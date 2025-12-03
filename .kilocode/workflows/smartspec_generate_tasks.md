@@ -508,22 +508,134 @@ Using the guidelines in `.smartspec/Knowledge-Base.md`:
 ### 4.2 Enforce Phase Rules
 
 - **10-task maximum per phase** rule (MANDATORY)
+- **Minimum 5 tasks per phase** (avoid too-small phases)
 - Define clear phases with logical grouping
-- Typical phase structure:
-  1. **Phase 1: Setup & Foundation** (T001-T010)
-     - Project initialization
-     - Database setup
-     - Core models
-  2. **Phase 2: Core Services** (T011-T020)
-     - Business logic
-     - Service layer
-  3. **Phase 3+: Feature Implementation** (groups of 10)
-     - Feature-specific tasks
-     - One phase per major feature group
-  4. **Final Phase: Polish & Deployment**
-     - Testing
-     - Documentation
-     - Performance optimization
+
+**Standard 10-Phase Structure for Financial/Complex Systems:**
+
+1. **Phase 1: Foundation & Setup** (T001-T010)
+   - Project initialization, build config
+   - Database setup (PostgreSQL, Redis)
+   - Core infrastructure (logging, monitoring)
+   - Basic authentication
+
+2. **Phase 2: Database Schema & Core Models** (T011-T020)
+   - All database tables (15+ tables)
+   - Prisma schema
+   - Migrations
+   - Seed data
+
+3. **Phase 3: Authentication & Authorization** (T021-T030)
+   - JWT implementation
+   - RBAC middleware
+   - Permission matrix
+   - MFA enforcement
+
+4. **Phase 4: Credit Management Core** (T031-T040)
+   - Credit balance service
+   - Reserve/Commit/Release flows
+   - Transaction ledger
+   - Idempotency
+
+5. **Phase 5: Payment Integration** (T041-T050)
+   - Payment gateway integration
+   - Payment intent flow
+   - Webhook handlers
+   - Refund system
+
+6. **Phase 6: Billing System** (T051-T060)
+   - Billing cycle engine
+   - Invoice generation
+   - Subscription management
+   - Payment method management
+
+7. **Phase 7: Cost Management & Analytics** (T061-T070)
+   - Cost tracking
+   - Analytics pipeline
+   - Reporting APIs
+   - Forecasting
+
+8. **Phase 8: Security & Compliance** (T071-T080)
+   - Audit logging
+   - Security monitoring
+   - Fraud detection
+   - Compliance checks (PCI DSS)
+
+9. **Phase 9: API Layer & Integration** (T081-T090)
+   - Public APIs
+   - Admin APIs
+   - Internal APIs
+   - API documentation
+
+10. **Phase 10: Testing & Deployment** (T091-T100)
+    - Integration tests
+    - E2E tests
+    - Performance tests
+    - Deployment automation
+
+**For smaller projects (<50 tasks):**
+- Combine related phases
+- Maintain 5-10 tasks per phase
+- Still use clear phase boundaries
+
+**For larger projects (>100 tasks):**
+- Split large phases into sub-phases
+- Example: Phase 4A, Phase 4B
+- Maintain 10-task maximum per sub-phase
+
+### 4.2.1 Complete Coverage Requirements (CRITICAL)
+
+**🚨 MANDATORY: 100% SPEC Coverage**
+
+All tasks.md MUST cover 100% of SPEC requirements. Check coverage for:
+
+**Business Logic (MUST be 100%):**
+- [ ] All core flows (e.g., credit reserve/commit/release)
+- [ ] All payment flows (purchase, refund, failed payment)
+- [ ] All billing operations (invoice, subscription, payment method)
+- [ ] All cost management features (tracking, analytics, forecasting)
+- [ ] All fraud prevention mechanisms
+
+**API Endpoints (MUST be 100%):**
+- [ ] All public user APIs (balance, history, transactions)
+- [ ] All admin APIs (adjustments, refunds, overrides)
+- [ ] All billing APIs (invoices, subscriptions, payment methods)
+- [ ] All payment webhook handlers
+- [ ] All internal service APIs
+
+**Security (MUST be 100%):**
+- [ ] MFA enforcement
+- [ ] RBAC middleware for all endpoints
+- [ ] Permission checks
+- [ ] Audit trail for financial events
+- [ ] Security monitoring automation
+- [ ] Compliance checks (PCI DSS, SOC 2, GDPR)
+
+**Database (MUST be 100%):**
+- [ ] All tables from data model (15+ tables)
+- [ ] All migrations
+- [ ] All indexes
+- [ ] All partitioning strategies
+- [ ] Seed data
+
+**Testing (MUST be 100%):**
+- [ ] Unit tests for all services
+- [ ] Integration tests for all flows
+- [ ] E2E tests for critical paths
+- [ ] Permission tests for all endpoints
+- [ ] Fraud scenario tests
+- [ ] Performance tests
+
+**Coverage Validation:**
+
+Before finalizing tasks.md:
+1. Read SPEC completely
+2. List ALL requirements
+3. Map each requirement to task(s)
+4. Verify no gaps
+5. Add missing tasks if needed
+
+**If coverage < 90%:** STOP and add missing tasks
 
 ### 4.3 Assign Risk Levels
 
@@ -659,49 +771,137 @@ For each phase X:
 For every task T in this phase:
 
 ```markdown
-### Task T00X: [Task Title] (~X.X hours)
+- [ ] **T00X: [Task Title]** (Xh)
 
-**Description:**
-[Concrete implementation details - what, why, how]
-
-**Files:**
-
-**CREATE: `[path/to/file.ts]`** (~XXX lines - [SMALL/MEDIUM/LARGE])
-- [What this file contains]
-- [Key responsibilities]
-- Strategy: [Full creation / Iterative build]
-
-**EDIT: `[path/to/existing.ts]`** (add XX lines - [SMALL/MEDIUM/LARGE])
-- Location: [Where to edit]
-- Changes: [What to change]
-- Strategy: [str_replace / surgical edit]
-- Max lines per change: [Based on file size category]
-
-**Supporting Files Referenced:**
-- `[supporting-file.yaml]` - [How it's used in this task]
-
-**Dependencies:**
-- T00Y: [Reason for dependency]
-- Related Spec: **[spec-id]** (`[path]`, repo: [repo])
-
-**Acceptance Criteria:**
-- [ ] [Testable criterion 1]
-- [ ] [Testable criterion 2]
-- [ ] [Testable criterion 3]
-
-**Validation:**
-```bash
-# Commands to verify task completion
-tsc --noEmit
-npm test -- [relevant-test-file]
-npm run lint
-```
-
-**Expected Outcome:**
-[What should work after this task]
+  **Description:**
+  [Concrete, actionable implementation details - what, why, how]
+  
+  **Subtasks:**
+  - [ ] T00X.1: [Subtask 1 name] (2h)
+    - Description: [Specific action]
+    - Files: `path/to/file1.ts`
+  - [ ] T00X.2: [Subtask 2 name] (3h)
+    - Description: [Specific action]
+    - Files: `path/to/file2.ts`
+  - [ ] T00X.3: [Subtask 3 name] (2h)
+    - Description: [Specific action]
+    - Files: `path/to/file3.ts`
+  
+  **Files:**
+  
+  **CREATE: `[path/to/file.ts]`** (~XXX lines - [SMALL/MEDIUM/LARGE])
+  - [What this file contains]
+  - [Key responsibilities]
+  - Strategy: [Full creation / Iterative build]
+  
+  **EDIT: `[path/to/existing.ts]`** (add XX lines - [SMALL/MEDIUM/LARGE])
+  - Location: [Where to edit]
+  - Changes: [What to change]
+  - Strategy: [str_replace / surgical edit]
+  - Max lines per change: [Based on file size category]
+  
+  **Supporting Files Referenced:**
+  - `[supporting-file.yaml]` - [How it's used in this task]
+  
+  **Dependencies:**
+  - T00Y: [Reason for dependency]
+  - Related Spec: **[spec-id]** (`[path]`, repo: [repo])
+  
+  **Acceptance Criteria:**
+  - [ ] [Testable criterion 1]
+  - [ ] [Testable criterion 2]
+  - [ ] [Testable criterion 3]
+  - [ ] Tests pass with >80% coverage
+  - [ ] No TypeScript errors
+  - [ ] Documentation updated
+  
+  **Validation:**
+  ```bash
+  # Commands to verify task completion
+  tsc --noEmit
+  npm test -- [relevant-test-file]
+  npm run lint
+  ```
+  
+  **Expected Outcome:**
+  [What should work after this task]
 
 ---
 ```
+
+### 7.2.1 Task Sizing Rules (CRITICAL)
+
+**🚨 MANDATORY: Prevent Context Overflow**
+
+Every task MUST be sized appropriately to prevent LLM context overflow and infinite loops:
+
+**Small Task (2-4h):**
+- Single file or function
+- Clear, focused objective
+- No complex dependencies
+- Output: <200 lines of code
+- Context: <5K tokens
+- Subtasks: 0-2
+
+**Medium Task (4-8h):**
+- 2-3 related files
+- Some integration work
+- Few dependencies
+- Output: 200-500 lines
+- Context: 5-10K tokens
+- Subtasks: 2-4 (REQUIRED)
+
+**Large Task (8-16h):**
+- Multiple components
+- Complex integration
+- Multiple dependencies
+- Output: 500-1000 lines
+- Context: 10-20K tokens
+- Subtasks: 4-6 (MANDATORY)
+
+**❌ TOO LARGE (>16h):**
+- **NOT ALLOWED**
+- MUST split into 2+ separate tasks
+- Each new task follows rules above
+
+**Context Overflow Prevention Checklist:**
+
+Before creating a task, verify:
+- [ ] Task requires reading <5 files
+- [ ] Task description <500 words
+- [ ] Task has <6 subtasks
+- [ ] Task output <1000 lines
+- [ ] Task can be completed without reading entire codebase
+
+If ANY checkbox fails: **SPLIT THE TASK**
+
+### 7.2.2 Subtask Breakdown Rules
+
+**When to create subtasks:**
+1. Task > 8h (MANDATORY)
+2. Task involves >3 files (MANDATORY)
+3. Task has multiple logical steps (RECOMMENDED)
+4. Task requires multiple skills (DB + API + Tests) (RECOMMENDED)
+
+**Subtask format:**
+```markdown
+- [ ] T00X.1: [Specific, actionable subtask name] (2h)
+  - Description: [Clear, focused description]
+  - Files: `path/to/specific/file.ts`
+  - Output: [What this subtask produces]
+```
+
+**Subtask naming:**
+- ✅ GOOD: "T401.1: Create reserve() method in CreditService"
+- ✅ GOOD: "T401.2: Implement reservation timeout worker"
+- ❌ BAD: "T401.1: Implement credit logic"
+- ❌ BAD: "T401.2: Add tests"
+
+**Subtask sizing:**
+- Each subtask: 1-4h
+- If subtask >4h: Split further
+- Total subtasks per task: 2-6
+- If >6 subtasks needed: Split parent task
 
 ### 7.3 Task Details Best Practices
 

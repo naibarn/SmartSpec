@@ -216,16 +216,18 @@ If file doesn't exist:
 4. Overview
 5. When to Use / When NOT to Use
 6. Architecture (detailed)
-7. **Security Threat Model (STRIDE)** - Full by default
-8. **Performance Requirements** - Full metrics
-9. **Configuration Schema** - Complete
-10. Implementation Guide
-11. Testing Strategy (comprehensive)
-12. Monitoring & Observability (detailed)
-13. Examples (multiple scenarios)
-14. Related Specs
+7. **Data Model & Schema** - Database schema, ER diagram (NEW)
+8. **Security Threat Model (STRIDE)** - Full by default
+9. **Performance Requirements** - Full metrics
+10. **Configuration Schema** - Complete
+11. Implementation Guide
+12. Testing Strategy (comprehensive)
+13. Monitoring & Observability (detailed)
+14. Examples (multiple scenarios)
+15. Related Specs
 
 **Automatically includes:**
+- ✅ Data Model & Schema (tables, ER diagram)
 - ✅ STRIDE threat model (full)
 - ✅ Performance Requirements (P50/P95/P99, TPS, SLA)
 - ✅ Audit logging requirements
@@ -384,6 +386,133 @@ Full STRIDE model as in v4.0:
 - Testing approach
 - Compliance notes
 
+**Enhanced for Fintech/Financial Domain:**
+
+When `--domain=fintech` or `--profile=financial`, include additional security measures:
+
+```markdown
+## Security Threat Model (STRIDE-Full)
+
+### Spoofing
+- **JWT Validation:** Verify signature, expiration, issuer
+- **API Key Rotation:** Automatic rotation every 90 days
+- **MFA for Sensitive Operations:** Required for financial transactions > threshold
+- **Device Fingerprinting:** Track and verify known devices
+
+### Tampering
+- **Ledger Tamper-Proof Design:**
+  - Immutable ledger entries (no UPDATE/DELETE)
+  - SHA-256 hash chain (blockchain-style)
+  - Audit log integrity verification
+  - Previous hash linkage for tamper detection
+- **Request Signing:** HMAC-SHA256 for API requests
+- **HTTPS/TLS Enforcement:** TLS 1.3 minimum
+- **Database Constraints:** CHECK constraints prevent invalid states
+
+### Repudiation
+- **Comprehensive Audit Trail:**
+  - All financial operations logged
+  - IP address, user agent, request ID tracking
+  - Timestamp with timezone (UTC)
+  - Non-repudiation signatures for critical operations
+- **Immutable Logs:** Append-only transaction log
+- **7-Year Retention:** Compliance requirement
+
+### Information Disclosure
+- **Encryption at Rest:** AES-256 for sensitive data
+- **Encryption in Transit:** TLS 1.3
+- **PII Masking in Logs:** Credit card, SSN, account numbers masked
+- **Secure Key Management:** AWS KMS / HashiCorp Vault
+- **Data Classification:** PUBLIC, INTERNAL, CONFIDENTIAL, RESTRICTED
+
+### Denial of Service
+- **Rate Limiting:**
+  - Per user: 100 req/min
+  - Per IP: 1000 req/min
+  - Per endpoint: Custom limits
+- **Replay Attack Mitigation:**
+  - Idempotency key required for mutations
+  - Request timestamp validation (max 5 min skew)
+  - Nonce-based replay prevention
+  - Idempotency key expiration (24 hours)
+- **Circuit Breaker Pattern:** Prevent cascade failures
+- **Request Timeout:** 30s max
+- **Connection Pooling:** Limit concurrent connections
+
+### Elevation of Privilege
+- **RBAC Enforcement:** Role-based access control
+- **Principle of Least Privilege:** Minimal permissions
+- **TOCTOU Race Condition Prevention:**
+  - Optimistic locking (version field)
+  - Database-level constraints
+  - Transaction isolation level: SERIALIZABLE for critical operations
+  - Row-level locking for balance updates
+- **Credit Double-Spending Prevention:**
+  - Atomic balance updates (BEGIN TRANSACTION)
+  - Reserved balance mechanism
+  - Distributed lock for critical operations (Redis)
+  - Idempotency checks before deduction
+- **Admin Action Audit:** All admin operations logged
+
+### Saga-Specific Security (NEW)
+- **Multi-Service Reconciliation:**
+  - Saga state verification across services
+  - Compensation idempotency (can retry safely)
+  - Cross-service audit trail
+  - Saga timeout detection (max 5 minutes)
+- **Saga Timeout Handling:**
+  - Automatic compensation on timeout
+  - Dead letter queue for failed sagas
+  - Manual intervention dashboard
+- **Saga Replay Protection:**
+  - Saga ID uniqueness check
+  - Step completion verification
+  - Prevent duplicate saga execution
+
+### Financial-Specific Threats (NEW)
+
+#### Double-Spending Attack
+- **Prevention:**
+  - Optimistic locking on credit_balance table
+  - Check available balance before deduction
+  - Reserve balance during pending operations
+  - Atomic commit after all checks pass
+
+#### Ledger Tampering
+- **Prevention:**
+  - Immutable ledger (no UPDATE/DELETE)
+  - Hash chain verification
+  - Periodic integrity checks
+  - Alert on hash mismatch
+
+#### Transaction Replay
+- **Prevention:**
+  - Idempotency key required
+  - Request timestamp validation
+  - Nonce tracking (Redis)
+  - Duplicate detection within 24h window
+
+#### Unauthorized Refunds
+- **Prevention:**
+  - Refund authorization workflow
+  - Admin approval for refunds > threshold
+  - Refund reason required
+  - Audit trail for all refunds
+
+### Compliance Requirements
+- **PCI DSS Level 1:** If processing credit cards
+- **SOC 2 Type II:** Security controls audit
+- **GDPR:** If handling EU customer data
+- **Data Residency:** Store data in approved regions
+
+### Security Testing
+- **Penetration Testing:** Annual third-party audit
+- **Vulnerability Scanning:** Weekly automated scans
+- **Dependency Audits:** Daily npm/pip audit
+- **OWASP Top 10:** Coverage in test suite
+- **Chaos Engineering:** Test failure scenarios
+```
+
 ---
 
 ## 5. DI Pattern Handling
@@ -454,6 +583,219 @@ Complete performance section as in v4.0:
 - Metrics & alerting
 - Load testing requirements
 
+**Enhanced: Service-Level Performance Breakdown**
+
+For multi-service architectures (especially financial systems), include per-service performance targets:
+
+```markdown
+## Performance Requirements
+
+### System-Wide Targets
+
+**Latency:**
+- P50: < 100ms
+- P95: < 200ms
+- P99: < 300ms
+
+**Throughput:**
+- Normal load: 1000 TPS
+- Peak load: 3000 TPS
+
+**Availability:**
+- SLA: 99.95% uptime
+- Max downtime: 4.38 hours/year
+
+**Scalability:**
+- Horizontal scaling: Auto-scale based on CPU > 70%
+- Max instances: 20
+
+---
+
+### Per-Service Performance Targets
+
+#### Credit Service
+
+**Latency:**
+- P50: < 50ms
+- P95: < 100ms
+- P99: < 150ms
+
+**Throughput:**
+- Target: 1000 TPS
+- Peak: 2000 TPS
+
+**Workload Characteristics:**
+- High-frequency reads (balance queries)
+- Medium-frequency writes (credit add/deduct)
+- Critical path: User-facing operations
+
+**Database:**
+- Read queries: < 10ms (P95)
+- Write queries: < 20ms (P95)
+- Connection pool: 20-50 connections
+
+**Caching:**
+- Cache hit rate: > 80%
+- Cache TTL: 60 seconds for balance
+- Cache invalidation: On balance update
+
+---
+
+#### Payment Service
+
+**Latency:**
+- P50: < 100ms
+- P95: < 200ms
+- P99: < 300ms
+- P99.9: < 500ms (includes external API calls)
+
+**Throughput:**
+- Target: 500 TPS
+- Peak: 1000 TPS
+
+**Workload Characteristics:**
+- Low-frequency, high-value transactions
+- External API dependency (Stripe, PromptPay)
+- Retry logic for failed payments
+
+**External API:**
+- Stripe API timeout: 10s
+- Retry attempts: 3
+- Circuit breaker: Open after 5 failures
+
+**Database:**
+- Transaction isolation: SERIALIZABLE
+- Lock timeout: 5s
+
+---
+
+#### Billing Service
+
+**Latency:**
+- P50: < 200ms
+- P95: < 500ms
+- P99: < 1000ms
+
+**Throughput:**
+- Target: 100 TPS
+- Peak: 300 TPS
+
+**Workload Characteristics:**
+- Batch processing (invoice generation)
+- Scheduled jobs (monthly billing cycles)
+- Complex calculations (tax, proration)
+
+**Batch Jobs:**
+- Invoice generation: < 5 minutes for 10K users
+- Billing cycle: < 30 minutes for 100K users
+
+**Database:**
+- Bulk insert: 1000 records/second
+- Report queries: < 5s
+
+---
+
+#### Cost Management Service
+
+**Latency:**
+- P50: < 100ms
+- P95: < 200ms
+- P99: < 300ms
+
+**Throughput:**
+- Target: 200 TPS
+- Peak: 500 TPS
+
+**Workload Characteristics:**
+- Analytics queries (cost reports)
+- Aggregations (daily/monthly summaries)
+- Real-time cost tracking
+
+**Database:**
+- Aggregation queries: < 2s
+- Time-series data: Partitioned by month
+- Materialized views: Refreshed every 5 minutes
+
+**Caching:**
+- Report cache: 5 minutes TTL
+- Summary cache: 15 minutes TTL
+
+---
+
+### Database Performance
+
+**PostgreSQL:**
+- Connection pool: 50-100 connections per service
+- Query timeout: 30s
+- Statement timeout: 10s
+- Idle transaction timeout: 60s
+
+**Read Replicas:**
+- 2 read replicas for read-heavy services
+- Replication lag: < 1s
+
+**Indexes:**
+- All foreign keys indexed
+- Composite indexes for common queries
+- Partial indexes for filtered queries
+
+**Monitoring:**
+- Slow query log: > 100ms
+- Long-running queries: > 5s
+- Deadlock detection: Alert immediately
+
+---
+
+### Queue Performance
+
+**Message Queue (Redis/RabbitMQ):**
+- Message processing: < 100ms per message
+- Queue depth: Alert if > 1000 messages
+- Consumer lag: < 10 seconds
+
+**Dead Letter Queue:**
+- Max retries: 3
+- Retry backoff: Exponential (1s, 5s, 30s)
+
+---
+
+### Monitoring & Alerting
+
+**Metrics Collection:**
+- Interval: 10 seconds
+- Retention: 30 days (high-res), 1 year (aggregated)
+
+**Alerts:**
+- P99 latency > 500ms: Warning
+- P99 latency > 1000ms: Critical
+- Error rate > 1%: Warning
+- Error rate > 5%: Critical
+- Availability < 99.9%: Critical
+
+---
+
+### Load Testing Requirements
+
+**Scenarios:**
+1. **Normal Load:** 1000 TPS for 1 hour
+2. **Peak Load:** 3000 TPS for 15 minutes
+3. **Stress Test:** Increase until failure
+4. **Endurance Test:** 1000 TPS for 24 hours
+5. **Spike Test:** 0 → 5000 TPS in 10 seconds
+
+**Acceptance Criteria:**
+- All P99 targets met under normal load
+- No errors under normal load
+- Graceful degradation under peak load
+- System recovers within 5 minutes after spike
+```
+
+**Customization:**
+- Adjust service names based on SPEC context
+- Add/remove services as needed
+- Modify targets based on business requirements
+- Include domain-specific workload characteristics
+
 ---
 
 ## 7. Domain-Based Enhancement
@@ -495,6 +837,281 @@ Auto-add:
 ### 7.5 domain=fintech
 
 Same as `--profile=financial`
+
+**Additional Saga Patterns for Fintech:**
+
+Automatically include comprehensive saga orchestration patterns:
+
+```markdown
+## Saga Orchestration Patterns
+
+### 1. Credit Purchase Saga
+
+**Flow:**
+```
+1. Reserve Credit → 2. Process Payment → 3. Commit Credit → 4. Update Ledger
+```
+
+**Compensation:**
+```
+4. Rollback Ledger ← 3. Rollback Credit ← 2. Refund Payment ← 1. Release Reserve
+```
+
+**Implementation:**
+```typescript
+class CreditPurchaseSaga {
+  async execute(amount: number, userId: string, paymentMethod: string) {
+    const sagaId = generateSagaId();
+    
+    try {
+      // Step 1: Reserve credit
+      await creditService.reserve(userId, amount, sagaId);
+      
+      // Step 2: Process payment
+      const paymentId = await paymentService.charge(paymentMethod, amount, sagaId);
+      
+      // Step 3: Commit credit
+      await creditService.commit(userId, amount, sagaId);
+      
+      // Step 4: Update ledger
+      await ledgerService.record(userId, 'CREDIT', amount, paymentId);
+      
+      await sagaService.markCompleted(sagaId);
+    } catch (error) {
+      await this.compensate(sagaId, error);
+      throw error;
+    }
+  }
+  
+  async compensate(sagaId: string, error: Error) {
+    const saga = await sagaService.getState(sagaId);
+    
+    // Rollback in reverse order
+    if (saga.currentStep >= 4) await ledgerService.rollback(sagaId);
+    if (saga.currentStep >= 3) await creditService.rollback(sagaId);
+    if (saga.currentStep >= 2) await paymentService.refund(saga.paymentId);
+    if (saga.currentStep >= 1) await creditService.releaseReserve(sagaId);
+    
+    await sagaService.markCompensated(sagaId, error.message);
+  }
+}
+```
+
+### 2. Cost Deduction Saga
+
+**Flow:**
+```
+1. Check Balance → 2. Reserve Credit → 3. Deduct Credit → 4. Update Ledger → 5. Execute Service
+```
+
+**Compensation:**
+```
+5. Rollback Service ← 4. Rollback Ledger ← 3. Restore Credit ← 2. Release Reserve
+```
+
+### 3. Refund Saga (NEW)
+
+**Flow:**
+```
+1. Validate Refund → 2. Process Refund → 3. Add Credit → 4. Update Ledger → 5. Notify User
+```
+
+**Compensation:**
+```
+5. Cancel Notification ← 4. Rollback Ledger ← 3. Deduct Credit ← 2. Reverse Refund
+```
+
+**Types:**
+- **Full Refund:** Refund entire transaction amount
+- **Partial Refund:** Refund portion of transaction
+- **Refund Compensation:** Handle failed refund attempts
+
+**Implementation:**
+```typescript
+class RefundSaga {
+  async execute(transactionId: string, amount: number, reason: string) {
+    const sagaId = generateSagaId();
+    
+    try {
+      // Step 1: Validate refund eligibility
+      const transaction = await validateRefund(transactionId, amount);
+      
+      // Step 2: Process refund via payment provider
+      const refundId = await paymentService.refund(transaction.paymentId, amount);
+      
+      // Step 3: Add credit back to user
+      await creditService.add(transaction.userId, amount, sagaId);
+      
+      // Step 4: Update ledger
+      await ledgerService.record(transaction.userId, 'REFUND', amount, refundId);
+      
+      // Step 5: Notify user
+      await notificationService.send(transaction.userId, 'refund_completed', { amount });
+      
+      await sagaService.markCompleted(sagaId);
+    } catch (error) {
+      await this.compensate(sagaId, error);
+      throw error;
+    }
+  }
+}
+```
+
+### 4. Failed Payment Compensation Saga (NEW)
+
+**Scenario:** Payment fails after credit was reserved
+
+**Flow:**
+```
+1. Detect Payment Failure → 2. Release Reserved Credit → 3. Update Status → 4. Retry Logic
+```
+
+**Retry Strategy:**
+- **Attempt 1:** Immediate retry
+- **Attempt 2:** Retry after 5 seconds
+- **Attempt 3:** Retry after 30 seconds
+- **After 3 failures:** Move to dead letter queue, notify admin
+
+**Implementation:**
+```typescript
+class FailedPaymentCompensationSaga {
+  async execute(sagaId: string, retryCount: number = 0) {
+    const saga = await sagaService.getState(sagaId);
+    
+    try {
+      // Release reserved credit
+      await creditService.releaseReserve(saga.userId, saga.amount, sagaId);
+      
+      // Update saga status
+      await sagaService.updateStatus(sagaId, 'COMPENSATED');
+      
+      // Notify user of failure
+      await notificationService.send(saga.userId, 'payment_failed', {
+        amount: saga.amount,
+        reason: saga.errorMessage
+      });
+      
+    } catch (error) {
+      if (retryCount < 3) {
+        await this.scheduleRetry(sagaId, retryCount + 1);
+      } else {
+        await deadLetterQueue.add(sagaId, error);
+        await alertService.notifyAdmin('saga_compensation_failed', { sagaId });
+      }
+    }
+  }
+}
+```
+
+### 5. Partial Apply Scenario (NEW)
+
+**Scenario:** User has insufficient credit, apply partial amount
+
+**Flow:**
+```
+1. Check Available Balance → 2. Calculate Partial Amount → 3. Apply Partial → 4. Create Debt Record
+```
+
+**Implementation:**
+```typescript
+class PartialApplySaga {
+  async execute(userId: string, requestedAmount: number, serviceId: string) {
+    const balance = await creditService.getBalance(userId);
+    
+    if (balance.available >= requestedAmount) {
+      // Full deduction
+      return await costDeductionSaga.execute(userId, requestedAmount, serviceId);
+    } else if (balance.available > 0) {
+      // Partial deduction
+      const partialAmount = balance.available;
+      const remainingAmount = requestedAmount - partialAmount;
+      
+      await creditService.deduct(userId, partialAmount, sagaId);
+      await debtService.create(userId, remainingAmount, serviceId);
+      await ledgerService.record(userId, 'PARTIAL_DEBIT', partialAmount, serviceId);
+      
+      return { applied: partialAmount, debt: remainingAmount };
+    } else {
+      throw new InsufficientCreditError('No credit available');
+    }
+  }
+}
+```
+
+### 6. Idempotent Replay Flow (NEW)
+
+**Purpose:** Ensure saga can be safely replayed without side effects
+
+**Idempotency Key:**
+```typescript
+interface SagaRequest {
+  idempotencyKey: string; // Client-provided unique key
+  userId: string;
+  amount: number;
+  // ... other fields
+}
+```
+
+**Implementation:**
+```typescript
+class IdempotentSagaExecutor {
+  async execute(request: SagaRequest) {
+    // Check if already processed
+    const existing = await sagaService.findByIdempotencyKey(request.idempotencyKey);
+    
+    if (existing) {
+      if (existing.status === 'COMPLETED') {
+        // Return cached result
+        return existing.result;
+      } else if (existing.status === 'PENDING') {
+        // Wait for completion
+        return await this.waitForCompletion(existing.sagaId);
+      } else if (existing.status === 'FAILED') {
+        // Return cached error
+        throw new Error(existing.errorMessage);
+      }
+    }
+    
+    // Create new saga with idempotency key
+    const sagaId = await sagaService.create({
+      idempotencyKey: request.idempotencyKey,
+      type: 'CREDIT_PURCHASE',
+      payload: request
+    });
+    
+    // Execute saga
+    return await this.executeSaga(sagaId, request);
+  }
+}
+```
+
+**Duplicate Request Detection:**
+```typescript
+// Redis-based duplicate detection
+const isDuplicate = await redis.set(
+  `idempotency:${idempotencyKey}`,
+  sagaId,
+  'EX', 86400, // 24 hour expiration
+  'NX' // Only set if not exists
+);
+
+if (!isDuplicate) {
+  const existingSagaId = await redis.get(`idempotency:${idempotencyKey}`);
+  return await sagaService.getResult(existingSagaId);
+}
+```
+
+### Saga Best Practices
+
+1. **Idempotency:** All saga steps must be idempotent
+2. **Timeout:** Set maximum saga execution time (5 minutes)
+3. **Compensation:** Always implement compensation logic
+4. **State Persistence:** Store saga state in database
+5. **Monitoring:** Track saga success/failure rates
+6. **Dead Letter Queue:** Handle permanently failed sagas
+7. **Retry Logic:** Exponential backoff for transient failures
+8. **Audit Trail:** Log all saga state transitions
+```
 
 ### 7.6 domain=internal
 
@@ -787,6 +1404,221 @@ If the SPEC includes dependencies (Related Specs section):
   ## 19. Related Specs
   - **spec-core-001-authentication** - User authentication for financial operations
   ```
+
+### 13.1.2 Generate Data Model Section (NEW - Financial Profile Only)
+
+If profile is `financial`, automatically include Data Model & Schema section:
+
+**Section Structure:**
+```markdown
+## {N}. Data Model & Schema
+
+### {N}.1 Core Tables
+
+#### Ledger Table
+```sql
+CREATE TABLE ledger (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  transaction_type VARCHAR(50) NOT NULL, -- CREDIT, DEBIT, REFUND
+  amount DECIMAL(19,4) NOT NULL,
+  balance_after DECIMAL(19,4) NOT NULL,
+  reference_id UUID, -- Link to payment/invoice/transaction
+  description TEXT,
+  metadata JSONB,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  created_by UUID NOT NULL,
+  
+  -- Immutability & Tamper Detection
+  is_immutable BOOLEAN DEFAULT TRUE,
+  hash VARCHAR(64), -- SHA-256 for tamper detection
+  previous_hash VARCHAR(64), -- Link to previous entry (blockchain-style)
+  
+  -- Indexes
+  INDEX idx_ledger_user_id (user_id),
+  INDEX idx_ledger_created_at (created_at),
+  INDEX idx_ledger_reference_id (reference_id)
+);
+```
+
+#### Credit Balance Table
+```sql
+CREATE TABLE credit_balance (
+  user_id UUID PRIMARY KEY,
+  balance DECIMAL(19,4) NOT NULL DEFAULT 0 CHECK (balance >= 0),
+  reserved_balance DECIMAL(19,4) NOT NULL DEFAULT 0 CHECK (reserved_balance >= 0),
+  available_balance DECIMAL(19,4) GENERATED ALWAYS AS (balance - reserved_balance) STORED,
+  last_updated TIMESTAMP NOT NULL DEFAULT NOW(),
+  version INT NOT NULL DEFAULT 1, -- Optimistic locking
+  
+  -- Constraints
+  CONSTRAINT chk_balance_non_negative CHECK (balance >= reserved_balance)
+);
+```
+
+#### Invoice Table
+```sql
+CREATE TABLE invoice (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  invoice_number VARCHAR(50) UNIQUE NOT NULL,
+  amount DECIMAL(19,4) NOT NULL,
+  tax DECIMAL(19,4) NOT NULL DEFAULT 0,
+  total DECIMAL(19,4) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'DRAFT', -- DRAFT, ISSUED, PAID, VOID, OVERDUE
+  due_date DATE NOT NULL,
+  issued_at TIMESTAMP,
+  paid_at TIMESTAMP,
+  voided_at TIMESTAMP,
+  metadata JSONB,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  
+  -- Indexes
+  INDEX idx_invoice_user_id (user_id),
+  INDEX idx_invoice_status (status),
+  INDEX idx_invoice_due_date (due_date)
+);
+```
+
+#### Transaction Log (Audit Trail)
+```sql
+CREATE TABLE transaction_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  transaction_id UUID NOT NULL,
+  event_type VARCHAR(50) NOT NULL, -- CREATED, UPDATED, COMPLETED, FAILED, REFUNDED
+  user_id UUID NOT NULL,
+  amount DECIMAL(19,4),
+  status VARCHAR(20) NOT NULL,
+  metadata JSONB,
+  
+  -- Audit Information
+  ip_address INET,
+  user_agent TEXT,
+  request_id VARCHAR(100),
+  
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  
+  -- Indexes
+  INDEX idx_txlog_transaction_id (transaction_id),
+  INDEX idx_txlog_user_id (user_id),
+  INDEX idx_txlog_created_at (created_at)
+) PARTITION BY RANGE (created_at);
+```
+
+#### Saga State Table
+```sql
+CREATE TABLE saga_state (
+  saga_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  saga_type VARCHAR(50) NOT NULL, -- CREDIT_PURCHASE, REFUND, PAYMENT, etc.
+  current_step VARCHAR(50) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- PENDING, COMPLETED, FAILED, COMPENSATING, COMPENSATED
+  payload JSONB NOT NULL,
+  compensation_data JSONB,
+  error_message TEXT,
+  retry_count INT NOT NULL DEFAULT 0,
+  max_retries INT NOT NULL DEFAULT 3,
+  
+  started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  
+  -- Indexes
+  INDEX idx_saga_type (saga_type),
+  INDEX idx_saga_status (status),
+  INDEX idx_saga_started_at (started_at)
+);
+```
+
+### {N}.2 ER Diagram
+
+```mermaid
+erDiagram
+    USER ||--o{ CREDIT_BALANCE : has
+    USER ||--o{ LEDGER : records
+    USER ||--o{ INVOICE : receives
+    USER ||--o{ TRANSACTION_LOG : generates
+    
+    CREDIT_BALANCE {
+        uuid user_id PK
+        decimal balance
+        decimal reserved_balance
+        decimal available_balance
+        int version
+    }
+    
+    LEDGER {
+        uuid id PK
+        uuid user_id FK
+        string transaction_type
+        decimal amount
+        decimal balance_after
+        uuid reference_id
+        string hash
+        string previous_hash
+    }
+    
+    INVOICE {
+        uuid id PK
+        uuid user_id FK
+        string invoice_number UK
+        decimal amount
+        decimal tax
+        decimal total
+        string status
+        date due_date
+    }
+    
+    TRANSACTION_LOG {
+        uuid id PK
+        uuid transaction_id
+        uuid user_id FK
+        string event_type
+        string status
+        inet ip_address
+    }
+    
+    SAGA_STATE {
+        uuid saga_id PK
+        string saga_type
+        string current_step
+        string status
+        jsonb payload
+        jsonb compensation_data
+    }
+    
+    INVOICE ||--o{ LEDGER : generates
+    SAGA_STATE ||--o{ TRANSACTION_LOG : tracks
+```
+
+### {N}.3 Data Integrity Rules
+
+1. **Ledger Immutability**
+   - No UPDATE or DELETE operations allowed
+   - All entries are append-only
+   - Hash chain ensures tamper detection
+
+2. **Balance Consistency**
+   - `available_balance = balance - reserved_balance`
+   - All balance updates must be atomic
+   - Optimistic locking prevents race conditions
+
+3. **Audit Trail Completeness**
+   - Every financial operation must create transaction log entry
+   - Logs are partitioned by month for performance
+   - Retention: 7 years (compliance requirement)
+
+4. **Saga Reliability**
+   - All saga steps must be idempotent
+   - Compensation data stored for rollback
+   - Automatic retry with exponential backoff
+```
+
+**Customization:**
+- Adjust table names based on SPEC context
+- Add domain-specific tables (e.g., Payment, Subscription)
+- Include additional indexes based on query patterns
+- Add partitioning strategy for high-volume tables
 
 ### 13.2 Apply Meta Tags
 

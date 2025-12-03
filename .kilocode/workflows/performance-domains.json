@@ -1,0 +1,258 @@
+{
+  "version": "5.0.0",
+  "description": "Domain-based performance detection rules for SmartSpec v5.0",
+  
+  "domains": {
+    "healthcare": {
+      "name": "Healthcare & Medical Systems",
+      "keywords": ["patient", "medical", "health", "HIPAA", "PHI", "EHR", "EMR", "clinic", "hospital"],
+      "performanceProfile": {
+        "latency": {
+          "p50": 100,
+          "p95": 200,
+          "p99": 500,
+          "unit": "ms",
+          "rationale": "Real-time patient data access"
+        },
+        "throughput": {
+          "normal": 100,
+          "peak": 500,
+          "unit": "TPS"
+        },
+        "availability": {
+          "uptime": "99.95%",
+          "rto": "5 minutes",
+          "rpo": "0",
+          "rationale": "Critical healthcare data"
+        }
+      },
+      "mandatorySections": ["privacy-compliance", "audit-logging", "data-retention"],
+      "compliance": ["HIPAA", "GDPR"],
+      "security": "stride-full"
+    },
+    
+    "iot": {
+      "name": "IoT & Telemetry Systems",
+      "keywords": ["IoT", "telemetry", "sensor", "device", "edge", "mqtt", "time-series"],
+      "performanceProfile": {
+        "throughput": {
+          "normal": 1000,
+          "peak": 10000,
+          "unit": "messages/sec",
+          "rationale": "High-volume telemetry ingestion"
+        },
+        "batchProcessing": {
+          "enabled": true,
+          "batchSize": 1000,
+          "batchInterval": "1 second"
+        },
+        "storage": {
+          "retention": "90 days",
+          "compression": "required"
+        }
+      },
+      "mandatorySections": ["throughput-requirements", "batch-processing", "data-retention"],
+      "architecture": ["event-driven", "stream-processing"]
+    },
+    
+    "logistics": {
+      "name": "Logistics & Supply Chain",
+      "keywords": ["logistics", "shipping", "delivery", "tracking", "warehouse", "inventory", "supply chain"],
+      "performanceProfile": {
+        "latency": {
+          "p99": 300,
+          "unit": "ms",
+          "rationale": "Real-time tracking updates"
+        },
+        "availability": {
+          "uptime": "99.9%",
+          "rto": "5 minutes",
+          "rationale": "Business critical operations"
+        },
+        "geographic": {
+          "multiRegion": true,
+          "cdnRequired": false
+        }
+      },
+      "mandatorySections": ["geographic-distribution", "realtime-tracking", "integration-complexity"]
+    },
+    
+    "ai": {
+      "name": "AI & ML Systems",
+      "keywords": ["AI", "ML", "machine learning", "inference", "model", "prediction", "neural network", "GPU"],
+      "performanceProfile": {
+        "latency": {
+          "p50": 50,
+          "p95": 150,
+          "p99": 300,
+          "unit": "ms",
+          "rationale": "Real-time inference"
+        },
+        "compute": {
+          "gpuRequired": true,
+          "gpuType": "T4/V100/A100",
+          "batchInference": true
+        },
+        "throughput": {
+          "normal": 100,
+          "peak": 500,
+          "unit": "predictions/sec"
+        }
+      },
+      "mandatorySections": ["model-versioning", "inference-performance", "compute-requirements"]
+    },
+    
+    "fintech": {
+      "name": "Financial Technology",
+      "keywords": ["payment", "credit", "billing", "ledger", "wallet", "transaction", "finance", "money"],
+      "performanceProfile": {
+        "latency": {
+          "p50": 150,
+          "p90": 250,
+          "p95": 300,
+          "p99": 600,
+          "unit": "ms",
+          "rationale": "Financial transaction processing"
+        },
+        "throughput": {
+          "normal": 200,
+          "peak": 1000,
+          "unit": "TPS"
+        },
+        "availability": {
+          "uptime": "99.9%",
+          "rto": "5 minutes",
+          "rpo": "0",
+          "rationale": "Zero data loss for financial data"
+        },
+        "database": {
+          "writeLatency": 10,
+          "readLatency": 5,
+          "transactionIsolation": "SERIALIZABLE",
+          "unit": "ms"
+        }
+      },
+      "mandatorySections": ["security-stride", "performance-full", "audit-logging", "idempotency", "data-integrity"],
+      "security": "stride-full",
+      "compliance": ["PCI-DSS", "SOC2"]
+    },
+    
+    "saas": {
+      "name": "SaaS Applications",
+      "keywords": ["SaaS", "subscription", "multi-tenant", "tenant", "plan", "billing"],
+      "performanceProfile": {
+        "latency": {
+          "p99": 500,
+          "unit": "ms"
+        },
+        "throughput": {
+          "normal": 500,
+          "peak": 2000,
+          "unit": "requests/sec"
+        },
+        "scalability": {
+          "horizontal": true,
+          "autoscaling": "required",
+          "targetUtilization": "70%"
+        },
+        "availability": {
+          "uptime": "99.9%"
+        }
+      },
+      "mandatorySections": ["multi-tenancy", "scalability", "subscription-management"],
+      "security": "stride-basic"
+    },
+    
+    "internal": {
+      "name": "Internal Tools & Admin Systems",
+      "keywords": ["admin", "internal", "dashboard", "management", "backoffice"],
+      "performanceProfile": {
+        "latency": {
+          "p99": 1000,
+          "unit": "ms",
+          "rationale": "Not user-facing"
+        },
+        "throughput": {
+          "normal": 20,
+          "peak": 50,
+          "unit": "TPS"
+        },
+        "availability": {
+          "uptime": "95%",
+          "rationale": "Internal use only"
+        }
+      },
+      "simplified": true,
+      "security": "basic",
+      "performance": "basic"
+    },
+    
+    "realtime": {
+      "name": "Real-time Systems",
+      "keywords": ["websocket", "real-time", "realtime", "live", "streaming", "socket.io"],
+      "performanceProfile": {
+        "latency": {
+          "p50": 50,
+          "p95": 100,
+          "p99": 200,
+          "unit": "ms",
+          "rationale": "Real-time user experience"
+        },
+        "connections": {
+          "concurrent": 10000,
+          "protocol": "WebSocket"
+        },
+        "messageRate": {
+          "normal": 1000,
+          "peak": 5000,
+          "unit": "messages/sec"
+        }
+      },
+      "mandatorySections": ["connection-management", "message-reliability", "scaling"]
+    },
+    
+    "batch": {
+      "name": "Batch Processing Systems",
+      "keywords": ["batch", "ETL", "data pipeline", "cron", "scheduled", "job"],
+      "performanceProfile": {
+        "throughput": {
+          "recordsPerHour": 1000000,
+          "batchSize": 10000
+        },
+        "latency": {
+          "acceptable": "minutes to hours",
+          "rationale": "Not real-time"
+        },
+        "reliability": {
+          "retry": true,
+          "idempotent": true,
+          "checkpoint": "required"
+        }
+      },
+      "mandatorySections": ["batch-processing", "retry-strategy", "monitoring"],
+      "performance": "throughput-focused"
+    }
+  },
+  
+  "detectionRules": {
+    "priority": [
+      "fintech",
+      "healthcare",
+      "ai",
+      "iot",
+      "logistics",
+      "saas",
+      "realtime",
+      "batch",
+      "internal"
+    ],
+    "multipleMatches": "use-highest-priority",
+    "fallback": "backend-service"
+  },
+  
+  "customization": {
+    "enabled": true,
+    "userDefinedDomains": ".smartspec/custom-domains.json",
+    "organizationOverrides": ".smartspec/org-performance-rules.json"
+  }
+}

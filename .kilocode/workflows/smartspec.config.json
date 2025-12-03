@@ -1,0 +1,239 @@
+{
+  "$schema": "https://smartspec.dev/schemas/config.v5.json",
+  "version": "5.0.0",
+  
+  "defaults": {
+    "profile": "backend-service",
+    "mode": "standard",
+    "security": "auto",
+    "di": "auto",
+    "performance": "auto",
+    "author": "SmartSpec Architect v5.0"
+  },
+  
+  "profiles": {
+    "basic": {
+      "description": "Minimal SPEC for simple tools",
+      "sections": ["header", "overview", "architecture-summary", "api-or-data", "acceptance"],
+      "excludes": ["di", "testing-full", "monitoring", "security", "performance"],
+      "useCases": ["simple CRUD", "internal tools", "prototypes"]
+    },
+    
+    "backend-service": {
+      "description": "Standard microservice SPEC",
+      "sections": ["header", "tech-stack", "di", "overview", "when-to-use", "architecture", "implementation", "testing", "monitoring", "examples"],
+      "security": "basic",
+      "performance": "basic",
+      "di": "full",
+      "useCases": ["REST APIs", "microservices", "backend workers"]
+    },
+    
+    "financial": {
+      "description": "Critical financial system SPEC",
+      "sections": ["all"],
+      "security": "stride-full",
+      "performance": "full",
+      "di": "full",
+      "mandatory": ["security", "performance", "di", "audit-logging"],
+      "autoInclude": ["idempotency", "data-integrity", "disaster-recovery"],
+      "useCases": ["payment systems", "billing", "ledger", "credit systems"]
+    },
+    
+    "full": {
+      "description": "All sections (v4.0 compatibility)",
+      "sections": ["all"],
+      "security": "auto",
+      "performance": "auto",
+      "di": "auto",
+      "backwardCompatible": true
+    }
+  },
+  
+  "domains": {
+    "healthcare": {
+      "description": "Healthcare & medical systems",
+      "autoInclude": ["privacy-compliance", "audit-logging", "realtime-requirements"],
+      "compliance": ["HIPAA", "GDPR"],
+      "performance": "full",
+      "security": "stride-full",
+      "dataRetention": "mandatory"
+    },
+    
+    "iot": {
+      "description": "IoT & telemetry systems",
+      "autoInclude": ["throughput-requirements", "telemetry-patterns", "edge-computing"],
+      "performance": "full",
+      "performanceEmphasis": ["throughput", "batch-processing"],
+      "security": "basic"
+    },
+    
+    "logistics": {
+      "description": "Logistics & supply chain",
+      "autoInclude": ["high-sla", "geographic-distribution", "realtime-tracking"],
+      "performance": "full",
+      "sla": "99.9%",
+      "security": "basic"
+    },
+    
+    "ai": {
+      "description": "AI & ML systems",
+      "autoInclude": ["latency-requirements", "model-versioning", "inference-performance"],
+      "performance": "full",
+      "performanceEmphasis": ["latency", "gpu-compute"],
+      "security": "basic"
+    },
+    
+    "fintech": {
+      "description": "Financial technology",
+      "inherits": "financial",
+      "autoInclude": ["regulatory-compliance", "transaction-integrity"]
+    },
+    
+    "saas": {
+      "description": "SaaS applications",
+      "autoInclude": ["scalability", "multi-tenancy", "subscription-management"],
+      "performance": "full",
+      "security": "stride-basic"
+    },
+    
+    "internal": {
+      "description": "Internal tools & admin systems",
+      "performance": "none",
+      "security": "basic",
+      "sla": "95%",
+      "simplifiedRequirements": true
+    }
+  },
+  
+  "security": {
+    "levels": {
+      "none": {
+        "description": "No security section",
+        "include": false
+      },
+      "basic": {
+        "description": "Basic security considerations",
+        "sections": ["authentication", "authorization", "data-protection", "key-risks"]
+      },
+      "stride-basic": {
+        "description": "STRIDE table (5-10 lines)",
+        "format": "table",
+        "threats": ["spoofing", "tampering", "repudiation", "information-disclosure", "denial-of-service", "elevation-of-privilege"],
+        "detail": "key-mitigations-only"
+      },
+      "stride-full": {
+        "description": "Complete STRIDE model",
+        "format": "detailed",
+        "threats": ["all"],
+        "detail": "comprehensive",
+        "includes": ["mitigation-strategies", "implementation-requirements", "testing", "compliance"]
+      }
+    }
+  },
+  
+  "di": {
+    "levels": {
+      "none": {
+        "description": "No DI pattern section",
+        "include": false
+      },
+      "minimal": {
+        "description": "Brief DI pattern mention",
+        "sections": ["example", "testing-note"],
+        "lines": 10
+      },
+      "full": {
+        "description": "Complete DI pattern documentation",
+        "sections": ["requirements", "interfaces", "testing", "benefits", "examples"],
+        "lines": 50
+      }
+    }
+  },
+  
+  "performance": {
+    "levels": {
+      "none": {
+        "description": "No performance requirements",
+        "include": false
+      },
+      "basic": {
+        "description": "Key metrics only",
+        "metrics": ["p99-latency", "throughput", "uptime"]
+      },
+      "full": {
+        "description": "Complete performance requirements",
+        "metrics": ["p50", "p90", "p95", "p99", "throughput-normal", "throughput-peak", "sla", "rto", "rpo", "database", "queue", "alerting", "load-testing"]
+      }
+    }
+  },
+  
+  "validation": {
+    "enabled": true,
+    "consistencyRules": {
+      "api-example-coverage": {
+        "severity": "warn",
+        "description": "APIs in Architecture must appear in Examples",
+        "enabled": true
+      },
+      "queue-metrics": {
+        "severity": "error",
+        "description": "Queue mentioned must have queue metrics",
+        "enabled": true
+      },
+      "transaction-integration-tests": {
+        "severity": "warn",
+        "description": "Transactions mentioned must have integration tests",
+        "enabled": true
+      },
+      "external-api-retry": {
+        "severity": "warn",
+        "description": "External API must have retry policy",
+        "enabled": true
+      },
+      "auth-security-section": {
+        "severity": "error",
+        "description": "Authentication mentioned must have security section",
+        "enabled": true
+      }
+    }
+  },
+  
+  "output": {
+    "directory": ".smartspec/",
+    "structure": {
+      "backups": "backups/",
+      "reports": "reports/",
+      "registry": "registry/",
+      "logs": "trace.log"
+    },
+    "createBackups": true,
+    "generateReports": true,
+    "metaTags": true
+  },
+  
+  "organization": {
+    "name": "Your Organization",
+    "defaultAuthor": "SmartSpec Architect v5.0",
+    "copyrightNotice": "",
+    "customTemplates": ".smartspec/templates/"
+  },
+  
+  "keywords": {
+    "financial": ["credit", "payment", "billing", "ledger", "financial", "money", "transaction", "promo", "topup", "wallet"],
+    "architecture": ["saga", "queue", "orchestrator", "worker", "high throughput", "event-driven"],
+    "scale": ["TPS", "throughput", "load", "peak traffic", "concurrent", "scalability", "flash sale", "bulk"],
+    "critical": ["SLA", "uptime", "availability", "real-time", "critical path", "mission critical"],
+    "backend": ["backend", "service", "API", "server", "microservice", "Node.js", "Python", "Java", "Go", "TypeScript"],
+    "database": ["database", "DB", "PostgreSQL", "MySQL", "MongoDB", "Redis", "SQL", "schema", "table", "query"],
+    "integration": ["external API", "third-party", "integration", "webhook", "HTTP client", "REST", "GraphQL"]
+  },
+  
+  "migration": {
+    "fromV4": {
+      "enabled": true,
+      "autoConvert": true,
+      "detectCriticalSections": true,
+      "addMetaTags": true
+    }
+  }
+}

@@ -29,7 +29,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/infrastructure/spec-000-infrastructure"
+      "path": "specs/infrastructure/spec-000-infrastructure"
     },
     {
       "id": "spec-002-user-management",
@@ -46,7 +46,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-002-user-management"
+      "path": "specs/feature/spec-002-user-management"
     },
     {
       "id": "spec-003-access-control",
@@ -64,7 +64,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-003-access-control"
+      "path": "specs/feature/spec-003-access-control"
     },
     {
       "id": "spec-004-financial-system",
@@ -81,7 +81,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-004-financial-system"
+      "path": "specs/feature/spec-004-financial-system"
     },
     {
       "id": "spec-005-promo-system",
@@ -98,7 +98,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-005-promo-system"
+      "path": "specs/feature/spec-005-promo-system"
     },
     {
       "id": "spec-006-ai-integration",
@@ -115,7 +115,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-006-ai-integration"
+      "path": "specs/feature/spec-006-ai-integration"
     },
     {
       "id": "spec-007-infrastructure",
@@ -132,7 +132,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-007-infrastructure"
+      "path": "specs/feature/spec-007-infrastructure"
     },
     {
       "id": "spec-008-analytics",
@@ -149,7 +149,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-008-analytics"
+      "path": "specs/feature/spec-008-analytics"
     },
     {
       "id": "spec-009-general-ui-guidelines",
@@ -165,7 +165,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-009-general-ui-guidelines"
+      "path": "specs/feature/spec-009-general-ui-guidelines"
     },
     {
       "id": "spec-010-ui-component-library",
@@ -181,7 +181,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-010-ui-component-library"
+      "path": "specs/feature/spec-010-ui-component-library"
     },
     {
       "id": "spec-011-automated-backup",
@@ -198,7 +198,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-011-automated-backup"
+      "path": "specs/feature/spec-011-automated-backup"
     },
     {
       "id": "spec-012-subscription-plans",
@@ -214,7 +214,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-012-subscription-plans"
+      "path": "specs/feature/spec-012-subscription-plans"
     },
     {
       "id": "spec-013-promptpay-credit-topup",
@@ -231,7 +231,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-013-promptpay-credit-topup"
+      "path": "specs/feature/spec-013-promptpay-credit-topup"
     },
     {
       "id": "spec-014-agent-skills-rag-system",
@@ -253,7 +253,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-014-agent-skills-rag-system"
+      "path": "specs/feature/spec-014-agent-skills-rag-system"
     },
     {
       "id": "spec-015-agent-service",
@@ -276,7 +276,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-015-agent-service"
+      "path": "specs/feature/spec-015-agent-service"
     },
     {
       "id": "spec-016-frontend-ui",
@@ -294,7 +294,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-016-frontend-ui"
+      "path": "specs/feature/spec-016-frontend-ui"
     },
     {
       "id": "spec-017-internationalization",
@@ -310,7 +310,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-017-internationalization"
+      "path": "specs/feature/spec-017-internationalization"
     },
     {
       "id": "spec-018-api-gateway",
@@ -330,7 +330,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-018-api-gateway"
+      "path": "specs/feature/spec-018-api-gateway"
     },
     {
       "id": "spec-018-llm-provider-pricing",
@@ -346,7 +346,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-018-llm-provider-pricing"
+      "path": "specs/feature/spec-018-llm-provider-pricing"
     },
     {
       "id": "spec-019-storage-service",
@@ -367,7 +367,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-019-storage-service"
+      "path": "specs/feature/spec-019-storage-service"
     },
     {
       "id": "spec-019-voice-platform",
@@ -384,7 +384,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-019-voice-platform"
+      "path": "specs/feature/spec-019-voice-platform"
     },
     {
       "id": "spec-020-monitoring-observability",
@@ -402,7 +402,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-020-monitoring-observability"
+      "path": "specs/feature/spec-020-monitoring-observability"
     },
     {
       "id": "spec-020-realtime-communication",
@@ -422,7 +422,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-020-realtime-communication"
+      "path": "specs/feature/spec-020-realtime-communication"
     },
     {
       "id": "spec-021-logging-system",
@@ -439,7 +439,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-021-logging-system"
+      "path": "specs/feature/spec-021-logging-system"
     },
     {
       "id": "spec-021-message-queue",
@@ -459,7 +459,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-021-message-queue"
+      "path": "specs/feature/spec-021-message-queue"
     },
     {
       "id": "spec-022-database-architecture",
@@ -480,7 +480,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-022-database-architecture"
+      "path": "specs/feature/spec-022-database-architecture"
     },
     {
       "id": "spec-022-deployment-pipeline",
@@ -496,7 +496,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-022-deployment-pipeline"
+      "path": "specs/feature/spec-022-deployment-pipeline"
     },
     {
       "id": "spec-023-caching-strategy",
@@ -516,7 +516,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-023-caching-strategy"
+      "path": "specs/feature/spec-023-caching-strategy"
     },
     {
       "id": "spec-023-disaster-recovery",
@@ -533,7 +533,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-023-disaster-recovery"
+      "path": "specs/feature/spec-023-disaster-recovery"
     },
     {
       "id": "spec-024-infrastructure-as-code",
@@ -549,7 +549,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-024-infrastructure-as-code"
+      "path": "specs/feature/spec-024-infrastructure-as-code"
     },
     {
       "id": "spec-025-llm-cost-analytics",
@@ -566,7 +566,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-025-llm-cost-analytics"
+      "path": "specs/feature/spec-025-llm-cost-analytics"
     },
     {
       "id": "spec-025-security-audit",
@@ -587,7 +587,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-025-security-audit"
+      "path": "specs/feature/spec-025-security-audit"
     },
     {
       "id": "spec-026-artifacts-viewer",
@@ -604,7 +604,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-026-artifacts-viewer"
+      "path": "specs/feature/spec-026-artifacts-viewer"
     },
     {
       "id": "spec-027-data-privacy-compliance",
@@ -624,7 +624,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-027-data-privacy-compliance"
+      "path": "specs/feature/spec-027-data-privacy-compliance"
     },
     {
       "id": "spec-027-external-integrations",
@@ -643,7 +643,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-027-external-integrations"
+      "path": "specs/feature/spec-027-external-integrations"
     },
     {
       "id": "spec-028-backup-disaster-recovery",
@@ -663,7 +663,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-028-backup-disaster-recovery"
+      "path": "specs/feature/spec-028-backup-disaster-recovery"
     },
     {
       "id": "spec-028-cost-management",
@@ -679,7 +679,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-028-cost-management"
+      "path": "specs/feature/spec-028-cost-management"
     },
     {
       "id": "spec-029-observability",
@@ -695,7 +695,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-029-observability"
+      "path": "specs/feature/spec-029-observability"
     },
     {
       "id": "spec-029-performance-sla",
@@ -715,7 +715,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-029-performance-sla"
+      "path": "specs/feature/spec-029-performance-sla"
     },
     {
       "id": "spec-030-advanced-capabilities",
@@ -731,7 +731,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-030-advanced-capabilities"
+      "path": "specs/feature/spec-030-advanced-capabilities"
     },
     {
       "id": "spec-030-autoscaling",
@@ -751,7 +751,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-030-autoscaling"
+      "path": "specs/feature/spec-030-autoscaling"
     },
     {
       "id": "spec-031-e2e-testing",
@@ -771,7 +771,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-031-e2e-testing"
+      "path": "specs/feature/spec-031-e2e-testing"
     },
     {
       "id": "spec-031-ui-ux-complete",
@@ -788,7 +788,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-031-ui-ux-complete"
+      "path": "specs/feature/spec-031-ui-ux-complete"
     },
     {
       "id": "spec-032-agency-white-label",
@@ -804,7 +804,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-032-agency-white-label"
+      "path": "specs/feature/spec-032-agency-white-label"
     },
     {
       "id": "spec-032-load-testing",
@@ -824,7 +824,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-032-load-testing"
+      "path": "specs/feature/spec-032-load-testing"
     },
     {
       "id": "spec-033-integration-testing",
@@ -844,7 +844,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-033-integration-testing"
+      "path": "specs/feature/spec-033-integration-testing"
     },
     {
       "id": "spec-033-mobile-app-ios-android",
@@ -866,7 +866,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-033-mobile-app-ios-android"
+      "path": "specs/feature/spec-033-mobile-app-ios-android"
     },
     {
       "id": "spec-033-notification-system",
@@ -884,7 +884,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-033-notification-system"
+      "path": "specs/feature/spec-033-notification-system"
     },
     {
       "id": "spec-034-api-documentation",
@@ -904,7 +904,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-034-api-documentation"
+      "path": "specs/feature/spec-034-api-documentation"
     },
     {
       "id": "spec-034-built-in-agents",
@@ -930,7 +930,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-034-built-in-agents"
+      "path": "specs/feature/spec-034-built-in-agents"
     },
     {
       "id": "spec-035-deployment-ops",
@@ -950,7 +950,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-035-deployment-ops"
+      "path": "specs/feature/spec-035-deployment-ops"
     },
     {
       "id": "spec-035-line-integration",
@@ -967,7 +967,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-035-line-integration"
+      "path": "specs/feature/spec-035-line-integration"
     },
     {
       "id": "spec-036-event-management",
@@ -983,7 +983,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-036-event-management"
+      "path": "specs/feature/spec-036-event-management"
     },
     {
       "id": "spec-036-monitoring",
@@ -1003,7 +1003,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-036-monitoring"
+      "path": "specs/feature/spec-036-monitoring"
     },
     {
       "id": "spec-037-chat-history-system",
@@ -1023,7 +1023,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-037-chat-history-system"
+      "path": "specs/feature/spec-037-chat-history-system"
     },
     {
       "id": "spec-037-desktop-app",
@@ -1043,7 +1043,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-037-desktop-app"
+      "path": "specs/feature/spec-037-desktop-app"
     },
     {
       "id": "spec-037-mobile-app",
@@ -1059,7 +1059,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-037-mobile-app"
+      "path": "specs/feature/spec-037-mobile-app"
     },
     {
       "id": "spec-038-in-app-purchase",
@@ -1075,7 +1075,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-038-in-app-purchase"
+      "path": "specs/feature/spec-038-in-app-purchase"
     },
     {
       "id": "spec-039-mobile-push",
@@ -1091,7 +1091,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-039-mobile-push"
+      "path": "specs/feature/spec-039-mobile-push"
     },
     {
       "id": "spec-040-document-management",
@@ -1108,7 +1108,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-040-document-management"
+      "path": "specs/feature/spec-040-document-management"
     },
     {
       "id": "spec-041-mcp-universal-platform",
@@ -1124,7 +1124,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-041-mcp-universal-platform"
+      "path": "specs/feature/spec-041-mcp-universal-platform"
     },
     {
       "id": "spec-042-pin-biometric-auth",
@@ -1146,7 +1146,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-042-pin-biometric-auth"
+      "path": "specs/feature/spec-042-pin-biometric-auth"
     },
     {
       "id": "spec-043-workflow-builder",
@@ -1165,7 +1165,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-043-workflow-builder"
+      "path": "specs/feature/spec-043-workflow-builder"
     },
     {
       "id": "spec-044-multi-agent-collaboration",
@@ -1183,7 +1183,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/deprecated/spec-044-multi-agent-collaboration"
+      "path": "specs/deprecated/spec-044-multi-agent-collaboration"
     },
     {
       "id": "spec-047-ui-ux-enhancements",
@@ -1199,7 +1199,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-047-ui-ux-enhancements"
+      "path": "specs/feature/spec-047-ui-ux-enhancements"
     },
     {
       "id": "spec-048-workflow-enhancements",
@@ -1215,7 +1215,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-048-workflow-enhancements"
+      "path": "specs/feature/spec-048-workflow-enhancements"
     },
     {
       "id": "spec-049-enterprise-features",
@@ -1231,7 +1231,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-049-enterprise-features"
+      "path": "specs/feature/spec-049-enterprise-features"
     },
     {
       "id": "spec-050-billing-payment",
@@ -1248,7 +1248,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-050-billing-payment"
+      "path": "specs/feature/spec-050-billing-payment"
     },
     {
       "id": "spec-051-knowledge-management",
@@ -1265,7 +1265,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-051-knowledge-management"
+      "path": "specs/feature/spec-051-knowledge-management"
     },
     {
       "id": "spec-052-mobile-app-flutter-native",
@@ -1283,7 +1283,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-052-mobile-app-flutter-native"
+      "path": "specs/feature/spec-052-mobile-app-flutter-native"
     },
     {
       "id": "spec-053-integration-enhancements",
@@ -1301,7 +1301,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-053-integration-enhancements"
+      "path": "specs/feature/spec-053-integration-enhancements"
     },
     {
       "id": "spec-054-agent-templates",
@@ -1323,7 +1323,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-054-agent-templates"
+      "path": "specs/feature/spec-054-agent-templates"
     },
     {
       "id": "spec-054-plugin-architecture",
@@ -1341,7 +1341,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-054-plugin-architecture"
+      "path": "specs/feature/spec-054-plugin-architecture"
     },
     {
       "id": "spec-055-agent-version-control",
@@ -1363,7 +1363,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-055-agent-version-control"
+      "path": "specs/feature/spec-055-agent-version-control"
     },
     {
       "id": "spec-055-flow-orchestration",
@@ -1381,7 +1381,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-055-flow-orchestration"
+      "path": "specs/feature/spec-055-flow-orchestration"
     },
     {
       "id": "spec-056-agent-deployment-rollback",
@@ -1403,7 +1403,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-056-agent-deployment-rollback"
+      "path": "specs/feature/spec-056-agent-deployment-rollback"
     },
     {
       "id": "spec-056-visual-flow-builder",
@@ -1421,7 +1421,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-056-visual-flow-builder"
+      "path": "specs/feature/spec-056-visual-flow-builder"
     },
     {
       "id": "spec-057-visual-flow-ux-blueprint",
@@ -1439,7 +1439,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-057-visual-flow-ux-blueprint"
+      "path": "specs/feature/spec-057-visual-flow-ux-blueprint"
     },
     {
       "id": "spec-058-advanced-node-types",
@@ -1456,7 +1456,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-058-advanced-node-types"
+      "path": "specs/feature/spec-058-advanced-node-types"
     },
     {
       "id": "spec-058-agent-monitoring",
@@ -1478,7 +1478,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-058-agent-monitoring"
+      "path": "specs/feature/spec-058-agent-monitoring"
     },
     {
       "id": "spec-059-async-callback-extension",
@@ -1496,7 +1496,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-059-async-callback-extension"
+      "path": "specs/feature/spec-059-async-callback-extension"
     },
     {
       "id": "spec-060-agent-analytics",
@@ -1518,7 +1518,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-060-agent-analytics"
+      "path": "specs/feature/spec-060-agent-analytics"
     },
     {
       "id": "spec-060-security",
@@ -1535,7 +1535,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-060-security"
+      "path": "specs/feature/spec-060-security"
     },
     {
       "id": "spec-061-security-mcp",
@@ -1553,7 +1553,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-061-security-mcp"
+      "path": "specs/feature/spec-061-security-mcp"
     },
     {
       "id": "spec-062-voltagent-integration",
@@ -1571,7 +1571,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/deprecated/spec-062-voltagent-integration"
+      "path": "specs/deprecated/spec-062-voltagent-integration"
     },
     {
       "id": "spec-063-automation-triggers",
@@ -1589,7 +1589,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-063-automation-triggers"
+      "path": "specs/feature/spec-063-automation-triggers"
     },
     {
       "id": "spec-064-agent-marketplace",
@@ -1611,7 +1611,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-064-agent-marketplace"
+      "path": "specs/feature/spec-064-agent-marketplace"
     },
     {
       "id": "spec-064-universal-mcp-integration",
@@ -1630,7 +1630,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-064-universal-mcp-integration"
+      "path": "specs/feature/spec-064-universal-mcp-integration"
     },
     {
       "id": "spec-065-ai-avatar-live-chat",
@@ -1648,7 +1648,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-065-ai-avatar-live-chat"
+      "path": "specs/feature/spec-065-ai-avatar-live-chat"
     },
     {
       "id": "spec-066-security-compliance",
@@ -1667,7 +1667,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-066-security-compliance"
+      "path": "specs/feature/spec-066-security-compliance"
     },
     {
       "id": "spec-067-hitl-workflows-enhanced",
@@ -1683,7 +1683,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-067-hitl-workflows-enhanced"
+      "path": "specs/feature/spec-067-hitl-workflows-enhanced"
     },
     {
       "id": "spec-068-workflow-builder-enhanced",
@@ -1699,7 +1699,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-068-workflow-builder-enhanced"
+      "path": "specs/feature/spec-068-workflow-builder-enhanced"
     },
     {
       "id": "spec-069-mobile-app-flutter-native",
@@ -1716,7 +1716,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-069-mobile-app-flutter-native"
+      "path": "specs/feature/spec-069-mobile-app-flutter-native"
     },
     {
       "id": "spec-069-mobile-app-native-module-specs",
@@ -1736,7 +1736,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-069-mobile-app-native-module-specs"
+      "path": "specs/feature/spec-069-mobile-app-native-module-specs"
     },
     {
       "id": "spec-070-flow-automation-ecosystem",
@@ -1754,7 +1754,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-070-flow-automation-ecosystem"
+      "path": "specs/feature/spec-070-flow-automation-ecosystem"
     },
     {
       "id": "spec-071-builtin-flow-templates",
@@ -1770,7 +1770,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-071-builtin-flow-templates"
+      "path": "specs/feature/spec-071-builtin-flow-templates"
     },
     {
       "id": "spec-072-voltagent-integration",
@@ -1788,7 +1788,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/deprecated/spec-072-voltagent-integration"
+      "path": "specs/deprecated/spec-072-voltagent-integration"
     },
     {
       "id": "spec-072-voltagent-spec",
@@ -1809,7 +1809,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/deprecated/spec-072-voltagent-spec"
+      "path": "specs/deprecated/spec-072-voltagent-spec"
     },
     {
       "id": "spec-073-document-management",
@@ -1826,7 +1826,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-073-document-management"
+      "path": "specs/feature/spec-073-document-management"
     },
     {
       "id": "spec-074-cost-management-enhancements",
@@ -1842,7 +1842,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-074-cost-management-enhancements"
+      "path": "specs/feature/spec-074-cost-management-enhancements"
     },
     {
       "id": "spec-075-ai-model-management",
@@ -1859,7 +1859,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-075-ai-model-management"
+      "path": "specs/feature/spec-075-ai-model-management"
     },
     {
       "id": "spec-076-billing-system",
@@ -1876,7 +1876,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-076-billing-system"
+      "path": "specs/feature/spec-076-billing-system"
     },
     {
       "id": "spec-077-job-queue-integration",
@@ -1892,7 +1892,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-077-job-queue-integration"
+      "path": "specs/feature/spec-077-job-queue-integration"
     },
     {
       "id": "spec-078-windows-agent-tauri",
@@ -1915,7 +1915,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-078-windows-agent-tauri"
+      "path": "specs/feature/spec-078-windows-agent-tauri"
     },
     {
       "id": "spec-079-cloudflare-vector-integration",
@@ -1933,7 +1933,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-079-cloudflare-vector-integration"
+      "path": "specs/feature/spec-079-cloudflare-vector-integration"
     },
     {
       "id": "spec-080-analytics-tracking-ga4",
@@ -1952,7 +1952,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-080-analytics-tracking-ga4"
+      "path": "specs/feature/spec-080-analytics-tracking-ga4"
     },
     {
       "id": "spec-081-agent-monetization-marketplace",
@@ -1975,7 +1975,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-081-agent-monetization-marketplace"
+      "path": "specs/feature/spec-081-agent-monetization-marketplace"
     },
     {
       "id": "spec-082-docker-resource-scaling",
@@ -1993,7 +1993,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-082-docker-resource-scaling"
+      "path": "specs/feature/spec-082-docker-resource-scaling"
     },
     {
       "id": "spec-083-public-marketing-website",
@@ -2010,7 +2010,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-083-public-marketing-website"
+      "path": "specs/feature/spec-083-public-marketing-website"
     },
     {
       "id": "spec-084-http-request-node",
@@ -2029,7 +2029,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-084-http-request-node"
+      "path": "specs/feature/spec-084-http-request-node"
     },
     {
       "id": "spec-085-ai-workflow-copilot",
@@ -2048,7 +2048,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-085-ai-workflow-copilot"
+      "path": "specs/feature/spec-085-ai-workflow-copilot"
     },
     {
       "id": "spec-086-workflow-debugging-tools",
@@ -2066,7 +2066,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-086-workflow-debugging-tools"
+      "path": "specs/feature/spec-086-workflow-debugging-tools"
     },
     {
       "id": "spec-087-agent-analytics-dashboard",
@@ -2088,7 +2088,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-087-agent-analytics-dashboard"
+      "path": "specs/feature/spec-087-agent-analytics-dashboard"
     },
     {
       "id": "spec-087-floating-chat-widget",
@@ -2108,7 +2108,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-087-floating-chat-widget"
+      "path": "specs/feature/spec-087-floating-chat-widget"
     },
     {
       "id": "spec-088-agent-marketplace-ui",
@@ -2132,7 +2132,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-088-agent-marketplace-ui"
+      "path": "specs/feature/spec-088-agent-marketplace-ui"
     },
     {
       "id": "spec-088-canvas-editor",
@@ -2152,7 +2152,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-088-canvas-editor"
+      "path": "specs/feature/spec-088-canvas-editor"
     },
     {
       "id": "spec-089-user-profile-page",
@@ -2175,7 +2175,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-089-user-profile-page"
+      "path": "specs/feature/spec-089-user-profile-page"
     },
     {
       "id": "spec-089-widget-system",
@@ -2193,7 +2193,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-089-widget-system"
+      "path": "specs/feature/spec-089-widget-system"
     },
     {
       "id": "spec-090-billing-and-subscription-ui",
@@ -2210,7 +2210,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-090-billing-and-subscription-ui"
+      "path": "specs/feature/spec-090-billing-and-subscription-ui"
     },
     {
       "id": "spec-090-supabase-integration",
@@ -2230,7 +2230,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-090-supabase-integration"
+      "path": "specs/feature/spec-090-supabase-integration"
     },
     {
       "id": "spec-091-admin-dashboard-ui",
@@ -2247,7 +2247,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-091-admin-dashboard-ui"
+      "path": "specs/feature/spec-091-admin-dashboard-ui"
     },
     {
       "id": "spec-091-database-migration-tools",
@@ -2268,7 +2268,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-091-database-migration-tools"
+      "path": "specs/feature/spec-091-database-migration-tools"
     },
     {
       "id": "spec-092-external-agent-marketplace",
@@ -2292,7 +2292,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-092-external-agent-marketplace"
+      "path": "specs/feature/spec-092-external-agent-marketplace"
     },
     {
       "id": "spec-093-natural-language-workflow",
@@ -2310,7 +2310,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-093-natural-language-workflow"
+      "path": "specs/feature/spec-093-natural-language-workflow"
     },
     {
       "id": "spec-094-agent-collaboration",
@@ -2332,7 +2332,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-094-agent-collaboration"
+      "path": "specs/feature/spec-094-agent-collaboration"
     },
     {
       "id": "spec-094-app-builder-workflow-runtime",
@@ -2350,7 +2350,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-094-app-builder-workflow-runtime"
+      "path": "specs/feature/spec-094-app-builder-workflow-runtime"
     },
     {
       "id": "spec-095-context7-integration",
@@ -2367,7 +2367,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-095-context7-integration"
+      "path": "specs/feature/spec-095-context7-integration"
     },
     {
       "id": "spec-095-mcp-client-for-context7",
@@ -2387,7 +2387,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-095-mcp-client-for-context7"
+      "path": "specs/feature/spec-095-mcp-client-for-context7"
     },
     {
       "id": "spec-096-logging-observability-infrastructure",
@@ -2406,7 +2406,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-096-logging-observability-infrastructure"
+      "path": "specs/feature/spec-096-logging-observability-infrastructure"
     },
     {
       "id": "spec-097-audit-trail-system",
@@ -2425,7 +2425,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-097-audit-trail-system"
+      "path": "specs/feature/spec-097-audit-trail-system"
     },
     {
       "id": "spec-098-agent-security-scanning",
@@ -2447,7 +2447,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-098-agent-security-scanning"
+      "path": "specs/feature/spec-098-agent-security-scanning"
     },
     {
       "id": "spec-098-anomaly-detection-security",
@@ -2464,7 +2464,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-098-anomaly-detection-security"
+      "path": "specs/feature/spec-098-anomaly-detection-security"
     },
     {
       "id": "spec-099-office-suite-llm-first",
@@ -2483,7 +2483,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-099-office-suite-llm-first"
+      "path": "specs/feature/spec-099-office-suite-llm-first"
     },
     {
       "id": "spec-102-universal-agent-registry",
@@ -2507,7 +2507,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-102-universal-agent-registry"
+      "path": "specs/feature/spec-102-universal-agent-registry"
     },
     {
       "id": "spec-103-agent-discovery-service",
@@ -2529,7 +2529,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-103-agent-discovery-service"
+      "path": "specs/feature/spec-103-agent-discovery-service"
     },
     {
       "id": "spec-103-unified-permission-system",
@@ -2546,7 +2546,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-103-unified-permission-system"
+      "path": "specs/feature/spec-103-unified-permission-system"
     },
     {
       "id": "spec-104-document-management-system",
@@ -2564,7 +2564,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-104-document-management-system"
+      "path": "specs/feature/spec-104-document-management-system"
     },
     {
       "id": "spec-105-llm-orchestration-fallback",
@@ -2581,7 +2581,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/deprecated/spec-105-llm-orchestration-fallback"
+      "path": "specs/deprecated/spec-105-llm-orchestration-fallback"
     },
     {
       "id": "spec-106-llm-gateway-cost-management",
@@ -2603,7 +2603,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-106-llm-gateway-cost-management"
+      "path": "specs/feature/spec-106-llm-gateway-cost-management"
     },
     {
       "id": "spec-107-event-bus",
@@ -2625,7 +2625,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-107-event-bus"
+      "path": "specs/feature/spec-107-event-bus"
     },
     {
       "id": "spec-107-webhooks-event-system",
@@ -2642,7 +2642,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-107-webhooks-event-system"
+      "path": "specs/feature/spec-107-webhooks-event-system"
     },
     {
       "id": "spec-108-postgresql-database",
@@ -2664,7 +2664,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-108-postgresql-database"
+      "path": "specs/feature/spec-108-postgresql-database"
     },
     {
       "id": "spec-108-sdk-developer-tools",
@@ -2681,7 +2681,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-108-sdk-developer-tools"
+      "path": "specs/feature/spec-108-sdk-developer-tools"
     },
     {
       "id": "spec-108a-data-access-layer",
@@ -2703,7 +2703,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-108a-data-access-layer"
+      "path": "specs/feature/spec-108a-data-access-layer"
     },
     {
       "id": "spec-109-agent-testing-framework",
@@ -2726,7 +2726,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-109-agent-testing-framework"
+      "path": "specs/feature/spec-109-agent-testing-framework"
     },
     {
       "id": "spec-110-agent-templates-marketplace",
@@ -2751,7 +2751,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-110-agent-templates-marketplace"
+      "path": "specs/feature/spec-110-agent-templates-marketplace"
     },
     {
       "id": "spec-111-developer-experience-platform",
@@ -2769,7 +2769,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-111-developer-experience-platform"
+      "path": "specs/feature/spec-111-developer-experience-platform"
     },
     {
       "id": "spec-112-agent-recommendation-engine",
@@ -2794,7 +2794,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-112-agent-recommendation-engine"
+      "path": "specs/feature/spec-112-agent-recommendation-engine"
     },
     {
       "id": "spec-113-auto-docs-faq-system",
@@ -2812,7 +2812,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-113-auto-docs-faq-system"
+      "path": "specs/feature/spec-113-auto-docs-faq-system"
     },
     {
       "id": "spec-114-universal-output-generator",
@@ -2829,7 +2829,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-114-universal-output-generator"
+      "path": "specs/feature/spec-114-universal-output-generator"
     },
     {
       "id": "spec-115-standalone-webapp-generator",
@@ -2846,7 +2846,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-115-standalone-webapp-generator"
+      "path": "specs/feature/spec-115-standalone-webapp-generator"
     },
     {
       "id": "spec-116-agent-composition-orchestration",
@@ -2864,7 +2864,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/deprecated/spec-116-agent-composition-orchestration"
+      "path": "specs/deprecated/spec-116-agent-composition-orchestration"
     },
     {
       "id": "spec-117-google-workspace-agents",
@@ -2888,7 +2888,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-117-google-workspace-agents"
+      "path": "specs/feature/spec-117-google-workspace-agents"
     },
     {
       "id": "spec-118-notion-agent-system",
@@ -2911,7 +2911,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-118-notion-agent-system"
+      "path": "specs/feature/spec-118-notion-agent-system"
     },
     {
       "id": "spec-119-bookmark-manager",
@@ -2931,7 +2931,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-119-bookmark-manager"
+      "path": "specs/feature/spec-119-bookmark-manager"
     },
     {
       "id": "spec-120-mcp-agent-access",
@@ -2954,7 +2954,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/supporting/spec-120-mcp-agent-access"
+      "path": "specs/supporting/spec-120-mcp-agent-access"
     },
     {
       "id": "spec-121-chat-service",
@@ -2974,7 +2974,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/core/spec-121-chat-service"
+      "path": "specs/core/spec-121-chat-service"
     },
     {
       "id": "spec-122-external-platform-integration",
@@ -2994,7 +2994,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-122-external-platform-integration"
+      "path": "specs/feature/spec-122-external-platform-integration"
     },
     {
       "id": "spec-123-async-job-processing-service",
@@ -3014,7 +3014,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-123-async-job-processing-service"
+      "path": "specs/feature/spec-123-async-job-processing-service"
     },
     {
       "id": "spec-124-webhook-handler-service",
@@ -3034,7 +3034,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-124-webhook-handler-service"
+      "path": "specs/feature/spec-124-webhook-handler-service"
     },
     {
       "id": "spec-127-plugin-configuration-service",
@@ -3054,7 +3054,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-127-plugin-configuration-service"
+      "path": "specs/feature/spec-127-plugin-configuration-service"
     },
     {
       "id": "spec-128-admin-plugin-configuration-ui",
@@ -3075,7 +3075,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-128-admin-plugin-configuration-ui"
+      "path": "specs/feature/spec-128-admin-plugin-configuration-ui"
     },
     {
       "id": "spec-129-voice-authentication",
@@ -3094,7 +3094,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-129-voice-authentication"
+      "path": "specs/feature/spec-129-voice-authentication"
     },
     {
       "id": "spec-130-accessibility-voice-control",
@@ -3112,7 +3112,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-130-accessibility-voice-control"
+      "path": "specs/feature/spec-130-accessibility-voice-control"
     },
     {
       "id": "spec-130-system-prompt-management",
@@ -3128,7 +3128,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-130-system-prompt-management"
+      "path": "specs/feature/spec-130-system-prompt-management"
     },
     {
       "id": "spec-131-personal-rag-mcp",
@@ -3147,7 +3147,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-131-personal-rag-mcp"
+      "path": "specs/feature/spec-131-personal-rag-mcp"
     },
     {
       "id": "spec-135-code-execution-workspace",
@@ -3167,7 +3167,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-135-code-execution-workspace"
+      "path": "specs/feature/spec-135-code-execution-workspace"
     },
     {
       "id": "spec-140-video-ai-platform",
@@ -3190,7 +3190,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-140-video-ai-platform"
+      "path": "specs/feature/spec-140-video-ai-platform"
     },
     {
       "id": "spec-141-ai-quality-layer",
@@ -3210,7 +3210,7 @@
       "tags": [
         "ai"
       ],
-      "path": "specs/specs/feature/spec-141-ai-quality-layer"
+      "path": "specs/feature/spec-141-ai-quality-layer"
     },
     {
       "id": "spec-142-rust-worker",
@@ -3228,7 +3228,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-142-rust-worker"
+      "path": "specs/feature/spec-142-rust-worker"
     },
     {
       "id": "spec-142-video-asset-management",
@@ -3250,7 +3250,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-142-video-asset-management"
+      "path": "specs/feature/spec-142-video-asset-management"
     },
     {
       "id": "spec-143-video-qc",
@@ -3268,7 +3268,7 @@
       "tags": [
         "ai"
       ],
-      "path": "specs/specs/feature/spec-143-video-qc"
+      "path": "specs/feature/spec-143-video-qc"
     },
     {
       "id": "spec-144-style-engine",
@@ -3286,7 +3286,7 @@
       "tags": [
         "ai"
       ],
-      "path": "specs/specs/feature/spec-144-style-engine"
+      "path": "specs/feature/spec-144-style-engine"
     },
     {
       "id": "spec-145-identity",
@@ -3305,7 +3305,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-145-identity"
+      "path": "specs/feature/spec-145-identity"
     },
     {
       "id": "spec-150-video-production",
@@ -3324,7 +3324,7 @@
       "tags": [
         "ai"
       ],
-      "path": "specs/specs/feature/spec-150-video-production"
+      "path": "specs/feature/spec-150-video-production"
     },
     {
       "id": "spec-160-advanced-timeline-editor",
@@ -3341,7 +3341,7 @@
       "tags": [
         "ai"
       ],
-      "path": "specs/specs/feature/spec-160-advanced-timeline-editor"
+      "path": "specs/feature/spec-160-advanced-timeline-editor"
     },
     {
       "id": "spec-161-real-time-collaboration",
@@ -3360,7 +3360,7 @@
         "auth",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-161-real-time-collaboration"
+      "path": "specs/feature/spec-161-real-time-collaboration"
     },
     {
       "id": "spec-163-transitions-effects",
@@ -3377,7 +3377,7 @@
       "tags": [
         "ai"
       ],
-      "path": "specs/specs/feature/spec-163-transitions-effects"
+      "path": "specs/feature/spec-163-transitions-effects"
     },
     {
       "id": "spec-164-advanced-audio",
@@ -3397,7 +3397,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-164-advanced-audio"
+      "path": "specs/feature/spec-164-advanced-audio"
     },
     {
       "id": "spec-165-export-delivery",
@@ -3416,7 +3416,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/feature/spec-165-export-delivery"
+      "path": "specs/feature/spec-165-export-delivery"
     },
     {
       "id": "spec-166-performance-optimization",
@@ -3433,7 +3433,7 @@
       "tags": [
         "ai"
       ],
-      "path": "specs/specs/feature/spec-166-performance-optimization"
+      "path": "specs/feature/spec-166-performance-optimization"
     },
     {
       "id": "spec-167-plugin-registry",
@@ -3453,7 +3453,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-167-plugin-registry"
+      "path": "specs/feature/spec-167-plugin-registry"
     },
     {
       "id": "spec-168-personal-secretary",
@@ -3473,7 +3473,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-168-personal-secretary"
+      "path": "specs/feature/spec-168-personal-secretary"
     },
     {
       "id": "spec-169-auto-dubbing",
@@ -3493,7 +3493,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-169-auto-dubbing"
+      "path": "specs/feature/spec-169-auto-dubbing"
     },
     {
       "id": "spec-170-storyboard-structure",
@@ -3513,7 +3513,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-170-storyboard-structure"
+      "path": "specs/feature/spec-170-storyboard-structure"
     },
     {
       "id": "spec-171-storyboard-generator",
@@ -3533,7 +3533,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-171-storyboard-generator"
+      "path": "specs/feature/spec-171-storyboard-generator"
     },
     {
       "id": "spec-172-prompt-templates-system",
@@ -3553,7 +3553,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-172-prompt-templates-system"
+      "path": "specs/feature/spec-172-prompt-templates-system"
     },
     {
       "id": "spec-173-agent-reflection-system",
@@ -3574,7 +3574,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-173-agent-reflection-system"
+      "path": "specs/feature/spec-173-agent-reflection-system"
     },
     {
       "id": "spec-174-ai-showcase-gallery",
@@ -3594,7 +3594,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-174-ai-showcase-gallery"
+      "path": "specs/feature/spec-174-ai-showcase-gallery"
     },
     {
       "id": "spec-175-agentkit-workflow-node",
@@ -3615,7 +3615,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-175-agentkit-workflow-node"
+      "path": "specs/feature/spec-175-agentkit-workflow-node"
     },
     {
       "id": "spec-176-agent-network-management",
@@ -3636,7 +3636,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-176-agent-network-management"
+      "path": "specs/feature/spec-176-agent-network-management"
     },
     {
       "id": "spec-177-agent-designer-visual-workflow",
@@ -3657,7 +3657,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-177-agent-designer-visual-workflow"
+      "path": "specs/feature/spec-177-agent-designer-visual-workflow"
     },
     {
       "id": "spec-178-marketplace-agentkit-networks",
@@ -3678,7 +3678,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/feature/spec-178-marketplace-agentkit-networks"
+      "path": "specs/feature/spec-178-marketplace-agentkit-networks"
     },
     {
       "id": "spec-core-001-authentication",
@@ -3698,7 +3698,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/core/spec-core-001-authentication"
+      "path": "specs/core/spec-core-001-authentication"
     },
     {
       "id": "spec-core-002-authorization",
@@ -3721,7 +3721,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/core/spec-core-002-authorization"
+      "path": "specs/core/spec-core-002-authorization"
     },
     {
       "id": "spec-core-003-audit-logging",
@@ -3747,7 +3747,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/core/spec-core-003-audit-logging"
+      "path": "specs/core/spec-core-003-audit-logging"
     },
     {
       "id": "spec-core-004-rate-limiting",
@@ -3770,7 +3770,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/core/spec-core-004-rate-limiting"
+      "path": "specs/core/spec-core-004-rate-limiting"
     },
     {
       "id": "spec-int-001-gmail-integration",
@@ -3790,7 +3790,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/integration/spec-int-001-gmail-integration"
+      "path": "specs/integration/spec-int-001-gmail-integration"
     },
     {
       "id": "spec-int-002-google-calendar-integration",
@@ -3810,7 +3810,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/integration/spec-int-002-google-calendar-integration"
+      "path": "specs/integration/spec-int-002-google-calendar-integration"
     },
     {
       "id": "spec-int-003-telegram-bot-integration",
@@ -3830,7 +3830,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/integration/spec-int-003-telegram-bot-integration"
+      "path": "specs/integration/spec-int-003-telegram-bot-integration"
     },
     {
       "id": "spec-int-004-slack-integration",
@@ -3850,7 +3850,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/integration/spec-int-004-slack-integration"
+      "path": "specs/integration/spec-int-004-slack-integration"
     },
     {
       "id": "spec-int-005-agentkit-bridge-service",
@@ -3871,7 +3871,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/integration/spec-int-005-agentkit-bridge-service"
+      "path": "specs/integration/spec-int-005-agentkit-bridge-service"
     },
     {
       "id": "spec-maui-001-minimal-agentic-ui",
@@ -3893,7 +3893,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/core/spec-maui-001-minimal-agentic-ui"
+      "path": "specs/core/spec-maui-001-minimal-agentic-ui"
     },
     {
       "id": "spec-ui-000-master-architecture",
@@ -3913,7 +3913,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-000-master-architecture"
+      "path": "specs/ui/spec-ui-000-master-architecture"
     },
     {
       "id": "spec-ui-001-authentication",
@@ -3933,7 +3933,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-001-authentication"
+      "path": "specs/ui/spec-ui-001-authentication"
     },
     {
       "id": "spec-ui-002-user-management",
@@ -3955,7 +3955,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-002-user-management"
+      "path": "specs/ui/spec-ui-002-user-management"
     },
     {
       "id": "spec-ui-003-access-control",
@@ -3973,7 +3973,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-003-access-control"
+      "path": "specs/ui/spec-ui-003-access-control"
     },
     {
       "id": "spec-ui-006-ai-integration",
@@ -3990,7 +3990,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-006-ai-integration"
+      "path": "specs/ui/spec-ui-006-ai-integration"
     },
     {
       "id": "spec-ui-007-infrastructure",
@@ -4007,7 +4007,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-007-infrastructure"
+      "path": "specs/ui/spec-ui-007-infrastructure"
     },
     {
       "id": "spec-ui-008-analytics",
@@ -4024,7 +4024,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-008-analytics"
+      "path": "specs/ui/spec-ui-008-analytics"
     },
     {
       "id": "spec-ui-009-general-ui-guidelines",
@@ -4040,7 +4040,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-009-general-ui-guidelines"
+      "path": "specs/ui/spec-ui-009-general-ui-guidelines"
     },
     {
       "id": "spec-ui-010-ui-component-library",
@@ -4056,7 +4056,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-010-ui-component-library"
+      "path": "specs/ui/spec-ui-010-ui-component-library"
     },
     {
       "id": "spec-ui-016-frontend-ui",
@@ -4074,7 +4074,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-016-frontend-ui"
+      "path": "specs/ui/spec-ui-016-frontend-ui"
     },
     {
       "id": "spec-ui-017-design-system",
@@ -4094,7 +4094,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-017-design-system"
+      "path": "specs/ui/spec-ui-017-design-system"
     },
     {
       "id": "spec-ui-019-voice-platform",
@@ -4111,7 +4111,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-019-voice-platform"
+      "path": "specs/ui/spec-ui-019-voice-platform"
     },
     {
       "id": "spec-ui-020-monitoring-observability",
@@ -4129,7 +4129,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-020-monitoring-observability"
+      "path": "specs/ui/spec-ui-020-monitoring-observability"
     },
     {
       "id": "spec-ui-022-deployment-pipeline",
@@ -4145,7 +4145,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-022-deployment-pipeline"
+      "path": "specs/ui/spec-ui-022-deployment-pipeline"
     },
     {
       "id": "spec-ui-024-infrastructure-as-code",
@@ -4161,7 +4161,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-024-infrastructure-as-code"
+      "path": "specs/ui/spec-ui-024-infrastructure-as-code"
     },
     {
       "id": "spec-ui-025-llm-cost-analytics",
@@ -4178,7 +4178,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-025-llm-cost-analytics"
+      "path": "specs/ui/spec-ui-025-llm-cost-analytics"
     },
     {
       "id": "spec-ui-028-cost-management",
@@ -4194,7 +4194,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-028-cost-management"
+      "path": "specs/ui/spec-ui-028-cost-management"
     },
     {
       "id": "spec-ui-031-ui-ux-complete",
@@ -4211,7 +4211,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-031-ui-ux-complete"
+      "path": "specs/ui/spec-ui-031-ui-ux-complete"
     },
     {
       "id": "spec-ui-033-notification-system",
@@ -4229,7 +4229,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-033-notification-system"
+      "path": "specs/ui/spec-ui-033-notification-system"
     },
     {
       "id": "spec-ui-034-built-in-agents",
@@ -4252,7 +4252,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-034-built-in-agents"
+      "path": "specs/ui/spec-ui-034-built-in-agents"
     },
     {
       "id": "spec-ui-037-desktop-app",
@@ -4272,7 +4272,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-037-desktop-app"
+      "path": "specs/ui/spec-ui-037-desktop-app"
     },
     {
       "id": "spec-ui-039-mobile-push",
@@ -4288,7 +4288,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-039-mobile-push"
+      "path": "specs/ui/spec-ui-039-mobile-push"
     },
     {
       "id": "spec-ui-042-pin-biometric-auth",
@@ -4310,7 +4310,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-042-pin-biometric-auth"
+      "path": "specs/ui/spec-ui-042-pin-biometric-auth"
     },
     {
       "id": "spec-ui-043-workflow-builder",
@@ -4329,7 +4329,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-043-workflow-builder"
+      "path": "specs/ui/spec-ui-043-workflow-builder"
     },
     {
       "id": "spec-ui-047-ui-ux-enhancements",
@@ -4345,7 +4345,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-047-ui-ux-enhancements"
+      "path": "specs/ui/spec-ui-047-ui-ux-enhancements"
     },
     {
       "id": "spec-ui-048-workflow-enhancements",
@@ -4361,7 +4361,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-048-workflow-enhancements"
+      "path": "specs/ui/spec-ui-048-workflow-enhancements"
     },
     {
       "id": "spec-ui-049-enterprise-features",
@@ -4377,7 +4377,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-049-enterprise-features"
+      "path": "specs/ui/spec-ui-049-enterprise-features"
     },
     {
       "id": "spec-ui-051-knowledge-management",
@@ -4394,7 +4394,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-051-knowledge-management"
+      "path": "specs/ui/spec-ui-051-knowledge-management"
     },
     {
       "id": "spec-ui-053-integration-enhancements",
@@ -4412,7 +4412,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-053-integration-enhancements"
+      "path": "specs/ui/spec-ui-053-integration-enhancements"
     },
     {
       "id": "spec-ui-056-visual-flow-builder",
@@ -4430,7 +4430,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-056-visual-flow-builder"
+      "path": "specs/ui/spec-ui-056-visual-flow-builder"
     },
     {
       "id": "spec-ui-065-ai-avatar-live-chat",
@@ -4448,7 +4448,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-065-ai-avatar-live-chat"
+      "path": "specs/ui/spec-ui-065-ai-avatar-live-chat"
     },
     {
       "id": "spec-ui-066-security-compliance",
@@ -4467,7 +4467,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-066-security-compliance"
+      "path": "specs/ui/spec-ui-066-security-compliance"
     },
     {
       "id": "spec-ui-067-hitl-workflows-enhanced",
@@ -4483,7 +4483,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-067-hitl-workflows-enhanced"
+      "path": "specs/ui/spec-ui-067-hitl-workflows-enhanced"
     },
     {
       "id": "spec-ui-068-workflow-builder-enhanced",
@@ -4499,7 +4499,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-068-workflow-builder-enhanced"
+      "path": "specs/ui/spec-ui-068-workflow-builder-enhanced"
     },
     {
       "id": "spec-ui-069-mobile-app-flutter-native",
@@ -4516,7 +4516,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-069-mobile-app-flutter-native"
+      "path": "specs/ui/spec-ui-069-mobile-app-flutter-native"
     },
     {
       "id": "spec-ui-071-builtin-flow-templates",
@@ -4532,7 +4532,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-071-builtin-flow-templates"
+      "path": "specs/ui/spec-ui-071-builtin-flow-templates"
     },
     {
       "id": "spec-ui-074-cost-management-enhancements",
@@ -4548,7 +4548,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-074-cost-management-enhancements"
+      "path": "specs/ui/spec-ui-074-cost-management-enhancements"
     },
     {
       "id": "spec-ui-077-job-queue-integration",
@@ -4564,7 +4564,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-077-job-queue-integration"
+      "path": "specs/ui/spec-ui-077-job-queue-integration"
     },
     {
       "id": "spec-ui-080-analytics-tracking-ga4",
@@ -4583,7 +4583,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-080-analytics-tracking-ga4"
+      "path": "specs/ui/spec-ui-080-analytics-tracking-ga4"
     },
     {
       "id": "spec-ui-083-public-marketing-website",
@@ -4600,7 +4600,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-083-public-marketing-website"
+      "path": "specs/ui/spec-ui-083-public-marketing-website"
     },
     {
       "id": "spec-ui-084-http-request-node",
@@ -4619,7 +4619,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-084-http-request-node"
+      "path": "specs/ui/spec-ui-084-http-request-node"
     },
     {
       "id": "spec-ui-085-ai-workflow-copilot",
@@ -4638,7 +4638,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-085-ai-workflow-copilot"
+      "path": "specs/ui/spec-ui-085-ai-workflow-copilot"
     },
     {
       "id": "spec-ui-086-workflow-debugging-tools",
@@ -4656,7 +4656,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-086-workflow-debugging-tools"
+      "path": "specs/ui/spec-ui-086-workflow-debugging-tools"
     },
     {
       "id": "spec-ui-087-floating-chat-widget",
@@ -4676,7 +4676,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-087-floating-chat-widget"
+      "path": "specs/ui/spec-ui-087-floating-chat-widget"
     },
     {
       "id": "spec-ui-088-agent-marketplace-ui",
@@ -4700,7 +4700,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-088-agent-marketplace-ui"
+      "path": "specs/ui/spec-ui-088-agent-marketplace-ui"
     },
     {
       "id": "spec-ui-089-user-profile-page",
@@ -4723,7 +4723,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-089-user-profile-page"
+      "path": "specs/ui/spec-ui-089-user-profile-page"
     },
     {
       "id": "spec-ui-090-billing-and-subscription-ui",
@@ -4746,7 +4746,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-090-billing-and-subscription-ui"
+      "path": "specs/ui/spec-ui-090-billing-and-subscription-ui"
     },
     {
       "id": "spec-ui-091-admin-dashboard-ui",
@@ -4763,7 +4763,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-091-admin-dashboard-ui"
+      "path": "specs/ui/spec-ui-091-admin-dashboard-ui"
     },
     {
       "id": "spec-ui-092-chat-image-upload",
@@ -4783,7 +4783,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-092-chat-image-upload"
+      "path": "specs/ui/spec-ui-092-chat-image-upload"
     },
     {
       "id": "spec-ui-094-app-builder-workflow-runtime",
@@ -4801,7 +4801,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-094-app-builder-workflow-runtime"
+      "path": "specs/ui/spec-ui-094-app-builder-workflow-runtime"
     },
     {
       "id": "spec-ui-095-context7-integration",
@@ -4818,7 +4818,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-095-context7-integration"
+      "path": "specs/ui/spec-ui-095-context7-integration"
     },
     {
       "id": "spec-ui-099-office-suite-llm-first",
@@ -4837,7 +4837,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-099-office-suite-llm-first"
+      "path": "specs/ui/spec-ui-099-office-suite-llm-first"
     },
     {
       "id": "spec-ui-105-llm-orchestration-fallback",
@@ -4854,7 +4854,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-105-llm-orchestration-fallback"
+      "path": "specs/ui/spec-ui-105-llm-orchestration-fallback"
     },
     {
       "id": "spec-ui-109-agent-testing-framework",
@@ -4877,7 +4877,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-109-agent-testing-framework"
+      "path": "specs/ui/spec-ui-109-agent-testing-framework"
     },
     {
       "id": "spec-ui-111-developer-experience-platform",
@@ -4895,7 +4895,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-111-developer-experience-platform"
+      "path": "specs/ui/spec-ui-111-developer-experience-platform"
     },
     {
       "id": "spec-ui-113-auto-docs-faq-system",
@@ -4913,7 +4913,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-113-auto-docs-faq-system"
+      "path": "specs/ui/spec-ui-113-auto-docs-faq-system"
     },
     {
       "id": "spec-ui-114-universal-output-generator",
@@ -4930,7 +4930,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-114-universal-output-generator"
+      "path": "specs/ui/spec-ui-114-universal-output-generator"
     },
     {
       "id": "spec-ui-115-standalone-webapp-generator",
@@ -4947,7 +4947,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-115-standalone-webapp-generator"
+      "path": "specs/ui/spec-ui-115-standalone-webapp-generator"
     },
     {
       "id": "spec-ui-116-agent-composition-orchestration",
@@ -4971,7 +4971,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-116-agent-composition-orchestration"
+      "path": "specs/ui/spec-ui-116-agent-composition-orchestration"
     },
     {
       "id": "spec-ui-118-notion-agent-system",
@@ -4995,7 +4995,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-118-notion-agent-system"
+      "path": "specs/ui/spec-ui-118-notion-agent-system"
     },
     {
       "id": "spec-ui-128-admin-plugin-configuration-ui",
@@ -5016,7 +5016,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-128-admin-plugin-configuration-ui"
+      "path": "specs/ui/spec-ui-128-admin-plugin-configuration-ui"
     },
     {
       "id": "spec-ui-129-custom-integration-nodes",
@@ -5036,7 +5036,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-129-custom-integration-nodes"
+      "path": "specs/ui/spec-ui-129-custom-integration-nodes"
     },
     {
       "id": "spec-ui-129-voice-authentication",
@@ -5060,7 +5060,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-129-voice-authentication"
+      "path": "specs/ui/spec-ui-129-voice-authentication"
     },
     {
       "id": "spec-ui-130-accessibility-voice-control",
@@ -5078,7 +5078,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-130-accessibility-voice-control"
+      "path": "specs/ui/spec-ui-130-accessibility-voice-control"
     },
     {
       "id": "spec-ui-130-advanced-hitl-nodes",
@@ -5098,7 +5098,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-130-advanced-hitl-nodes"
+      "path": "specs/ui/spec-ui-130-advanced-hitl-nodes"
     },
     {
       "id": "spec-ui-131-personal-rag-mcp",
@@ -5117,7 +5117,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-131-personal-rag-mcp"
+      "path": "specs/ui/spec-ui-131-personal-rag-mcp"
     },
     {
       "id": "spec-ui-131-workflow-viewer",
@@ -5137,7 +5137,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-131-workflow-viewer"
+      "path": "specs/ui/spec-ui-131-workflow-viewer"
     },
     {
       "id": "spec-ui-135-code-execution-workspace",
@@ -5157,7 +5157,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-135-code-execution-workspace"
+      "path": "specs/ui/spec-ui-135-code-execution-workspace"
     },
     {
       "id": "spec-ui-140-video-ai-platform",
@@ -5180,7 +5180,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-140-video-ai-platform"
+      "path": "specs/ui/spec-ui-140-video-ai-platform"
     },
     {
       "id": "spec-ui-160-advanced-timeline-editor",
@@ -5197,7 +5197,7 @@
       "tags": [
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-160-advanced-timeline-editor"
+      "path": "specs/ui/spec-ui-160-advanced-timeline-editor"
     },
     {
       "id": "spec-ui-161-real-time-collaboration",
@@ -5216,7 +5216,7 @@
         "auth",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-161-real-time-collaboration"
+      "path": "specs/ui/spec-ui-161-real-time-collaboration"
     },
     {
       "id": "spec-ui-163-transitions-effects",
@@ -5233,7 +5233,7 @@
       "tags": [
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-163-transitions-effects"
+      "path": "specs/ui/spec-ui-163-transitions-effects"
     },
     {
       "id": "spec-ui-164-advanced-audio",
@@ -5253,7 +5253,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-164-advanced-audio"
+      "path": "specs/ui/spec-ui-164-advanced-audio"
     },
     {
       "id": "spec-ui-165-export-delivery",
@@ -5272,7 +5272,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-165-export-delivery"
+      "path": "specs/ui/spec-ui-165-export-delivery"
     },
     {
       "id": "spec-ui-166-performance-optimization",
@@ -5289,7 +5289,7 @@
       "tags": [
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-166-performance-optimization"
+      "path": "specs/ui/spec-ui-166-performance-optimization"
     },
     {
       "id": "spec-ui-167-plugin-registry",
@@ -5309,7 +5309,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-167-plugin-registry"
+      "path": "specs/ui/spec-ui-167-plugin-registry"
     },
     {
       "id": "spec-ui-168-showcase-gallery-ui",
@@ -5329,7 +5329,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-168-showcase-gallery-ui"
+      "path": "specs/ui/spec-ui-168-showcase-gallery-ui"
     },
     {
       "id": "spec-ui-169-generation-studio-ui",
@@ -5349,7 +5349,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-169-generation-studio-ui"
+      "path": "specs/ui/spec-ui-169-generation-studio-ui"
     },
     {
       "id": "spec-ui-170-storyboard-structure",
@@ -5370,7 +5370,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-170-storyboard-structure"
+      "path": "specs/ui/spec-ui-170-storyboard-structure"
     },
     {
       "id": "spec-ui-171-storyboard-generator",
@@ -5391,7 +5391,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-171-storyboard-generator"
+      "path": "specs/ui/spec-ui-171-storyboard-generator"
     },
     {
       "id": "spec-ui-172-prompt-templates-system",
@@ -5413,7 +5413,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-172-prompt-templates-system"
+      "path": "specs/ui/spec-ui-172-prompt-templates-system"
     },
     {
       "id": "spec-ui-174-auto-generated-agent-ui",
@@ -5435,7 +5435,7 @@
         "agent",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-174-auto-generated-agent-ui"
+      "path": "specs/ui/spec-ui-174-auto-generated-agent-ui"
     },
     {
       "id": "spec-ui-175-canvas-editor-artifacts",
@@ -5453,7 +5453,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-175-canvas-editor-artifacts"
+      "path": "specs/ui/spec-ui-175-canvas-editor-artifacts"
     },
     {
       "id": "spec-ui-176-document-editor",
@@ -5471,7 +5471,7 @@
         "ai",
         "database"
       ],
-      "path": "specs/specs/ui/spec-ui-176-document-editor"
+      "path": "specs/ui/spec-ui-176-document-editor"
     },
     {
       "id": "spec-ui-component-library",
@@ -5491,7 +5491,7 @@
         "ui",
         "ai"
       ],
-      "path": "specs/specs/ui/spec-ui-component-library"
+      "path": "specs/ui/spec-ui-component-library"
     }
   ]
 }

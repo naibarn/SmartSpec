@@ -72,9 +72,9 @@ Profiles define the **template structure**, **mandatory sections**, and **valida
 
 ### Choose a profile
 ```
-/spec create financial
-/spec update financial
+/smartspec_generate_spec.md
 ```
+Then select the desired profile (basic, backend-service, financial, or full) when prompted.
 
 ---
 
@@ -92,8 +92,9 @@ Domains add specialized content to SPECs.
 
 ### How to apply
 ```
-/spec create financial --domain=fintech
+/smartspec_generate_spec.md
 ```
+Then specify the domain (fintech, healthcare, iot, ai, realtime, batch, or internal) when prompted.
 
 ---
 
@@ -127,17 +128,16 @@ V5 allows flexible DI patterns.
 - `--di=full` → full DI pattern with interfaces & examples
 
 ### Example
-```
-/spec update full --di=auto
-```
+Run `/smartspec_generate_spec.md` and specify DI mode (none, minimal, auto, or full) when prompted.
 
 ---
 
 # 🛡️ 8. Security Modes
-```
---security=stride-basic
---security=stride-full
-```
+Available modes:
+- `stride-basic` → basic security coverage
+- `stride-full` → comprehensive security coverage
+
+Run `/smartspec_generate_spec.md` and specify security mode when prompted.
 
 `stride-full` includes:
 - full threat table
@@ -148,10 +148,11 @@ V5 allows flexible DI patterns.
 ---
 
 # 🚀 9. Performance Modes
-```
---performance=basic
---performance=full
-```
+Available modes:
+- `basic` → basic performance requirements
+- `full` → comprehensive performance requirements
+
+Run `/smartspec_generate_spec.md` and specify performance mode when prompted.
 
 `performance=full` adds:
 - P50 / P95 / P99 targets
@@ -189,11 +190,9 @@ SmartSpec V5 uses two config layers.
 ---
 
 # 📦 11. Compact Mode
-For minimal SPECs:
-```
-/spec create financial --mode=compact
-```
-Removes:
+For minimal SPECs, run `/smartspec_generate_spec.md` and specify compact mode when prompted.
+
+Compact mode removes:
 - examples
 - deep STRIDE details
 - implementation guides
@@ -207,12 +206,12 @@ Useful for:
 # 📜 12. Force Update System
 Used when SPEC sections became outdated.
 
-Examples:
-```
-/spec update full --force-update=stride
-/spec update financial --force-update=performance,config
-/spec update full --force-update=all
-```
+To force update specific sections:
+1. Run `/smartspec_generate_spec.md`
+2. Specify force-update options when prompted:
+   - `stride` → update security section only
+   - `performance,config` → update multiple sections
+   - `all` → update all sections
 
 ---
 
@@ -244,10 +243,9 @@ SmartSpec V5 preserves V4 behavior but adds stricter defaults.
 - validation engine
 
 ### Update older SPECs
-```
-/spec upgrade v5
-```
-Adds missing:
+Run `/smartspec_generate_spec.md` with your existing SPEC to upgrade to V5 format.
+
+This adds missing:
 - Non‑Goals
 - Domain content
 - Performance requirements
@@ -256,25 +254,43 @@ Adds missing:
 ---
 
 # 🛠️ 15. Workflow Summary
-SmartSpec V5 ships with three main workflows.
+SmartSpec V5 ships with six main workflows.
 
 ### 1) Generate SPEC
 ```
-/spec create <profile> --domain=<domain>
+/smartspec_generate_spec.md
 ```
 Outputs a new SmartSpec v5‑format SPEC.
 
-### 2) Generate Tasks
+### 2) Generate Plan
 ```
-/spec tasks <path>
+/smartspec_generate_plan.md
+```
+Generates project plan from requirements.
+
+### 3) Generate Tasks
+```
+/smartspec_generate_tasks.md
 ```
 Converts SPEC → tasks.md
 
-### 3) Generate Kilo Prompt
+### 4) Generate Kilo Prompt
 ```
-/spec kilo <path>
+/smartspec_generate_kilo_prompt.md
 ```
 Converts tasks.md → kilo prompt with full safety constraints.
+
+### 5) Sync SPEC and Tasks
+```
+/smartspec_sync_spec_tasks.md
+```
+Synchronizes SPEC with tasks.md to ensure consistency.
+
+### 6) Verify Tasks Progress
+```
+/smartspec_verify_tasks_progress.md
+```
+Verifies and tracks progress of implementation tasks.
 
 ---
 
@@ -294,30 +310,47 @@ Includes:
 # 🧪 17. Example Usage
 ### Create a fintech SPEC
 ```
-/spec create financial --domain=fintech --security=stride-full --performance=full
+/smartspec_generate_spec.md
 ```
+Then specify: financial profile, fintech domain, stride-full security, full performance
 
-### Update a SPEC with strict validation
+### Generate project plan
 ```
-/spec update full --force-update=config,performance
+/smartspec_generate_plan.md
 ```
+Creates structured project plan from requirements.
 
 ### Generate tasks from SPEC
 ```
-/spec tasks specs/feature/spec-004-financial-system/spec.md
+/smartspec_generate_tasks.md
 ```
+Input: specs/feature/spec-004-financial-system/spec.md
 
 ### Generate Kilo Code prompt
 ```
-/spec kilo specs/feature/spec-004-financial-system/tasks.md
+/smartspec_generate_kilo_prompt.md
 ```
+Input: specs/feature/spec-004-financial-system/tasks.md
+
+### Sync SPEC with tasks
+```
+/smartspec_sync_spec_tasks.md
+```
+Ensures SPEC and tasks.md are synchronized.
+
+### Verify implementation progress
+```
+/smartspec_verify_tasks_progress.md
+```
+Tracks and validates task completion status.
 
 ---
 
 # 🧭 18. Troubleshooting
-- **SPEC missing sections** → run `/spec update full`
+- **SPEC missing sections** → run `/smartspec_generate_spec.md` with appropriate profile
 - **Validation errors** → check ERROR‑level rules in output
-- **Kilo prompt missing tasks** → re‑generate tasks.md
+- **Kilo prompt missing tasks** → re‑run `/smartspec_generate_tasks.md`
+- **Tasks out of sync** → run `/smartspec_sync_spec_tasks.md`
 - **Domain mismatch** → check `smartspec.config.json`
 
 ---

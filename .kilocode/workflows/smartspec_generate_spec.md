@@ -130,9 +130,21 @@ Options:
 Read configuration in priority order:
 1. `smartspec.config.json` (if exists - project-specific)
 2. `.smartspec/config.json` (if exists - organization-wide)
-3. Built-in defaults
+3. `.smartspec/SPEC_INDEX.json` (if exists - for dependency resolution)
+4. Built-in defaults
 
 Parse flags from $ARGUMENTS and merge with config.
+
+### 1.1 Load SPEC_INDEX.json for Dependency Resolution
+
+If `.smartspec/SPEC_INDEX.json` exists:
+- Load the entire spec index into memory
+- This will be used to resolve spec dependencies with full path and repo information
+- Structure: `{ "specs": [{ "id": "...", "title": "...", "path": "...", "repo": "..." }] }`
+
+If file doesn't exist:
+- Dependencies will be listed without path/repo information
+- Show warning in output
 
 ---
 
@@ -735,6 +747,46 @@ Based on:
 - Flags (--security, --di, --performance)
 - Domain hints
 - Config file settings
+
+### 13.1.1 Resolve Spec Dependencies (NEW)
+
+If the SPEC includes dependencies (Related Specs section):
+
+1. **Extract dependency IDs** from user input or existing SPEC
+2. **Look up each dependency** in SPEC_INDEX.json
+3. **Format each dependency** as:
+   ```
+   - **{spec_id}** - {description} - Spec Path: "{path}/spec.md" Repo: {repo}
+   ```
+4. **Group by category**:
+   - Core Dependencies (category: "core")
+   - Feature Specs (category: "feature")
+   - Infrastructure Specs (category: "infrastructure")
+
+**Example output:**
+```markdown
+## 19. Related Specs
+
+### 19.1. Core Dependencies
+- **spec-core-001-authentication** - User authentication for financial operations - Spec Path: "specs/core/spec-core-001-authentication/spec.md" Repo: private
+- **spec-core-002-authorization** - RBAC for admin financial operations - Spec Path: "specs/core/spec-core-002-authorization/spec.md" Repo: private
+
+### 19.2. Feature Specs
+- **spec-002-user-management** - User profile and account management - Spec Path: "specs/feature/spec-002-user-management/spec.md" Repo: public
+```
+
+**Error handling:**
+- If spec not found in SPEC_INDEX.json:
+  ```
+  - **spec-unknown-001** - [NOT FOUND IN SPEC_INDEX] - Spec Path: "N/A" Repo: unknown
+  ```
+- If SPEC_INDEX.json doesn't exist:
+  ```
+  ⚠️ Warning: SPEC_INDEX.json not found. Dependencies listed without path/repo information.
+  
+  ## 19. Related Specs
+  - **spec-core-001-authentication** - User authentication for financial operations
+  ```
 
 ### 13.2 Apply Meta Tags
 

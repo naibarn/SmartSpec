@@ -2205,141 +2205,179 @@ If --validate-consistency: check rules.
 
 ### 13.5 Write Output
 
-#### 13.5.1 Backup Existing SPEC (MANDATORY - MUST EXECUTE)
+#### 13.5.1 Backup Existing SPEC (MANDATORY - MUST EXECUTE WITH PROOF)
 
 🚨 **CRITICAL: This step MUST be executed before writing new spec.md** 🚨
 
+🔍 **PROOF REQUIRED: You MUST show actual command outputs, not just say "done"** 🔍
+
+---
+
 **INSTRUCTION FOR AI:**
-You MUST perform the following backup steps using shell commands or file operations:
+
+You MUST perform the following backup steps using `shell` tool.
+
+**⚠️ CRITICAL RULE: You MUST show the actual output from EVERY command below.**
+
+**❌ DO NOT just say "Backup created" without showing proof.**
+**❌ DO NOT just write "✅ Backup verified" without showing actual output.**
+**✅ DO show the exact commands and their outputs.
 
 ---
 
 **Step 1: Check if spec.md exists**
 
-Use `file` tool or `shell` tool to check:
+Execute using `shell` tool:
 ```bash
 test -f spec.md && echo "EXISTS" || echo "NOT_EXISTS"
 ```
 
-If spec.md EXISTS, proceed to Step 2.
-If NOT_EXISTS, skip to section 13.5.2.
+**👉 SHOW THE OUTPUT HERE in your response.**
+
+If output is "NOT_EXISTS", skip to section 13.5.2.
+If output is "EXISTS", proceed to Step 2.
 
 ---
 
-**Step 2: Create backup directory**
+**Step 2: Create backup directory and verify**
 
-MUST execute:
+Execute using `shell` tool:
 ```bash
-mkdir -p .smartspec/backups
+mkdir -p .smartspec/backups && ls -la .smartspec/ | grep backups
 ```
 
+**👉 SHOW THE OUTPUT HERE in your response.**
+
+You should see a line showing `backups` directory.
+
 ---
 
-**Step 3: Generate backup filename with timestamp**
+**Step 3: Create backup with timestamp**
 
-Format: `spec.backup-YYYYMMDD-HHmmss.md`
-
-Generate timestamp:
+Execute using `shell` tool:
 ```bash
 TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
 BACKUP_FILE="spec.backup-${TIMESTAMP}.md"
-```
-
-Example output: `spec.backup-20251203-143022.md`
-
----
-
-**Step 4: Copy spec.md to backup**
-
-MUST execute:
-```bash
 cp spec.md ".smartspec/backups/${BACKUP_FILE}"
-echo "💾 Backup created: ${BACKUP_FILE}"
+echo "📁 Backup filename: ${BACKUP_FILE}"
 ```
 
-OR using `file` tool:
-```
-1. Read spec.md content
-2. Write to .smartspec/backups/spec.backup-{timestamp}.md
-```
+**👉 SHOW THE OUTPUT HERE in your response.**
+
+You should see: `📁 Backup filename: spec.backup-YYYYMMDD-HHMMSS.md`
 
 ---
 
-**Step 5: Verify backup was created**
+**Step 4: Verify backup was created (MANDATORY PROOF)**
 
-MUST verify:
+🚨 **THIS IS THE MOST CRITICAL STEP** 🚨
+
+Execute ALL of these commands using `shell` tool and show ALL outputs:
+
 ```bash
-test -f ".smartspec/backups/${BACKUP_FILE}" && echo "✅ Backup verified" || echo "❌ Backup FAILED"
+# Command 1: List all backup files with details
+echo "=== Backup files ==="
+ls -lh .smartspec/backups/
+
+# Command 2: Verify specific backup exists
+echo "=== Verification ==="
+test -f ".smartspec/backups/${BACKUP_FILE}" && echo "✅ BACKUP FILE EXISTS" || echo "❌ BACKUP FILE NOT FOUND"
+
+# Command 3: Show file size
+echo "=== File size ==="
+du -h ".smartspec/backups/${BACKUP_FILE}"
+
+# Command 4: Show first 5 lines to prove it's the correct file
+echo "=== First 5 lines of backup ==="
+head -n 5 ".smartspec/backups/${BACKUP_FILE}"
 ```
 
-If backup FAILED, STOP and report error. DO NOT proceed to write new spec.md.
+**👉 SHOW THE OUTPUT FROM ALL 4 COMMANDS HERE in your response.**
+
+**CRITICAL VALIDATION:**
+
+You MUST see:
+1. ✅ List of backup files (from `ls -lh`)
+2. ✅ Message "✅ BACKUP FILE EXISTS" (NOT "❌ BACKUP FILE NOT FOUND")
+3. ✅ File size (e.g., "24K")
+4. ✅ First 5 lines of the backup file
+
+If you see "❌ BACKUP FILE NOT FOUND" or any command fails:
+1. ❌ STOP immediately
+2. ❌ DO NOT proceed to section 13.5.2
+3. ❌ DO NOT write new spec.md
+4. ❌ Report error to user: "Backup failed. Cannot proceed."
+5. ❌ Exit with error
 
 ---
 
-**Step 6: Cleanup old backups (keep last 10)**
+**Step 5: Cleanup old backups (keep last 10)**
 
 Optional but recommended:
 ```bash
-cd .smartspec/backups
-ls -t spec.backup-*.md | tail -n +11 | xargs -r rm
-echo "🗑️  Old backups cleaned"
+cd .smartspec/backups && ls -t spec.backup-*.md | tail -n +11 | xargs -r rm 2>/dev/null
+echo "🗑️  Cleanup: Keeping last 10 backups"
+ls -lh
+cd ../..
 ```
+
+**👉 You may show the output if you execute this step.**
 
 ---
 
-**Example complete backup sequence:**
+---
 
-```bash
-# Check if spec.md exists
-if [ -f "spec.md" ]; then
-  # Create backup directory
-  mkdir -p .smartspec/backups
-  
-  # Generate timestamp
-  TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
-  BACKUP_FILE="spec.backup-${TIMESTAMP}.md"
-  
-  # Create backup
-  cp spec.md ".smartspec/backups/${BACKUP_FILE}"
-  
-  # Verify
-  if [ -f ".smartspec/backups/${BACKUP_FILE}" ]; then
-    echo "✅ Backup created: ${BACKUP_FILE}"
-    
-    # Cleanup old backups (keep 10)
-    cd .smartspec/backups
-    ls -t spec.backup-*.md | tail -n +11 | xargs -r rm 2>/dev/null
-    cd ../..
-  else
-    echo "❌ ERROR: Backup failed!"
-    exit 1
-  fi
-fi
-```
+**✅ PROOF CHECKLIST (MUST COMPLETE BEFORE PROCEEDING):**
+
+Before you proceed to section 13.5.2, verify you have shown:
+
+- [ ] ✅ Output from Step 1: "EXISTS" or "NOT_EXISTS"
+- [ ] ✅ Output from Step 2: Directory listing showing `backups`
+- [ ] ✅ Output from Step 3: Backup filename (e.g., `spec.backup-20251204-000859.md`)
+- [ ] ✅ Output from Step 4 Command 1: List of backup files
+- [ ] ✅ Output from Step 4 Command 2: "✅ BACKUP FILE EXISTS"
+- [ ] ✅ Output from Step 4 Command 3: File size
+- [ ] ✅ Output from Step 4 Command 4: First 5 lines of backup
+
+**If you cannot check ALL boxes above, GO BACK and execute the commands properly.**
 
 ---
 
-**Backup location structure:**
-```
-specs/feature/spec-004-financial-system/
-├── spec.md (current - will be overwritten)
-└── .smartspec/
-    └── backups/
-        ├── spec.backup-20251203-143022.md (newest)
-        ├── spec.backup-20251203-120530.md
-        └── spec.backup-20251202-165412.md (oldest kept)
-```
+**⚠️ CRITICAL REMINDERS:**
+
+1. ✅ ALWAYS use `shell` tool to execute commands
+2. ✅ ALWAYS show actual output from commands
+3. ✅ NEVER just say "done" without showing proof
+4. ✅ NEVER proceed if "❌ BACKUP FILE NOT FOUND"
+5. ✅ NEVER skip backup unless user provides --no-backup flag
+6. ❌ DO NOT write new spec.md if backup fails
+
+---
+
+**🔍 SELF-CHECK BEFORE PROCEEDING:**
+
+Ask yourself:
+1. Did I execute commands using `shell` tool? (Not just read the instructions)
+2. Did I show actual output? (Not just say "Backup created")
+3. Did I see "✅ BACKUP FILE EXISTS"? (Not "❌ BACKUP FILE NOT FOUND")
+4. Did I show first 5 lines of backup file? (Proof it's the correct file)
+
+If answer is NO to ANY question:
+- ❌ STOP
+- ❌ GO BACK
+- ❌ Execute properly
+- ❌ DO NOT proceed to section 13.5.2
 
 ---
 
 **Skip backup (only if user explicitly requests):**
 
-If user provides `--no-backup` flag, you may skip this section.
+If user provides `--no-backup` flag, you may skip this entire section.
 Otherwise, backup is MANDATORY.
 
 ---
 
-**⚠️ IMPORTANT REMINDERS:**
+**⚠️ IMPORTANT REMINDERS (LEGACY - REPLACED BY ABOVE):**
 
 1. ✅ ALWAYS backup before writing new spec.md
 2. ✅ VERIFY backup was created successfully

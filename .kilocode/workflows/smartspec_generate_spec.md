@@ -426,10 +426,45 @@ When `--domain=fintech` or `--profile=financial`, include additional security me
 - **Data Classification:** PUBLIC, INTERNAL, CONFIDENTIAL, RESTRICTED
 
 ### Denial of Service
-- **Rate Limiting:**
-  - Per user: 100 req/min
-  - Per IP: 1000 req/min
-  - Per endpoint: Custom limits
+
+**Rate Limiting Strategy:**
+
+*Per-User Limits:*
+- Standard users: 100 req/min
+- Premium users: 500 req/min
+- Admin users: 1000 req/min
+- Service accounts: 5000 req/min
+
+*Per-IP Limits:*
+- Public endpoints: 1000 req/min
+- Auth endpoints: 20 req/min (prevent brute force)
+- Registration: 5 req/hour per IP
+
+*Per-Endpoint Limits (Financial System):*
+- `GET /api/balance`: 200 req/min per user
+- `POST /api/credit/add`: 50 req/min per user
+- `POST /api/credit/deduct`: 100 req/min per user
+- `POST /api/payment`: 20 req/min per user
+- `GET /api/transactions`: 100 req/min per user
+- `POST /api/refund`: 10 req/min per user
+
+*Implementation:*
+- Technology: Redis for distributed rate limiting
+- Algorithm: Sliding window counter
+- Response: `429 Too Many Requests` with `Retry-After` header
+- Bypass: Admin users can bypass with special header (logged)
+
+*Burst Handling:*
+- Allow burst up to 2x limit for 10 seconds
+- Then enforce strict limit
+- Burst tokens reset every minute
+
+*Rate Limit Headers:*
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1701619200
+```
 - **Replay Attack Mitigation:**
   - Idempotency key required for mutations
   - Request timestamp validation (max 5 min skew)
@@ -1113,12 +1148,436 @@ if (!isDuplicate) {
 8. **Audit Trail:** Log all saga state transitions
 ```
 
+---
+
+**Role Terminology & Permissions (Fintech):**
+
+Automatically include role definitions for financial systems:
+
+```markdown
+## Role Terminology & Permissions
+
+### User Roles
+
+#### 1. End User (ROLE_USER)
+**Description:** Standard customer using the system
+
+**Permissions:**
+- View own balance
+- Add credit (via payment)
+- View own transaction history
+- View own invoices
+- Update own profile
+
+**Restrictions:**
+- Cannot view other users' data
+- Cannot perform admin operations
+- Cannot access system reports
+
+---
+
+#### 2. Premium User (ROLE_PREMIUM)
+**Description:** Paid subscription customer
+
+**Inherits:** ROLE_USER
+
+**Additional Permissions:**
+- Higher rate limits (500 req/min vs 100 req/min)
+- Access to advanced features
+- Priority support
+- Export transaction history (CSV, PDF)
+
+---
+
+#### 3. Support Agent (ROLE_SUPPORT)
+**Description:** Customer support team member
+
+**Permissions:**
+- View user profiles (read-only)
+- View user transaction history (read-only)
+- View user balance (read-only)
+- Create support tickets
+- Add notes to user accounts
+
+**Restrictions:**
+- Cannot modify user balance
+- Cannot process refunds
+- Cannot delete data
+- All actions logged for audit
+
+---
+
+#### 4. Finance Manager (ROLE_FINANCE)
+**Description:** Finance team member
+
+**Permissions:**
+- View all financial reports
+- Process refunds (with approval)
+- Generate invoices
+- View all transactions
+- Export financial data
+- Reconcile accounts
+
+**Restrictions:**
+- Cannot modify system configuration
+- Cannot manage users
+- Cannot access technical logs
+
+---
+
+#### 5. Admin (ROLE_ADMIN)
+**Description:** System administrator
+
+**Permissions:**
+- All ROLE_FINANCE permissions
+- Manage users (create, update, disable)
+- Modify user balances (with audit)
+- Configure system settings
+- View system logs
+- Manage roles and permissions
+
+**Restrictions:**
+- Cannot delete audit logs
+- Cannot bypass security controls
+- All actions logged and alerted
+
+---
+
+#### 6. Super Admin (ROLE_SUPER_ADMIN)
+**Description:** Technical team lead
+
+**Permissions:**
+- All ROLE_ADMIN permissions
+- Access database directly (emergency only)
+- Modify audit logs (emergency recovery only)
+- Deploy system updates
+- Access production servers
+
+**Restrictions:**
+- All actions require MFA
+- All actions alerted to security team
+- Emergency access logged and reviewed
+
+---
+
+### Permission Matrix
+
+| Action | User | Premium | Support | Finance | Admin | Super Admin |
+|--------|------|---------|---------|---------|-------|-------------|
+| View own balance | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Add credit | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| View other user balance | ❌ | ❌ | ✅ (read) | ✅ | ✅ | ✅ |
+| Modify user balance | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Process refund | ❌ | ❌ | ❌ | ✅ (approval) | ✅ | ✅ |
+| View financial reports | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Manage users | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| System configuration | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Database access | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+---
+
+### Role Assignment Rules
+
+1. **Default Role:** New users get ROLE_USER
+2. **Role Elevation:** Requires approval from ROLE_ADMIN or higher
+3. **Role Downgrade:** Can be done by ROLE_ADMIN or higher
+4. **Multiple Roles:** Users can have multiple roles (additive permissions)
+5. **Temporary Roles:** Support temporary role elevation (e.g., 24 hours)
+
+---
+
+### Implementation
+
+**Database Schema:**
+```sql
+CREATE TABLE roles (
+  id UUID PRIMARY KEY,
+  name VARCHAR(50) UNIQUE NOT NULL,
+  description TEXT,
+  permissions JSONB NOT NULL
+);
+
+CREATE TABLE user_roles (
+  user_id UUID NOT NULL,
+  role_id UUID NOT NULL,
+  granted_by UUID NOT NULL,
+  granted_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMP,
+  PRIMARY KEY (user_id, role_id)
+);
+```
+
+**Permission Check:**
+```typescript
+function hasPermission(user: User, permission: string): boolean {
+  return user.roles.some(role => 
+    role.permissions.includes(permission)
+  );
+}
+
+// Usage
+if (!hasPermission(user, 'credit:modify')) {
+  throw new ForbiddenError('Insufficient permissions');
+}
+```
+```
+
 ### 7.6 domain=internal
 
 Reduce requirements:
 - Lower SLA expectations
 - Simpler security
 - Minimal performance tracking
+
+---
+
+### 7.7 API Specification (Backend Services)
+
+For backend-service and financial profiles, auto-generate API specification:
+
+```markdown
+## API Specification
+
+### Base URL
+```
+Production: https://api.example.com/v1
+Staging: https://api-staging.example.com/v1
+Development: http://localhost:3000/v1
+```
+
+### Authentication
+All endpoints require JWT authentication unless marked as public.
+
+**Header:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+### Common Response Format
+
+**Success Response:**
+```json
+{
+  "success": true,
+  "data": { ... },
+  "meta": {
+    "timestamp": "2025-12-03T14:30:00Z",
+    "requestId": "req_abc123"
+  }
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INSUFFICIENT_CREDIT",
+    "message": "Insufficient credit balance",
+    "details": {
+      "required": 100.00,
+      "available": 50.00
+    }
+  },
+  "meta": {
+    "timestamp": "2025-12-03T14:30:00Z",
+    "requestId": "req_abc123"
+  }
+}
+```
+
+---
+
+### Credit Management Endpoints
+
+#### Get Balance
+```http
+GET /credit/balance
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "user_123",
+    "balance": 1000.00,
+    "reservedBalance": 50.00,
+    "availableBalance": 950.00,
+    "currency": "THB",
+    "lastUpdated": "2025-12-03T14:30:00Z"
+  }
+}
+```
+
+---
+
+#### Add Credit
+```http
+POST /credit/add
+```
+
+**Request:**
+```json
+{
+  "amount": 100.00,
+  "paymentMethod": "promptpay",
+  "idempotencyKey": "idem_abc123"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "transactionId": "txn_abc123",
+    "userId": "user_123",
+    "amount": 100.00,
+    "newBalance": 1100.00,
+    "status": "completed",
+    "createdAt": "2025-12-03T14:30:00Z"
+  }
+}
+```
+
+---
+
+#### Deduct Credit
+```http
+POST /credit/deduct
+```
+
+**Request:**
+```json
+{
+  "amount": 50.00,
+  "reason": "Service usage",
+  "metadata": {
+    "serviceId": "svc_123",
+    "usageType": "api_call"
+  },
+  "idempotencyKey": "idem_xyz789"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "transactionId": "txn_xyz789",
+    "userId": "user_123",
+    "amount": 50.00,
+    "newBalance": 1050.00,
+    "status": "completed",
+    "createdAt": "2025-12-03T14:30:00Z"
+  }
+}
+```
+
+---
+
+### Transaction History Endpoints
+
+#### Get Transaction History
+```http
+GET /transactions?page=1&limit=20&type=credit
+```
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 20, max: 100)
+- `type` (optional): Filter by type (credit, debit, refund)
+- `startDate` (optional): Start date (ISO 8601)
+- `endDate` (optional): End date (ISO 8601)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "transactions": [
+      {
+        "id": "txn_abc123",
+        "type": "credit",
+        "amount": 100.00,
+        "balance": 1100.00,
+        "description": "Credit added via PromptPay",
+        "createdAt": "2025-12-03T14:30:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 150,
+      "totalPages": 8
+    }
+  }
+}
+```
+
+---
+
+### Error Codes
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `INVALID_REQUEST` | 400 | Invalid request parameters |
+| `UNAUTHORIZED` | 401 | Missing or invalid authentication |
+| `FORBIDDEN` | 403 | Insufficient permissions |
+| `NOT_FOUND` | 404 | Resource not found |
+| `INSUFFICIENT_CREDIT` | 400 | Not enough credit balance |
+| `DUPLICATE_TRANSACTION` | 409 | Duplicate idempotency key |
+| `RATE_LIMIT_EXCEEDED` | 429 | Too many requests |
+| `INTERNAL_ERROR` | 500 | Internal server error |
+| `SERVICE_UNAVAILABLE` | 503 | Service temporarily unavailable |
+
+---
+
+### Rate Limits
+
+See [Rate Limiting Strategy](#rate-limiting-strategy) section.
+
+---
+
+### Idempotency
+
+All mutation endpoints (POST, PUT, DELETE) support idempotency via `idempotencyKey`.
+
+**Rules:**
+- Key format: Any string up to 255 characters
+- Key expiration: 24 hours
+- Duplicate requests return cached response
+- Different payload with same key returns 409 Conflict
+
+**Example:**
+```typescript
+// First request
+POST /credit/add
+{
+  "amount": 100.00,
+  "idempotencyKey": "key_123"
+}
+// Response: 200 OK, transaction created
+
+// Duplicate request (same key, same payload)
+POST /credit/add
+{
+  "amount": 100.00,
+  "idempotencyKey": "key_123"
+}
+// Response: 200 OK, returns cached result (no new transaction)
+
+// Conflicting request (same key, different payload)
+POST /credit/add
+{
+  "amount": 200.00,  // Different amount!
+  "idempotencyKey": "key_123"
+}
+// Response: 409 Conflict
+```
+```
 
 ---
 
@@ -1635,9 +2094,96 @@ If --validate-consistency: check rules.
 
 ### 13.5 Write Output
 
-- Primary: spec.md
-- Backup: .smartspec/backups/ (unless --no-backup)
-- Report: .smartspec/reports/ (unless --no-report)
+#### 13.5.1 Backup Existing SPEC (if exists)
+
+If spec.md already exists and backup is enabled:
+
+**1. Check if backup needed:**
+```typescript
+const specPath = path.join(specDir, 'spec.md');
+const shouldBackup = fs.existsSync(specPath) && !flags.noBackup;
+```
+
+**2. Generate backup filename:**
+```
+Format: spec.backup-YYYYMMDD-HHmmss.md
+Example: spec.backup-20251203-143022.md
+```
+
+**3. Create backup:**
+```typescript
+if (shouldBackup) {
+  const timestamp = new Date()
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\..+/, '')
+    .slice(0, 15); // YYYYMMDDTHHMMSS -> YYYYMMDD-HHmmss
+  
+  const backupDir = path.join(specDir, '.smartspec/backups');
+  fs.mkdirSync(backupDir, { recursive: true });
+  
+  const backupFilename = `spec.backup-${timestamp.slice(0,8)}-${timestamp.slice(9)}.md`;
+  const backupPath = path.join(backupDir, backupFilename);
+  
+  fs.copyFileSync(specPath, backupPath);
+  console.log(`💾 Backup created: ${backupFilename}`);
+}
+```
+
+**4. Cleanup old backups (optional):**
+```typescript
+// Keep only last 10 backups
+const backups = fs.readdirSync(backupDir)
+  .filter(f => f.startsWith('spec.backup-'))
+  .sort()
+  .reverse();
+
+if (backups.length > 10) {
+  backups.slice(10).forEach(f => {
+    fs.unlinkSync(path.join(backupDir, f));
+    console.log(`🗑️  Removed old backup: ${f}`);
+  });
+}
+```
+
+**Backup location:**
+```
+specs/feature/spec-004-financial-system/
+├── spec.md (current)
+└── .smartspec/
+    └── backups/
+        ├── spec.backup-20251203-143022.md
+        ├── spec.backup-20251203-120530.md
+        └── spec.backup-20251202-165412.md
+```
+
+**Skip backup:**
+```bash
+/smartspec_generate_spec.md --no-backup
+```
+
+---
+
+#### 13.5.2 Write New SPEC
+
+Write generated content to spec.md:
+```typescript
+fs.writeFileSync(specPath, generatedContent, 'utf-8');
+console.log(`✅ SPEC written: ${specPath}`);
+```
+
+---
+
+#### 13.5.3 Generate Report (optional)
+
+If `--no-report` not specified:
+```typescript
+const reportDir = path.join(specDir, '.smartspec/reports');
+fs.mkdirSync(reportDir, { recursive: true });
+
+const reportPath = path.join(reportDir, 'generation-report.md');
+fs.writeFileSync(reportPath, reportContent, 'utf-8');
+```
 
 ---
 

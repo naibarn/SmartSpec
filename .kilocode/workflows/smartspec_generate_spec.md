@@ -1824,45 +1824,156 @@ Based on:
 - Domain hints
 - Config file settings
 
-### 13.1.1 Resolve Spec Dependencies (NEW)
+### 13.1.1 Resolve Spec Dependencies (MANDATORY)
 
-If the SPEC includes dependencies (Related Specs section):
+🚨 **CRITICAL: Dependencies MUST include path and repo information** 🚨
 
-1. **Extract dependency IDs** from user input or existing SPEC
-2. **Look up each dependency** in SPEC_INDEX.json
-3. **Format each dependency** as:
-   ```
-   - **{spec_id}** - {description} - Spec Path: "{path}/spec.md" Repo: {repo}
-   ```
-4. **Group by category**:
-   - Core Dependencies (category: "core")
-   - Feature Specs (category: "feature")
-   - Infrastructure Specs (category: "infrastructure")
+**INSTRUCTION FOR AI:**
+When generating Related Specs section, you MUST follow these steps:
 
-**Example output:**
-```markdown
-## 19. Related Specs
+---
 
-### 19.1. Core Dependencies
-- **spec-core-001-authentication** - User authentication for financial operations - Spec Path: "specs/core/spec-core-001-authentication/spec.md" Repo: private
-- **spec-core-002-authorization** - RBAC for admin financial operations - Spec Path: "specs/core/spec-core-002-authorization/spec.md" Repo: private
+**Step 1: Check if SPEC_INDEX.json exists**
 
-### 19.2. Feature Specs
-- **spec-002-user-management** - User profile and account management - Spec Path: "specs/feature/spec-002-user-management/spec.md" Repo: public
+Use `file` tool to check:
+```bash
+test -f .smartspec/SPEC_INDEX.json && echo "EXISTS" || echo "NOT_EXISTS"
 ```
 
+---
+
+**Step 2: Load SPEC_INDEX.json (if exists)**
+
+If EXISTS:
+```
+1. Read .smartspec/SPEC_INDEX.json using `file` tool
+2. Parse JSON structure: { "specs": [{ "id": "...", "title": "...", "path": "...", "repo": "..." }] }
+3. Store in memory for lookup
+```
+
+If NOT_EXISTS:
+```
+- Show warning in output
+- Dependencies will be listed WITHOUT path/repo (fallback mode)
+```
+
+---
+
+**Step 3: Extract dependency IDs**
+
+From user input or existing SPEC, extract:
+- Core dependencies (e.g., spec-core-001-authentication)
+- Feature specs (e.g., spec-002-user-management)
+- Infrastructure specs (e.g., spec-infra-001-database)
+
+---
+
+**Step 4: Look up each dependency in SPEC_INDEX.json**
+
+For each dependency ID:
+```javascript
+const spec = SPEC_INDEX.specs.find(s => s.id === dependencyId);
+
+if (spec) {
+  // Found in index
+  return `- **${spec.id}** - ${spec.title} - Spec Path: "${spec.path}/spec.md" Repo: ${spec.repo}`;
+} else {
+  // Not found
+  return `- **${dependencyId}** - [NOT FOUND IN SPEC_INDEX] - Spec Path: "N/A" Repo: unknown`;
+}
+```
+
+---
+
+**Step 5: Format each dependency (MANDATORY FORMAT)**
+
+**✅ CORRECT FORMAT (with path and repo):**
+```markdown
+- **spec-core-001-authentication** - User authentication for financial operations - Spec Path: "specs/core/spec-core-001-authentication/spec.md" Repo: private
+```
+
+**❌ WRONG FORMAT (missing path and repo):**
+```markdown
+- **spec-core-001-authentication** - User authentication for financial operations
+```
+
+---
+
+**Step 6: Group by category**
+
+Group dependencies into sections:
+- **Core Dependencies** (category: "core")
+- **Feature Specs** (category: "feature")
+- **Infrastructure Specs** (category: "infrastructure")
+
+---
+
+**Example output (CORRECT - with SPEC_INDEX.json):**
+
+```markdown
+## 8. Related Specs
+
+### Core Dependencies
+- **spec-core-001-authentication** - User authentication for financial operations - Spec Path: "specs/core/spec-core-001-authentication/spec.md" Repo: private
+- **spec-core-002-authorization** - RBAC for admin financial operations - Spec Path: "specs/core/spec-core-002-authorization/spec.md" Repo: private
+- **spec-core-003-audit-logging** - Audit trail for all financial transactions - Spec Path: "specs/core/spec-core-003-audit-logging/spec.md" Repo: private
+
+### Feature Specs
+- **spec-002-user-management** - User profile and account management - Spec Path: "specs/feature/spec-002-user-management/spec.md" Repo: public
+- **spec-012-subscription-plans** - Subscription plan definitions - Spec Path: "specs/feature/spec-012-subscription-plans/spec.md" Repo: public
+
+### Integration Points
+- Payment gateway integration (Stripe, PayPal)
+- Message queue for saga orchestration
+- Redis for idempotency key storage
+```
+
+---
+
+**Example output (FALLBACK - without SPEC_INDEX.json):**
+
+```markdown
+⚠️ **Warning:** SPEC_INDEX.json not found. Dependencies listed without path/repo information.
+
+## 8. Related Specs
+
+### Core Dependencies
+- **spec-core-001-authentication** - User authentication for financial operations
+- **spec-core-002-authorization** - RBAC for admin financial operations
+
+### Feature Specs
+- **spec-002-user-management** - User profile and account management
+```
+
+---
+
 **Error handling:**
-- If spec not found in SPEC_INDEX.json:
-  ```
-  - **spec-unknown-001** - [NOT FOUND IN SPEC_INDEX] - Spec Path: "N/A" Repo: unknown
-  ```
-- If SPEC_INDEX.json doesn't exist:
-  ```
-  ⚠️ Warning: SPEC_INDEX.json not found. Dependencies listed without path/repo information.
-  
-  ## 19. Related Specs
-  - **spec-core-001-authentication** - User authentication for financial operations
-  ```
+
+1. **Spec not found in SPEC_INDEX.json:**
+   ```markdown
+   - **spec-unknown-001** - [NOT FOUND IN SPEC_INDEX] - Spec Path: "N/A" Repo: unknown
+   ```
+
+2. **SPEC_INDEX.json doesn't exist:**
+   ```markdown
+   ⚠️ Warning: SPEC_INDEX.json not found. Dependencies listed without path/repo information.
+   ```
+
+3. **SPEC_INDEX.json is malformed:**
+   ```markdown
+   ⚠️ Error: SPEC_INDEX.json is malformed. Please fix the JSON syntax.
+   ```
+
+---
+
+**⚠️ IMPORTANT REMINDERS:**
+
+1. ✅ ALWAYS try to load SPEC_INDEX.json first
+2. ✅ ALWAYS include "Spec Path" and "Repo" in dependency format
+3. ✅ Use EXACT format: `- **{id}** - {description} - Spec Path: "{path}/spec.md" Repo: {repo}`
+4. ✅ Group by category (Core, Feature, Infrastructure)
+5. ✅ Show warning if SPEC_INDEX.json not found
+6. ❌ NEVER output dependencies without path/repo unless SPEC_INDEX.json doesn't exist
 
 ### 13.1.2 Generate Data Model Section (NEW - Financial Profile Only)
 
@@ -2094,73 +2205,148 @@ If --validate-consistency: check rules.
 
 ### 13.5 Write Output
 
-#### 13.5.1 Backup Existing SPEC (if exists)
+#### 13.5.1 Backup Existing SPEC (MANDATORY - MUST EXECUTE)
 
-If spec.md already exists and backup is enabled:
+🚨 **CRITICAL: This step MUST be executed before writing new spec.md** 🚨
 
-**1. Check if backup needed:**
-```typescript
-const specPath = path.join(specDir, 'spec.md');
-const shouldBackup = fs.existsSync(specPath) && !flags.noBackup;
+**INSTRUCTION FOR AI:**
+You MUST perform the following backup steps using shell commands or file operations:
+
+---
+
+**Step 1: Check if spec.md exists**
+
+Use `file` tool or `shell` tool to check:
+```bash
+test -f spec.md && echo "EXISTS" || echo "NOT_EXISTS"
 ```
 
-**2. Generate backup filename:**
-```
-Format: spec.backup-YYYYMMDD-HHmmss.md
-Example: spec.backup-20251203-143022.md
+If spec.md EXISTS, proceed to Step 2.
+If NOT_EXISTS, skip to section 13.5.2.
+
+---
+
+**Step 2: Create backup directory**
+
+MUST execute:
+```bash
+mkdir -p .smartspec/backups
 ```
 
-**3. Create backup:**
-```typescript
-if (shouldBackup) {
-  const timestamp = new Date()
-    .toISOString()
-    .replace(/[-:]/g, '')
-    .replace(/\..+/, '')
-    .slice(0, 15); // YYYYMMDDTHHMMSS -> YYYYMMDD-HHmmss
+---
+
+**Step 3: Generate backup filename with timestamp**
+
+Format: `spec.backup-YYYYMMDD-HHmmss.md`
+
+Generate timestamp:
+```bash
+TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+BACKUP_FILE="spec.backup-${TIMESTAMP}.md"
+```
+
+Example output: `spec.backup-20251203-143022.md`
+
+---
+
+**Step 4: Copy spec.md to backup**
+
+MUST execute:
+```bash
+cp spec.md ".smartspec/backups/${BACKUP_FILE}"
+echo "💾 Backup created: ${BACKUP_FILE}"
+```
+
+OR using `file` tool:
+```
+1. Read spec.md content
+2. Write to .smartspec/backups/spec.backup-{timestamp}.md
+```
+
+---
+
+**Step 5: Verify backup was created**
+
+MUST verify:
+```bash
+test -f ".smartspec/backups/${BACKUP_FILE}" && echo "✅ Backup verified" || echo "❌ Backup FAILED"
+```
+
+If backup FAILED, STOP and report error. DO NOT proceed to write new spec.md.
+
+---
+
+**Step 6: Cleanup old backups (keep last 10)**
+
+Optional but recommended:
+```bash
+cd .smartspec/backups
+ls -t spec.backup-*.md | tail -n +11 | xargs -r rm
+echo "🗑️  Old backups cleaned"
+```
+
+---
+
+**Example complete backup sequence:**
+
+```bash
+# Check if spec.md exists
+if [ -f "spec.md" ]; then
+  # Create backup directory
+  mkdir -p .smartspec/backups
   
-  const backupDir = path.join(specDir, '.smartspec/backups');
-  fs.mkdirSync(backupDir, { recursive: true });
+  # Generate timestamp
+  TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+  BACKUP_FILE="spec.backup-${TIMESTAMP}.md"
   
-  const backupFilename = `spec.backup-${timestamp.slice(0,8)}-${timestamp.slice(9)}.md`;
-  const backupPath = path.join(backupDir, backupFilename);
+  # Create backup
+  cp spec.md ".smartspec/backups/${BACKUP_FILE}"
   
-  fs.copyFileSync(specPath, backupPath);
-  console.log(`💾 Backup created: ${backupFilename}`);
-}
+  # Verify
+  if [ -f ".smartspec/backups/${BACKUP_FILE}" ]; then
+    echo "✅ Backup created: ${BACKUP_FILE}"
+    
+    # Cleanup old backups (keep 10)
+    cd .smartspec/backups
+    ls -t spec.backup-*.md | tail -n +11 | xargs -r rm 2>/dev/null
+    cd ../..
+  else
+    echo "❌ ERROR: Backup failed!"
+    exit 1
+  fi
+fi
 ```
 
-**4. Cleanup old backups (optional):**
-```typescript
-// Keep only last 10 backups
-const backups = fs.readdirSync(backupDir)
-  .filter(f => f.startsWith('spec.backup-'))
-  .sort()
-  .reverse();
+---
 
-if (backups.length > 10) {
-  backups.slice(10).forEach(f => {
-    fs.unlinkSync(path.join(backupDir, f));
-    console.log(`🗑️  Removed old backup: ${f}`);
-  });
-}
-```
-
-**Backup location:**
+**Backup location structure:**
 ```
 specs/feature/spec-004-financial-system/
-├── spec.md (current)
+├── spec.md (current - will be overwritten)
 └── .smartspec/
     └── backups/
-        ├── spec.backup-20251203-143022.md
+        ├── spec.backup-20251203-143022.md (newest)
         ├── spec.backup-20251203-120530.md
-        └── spec.backup-20251202-165412.md
+        └── spec.backup-20251202-165412.md (oldest kept)
 ```
 
-**Skip backup:**
-```bash
-/smartspec_generate_spec.md --no-backup
-```
+---
+
+**Skip backup (only if user explicitly requests):**
+
+If user provides `--no-backup` flag, you may skip this section.
+Otherwise, backup is MANDATORY.
+
+---
+
+**⚠️ IMPORTANT REMINDERS:**
+
+1. ✅ ALWAYS backup before writing new spec.md
+2. ✅ VERIFY backup was created successfully
+3. ✅ DO NOT proceed if backup fails
+4. ✅ Use actual shell commands or file operations
+5. ✅ Show backup filename in output
+6. ❌ NEVER skip backup unless --no-backup flag provided
 
 ---
 

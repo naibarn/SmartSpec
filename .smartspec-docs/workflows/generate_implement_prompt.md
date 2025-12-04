@@ -36,6 +36,10 @@ This workflow generates a comprehensive, context-rich implementation prompt file
 
 ## 3. Platform-Specific Examples
 
+**For detailed, real-world examples with expected outputs, see:** [**Real-World Examples**](../examples/generate_implement_prompt_examples.md)
+
+Below are quick summaries of each platform's usage:
+
 ### Example 1: Kilo Code with Sub-Tasks (Default)
 
 Generates a prompt that leverages Kilo Code's Orchestrator Mode to automatically break down complex tasks.

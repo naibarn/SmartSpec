@@ -1,4 +1,4 @@
-# `/smartspec_generate_implement_prompt.md`
+_# `/smartspec_generate_implement_prompt.md`
 
 **Generates a single, comprehensive prompt file for automated execution by platforms like Kilo Code, Roo Code, and Claude Code.**
 
@@ -35,14 +35,6 @@ This command is **specifically designed for platforms that support file-based ex
 
 ## 4. Parameters & Options
 
-### **Primary Argument**
-
-| Name | Type | Required? | Description | Example |
-| :--- | :--- | :--- | :--- | :--- |
-| `tasks_path` | `string` | ✅ Yes | The full path to the source `tasks.md` file. | `specs/features/new-login/tasks.md` |
-
-### **Options**
-
 | Option | Value | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `--tasks` | `<task_id_or_range>` | (all) | The ID of the task(s) to include. Supports single tasks (`T001`), ranges (`T001-T005`), or comma-separated lists (`T001,T003`). |
@@ -52,89 +44,71 @@ This command is **specifically designed for platforms that support file-based ex
 
 ---
 
-## 5. Output Format: A Continuous Document
+## 5. Platform-Specific Examples
 
-Unlike `generate_cursor_prompt`, this command does **not** create a list of separate prompts. Instead, it generates **one continuous document** that the target platform reads and processes in its entirety.
+This section provides clear examples of the prompt output for each supported platform, highlighting the differences in their instructions.
 
-**Example Command:**
+### **Example 1: Kilo Code (`--kilocode`)**
+
+Kilo Code excels at **automatic sub-task decomposition**. The prompt instructs it to use this capability.
+
+**Command:**
 ```bash
-/smartspec_generate_implement_prompt.md specs/services/user-profile/tasks.md --tasks T001-T002 --kilocode
+/smartspec_generate_implement_prompt.md ... --tasks T001-T002 --kilocode
 ```
 
-**Resulting Prompt File (`implement-prompt-T001-T002.md`):**
-
+**Resulting Prompt (Key Section):**
 ```markdown
-# Implementation Prompt: User Profile Service
-
-## Project Context
-
-**SPEC:** user-profile-spec v1.2
-**Tech Stack:** TypeScript, Fastify, Prisma, PostgreSQL
-**OpenAPI Spec:**
-(content of openapi.yaml...)
-
 ## Platform Instructions (Kilo Code)
 
 - **Mode:** Use `Code Generation` mode.
-- **Sub-Agents:** Activate `DatabaseAgent` and `APIAgent`.
-- **Validation:** Run `npm test` and `npm run lint` after each phase.
-
----
-
-## Tasks to Implement
-
-### Phase 1: Database Layer
-
-#### Task T001: Create User Model
-
-**Description:** Create the Prisma model for the `User`.
-**Files to create:** `prisma/schema.prisma`
-**Context:** This is the foundational model for the entire service.
-
-#### Task T002: Create Database Migration
-
-**Description:** Generate a new database migration based on the updated schema.
-**Depends on:** T001
-**Context:** This task will use the `User` model created in T001.
+- **Sub-Tasks:** **Enable automatic sub-task decomposition.** Break down each task into smaller, verifiable steps before implementation.
+- **Validation:** Run `npm test` and `npm run lint` after each top-level task is complete.
 ```
 
-**Key Takeaway:** The platform (e.g., Kilo Code) is expected to read this entire file, understand the full context, and execute the tasks sequentially based on the provided information.
+### **Example 2: Claude Code (`--claude`)**
 
----
+Claude Code uses a **sub-agent architecture**. The prompt instructs it to activate the relevant agents.
 
-## 6. Detailed Examples
-
-### **Example 1: Generating a Prompt for Kilo Code**
-
-**Goal:** Create a prompt file to implement the first phase of a feature, to be executed by Kilo Code.
-
+**Command:**
 ```bash
-# 1. Generate the prompt file
-/smartspec_generate_implement_prompt.md specs/features/new-feature/tasks.md --phase 1 --kilocode
-
-# 2. Execute in Kilo Code
-kilocode execute "specs/features/new-feature/implement-prompt-new-feature.md"
+/smartspec_generate_implement_prompt.md ... --tasks T001-T002 --claude
 ```
 
-### **Example 2: Generating a Prompt for Claude Code**
+**Resulting Prompt (Key Section):**
+```markdown
+## Platform Instructions (Claude Code)
 
-**Goal:** Create a prompt file for a few specific tasks, to be executed by Claude Code.
+- **Mode:** Use `Multi-Agent` mode.
+- **Sub-Agents:** **Activate `DatabaseAgent` for schema tasks and `APIAgent` for route creation.**
+- **Validation:** The `ReviewerAgent` will run validation checks after each agent completes its work.
+```
 
+### **Example 3: Roo Code (`--roocode`)**
+
+Roo Code is focused on a **safety-first, sequential workflow**. The prompt emphasizes validation and previews.
+
+**Command:**
 ```bash
-# 1. Generate the prompt file (defaults to --claude)
-/smartspec_generate_implement_prompt.md specs/services/auth/tasks.md --tasks T010,T012
+/smartspec_generate_implement_prompt.md ... --tasks T001-T002 --roocode
+```
 
-# 2. Use with Claude Code
-# - Upload the generated 'implement-prompt-auth.md' file.
-# - Instruct Claude: "Please execute the tasks in this prompt file."
+**Resulting Prompt (Key Section):**
+```markdown
+## Platform Instructions (Roo Code)
+
+- **Mode:** Use `Safe Execution` mode.
+- **Workflow:** Execute tasks strictly in the order they appear. Do not proceed to the next task if the current one fails validation.
+- **Preview:** Show a diff preview of all file changes before applying them.
+- **Validation:** Run `npm test` and confirm success before committing changes.
 ```
 
 ---
 
-## 7. Troubleshooting
+## 6. Troubleshooting
 
 | Problem | Cause | Solution |
 | :--- | :--- | :--- |
 | **"Platform not supported"** | You are trying to use this for Cursor/Antigravity. | Use `/smartspec_generate_cursor_prompt.md` instead. |
 | **Kilo/Roo command fails** | The generated prompt may have issues. | Check the prompt file for obvious errors. Ensure the platform flag (`--kilocode`, etc.) was used correctly. |
-| **Claude doesn't understand** | The instruction to Claude was not clear. | Be explicit. Say: "Read the uploaded file and execute the implementation tasks described inside, following the platform instructions provided instructions." |
+| **Claude doesn't understand** | The instruction to Claude was not clear. | Be explicit. Say: "Read the uploaded file and execute the implementation tasks described inside, following the platform instructions provided." |

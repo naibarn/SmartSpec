@@ -1,26 +1,233 @@
-# SmartSpec V5 — Production‑Grade Documentation
+# SmartSpec: From Vague Idea to Production-Ready Code
 
-SmartSpec V5 is a **next‑generation Specification Orchestration System** designed for high‑integrity software projects. It unifies:
-- Specification generation (SPEC)
-- Task planning (tasks.md)
-- Kilo Code implementation prompts
-- Multi‑domain architecture patterns
-- Validation, compliance, and performance governance
-
-This README is written as a **production‑grade guide**, integrating all capabilities from the full **SmartSpec V5 Documentation**, including advanced features such as Profiles, Domain Detection, Config Files, Meta‑Tags, Validation Rules, and Migration Behavior.
+**The AI-native framework for building reliable software, faster.**
 
 ---
 
-# 🚀 Quick Start - Installation
+SmartSpec is a command-line tool that bridges the gap between a high-level idea and a fully implemented, production-grade software project. It uses a series of structured workflows to guide AI agents and developers, ensuring quality, consistency, and speed from start to finish.
 
-SmartSpec V5 supports **3 AI coding platforms** with a **single-command installation**:
-- **Kilo Code** - Autonomous AI agent with Orchestrator mode
-- **Roo Code** - Safety-first workflow-driven development
-- **Claude Code** - Deep analysis with sub-agents
+Whether you're a solo developer using Cursor for "vibe coding" or a team using Kilo Code for autonomous implementation, SmartSpec provides the architectural backbone that transforms chaotic AI-assisted development into a predictable, high-quality process.
 
-### Installation (One Command)
+---
 
-**Unix / Mac / Linux:**
+## 🤔 Why SmartSpec? The Problem with Modern AI-Powered Development
+
+AI coding assistants (like ChatGPT, Claude, Gemini, and Cursor) are incredibly powerful but often operate in a vacuum. They lack the high-level context, architectural constraints, and long-term vision required for building robust applications. This leads to common problems:
+
+- **Inconsistent Quality:** Code quality varies wildly depending on the prompt and the AI's interpretation.
+- **Architectural Drift:** The AI might choose a library or pattern that violates the project's architecture.
+- **Lost Context:** The AI forgets previous decisions, security requirements, or business rules.
+- **"Vibe Coding" Chaos:** It feels fast, but the lack of a structured plan results in technical debt, bugs, and difficult maintenance.
+
+**SmartSpec solves this by acting as the "Orchestrator" or "System Architect" for your AI coding partner.** It provides the structured, long-term memory and architectural guidance that AI agents lack, turning chaotic "vibe coding" into a streamlined, predictable, and high-quality process.
+
+| | **Traditional "Vibe Coding"** | **SmartSpec-Powered Development** |
+| :--- | :--- | :--- |
+| **Starting Point** | Vague idea, a few prompts | A structured, validated **SPEC** document |
+| **Process** | Ad-hoc, reactive, prompt-by-prompt | **SPEC → PLAN → TASKS → CODE** (Systematic) |
+| **Quality** | Inconsistent, depends on prompt quality | **Consistently High:** Enforced by validation rules |
+| **Architecture** | Often ignored or inconsistent | **Enforced:** Architectural choices are baked into the SPEC |
+| **Speed** | Feels fast initially, slows down due to rework | **Sustainably Fast:** Reduces rework and technical debt |
+| **Outcome** | A collection of code snippets | A production-ready, maintainable application |
+
+---
+
+## 💡 How It Works: The Core Workflow
+
+SmartSpec enforces a simple yet powerful workflow that transforms a high-level idea into production-ready code. This structure is designed to be intuitive for developers and easily parsable by LLMs.
+
+```
+┌─────────────┐
+│  Your Idea  │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────────────┐
+│  1. /generate_spec → spec.md                            │
+│     (System Overview, Data Model, API Spec,             │
+│      Business Rules, Security, Performance)             │
+└──────┬──────────────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────────────┐
+│  2. /generate_plan → plan.md                            │
+│     (High-level phases, timeline, milestones)           │
+└──────┬──────────────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────────────┐
+│  3. /generate_tasks → tasks.md                          │
+│     (Detailed task breakdown with checkboxes)           │
+└──────┬──────────────────────────────────────────────────┘
+       │
+       ├──────────────────────────────────────────────────┐
+       │                                                   │
+       ▼                                                   ▼
+┌──────────────────────────┐                  ┌──────────────────────────┐
+│ 4a. /generate_prompt     │                  │ 4b. /implement_tasks     │
+│     (For Cursor/Claude)  │                  │     (For Kilo Code)      │
+│                          │                  │                          │
+│  → Copy prompt to tool   │                  │  → Autonomous execution  │
+│  → Vibe code manually    │                  │  → Auto progress track   │
+└──────────────────────────┘                  └──────────────────────────┘
+       │                                                   │
+       └───────────────────┬───────────────────────────────┘
+                           │
+                           ▼
+                  ┌────────────────┐
+                  │ Production Code│
+                  └────────────────┘
+```
+
+### The Steps in Detail
+
+1.  **`/generate_spec`**: **From Idea to Blueprint**
+    - You start with a high-level feature idea (e.g., "Build a credit purchase system for a fintech app").
+    - SmartSpec asks a series of targeted questions (about domain, security, performance) and generates a comprehensive **SPEC** document. This is the project's single source of truth, containing:
+        - System Overview
+        - Architecture Summary
+        - Data Model (with ER diagrams)
+        - API Specification
+        - Feature Definitions & Use Cases
+        - Business Rules
+        - Security Requirements (STRIDE analysis)
+        - Performance Requirements
+
+2.  **`/generate_plan`**: **From Blueprint to Strategy**
+    - The SPEC is fed into the planning workflow.
+    - SmartSpec creates a high-level, phased implementation **PLAN**, outlining the major stages of development (e.g., Phase 1: Database & API, Phase 2: Frontend, Phase 3: Testing & Deployment).
+    - This plan includes timeline estimates and dependencies between phases.
+
+3.  **`/generate_tasks`**: **From Strategy to Actionable Tasks**
+    - The PLAN is broken down into a detailed `tasks.md` file.
+    - Each task has:
+        - A unique Task ID (e.g., `T001`)
+        - A clear description
+        - Acceptance criteria
+        - Effort estimation (hours)
+        - Dependencies on other tasks
+        - A checkbox for tracking completion (`[ ]` or `[x]`)
+
+4.  **`/generate_prompt` or `/implement_tasks`**: **From Tasks to Code**
+    - **Option A (Manual Vibe Coding):** Run `/generate_prompt --task T001` to generate a context-rich, optimized prompt for your AI coding assistant of choice (Cursor, Claude, VSCode, Antigravity). This prompt contains all the necessary context from the SPEC and previous tasks. You paste it into your tool and implement the task.
+    - **Option B (Autonomous Implementation):** Run `/implement_tasks` to let an autonomous agent like Kilo Code execute the implementation, tracking progress and validating outputs automatically.
+
+5.  **`/reverse_to_spec` (Bonus)**: **From Existing Code to a SmartSpec Blueprint**
+    - Have an existing project? This workflow reverse-engineers your codebase (TypeScript/Prisma for now) to generate a SPEC file, allowing you to adopt SmartSpec mid-project.
+
+---
+
+## 🚀 Supercharge Your Vibe Coding: The SmartSpec Workflow
+
+SmartSpec isn't here to replace your favorite tools; it's here to make them better. It transforms "vibe coding" from a chaotic sprint into a structured, high-velocity development process. Here's how it fits into your existing workflow:
+
+### The Concept: Plan the Work, then Vibe the Work
+
+Instead of jumping straight into coding with a vague idea, you take **5-10 minutes upfront** to generate a SPEC and a `tasks.md` file with SmartSpec. This small investment pays massive dividends:
+
+- **AI agents get the context they need** to make good architectural decisions.
+- **You get a roadmap** that prevents you from getting lost in the weeds.
+- **Quality is enforced** through validation rules baked into the SPEC.
+
+**Your new workflow looks like this:**
+
+1.  **Plan (5-10 mins):** Run `/generate_spec` and `/generate_tasks`.
+2.  **Vibe (Your usual coding time):** Use the generated prompts to code with your favorite AI assistant.
+3.  **Ship:** Deploy production-ready code, not a collection of hacks.
+
+This simple change provides the structure and context AI needs to perform at its best, making your "vibe coding" sessions more productive and the results more reliable.
+
+---
+
+### Example Workflows: SmartSpec + Your Favorite Tools
+
+Here are some popular development setups and how SmartSpec integrates with them:
+
+#### **1. The Power User: `Cursor` / `VSCode + Claude` / `Antigravity`**
+
+This workflow is for developers who want maximum control while still leveraging AI for heavy lifting.
+
+**Setup:**
+- Install SmartSpec (see below)
+- Use your existing Cursor, VSCode + Claude extension, or Antigravity setup
+
+**Workflow:**
+
+1.  **Generate Tasks:** Run `/generate_tasks` to get your `tasks.md` file.
+2.  **Generate a Prompt:** Run `/generate_prompt --task T001` to get a detailed, context-rich prompt for the first task.
+3.  **Paste & Vibe:** Paste the prompt into Cursor, VSCode, or Antigravity. The AI now has all the context (data models, API specs, business rules, security requirements) it needs.
+4.  **Implement & Verify:** Use your skills to guide the AI, refactor, and test the code.
+5.  **Mark as Done:** Check off the task in `tasks.md` (change `[ ]` to `[x]`).
+6.  **Repeat:** Run `/generate_prompt --task T002` for the next task. SmartSpec automatically includes context from completed tasks, so the AI "remembers" what you've already built.
+
+**Why This Works:**
+
+| Tool | How SmartSpec Helps |
+| :--- | :--- |
+| **Cursor** | Provides deep, project-wide context that Cursor's `@file` feature might miss. Ensures architectural consistency across all AI-generated code. |
+| **VSCode + Claude** | Turns a simple chat interface into a powerful, context-aware development partner. The generated prompts are optimized for Claude's strengths. |
+| **Google Antigravity** | Provides the structured plan and context needed to make Antigravity's large-scale code generation reliable and maintainable. |
+
+---
+
+#### **2. The Automator: `Kilo Code`**
+
+This workflow is for developers who want to automate as much of the implementation as possible.
+
+**Setup:**
+- Install SmartSpec (see below)
+- Install Kilo Code
+
+**Workflow:**
+
+1.  **Generate Tasks:** Run `/generate_tasks`.
+2.  **Generate Kilo Prompt:** Run `/generate_prompt --kilocode` to create a master prompt for Kilo Code's Orchestrator mode.
+3.  **Execute:** Let Kilo Code run the implementation autonomously. It will:
+    - Follow the `tasks.md` file
+    - Execute tasks sequentially
+    - Track its own progress (checking off tasks)
+    - Validate outputs against the SPEC
+4.  **Review:** Come back to review the completed code, which was built according to the high-quality standards defined in the SPEC.
+
+**Why This Works:**
+
+Kilo Code excels at autonomous execution when given clear instructions. SmartSpec provides those instructions in a format Kilo Code understands perfectly, resulting in high-quality, hands-off implementation.
+
+---
+
+#### **3. The Hybrid Approach (Most Common)**
+
+Mix and match based on the task's complexity. This is the most flexible and powerful workflow.
+
+**Workflow:**
+
+1.  **Automate the Grunt Work:** Use `Kilo Code` to implement the boilerplate and straightforward tasks (e.g., database setup, CRUD endpoints, basic authentication).
+    ```bash
+    kilo code implement tasks.md --tasks T001-T010
+    ```
+
+2.  **Vibe the Complex Parts:** For the core business logic, a tricky UI component, or something that requires creative problem-solving, switch to `Cursor` or `VSCode`. Generate a prompt for that specific task:
+    ```bash
+    /generate_prompt --task T011
+    ```
+    Paste it into your tool and implement it manually.
+
+3.  **Return to Automation:** Once the complex part is done, let Kilo Code finish the rest.
+    ```bash
+    kilo code implement tasks.md --tasks T012-T050 --skip-completed
+    ```
+
+**Why This Works:**
+
+SmartSpec seamlessly supports this by maintaining the state in the `tasks.md` file. It knows what's done and provides the right context, no matter which tool you use. You get the speed of automation where it makes sense and the control of manual coding where it's needed.
+
+---
+
+## 🚀 Getting Started: Installation
+
+Get up and running in under a minute. The installer automatically detects your AI coding environment (Kilo Code, Roo Code, Claude Code) and sets up the workflows.
+
+**Unix / macOS / Linux:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/install.sh | bash
 ```
@@ -37,7 +244,9 @@ iwr -useb https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/sc
 - ✅ Sets up auto-sync (if using copies)
 - ✅ Ready to use in 30 seconds!
 
-### Updating
+### Updating SmartSpec
+
+To get the latest workflows and features:
 
 **If using symlinks (automatic):**
 ```bash
@@ -58,7 +267,7 @@ cd ../..
 ### Uninstalling
 
 ```bash
-bash .smartspec/../scripts/uninstall.sh
+bash .smartspec/scripts/uninstall.sh
 ```
 
 Or manually:
@@ -68,164 +277,162 @@ rm -rf .smartspec .kilocode/workflows .roo/commands .claude/commands
 
 ---
 
-# 🧭 1. What is SmartSpec V5?
-SmartSpec V5 is a framework that standardizes how complex software specifications are:
-- **Created** (SPEC)
-- **Validated** (Architect Validation Engine)
-- **Expanded** into implementation tasks (tasks.md)
-- **Converted** into executable prompts (Kilo Code prompts)
+## 📖 Core Commands
 
-V5 includes:
-- A modular architecture
-- Domain‑specific enhancements
-- Strong validation and compliance rules
-- Human‑readable but machine‑optimized outputs
-- Built‑in enterprise governance
+SmartSpec is designed to be LLM-friendly. You can interact with it using natural language, but here are the core commands for structured interaction.
 
----
-
-# ⚡ 2. V5 Core Capabilities
-### ✔ Multi‑Profile SPEC generation
-### ✔ Domain‑driven specialization (fintech, healthcare, IoT, AI, etc.)
-### ✔ Configurable DI, Security, and Performance levels
-### ✔ Auto‑validation engine with error levels
-### ✔ Force‑update and partial‑update modes
-### ✔ Meta‑Tag protected sections (never overwritten)
-### ✔ Compact mode and Full mode
-### ✔ Project‑level and Organization‑level configuration files
-### ✔ V4 → V5 migration compatibility
+| Command | Description | When to Use |
+| :--- | :--- | :--- |
+| `/generate_spec <path>` | Creates a new, comprehensive SPEC document from a high-level idea. | At the very beginning of a new project or feature. |
+| `/generate_plan <spec_path>` | Creates a high-level, phased project plan from a SPEC. | After the SPEC is finalized and you need a strategic overview. |
+| `/generate_tasks <spec_path>` | Breaks down a SPEC into a detailed, actionable `tasks.md` checklist. | After the SPEC is ready and you want to start coding. |
+| `/generate_prompt <tasks_path>` | Generates a context-rich prompt for a specific task. | Your main command during "vibe coding" with Cursor, VSCode, etc. |
+| `/implement_tasks <tasks_path>` | Autonomously implements tasks using an agent like Kilo Code. | When you want to automate implementation. |
+| `/reverse_to_spec <src_path>` | Reverse-engineers an existing codebase into a SPEC document. | When you want to apply SmartSpec to an existing project. |
+| `/sync_spec_tasks` | Synchronizes a `tasks.md` file with its source SPEC. | If you manually change the SPEC and need to update the tasks. |
+| `/verify_progress <tasks_path>` | Verifies and tracks progress of implementation tasks. | To get a status report on your project. |
 
 ---
 
-# 🏗️ 3. System Architecture Overview
-```
- ┌──────────────────────────────┐
- │        User / Developer      │
- └───────────────┬──────────────┘
-                 │ CLI / UI
- ┌───────────────▼──────────────────────────────┐
- │             SmartSpec V5 Engine              │
- ├───────────────────────────┬──────────────────┤
- │  SPEC Generator (Profiles)│ Domain Engine    │
- │  SPEC Updater             │ DI/Security Mode │
- │  SPEC Validator           │ Performance Mode │
- ├───────────────────────────┼──────────────────┤
- │          Task Generator (tasks.md)           │
- ├───────────────────────────┼──────────────────┤
- │         Kilo Code Prompt Generator           │
- └───────────────────────────┴──────────────────┘
-```
+## 🎯 Quick Start Example: Building a Credit Purchase Feature
 
----
+Let's walk through a complete example to see SmartSpec in action.
 
-# 🧩 4. Profiles System (V5)
-Profiles define the **template structure**, **mandatory sections**, and **validation rules**.
+### Step 1: Generate the SPEC
 
-### Available Profiles
-- `basic` – simple CRUD / small backend services
-- `backend-service` – scalable services with integrations
-- `financial` – ledger, credit, billing, audit‑required systems
-- `full` – enterprise‑grade SPEC, maximum safety & detail
-
-### Choose a profile
 ```bash
-/smartspec_generate_spec.md specs/feature/spec-XXX-your-feature/spec.md
+/generate_spec specs/credit-purchase/spec.md
 ```
-Then select the desired profile (basic, backend-service, financial, or full) when prompted.
 
----
+You'll be asked a series of questions:
+- **Domain:** `fintech`
+- **Profile:** `financial`
+- **Security:** `stride-full`
+- **Performance:** `full`
 
-# 🌐 5. Domains (Auto‑Applied Enhancements)
-Domains add specialized content to SPECs.
+SmartSpec generates a comprehensive `spec.md` file with:
+- System overview
+- Data model (User, Credit, Transaction tables)
+- API endpoints (POST /api/credit/purchase)
+- Business rules (minimum purchase amount, payment validation)
+- Security requirements (PCI DSS guidance, authentication, rate limiting)
+- Performance targets (P95 < 500ms, 100 TPS)
 
-### Supported Domains
-- `fintech` → adds STRIDE‑full, audit logging, PCI DSS guidance
-- `healthcare` → HIPAA data protection notes
-- `iot` → device identity, OTA update safety
-- `ai` → model evaluation, dataset governance
-- `realtime` → low‑latency SLA guidance
-- `batch` → throughput and ETL safety
-- `internal` → relaxed security & flexible patterns
+### Step 2: Generate Tasks
 
-### How to apply
 ```bash
-/smartspec_generate_spec.md specs/feature/spec-XXX-your-feature/spec.md
-```
-Then specify the domain (fintech, healthcare, iot, ai, realtime, batch, or internal) when prompted.
-
----
-
-# 🔒 6. Meta‑Tags (Write‑Protected Sections)
-SmartSpec V5 respects protected regions using meta‑tags.
-
-Example:
-```md
-<!-- @critical security -->
-This security section will never be overwritten.
+/generate_tasks specs/credit-purchase/spec.md
 ```
 
-Supported meta‑tags:
-- `@critical security`
-- `@critical config`
-- `@critical legal`
-- `@critical audit`
-- `@no-edit`
+SmartSpec creates `tasks.md` with tasks like:
+- `[ ] T001: Setup database schema (Prisma)`
+- `[ ] T002: Implement Credit model`
+- `[ ] T003: Create POST /api/credit/purchase endpoint`
+- `[ ] T004: Implement payment gateway integration (Stripe)`
+- `[ ] T005: Add authentication middleware`
+- `[ ] T006: Add rate limiting`
+- `[ ] T007: Write unit tests`
+- `[ ] T008: Write integration tests`
 
-These ensure updates will **never remove essential sections**.
+### Step 3: Implement (Choose Your Path)
 
----
-
-# 🧱 7. Dependency Injection Control Modes
-V5 allows flexible DI patterns.
-
-### Modes
-- `--di=none` → no DI section
-- `--di=minimal` → lightweight DI
-- `--di=auto` → recommended DI pattern (default)
-- `--di=full` → full DI pattern with interfaces & examples
-
-### Example
-Run `/smartspec_generate_spec.md` and specify DI mode (none, minimal, auto, or full) when prompted.
-
----
-
-# 🛡️ 8. Security Modes
-Available modes:
-- `stride-basic` → basic security coverage
-- `stride-full` → comprehensive security coverage
-
-Run `/smartspec_generate_spec.md` and specify security mode when prompted.
-
-`stride-full` includes:
-- full threat table
-- tampering protection
-- replay‑attack notes
-- non‑repudiation patterns
-
----
-
-# 🚀 9. Performance Modes
-Available modes:
-- `basic` → basic performance requirements
-- `full` → comprehensive performance requirements
-
-Run `/smartspec_generate_spec.md` and specify performance mode when prompted.
-
-`performance=full` adds:
-- P50 / P95 / P99 targets
-- throughput requirements
-- SLA uptime
-- queue/DB performance baselines
-- load testing requirements
-
----
-
-# ⚙️ 10. Configuration Files (Project & Org Level)
-SmartSpec V5 uses two config layers.
-
-### 1) Project‑level config
-`smartspec.config.json`
+**Option A: Autonomous (Kilo Code)**
+```bash
+/implement_tasks specs/credit-purchase/tasks.md
 ```
+Let Kilo Code do the work. Come back to review.
+
+**Option B: Manual (Cursor/VSCode)**
+```bash
+/generate_prompt specs/credit-purchase/tasks.md --task T001
+```
+Copy the prompt to Cursor and implement T001. Repeat for each task.
+
+**Option C: Hybrid**
+```bash
+# Automate the boilerplate
+kilo code implement tasks.md --tasks T001-T003
+
+# Manually implement the payment logic (complex)
+/generate_prompt tasks.md --task T004
+# (paste into Cursor)
+
+# Automate the rest
+kilo code implement tasks.md --tasks T005-T008 --skip-completed
+```
+
+### Step 4: Verify Progress
+
+```bash
+/verify_progress specs/credit-purchase/tasks.md
+```
+
+Get a status report:
+```
+✅ Phase 1: Database Setup (100%)
+✅ Phase 2: API Implementation (100%)
+⏳ Phase 3: Testing (50%)
+   ✅ T007: Unit tests
+   [ ] T008: Integration tests
+
+Overall: 87.5% complete (7/8 tasks)
+```
+
+---
+
+## 🧩 Advanced Features
+
+### Profiles: Tailored SPECs for Different Project Types
+
+SmartSpec uses **Profiles** to generate SPECs appropriate for your project's complexity.
+
+| Profile | Best For | What It Includes |
+| :--- | :--- | :--- |
+| `basic` | Simple CRUD apps, prototypes | Minimal sections, no STRIDE, basic performance |
+| `backend-service` | Scalable backend services | Full API spec, moderate security, integrations |
+| `financial` | Fintech, billing, payments | Audit logging, PCI DSS guidance, full STRIDE |
+| `full` | Enterprise-grade systems | Maximum detail, all sections, strict validation |
+
+**How to use:**
+When running `/generate_spec`, you'll be prompted to choose a profile. Or set a default in `smartspec.config.json`:
+```json
+{
+  "profile": "financial"
+}
+```
+
+---
+
+### Domains: Specialized Content for Your Industry
+
+SmartSpec automatically adds domain-specific content to your SPEC.
+
+| Domain | What It Adds |
+| :--- | :--- |
+| `fintech` | PCI DSS guidance, audit logging, financial data protection |
+| `healthcare` | HIPAA compliance notes, PHI handling, consent management |
+| `iot` | Device identity, OTA updates, offline-first patterns |
+| `ai` | Model evaluation, dataset governance, bias mitigation |
+| `realtime` | Low-latency SLA guidance, WebSocket patterns |
+| `batch` | Throughput requirements, ETL safety, idempotency |
+| `internal` | Relaxed security, flexible patterns (for internal tools) |
+
+**How to use:**
+Specify the domain when running `/generate_spec`, or set it in `smartspec.config.json`:
+```json
+{
+  "domain": "fintech"
+}
+```
+
+---
+
+### Configuration Files: Project & Organization Defaults
+
+SmartSpec uses two levels of configuration:
+
+**1. Project-level (`smartspec.config.json` in project root):**
+```json
 {
   "profile": "financial",
   "domain": "fintech",
@@ -234,9 +441,8 @@ SmartSpec V5 uses two config layers.
 }
 ```
 
-### 2) Organization‑level config
-`.smartspec/config.json`
-```
+**2. Organization-level (`.smartspec/config.json`):**
+```json
 {
   "defaultProfile": "backend-service",
   "enforceSecurity": true,
@@ -244,326 +450,93 @@ SmartSpec V5 uses two config layers.
 }
 ```
 
----
-
-# 📦 11. Compact Mode
-For minimal SPECs, run `/smartspec_generate_spec.md` and specify compact mode when prompted.
-
-Compact mode removes:
-- examples
-- deep STRIDE details
-- implementation guides
-
-Useful for:
-- rapid prototyping
-- internal‑only designs
+This ensures consistency across all projects in your organization.
 
 ---
 
-# 📜 12. Force Update System
-Used when SPEC sections became outdated.
+### Meta-Tags: Protecting Critical Sections
 
-To force update specific sections:
-1. Run `/smartspec_generate_spec.md`
-2. Specify force-update options when prompted:
-   - `stride` → update security section only
-   - `performance,config` → update multiple sections
-   - `all` → update all sections
+Use meta-tags to prevent SmartSpec from overwriting critical sections during updates.
+
+```markdown
+<!-- @critical security -->
+This security section will never be overwritten.
+<!-- @end -->
+```
+
+Supported meta-tags:
+- `@critical security`
+- `@critical config`
+- `@critical legal`
+- `@critical audit`
+- `@no-edit`
 
 ---
 
-# 🧪 13. Validation System (Automatic Checks)
-Validation runs on SPEC generation & update.
+## 🏛️ For the LLM: How to Read This Repository
 
-### ERROR‑level (must fix)
-- missing security for financial domain
-- missing retry logic for external APIs
-- missing configuration schema
-- invalid/missing STRIDE when required
+This section provides a structured guide for Large Language Models to understand and utilize this project effectively.
 
-### WARNING‑level
-- domain mismatch
-- deprecated template sections
+### Project Goal
 
-Validation ensures outputs are **safe, consistent, and complete**.
+SmartSpec is a CLI-based framework that provides structure, context, and architectural governance to AI-driven software development. It achieves this through a series of interdependent workflows that transform a high-level requirement into implemented code, ensuring quality and consistency.
 
----
+### Key Artifacts
 
-# 🔄 14. Migration Guide (V4 → V5)
-SmartSpec V5 preserves V4 behavior but adds stricter defaults.
+1.  **SPEC Document (`spec.md`):** The single source of truth. It defines the system's architecture, data models, API contracts, business rules, and security requirements. It is generated by `/generate_spec`.
+2.  **Task List (`tasks.md`):** A checklist of implementation tasks derived from the SPEC. It includes task IDs, descriptions, dependencies, and effort estimates. It is generated by `/generate_tasks`.
+3.  **Workflows (`.kilocode/workflows/`):** These are the core logic of SmartSpec. Each file defines a command (e.g., `smartspec_generate_spec.md`). They are written in Markdown and contain instructions, templates, and logic for the Kilo Code engine to execute.
+4.  **Configuration (`.smartspec/config.json`):** A project-level configuration file that defines default profiles, domains, and security levels to ensure consistency.
 
-### Improvements in V5
-- profiles system
-- domain‑aware enhancements
-- protected meta‑tags
-- performance/security controls
-- validation engine
+### Core Principles for Analysis
 
-### Update older SPECs
-Run `/smartspec_generate_spec.md` with your existing SPEC to upgrade to V5 format.
+- **Follow the Workflow:** To understand the project, trace the flow of data: `spec.md` → `plan.md` → `tasks.md` → implementation prompts.
+- **Workflows are the Source of Truth:** The logic for each command is defined in the corresponding workflow file in the `.kilocode/workflows` directory. Analyze these files to understand the exact behavior of each command.
+- **SPEC is the Blueprint:** When asked to implement a feature or fix a bug, always refer to the `spec.md` file first. It contains the authoritative requirements.
+- **`tasks.md` Tracks State:** The `tasks.md` file, with its checkboxes (`[ ]` or `[x]`), is the canonical record of implementation progress.
 
-This adds missing:
-- Non‑Goals
-- Domain content
-- Performance requirements
-- STRIDE enhancements
+### How to Generate Effective Prompts
 
----
+When a user asks you to "implement task T005", follow this process:
 
-# 🛠️ 15. Workflow Summary
-SmartSpec V5 ships with seven main workflows.
-
-### 1) Generate SPEC
-```bash
-/smartspec_generate_spec.md <spec_path>
-```
-Example: `/smartspec_generate_spec.md specs/feature/spec-004-financial-system/spec.md`
-
-Outputs a new SmartSpec v5‑format SPEC.
-
-### 2) Generate Plan
-```bash
-/smartspec_generate_plan.md <spec_path>
-```
-Example: `/smartspec_generate_plan.md specs/feature/spec-004-financial-system/spec.md`
-
-Generates project plan from SPEC requirements.
-
-### 3) Generate Tasks
-```bash
-/smartspec_generate_tasks.md <spec_path>
-```
-Example: `/smartspec_generate_tasks.md specs/feature/spec-004-financial-system/spec.md`
-
-Converts SPEC → tasks.md with checkboxes and subtasks.
-
-### 4) Generate Implementation Prompt
-```bash
-/smartspec_generate_implement_prompt.md <tasks_path> [options]
-```
-Example: `/smartspec_generate_implement_prompt.md specs/feature/spec-004-financial-system/tasks.md`
-
-Converts tasks.md → implementation prompt with platform-specific instructions.
-
-**Options:**
-- `--phase 1` or `--phase 1-3` → Filter specific phases
-- `--tasks T001-T010` → Filter specific tasks
-- `--kilocode` → Generate for Kilo Code (auto subtasks, mode switching)
-- `--claude` → Generate for Claude Code (sub agents, interactive) [default]
-- `--roocode` → Generate for Roo Code
-- `--specindex="path"` → Custom SPEC_INDEX path
-
-**Output:** `implement-prompt-<spec-id>-<timestamp>.md`
-
-### 5) Implement Tasks (Auto)
-```bash
-/smartspec_implement_tasks.md <tasks_path|prompt_path|folder> [options]
-```
-Example: `/smartspec_implement_tasks.md specs/feature/spec-004-financial-system/tasks.md`
-
-Auto-implement tasks with safety constraints, progress tracking, and validation.
-
-**Options:**
-- `--phase 1-3` → Implement specific phases only
-- `--tasks T001-T010` → Implement specific tasks only
-- `--resume` → Continue from last checkpoint
-- `--skip-completed` → Skip checked tasks [default]
-- `--force-all` → Re-implement all tasks (ignore checkboxes)
-- `--validate-only` → Validate only, no implementation
-
-**Features:**
-- ✅ Progress tracking (updates checkboxes in tasks.md)
-- ✅ Checkpoint system (every 5 tasks)
-- ✅ Resume functionality
-- ✅ Dependency checking
-- ✅ Safety constraints enforcement
-- ✅ Comprehensive reporting
-
-### 6) Generate Cursor/Antigravity Prompts
-```bash
-/smartspec_generate_cursor_prompt.md <tasks_path> --task <task_selection> [options]
-```
-Example: `/smartspec_generate_cursor_prompt.md specs/feature/spec-004-financial-system/tasks.md --task T001`
-
-Generates user-friendly prompts from tasks.md for Cursor/Antigravity vibe coding.
-
-**Options:**
-- `--task T001` → Single task
-- `--task T001,T002,T003` → Multiple tasks (comma-separated)
-- `--task T001-T010` → Task range
-- `--task T050 --breakdown` → Auto-breakdown large tasks (>8h)
-- `--subtask T050.1,T050.2` → Specific subtasks
-- `--skip-completed` → Skip tasks marked [x]
-- `--antigravity` → Optimize for Antigravity (default: cursor)
-- `--all` → Generate one prompt per task
-
-**Features:**
-- ✅ Simple, non-technical prompts
-- ✅ Step-by-step instructions
-- ✅ Context preservation (previous tasks, dependencies)
-- ✅ Code structure examples
-- ✅ Platform-specific tips (Cursor/Antigravity)
-- ✅ Subtask breakdown for large tasks
-- ✅ Hybrid workflow support (switch between platforms)
-
-**Output:** `cursor-prompt-<tasks>.md` or multiple files with `--all`
-
-### 7) Sync SPEC and Tasks
-```bash
-/smartspec_sync_spec_tasks.md <spec_path> <tasks_path>
-```
-Example: `/smartspec_sync_spec_tasks.md specs/feature/spec-004-financial-system/spec.md specs/feature/spec-004-financial-system/tasks.md`
-
-Synchronizes SPEC with tasks.md to ensure consistency.
-
-### 8) Verify Tasks Progress
-```bash
-/smartspec_verify_tasks_progress.md <tasks_path>
-```
-Example: `/smartspec_verify_tasks_progress.md specs/feature/spec-004-financial-system/tasks.md`
-
-Verifies and tracks progress of implementation tasks.
+1.  **Read the SPEC:** Load the `spec.md` file to understand the overall system.
+2.  **Read the Task:** Find task T005 in `tasks.md` to understand the specific requirement.
+3.  **Check Dependencies:** Look at the task's dependencies. If it depends on T001-T004, check if those are marked `[x]` (completed). If not, warn the user.
+4.  **Generate Context:** Include relevant sections from the SPEC in your response:
+    - Data models (if the task involves database changes)
+    - API specifications (if the task involves API changes)
+    - Business rules (if the task involves logic)
+    - Security requirements (always)
+5.  **Provide Code:** Generate the code to implement the task, following the architectural patterns defined in the SPEC.
+6.  **Update State:** Remind the user to mark the task as complete (`[x]`) in `tasks.md`.
 
 ---
 
-# 📚 16. Knowledge Base Files
-Stored in `.smartspec/` directory.
+## 🐛 Troubleshooting
 
-Includes:
-- DI Pattern Template
-- Security STRIDE Template
-- Performance Requirements
-- Implementation Checklist
-- SPEC Structure & Rules
-- Domain Enhancement Packs
-
----
-
-# 🧪 17. Example Usage
-### Create a fintech SPEC
-```bash
-/smartspec_generate_spec.md specs/feature/spec-004-financial-system/spec.md
-```
-Then specify in conversation: financial profile, fintech domain, stride-full security, full performance
-
-### Generate project plan
-```bash
-/smartspec_generate_plan.md specs/feature/spec-004-financial-system/spec.md
-```
-Creates structured project plan from SPEC requirements.
-
-### Generate tasks from SPEC
-```bash
-/smartspec_generate_tasks.md specs/feature/spec-004-financial-system/spec.md
-```
-Generates detailed task breakdown with checkboxes and subtasks.
-
-### Generate Implementation Prompt
-```bash
-/smartspec_generate_implement_prompt.md specs/feature/spec-004-financial-system/tasks.md
-```
-Generates implementation prompts from tasks.md with platform-specific instructions.
-
-**For Kilo Code:**
-```bash
-/smartspec_generate_implement_prompt.md specs/feature/spec-004-financial-system/tasks.md --kilocode
-```
-
-**For Claude Code (default):**
-```bash
-/smartspec_generate_implement_prompt.md specs/feature/spec-004-financial-system/tasks.md --claude
-```
-
-**For specific phases/tasks:**
-```bash
-/smartspec_generate_implement_prompt.md specs/feature/spec-004-financial-system/tasks.md --phase 1-2 --tasks T001-T010
-```
-
-### Auto-Implement Tasks
-```bash
-/smartspec_implement_tasks.md specs/feature/spec-004-financial-system/tasks.md
-```
-Auto-implement tasks with safety constraints and progress tracking.
-
-### Generate Cursor Prompts (Vibe Coding)
-```bash
-# Single task
-/smartspec_generate_cursor_prompt.md specs/feature/spec-004-financial-system/tasks.md --task T001
-
-# Multiple tasks
-/smartspec_generate_cursor_prompt.md specs/feature/spec-004-financial-system/tasks.md --task T001-T005
-
-# Large task with breakdown
-/smartspec_generate_cursor_prompt.md specs/feature/spec-004-financial-system/tasks.md --task T050 --breakdown
-
-# Skip completed tasks
-/smartspec_generate_cursor_prompt.md specs/feature/spec-004-financial-system/tasks.md --task T011-T020 --skip-completed
-```
-Generates simple, user-friendly prompts for Cursor/Antigravity.
-
-**Hybrid Workflow Example:**
-```bash
-# Phase 1: Use Kilo Code (autonomous)
-kilo code implement tasks.md --task T001-T010
-
-# Phase 2: Switch to Cursor (manual control)
-/smartspec_generate_cursor_prompt.md tasks.md --task T011-T015 --skip-completed
-# Copy prompt to Cursor and implement
-
-# Phase 3: Back to Kilo Code
-kilo code implement tasks.md --task T016-T050 --skip-completed
-```
-
-**Resume from checkpoint:**
-```bash
-/smartspec_implement_tasks.md specs/feature/spec-004-financial-system/tasks.md --resume
-```
-
-**Implement specific phase:**
-```bash
-/smartspec_implement_tasks.md specs/feature/spec-004-financial-system/tasks.md --phase 1
-```
-
-**Validate only:**
-```bash
-/smartspec_implement_tasks.md specs/feature/spec-004-financial-system/tasks.md --validate-only
-```
-
-### Sync SPEC with tasks
-```bash
-/smartspec_sync_spec_tasks.md specs/feature/spec-004-financial-system/spec.md specs/feature/spec-004-financial-system/tasks.md
-```
-Ensures SPEC and tasks.md are synchronized.
-
-### Verify implementation progress
-```bash
-/smartspec_verify_tasks_progress.md specs/feature/spec-004-financial-system/tasks.md
-```
-Tracks and validates task completion status.
+| Problem | Solution |
+| :--- | :--- |
+| **SPEC missing sections** | Re-run `/generate_spec` with the appropriate profile (e.g., `full` instead of `basic`). |
+| **Validation errors** | Check the ERROR-level rules in the output. Common issues: missing security for financial domains, missing retry logic for external APIs. |
+| **Implementation prompt missing tasks** | Re-run `/generate_tasks` to ensure the `tasks.md` file is up-to-date. |
+| **Tasks out of sync with SPEC** | Run `/sync_spec_tasks` to synchronize them. |
+| **Domain mismatch warnings** | Check your `smartspec.config.json` file and ensure the domain matches your project type. |
 
 ---
 
-# 🧭 18. Troubleshooting
-- **SPEC missing sections** → run `/smartspec_generate_spec.md` with appropriate profile
-- **Validation errors** → check ERROR‑level rules in output
-- **Implementation prompt missing tasks** → re‑run `/smartspec_generate_tasks.md`
-- **Tasks out of sync** → run `/smartspec_sync_spec_tasks.md`
-- **Domain mismatch** → check `smartspec.config.json`
+## 🗺️ Roadmap
+
+- **Plugin SDK:** Allow developers to create custom workflows and profiles.
+- **Template Marketplace:** Share and discover SPEC templates for common use cases.
+- **Automatic Diagram Renderer:** Generate architecture diagrams from SPECs.
+- **Integration with Kilo Cloud:** Cloud-based execution and collaboration.
+- **Unified Multi-SPEC Architecture:** Manage multiple SPECs in a single project (e.g., microservices).
 
 ---
 
-# 🗺️ 19. Roadmap
-- Plugin SDK
-- Template Marketplace
-- Automatic Diagram Renderer
-- Integration with Kilo Cloud
-- Unified Multi‑SPEC Architecture Projects
+## 📄 License
 
----
-
-# 🏁 20. License
-
-SmartSpec is licensed under the **MIT License**.
+SmartSpec is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for full details.
 
 This means you are free to:
 - ✅ Use SmartSpec for commercial and non-commercial projects
@@ -571,33 +544,6 @@ This means you are free to:
 - ✅ Distribute SmartSpec and your modifications
 - ✅ Use SmartSpec in proprietary software
 
-See the [LICENSE](LICENSE) file for full details.
-
 ---
 
-## MIT License Summary
-
-```
-MIT License
-
-Copyright (c) 2025 SmartSpec Contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
+**Built with ❤️ for the AI-native development era.**

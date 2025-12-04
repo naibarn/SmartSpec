@@ -52,18 +52,53 @@ This command is **specifically designed for platforms that support file-based ex
 
 ---
 
-## 5. How Multiple Tasks are Handled
+## 5. Output Format: A Continuous Document
 
-This command bundles all specified tasks into **one single prompt file**.
+Unlike `generate_cursor_prompt`, this command does **not** create a list of separate prompts. Instead, it generates **one continuous document** that the target platform reads and processes in its entirety.
 
 **Example Command:**
 ```bash
-/smartspec_generate_implement_prompt.md specs/services/user-profile/tasks.md --tasks T001-T003 --kilocode
+/smartspec_generate_implement_prompt.md specs/services/user-profile/tasks.md --tasks T001-T002 --kilocode
 ```
 
-**Resulting Prompt File (`implement-prompt-T001-T003.md`):**
+**Resulting Prompt File (`implement-prompt-T001-T002.md`):**
 
-This single file will contain all the context and platform-specific instructions for Kilo Code to execute tasks T001, T002, and T003 sequentially.
+```markdown
+# Implementation Prompt: User Profile Service
+
+## Project Context
+
+**SPEC:** user-profile-spec v1.2
+**Tech Stack:** TypeScript, Fastify, Prisma, PostgreSQL
+**OpenAPI Spec:**
+(content of openapi.yaml...)
+
+## Platform Instructions (Kilo Code)
+
+- **Mode:** Use `Code Generation` mode.
+- **Sub-Agents:** Activate `DatabaseAgent` and `APIAgent`.
+- **Validation:** Run `npm test` and `npm run lint` after each phase.
+
+---
+
+## Tasks to Implement
+
+### Phase 1: Database Layer
+
+#### Task T001: Create User Model
+
+**Description:** Create the Prisma model for the `User`.
+**Files to create:** `prisma/schema.prisma`
+**Context:** This is the foundational model for the entire service.
+
+#### Task T002: Create Database Migration
+
+**Description:** Generate a new database migration based on the updated schema.
+**Depends on:** T001
+**Context:** This task will use the `User` model created in T001.
+```
+
+**Key Takeaway:** The platform (e.g., Kilo Code) is expected to read this entire file, understand the full context, and execute the tasks sequentially based on the provided information.
 
 ---
 

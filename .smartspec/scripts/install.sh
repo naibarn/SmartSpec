@@ -131,32 +131,9 @@ case $choice in
     *) echo -e "${RED}Invalid choice${NC}"; exit 1 ;;
 esac
 
-# Step 3: Try symlinks first
+# Step 3: Install workflows
 echo ""
-echo "🔗 Setting up platform integrations..."
-
-USE_SYMLINKS=true
-
-# Test if symlinks work
-test_symlink() {
-    local test_dir=".smartspec_test"
-    mkdir -p "$test_dir"
-    if ln -s "$test_dir" "$test_dir/link" 2>/dev/null; then
-        rm -rf "$test_dir"
-        return 0
-    else
-        rm -rf "$test_dir"
-        return 1
-    fi
-}
-
-if test_symlink; then
-    echo -e "  ${GREEN}✅ Symlinks supported - using symlinks${NC}"
-    USE_SYMLINKS=true
-else
-    echo -e "  ${YELLOW}⚠️  Symlinks not supported - using copies${NC}"
-    USE_SYMLINKS=false
-fi
+echo "📦 Installing SmartSpec workflows..."
 
 # Step 4: Install for each platform
 for platform in "${PLATFORMS[@]}"; do
@@ -178,34 +155,86 @@ for platform in "${PLATFORMS[@]}"; do
     # Create parent directory
     mkdir -p "$(dirname "$TARGET_DIR")"
     
-    # Backup existing workflows if they exist and are not symlinks
-    if [ -e "$TARGET_DIR" ] && [ ! -L "$TARGET_DIR" ]; then
-        BACKUP_DIR="${TARGET_DIR}.backup.$(date +%Y%m%d_%H%M%S)"
-        echo -e "  ${YELLOW}💾 Backing up existing workflows to $(basename "$BACKUP_DIR")${NC}"
-        mv "$TARGET_DIR" "$BACKUP_DIR"
-    elif [ -L "$TARGET_DIR" ]; then
-        # Remove old symlink
-        rm -f "$TARGET_DIR"
+    # Verify source directory exists
+    if [ ! -d "$WORKFLOWS_DIR" ]; then
+        echo -e "  ${RED}❌ Error: Workflows directory not found: $WORKFLOWS_DIR${NC}"
+        exit 1
     fi
     
-    # Install
-    if [ "$USE_SYMLINKS" = true ]; then
-        # Verify source directory exists
-        if [ ! -d "$WORKFLOWS_DIR" ]; then
-            echo -e "  ${RED}❌ Error: Workflows directory not found: $WORKFLOWS_DIR${NC}"
-            exit 1
+    # Handle existing workflows directory
+    if [ -L "$TARGET_DIR" ]; then
+        # Remove old symlink and convert to directory
+        echo -e "  ${BLUE}🔗 Converting symlink to directory${NC}"
+        rm -f "$TARGET_DIR"
+        mkdir -p "$TARGET_DIR"
+        cp "$WORKFLOWS_DIR"/smartspec_*.md "$TARGET_DIR/" 2>/dev/null || true
+        echo -e "  ${GREEN}✅ $PLATFORM_NAME: Workflows installed${NC}"
+    elif [ -d "$TARGET_DIR" ]; then
+        # Directory exists - merge workflows
+        echo -e "  ${BLUE}🔍 Checking for existing SmartSpec workflows...${NC}"
+        
+        # Find existing SmartSpec workflows
+        EXISTING_SMARTSPEC=()
+        if ls "$TARGET_DIR"/smartspec_*.md >/dev/null 2>&1; then
+            while IFS= read -r file; do
+                EXISTING_SMARTSPEC+=("$(basename "$file")")
+            done < <(ls "$TARGET_DIR"/smartspec_*.md 2>/dev/null)
         fi
-        # Create symlink (relative path for portability)
-        ln -s "../$WORKFLOWS_DIR" "$TARGET_DIR"
-        echo -e "  ${GREEN}✅ $PLATFORM_NAME: Symlink created${NC}"
+        
+        if [ ${#EXISTING_SMARTSPEC[@]} -gt 0 ]; then
+            echo -e "  ${YELLOW}⚠️  Found ${#EXISTING_SMARTSPEC[@]} existing SmartSpec workflow(s)${NC}"
+            echo ""
+            echo "  How do you want to proceed?"
+            echo "    1) Overwrite all (recommended for updates)"
+            echo "    2) Skip all (keep existing versions)"
+            echo "    3) Cancel installation"
+            read -p "  Enter choice [1-3]: " overwrite_choice
+            
+            case $overwrite_choice in
+                1)
+                    # Backup existing SmartSpec workflows
+                    BACKUP_DIR="${TARGET_DIR}.smartspec.backup.$(date +%Y%m%d_%H%M%S)"
+                    mkdir -p "$BACKUP_DIR"
+                    for file in "${EXISTING_SMARTSPEC[@]}"; do
+                        cp "$TARGET_DIR/$file" "$BACKUP_DIR/" 2>/dev/null || true
+                    done
+                    echo -e "  ${GREEN}💾 Backed up existing SmartSpec workflows to $(basename "$BACKUP_DIR")${NC}"
+                    
+                    # Copy new workflows
+                    cp "$WORKFLOWS_DIR"/smartspec_*.md "$TARGET_DIR/" 2>/dev/null || true
+                    echo -e "  ${GREEN}✅ $PLATFORM_NAME: Workflows merged (${#EXISTING_SMARTSPEC[@]} updated)${NC}"
+                    ;;
+                2)
+                    # Copy only new workflows (skip existing)
+                    COPIED=0
+                    for file in "$WORKFLOWS_DIR"/smartspec_*.md; do
+                        filename=$(basename "$file")
+                        if [ ! -f "$TARGET_DIR/$filename" ]; then
+                            cp "$file" "$TARGET_DIR/"
+                            ((COPIED++))
+                        fi
+                    done
+                    echo -e "  ${GREEN}✅ $PLATFORM_NAME: $COPIED new workflow(s) added${NC}"
+                    ;;
+                3)
+                    echo -e "  ${YELLOW}❌ Installation cancelled for $PLATFORM_NAME${NC}"
+                    continue
+                    ;;
+                *)
+                    echo -e "  ${RED}Invalid choice, skipping $PLATFORM_NAME${NC}"
+                    continue
+                    ;;
+            esac
+        else
+            # No existing SmartSpec workflows, just copy
+            cp "$WORKFLOWS_DIR"/smartspec_*.md "$TARGET_DIR/" 2>/dev/null || true
+            echo -e "  ${GREEN}✅ $PLATFORM_NAME: Workflows installed${NC}"
+        fi
     else
-        # Copy files
-        if [ ! -d "$WORKFLOWS_DIR" ]; then
-            echo -e "  ${RED}❌ Error: Workflows directory not found: $WORKFLOWS_DIR${NC}"
-            exit 1
-        fi
-        cp -r "$WORKFLOWS_DIR" "$TARGET_DIR"
-        echo -e "  ${GREEN}✅ $PLATFORM_NAME: Files copied${NC}"
+        # Directory doesn't exist - create and copy
+        mkdir -p "$TARGET_DIR"
+        cp "$WORKFLOWS_DIR"/smartspec_*.md "$TARGET_DIR/" 2>/dev/null || true
+        echo -e "  ${GREEN}✅ $PLATFORM_NAME: Workflows installed${NC}"
     fi
 done
 
@@ -219,7 +248,7 @@ cat > "$SMARTSPEC_DIR/config.json" <<EOF
   "version": "$SMARTSPEC_VERSION",
   "installed_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "platforms": [$(printf '"%s"' "${PLATFORMS[@]}" | paste -sd ',' -)],
-  "use_symlinks": $USE_SYMLINKS,
+  "use_symlinks": false,
   "repo": "$SMARTSPEC_REPO"
 }
 EOF
@@ -228,8 +257,8 @@ echo "$SMARTSPEC_VERSION" > "$SMARTSPEC_DIR/version.txt"
 
 echo -e "${GREEN}✅ Configuration saved${NC}"
 
-# Step 6: Create sync script (if using copies)
-if [ "$USE_SYMLINKS" = false ]; then
+# Step 6: Create sync script
+# Always create sync script for manual updates
     cat > "$SMARTSPEC_DIR/sync.sh" <<'SYNCEOF'
 #!/bin/bash
 # SmartSpec Sync Script
@@ -262,9 +291,9 @@ for platform in $PLATFORMS; do
         claude) TARGET_DIR=".claude/commands" ;;
     esac
     
-    # Sync
+    # Sync only SmartSpec workflows
     if [ -d "$TARGET_DIR" ]; then
-        rsync -a --delete "$WORKFLOWS_DIR/" "$TARGET_DIR/"
+        cp "$WORKFLOWS_DIR"/smartspec_*.md "$TARGET_DIR/" 2>/dev/null || true
         echo -e "  ${GREEN}✅ $platform synced${NC}"
     fi
 done
@@ -272,11 +301,11 @@ done
 echo -e "${GREEN}✅ Sync complete${NC}"
 SYNCEOF
     
-    chmod +x "$SMARTSPEC_DIR/sync.sh"
-    echo -e "${GREEN}✅ Sync script created${NC}"
-    
-    # Create git hook
-    if [ -d ".git" ]; then
+chmod +x "$SMARTSPEC_DIR/sync.sh"
+echo -e "${GREEN}✅ Sync script created${NC}"
+
+# Create git hook
+if [ -d ".git" ]; then
         mkdir -p ".git/hooks"
         cat > ".git/hooks/post-merge" <<'HOOKEOF'
 #!/bin/bash
@@ -287,9 +316,8 @@ if [ -f ".smartspec/sync.sh" ]; then
     .smartspec/sync.sh
 fi
 HOOKEOF
-        chmod +x ".git/hooks/post-merge"
-        echo -e "${GREEN}✅ Git hook installed (auto-sync on pull)${NC}"
-    fi
+    chmod +x ".git/hooks/post-merge"
+    echo -e "${GREEN}✅ Git hook installed (auto-sync on pull)${NC}"
 fi
 
 # Step 7: Success message
@@ -301,15 +329,13 @@ echo ""
 echo "📍 Installation details:"
 echo "  - Version: $SMARTSPEC_VERSION"
 echo "  - Location: $SMARTSPEC_DIR"
-echo "  - Method: $([ "$USE_SYMLINKS" = true ] && echo "Symlinks (auto-sync)" || echo "Copies (manual sync)")"
+echo "  - Method: Merged installation (preserves existing workflows)"
 echo "  - Platforms: ${PLATFORMS[*]}"
 echo ""
 
-if [ "$USE_SYMLINKS" = false ]; then
-    echo -e "${YELLOW}📝 Note: You're using copies (not symlinks)${NC}"
-    echo "   Run '.smartspec/sync.sh' after updating workflows"
-    echo ""
-fi
+echo -e "${YELLOW}📝 Note: SmartSpec workflows are merged with your existing workflows${NC}"
+echo "   Run '.smartspec/sync.sh' to update SmartSpec workflows from repository"
+echo ""
 
 echo "🎉 You can now use SmartSpec workflows in:"
 for platform in "${PLATFORMS[@]}"; do

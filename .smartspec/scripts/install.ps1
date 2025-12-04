@@ -120,28 +120,9 @@ switch ($choice) {
     }
 }
 
-# Step 3: Try symlinks first (Windows 10+ with Developer Mode)
+# Step 3: Install workflows
 Write-Host ""
-Write-Host "🔗 Setting up platform integrations..."
-
-$USE_SYMLINKS = $false
-
-# Test if symlinks work
-try {
-    $testDir = ".smartspec_test"
-    New-Item -ItemType Directory -Force -Path $testDir | Out-Null
-    New-Item -ItemType SymbolicLink -Path "$testDir\link" -Target $testDir -ErrorAction Stop | Out-Null
-    Remove-Item -Recurse -Force $testDir
-    $USE_SYMLINKS = $true
-    Write-Host "  ✅ Symlinks supported - using symlinks" -ForegroundColor Green
-} catch {
-    if (Test-Path ".smartspec_test") {
-        Remove-Item -Recurse -Force .smartspec_test -ErrorAction SilentlyContinue
-    }
-    Write-Host "  ⚠️  Symlinks not supported - using copies" -ForegroundColor Yellow
-    Write-Host "     (Enable Developer Mode in Windows Settings for symlinks)" -ForegroundColor Gray
-    $USE_SYMLINKS = $false
-}
+Write-Host "📦 Installing SmartSpec workflows..."
 
 # Step 4: Install for each platform
 foreach ($platform in $PLATFORMS) {
@@ -164,39 +145,86 @@ foreach ($platform in $PLATFORMS) {
     $parentDir = Split-Path -Parent $TARGET_DIR
     New-Item -ItemType Directory -Force -Path $parentDir | Out-Null
     
-    # Backup existing workflows if they exist and are not symlinks
-    if (Test-Path $TARGET_DIR) {
-        $item = Get-Item $TARGET_DIR
-        if ($item.LinkType -ne "SymbolicLink") {
-            $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-            $BACKUP_DIR = "${TARGET_DIR}.backup.$timestamp"
-            Write-Host "  💾 Backing up existing workflows to $(Split-Path -Leaf $BACKUP_DIR)" -ForegroundColor Yellow
-            Move-Item $TARGET_DIR $BACKUP_DIR
-        } else {
-            # Remove old symlink
-            Remove-Item $TARGET_DIR -Force
-        }
+    # Verify source directory exists
+    if (-not (Test-Path $WORKFLOWS_DIR)) {
+        Write-Host "  ❌ Error: Workflows directory not found: $WORKFLOWS_DIR" -ForegroundColor Red
+        exit 1
     }
     
-    # Install
-    if ($USE_SYMLINKS) {
-        # Verify source directory exists
-        if (-not (Test-Path $WORKFLOWS_DIR)) {
-            Write-Host "  ❌ Error: Workflows directory not found: $WORKFLOWS_DIR" -ForegroundColor Red
-            exit 1
+    # Handle existing workflows directory
+    if (Test-Path $TARGET_DIR) {
+        $item = Get-Item $TARGET_DIR
+        if ($item.LinkType -eq "SymbolicLink") {
+            # Remove old symlink and convert to directory
+            Write-Host "  🔗 Converting symlink to directory" -ForegroundColor Cyan
+            Remove-Item $TARGET_DIR -Force
+            New-Item -ItemType Directory -Force -Path $TARGET_DIR | Out-Null
+            Copy-Item "$WORKFLOWS_DIR\smartspec_*.md" $TARGET_DIR -ErrorAction SilentlyContinue
+            Write-Host "  ✅ $PLATFORM_NAME`: Workflows installed" -ForegroundColor Green
+        } else {
+            # Directory exists - merge workflows
+            Write-Host "  🔍 Checking for existing SmartSpec workflows..." -ForegroundColor Cyan
+            
+            # Find existing SmartSpec workflows
+            $existingSmartSpec = @(Get-ChildItem -Path $TARGET_DIR -Filter "smartspec_*.md" -ErrorAction SilentlyContinue)
+            
+            if ($existingSmartSpec.Count -gt 0) {
+                Write-Host "  ⚠️  Found $($existingSmartSpec.Count) existing SmartSpec workflow(s)" -ForegroundColor Yellow
+                Write-Host ""
+                Write-Host "  How do you want to proceed?"
+                Write-Host "    1) Overwrite all (recommended for updates)"
+                Write-Host "    2) Skip all (keep existing versions)"
+                Write-Host "    3) Cancel installation"
+                $overwriteChoice = Read-Host "  Enter choice [1-3]"
+                
+                switch ($overwriteChoice) {
+                    1 {
+                        # Backup existing SmartSpec workflows
+                        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                        $BACKUP_DIR = "${TARGET_DIR}.smartspec.backup.$timestamp"
+                        New-Item -ItemType Directory -Force -Path $BACKUP_DIR | Out-Null
+                        foreach ($file in $existingSmartSpec) {
+                            Copy-Item $file.FullName $BACKUP_DIR -ErrorAction SilentlyContinue
+                        }
+                        Write-Host "  💾 Backed up existing SmartSpec workflows to $(Split-Path -Leaf $BACKUP_DIR)" -ForegroundColor Green
+                        
+                        # Copy new workflows
+                        Copy-Item "$WORKFLOWS_DIR\smartspec_*.md" $TARGET_DIR -Force -ErrorAction SilentlyContinue
+                        Write-Host "  ✅ $PLATFORM_NAME`: Workflows merged ($($existingSmartSpec.Count) updated)" -ForegroundColor Green
+                    }
+                    2 {
+                        # Copy only new workflows (skip existing)
+                        $copied = 0
+                        $newWorkflows = Get-ChildItem -Path $WORKFLOWS_DIR -Filter "smartspec_*.md"
+                        foreach ($file in $newWorkflows) {
+                            $targetFile = Join-Path $TARGET_DIR $file.Name
+                            if (-not (Test-Path $targetFile)) {
+                                Copy-Item $file.FullName $targetFile
+                                $copied++
+                            }
+                        }
+                        Write-Host "  ✅ $PLATFORM_NAME`: $copied new workflow(s) added" -ForegroundColor Green
+                    }
+                    3 {
+                        Write-Host "  ❌ Installation cancelled for $PLATFORM_NAME" -ForegroundColor Yellow
+                        continue
+                    }
+                    default {
+                        Write-Host "  Invalid choice, skipping $PLATFORM_NAME" -ForegroundColor Red
+                        continue
+                    }
+                }
+            } else {
+                # No existing SmartSpec workflows, just copy
+                Copy-Item "$WORKFLOWS_DIR\smartspec_*.md" $TARGET_DIR -ErrorAction SilentlyContinue
+                Write-Host "  ✅ $PLATFORM_NAME`: Workflows installed" -ForegroundColor Green
+            }
         }
-        # Create symlink (relative path)
-        $sourcePath = "..\$WORKFLOWS_DIR"
-        New-Item -ItemType SymbolicLink -Path $TARGET_DIR -Target $sourcePath | Out-Null
-        Write-Host "  ✅ $PLATFORM_NAME`: Symlink created" -ForegroundColor Green
     } else {
-        # Copy files
-        if (-not (Test-Path $WORKFLOWS_DIR)) {
-            Write-Host "  ❌ Error: Workflows directory not found: $WORKFLOWS_DIR" -ForegroundColor Red
-            exit 1
-        }
-        Copy-Item -Recurse $WORKFLOWS_DIR $TARGET_DIR
-        Write-Host "  ✅ $PLATFORM_NAME`: Files copied" -ForegroundColor Green
+        # Directory doesn't exist - create and copy
+        New-Item -ItemType Directory -Force -Path $TARGET_DIR | Out-Null
+        Copy-Item "$WORKFLOWS_DIR\smartspec_*.md" $TARGET_DIR -ErrorAction SilentlyContinue
+        Write-Host "  ✅ $PLATFORM_NAME`: Workflows installed" -ForegroundColor Green
     }
 }
 
@@ -208,7 +236,7 @@ $config = @{
     version = $SMARTSPEC_VERSION
     installed_at = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     platforms = $PLATFORMS
-    use_symlinks = $USE_SYMLINKS
+    use_symlinks = $false
     repo = $SMARTSPEC_REPO
 }
 
@@ -217,8 +245,8 @@ $SMARTSPEC_VERSION | Out-File -Encoding UTF8 "$SMARTSPEC_DIR\version.txt"
 
 Write-Host "✅ Configuration saved" -ForegroundColor Green
 
-# Step 6: Create sync script (if using copies)
-if (-not $USE_SYMLINKS) {
+# Step 6: Create sync script
+# Always create sync script for manual updates
     $syncScript = @'
 # SmartSpec Sync Script (Windows)
 
@@ -254,9 +282,8 @@ foreach ($platform in $PLATFORMS) {
 Write-Host "✅ Sync complete" -ForegroundColor Green
 '@
     
-    $syncScript | Out-File -Encoding UTF8 "$SMARTSPEC_DIR\sync.ps1"
-    Write-Host "✅ Sync script created" -ForegroundColor Green
-}
+$syncScript | Out-File -Encoding UTF8 "$SMARTSPEC_DIR\sync.ps1"
+Write-Host "✅ Sync script created" -ForegroundColor Green
 
 # Step 7: Success message
 Write-Host ""
@@ -267,15 +294,13 @@ Write-Host ""
 Write-Host "📍 Installation details:"
 Write-Host "  - Version: $SMARTSPEC_VERSION"
 Write-Host "  - Location: $SMARTSPEC_DIR"
-Write-Host "  - Method: $(if ($USE_SYMLINKS) { 'Symlinks (auto-sync)' } else { 'Copies (manual sync)' })"
+Write-Host "  - Method: Merged installation (preserves existing workflows)"
 Write-Host "  - Platforms: $($PLATFORMS -join ', ')"
 Write-Host ""
 
-if (-not $USE_SYMLINKS) {
-    Write-Host "📝 Note: You're using copies (not symlinks)" -ForegroundColor Yellow
-    Write-Host "   Run '.smartspec\sync.ps1' after updating workflows"
-    Write-Host ""
-}
+Write-Host "📝 Note: SmartSpec workflows are merged with your existing workflows" -ForegroundColor Yellow
+Write-Host "   Run '.smartspec\sync.ps1' to update SmartSpec workflows from repository"
+Write-Host ""
 
 Write-Host "🎉 You can now use SmartSpec workflows in:"
 foreach ($platform in $PLATFORMS) {

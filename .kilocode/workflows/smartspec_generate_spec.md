@@ -1912,11 +1912,397 @@ From user input or existing SPEC, extract:
 
 ---
 
-**Step 4: Validate and look up each dependency in SPEC_INDEX.json (Enhanced with Validation)**
+**Step 4: Validate and look up each dependency in SPEC_INDEX.json (Enhanced with Smart Validation)**
+
+**Helper Functions:**
+
+```javascript
+// Levenshtein Distance for fuzzy matching
+function levenshteinDistance(str1, str2) {
+  const len1 = str1.length;
+  const len2 = str2.length;
+  const matrix = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(0));
+  
+  for (let i = 0; i <= len1; i++) matrix[i][0] = i;
+  for (let j = 0; j <= len2; j++) matrix[0][j] = j;
+  
+  for (let i = 1; i <= len1; i++) {
+    for (let j = 1; j <= len2; j++) {
+      const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,      // deletion
+        matrix[i][j - 1] + 1,      // insertion
+        matrix[i - 1][j - 1] + cost // substitution
+      );
+    }
+  }
+  
+  return matrix[len1][len2];
+}
+
+// Smart Spec Search (4 levels)
+function findSpec(dependencyId, SPEC_INDEX) {
+  // Level 1: Exact match
+  let spec = SPEC_INDEX.specs.find(s => s.id === dependencyId);
+  if (spec) {
+    return { spec, matchType: 'exact', confidence: 1.0 };
+  }
+  
+  // Level 2: Fuzzy match (typo tolerance)
+  const fuzzyMatches = SPEC_INDEX.specs
+    .map(s => ({
+      spec: s,
+      distance: levenshteinDistance(dependencyId.toLowerCase(), s.id.toLowerCase())
+    }))
+    .filter(m => m.distance <= 3) // Max 3 character difference
+    .sort((a, b) => a.distance - b.distance);
+  
+  if (fuzzyMatches.length > 0) {
+    return {
+      spec: fuzzyMatches[0].spec,
+      matchType: 'fuzzy',
+      confidence: 1 - (fuzzyMatches[0].distance / Math.max(dependencyId.length, fuzzyMatches[0].spec.id.length)),
+      allMatches: fuzzyMatches.slice(0, 3)
+    };
+  }
+  
+  // Level 3: Partial match (substring)
+  const partialMatches = SPEC_INDEX.specs
+    .filter(s => 
+      s.id.toLowerCase().includes(dependencyId.toLowerCase()) || 
+      dependencyId.toLowerCase().includes(s.id.toLowerCase())
+    )
+    .map(s => ({
+      spec: s,
+      score: Math.max(
+        dependencyId.toLowerCase().length / s.id.toLowerCase().length,
+        s.id.toLowerCase().length / dependencyId.toLowerCase().length
+      )
+    }))
+    .sort((a, b) => b.score - a.score);
+  
+  if (partialMatches.length > 0) {
+    return {
+      spec: partialMatches[0].spec,
+      matchType: 'partial',
+      confidence: partialMatches[0].score,
+      allMatches: partialMatches.slice(0, 3)
+    };
+  }
+  
+  // Level 4: Semantic match (title similarity)
+  const semanticMatches = SPEC_INDEX.specs
+    .map(s => {
+      const titleWords = s.title.toLowerCase().split(/[\s-_]+/);
+      const depWords = dependencyId.toLowerCase().split(/[\s-_]+/);
+      const overlap = depWords.filter(w => titleWords.some(tw => tw.includes(w) || w.includes(tw))).length;
+      const score = overlap / Math.max(depWords.length, 1);
+      return { spec: s, score };
+    })
+    .filter(m => m.score > 0.4) // >40% word overlap
+    .sort((a, b) => b.score - a.score);
+  
+  if (semanticMatches.length > 0) {
+    return {
+      spec: semanticMatches[0].spec,
+      matchType: 'semantic',
+      confidence: semanticMatches[0].score,
+      allMatches: semanticMatches.slice(0, 3)
+    };
+  }
+  
+  // Not found
+  return { spec: null, matchType: 'none', confidence: 0, allMatches: [] };
+}
+
+// Auto-Correction for typos
+function autoCorrect(dependencyId, SPEC_INDEX) {
+  const candidates = SPEC_INDEX.specs
+    .map(spec => ({
+      spec: spec,
+      distance: levenshteinDistance(dependencyId.toLowerCase(), spec.id.toLowerCase())
+    }))
+    .filter(c => c.distance <= 2) // Max 2 character difference
+    .sort((a, b) => a.distance - b.distance);
+  
+  if (candidates.length === 0) {
+    return { corrected: false };
+  }
+  
+  const best = candidates[0];
+  
+  if (best.distance === 1 && candidates.length === 1) {
+    // High confidence: only 1 candidate, 1 char difference
+    return {
+      corrected: true,
+      confidence: 'high',
+      original: dependencyId,
+      correctedId: best.spec.id,
+      spec: best.spec,
+      autoApply: true
+    };
+  }
+  
+  if (best.distance <= 2 && candidates.length <= 3) {
+    // Medium confidence: few candidates, 1-2 char difference
+    return {
+      corrected: true,
+      confidence: 'medium',
+      original: dependencyId,
+      suggestions: candidates.slice(0, 3),
+      autoApply: false
+    };
+  }
+  
+  return { corrected: false };
+}
+
+// Deprecated Spec Detection
+function validateDeprecated(spec, SPEC_INDEX) {
+  if (spec.status !== 'deprecated') {
+    return { valid: true, deprecated: false };
+  }
+  
+  // Method 1: Check metadata for replacement_id
+  if (spec.metadata?.replacement_id) {
+    const replacement = SPEC_INDEX.specs.find(
+      s => s.id === spec.metadata.replacement_id
+    );
+    
+    if (replacement) {
+      return {
+        valid: false,
+        deprecated: true,
+        replacement: replacement,
+        method: 'metadata',
+        autoFix: true
+      };
+    }
+  }
+  
+  // Method 2: Find by version (v1 → v2)
+  const versionMatch = spec.id.match(/-v(\d+)$/);
+  if (versionMatch) {
+    const currentVersion = parseInt(versionMatch[1]);
+    const nextVersion = currentVersion + 1;
+    const nextId = spec.id.replace(/-v\d+$/, `-v${nextVersion}`);
+    
+    const replacement = SPEC_INDEX.specs.find(s => s.id === nextId);
+    if (replacement) {
+      return {
+        valid: false,
+        deprecated: true,
+        replacement: replacement,
+        method: 'version',
+        autoFix: true
+      };
+    }
+  }
+  
+  // Method 3: Find by similar title (active status)
+  const similarSpecs = SPEC_INDEX.specs
+    .filter(s => 
+      s.id !== spec.id &&
+      s.status === 'active' &&
+      levenshteinDistance(s.title.toLowerCase(), spec.title.toLowerCase()) < spec.title.length * 0.3
+    )
+    .sort((a, b) => new Date(b.updated) - new Date(a.updated));
+  
+  if (similarSpecs.length > 0) {
+    return {
+      valid: false,
+      deprecated: true,
+      replacement: similarSpecs[0],
+      method: 'similarity',
+      autoFix: false // Need user confirmation
+    };
+  }
+  
+  // Deprecated but no replacement found
+  return {
+    valid: false,
+    deprecated: true,
+    replacement: null,
+    method: 'none',
+    autoFix: false
+  };
+}
+```
+
+---
+
+**Enhanced Validation Logic:**
 
 For each dependency ID:
 ```javascript
-const spec = SPEC_INDEX.specs.find(s => s.id === dependencyId);
+console.log(`\n🔍 Validating: ${dependencyId}`);
+
+// Step 1: Smart search
+const searchResult = findSpec(dependencyId, SPEC_INDEX);
+let finalSpec = searchResult.spec;
+let warnings = [];
+
+if (searchResult.matchType === 'exact') {
+  console.log(`✅ Exact match found: ${finalSpec.id}`);
+  
+} else if (searchResult.matchType === 'fuzzy') {
+  // Fuzzy match - possible typo
+  const correction = autoCorrect(dependencyId, SPEC_INDEX);
+  
+  if (correction.corrected && correction.confidence === 'high' && FLAGS.auto_fix) {
+    // Auto-correct with high confidence
+    console.log(`✅ Auto-corrected: "${dependencyId}" → "${correction.correctedId}" (typo detected)`);
+    finalSpec = correction.spec;
+    warnings.push(`Auto-corrected from ${dependencyId}`);
+    
+  } else if (correction.corrected && correction.confidence === 'medium') {
+    // Ask user to select
+    console.log(`💡 Possible typo in "${dependencyId}". Did you mean:`);
+    correction.suggestions.forEach((c, i) => {
+      console.log(`   ${i+1}. ${c.spec.id} (${c.distance} char difference)`);
+    });
+    
+    if (FLAGS.auto_fix) {
+      // Use best match
+      finalSpec = correction.suggestions[0].spec;
+      console.log(`✅ Using: ${finalSpec.id}`);
+      warnings.push(`Auto-selected ${finalSpec.id} (best match)`);
+    } else {
+      // Interactive mode
+      const choice = await askUser('Select option (1-3) or 0 to use original:');
+      if (choice > 0 && choice <= correction.suggestions.length) {
+        finalSpec = correction.suggestions[choice - 1].spec;
+        console.log(`✅ Using: ${finalSpec.id}`);
+      } else {
+        console.log(`⚠️ Using original: ${dependencyId} (not found)`);
+        finalSpec = null;
+      }
+    }
+  } else {
+    console.log(`⚠️ Fuzzy match: ${finalSpec.id} (${Math.round(searchResult.confidence * 100)}% confidence)`);
+    warnings.push(`Fuzzy match with ${searchResult.confidence.toFixed(2)} confidence`);
+  }
+  
+} else if (searchResult.matchType === 'partial') {
+  console.log(`⚠️ Partial match: ${finalSpec.id} (${Math.round(searchResult.confidence * 100)}% confidence)`);
+  console.log(`   Original: ${dependencyId}`);
+  
+  if (!FLAGS.auto_fix) {
+    const confirm = await askUser(`Use ${finalSpec.id}? [Y/n]`);
+    if (!confirm) {
+      finalSpec = null;
+    }
+  }
+  warnings.push(`Partial match - verify correctness`);
+  
+} else if (searchResult.matchType === 'semantic') {
+  console.log(`💡 Semantic match: ${finalSpec.id}`);
+  console.log(`   Title: ${finalSpec.title}`);
+  console.log(`   Confidence: ${Math.round(searchResult.confidence * 100)}%`);
+  
+  if (!FLAGS.auto_fix) {
+    const confirm = await askUser(`Use ${finalSpec.id}? [Y/n]`);
+    if (!confirm) {
+      finalSpec = null;
+    }
+  }
+  warnings.push(`Semantic match - verify functionality`);
+  
+} else {
+  // Not found
+  console.log(`❌ Not found: ${dependencyId}`);
+  finalSpec = null;
+}
+
+// Step 2: Validate deprecated (if found)
+if (finalSpec) {
+  const deprecatedCheck = validateDeprecated(finalSpec, SPEC_INDEX);
+  
+  if (deprecatedCheck.deprecated) {
+    console.log(`⚠️ DEPRECATED: ${finalSpec.id} is deprecated`);
+    
+    if (deprecatedCheck.replacement) {
+      console.log(`✅ Replacement found: ${deprecatedCheck.replacement.id}`);
+      console.log(`   Method: ${deprecatedCheck.method}`);
+      
+      if (deprecatedCheck.autoFix && FLAGS.auto_fix) {
+        // Auto-replace
+        console.log(`✅ Auto-replacing with ${deprecatedCheck.replacement.id}`);
+        finalSpec = deprecatedCheck.replacement;
+        warnings.push(`Replaced deprecated spec with ${finalSpec.id}`);
+        
+      } else if (deprecatedCheck.replacement) {
+        // Ask user
+        const replace = await askUser(`Use ${deprecatedCheck.replacement.id} instead? [Y/n]`);
+        if (replace) {
+          finalSpec = deprecatedCheck.replacement;
+          console.log(`✅ Using: ${finalSpec.id}`);
+        } else {
+          warnings.push(`Using deprecated spec ${finalSpec.id}`);
+        }
+      }
+    } else {
+      console.log(`❌ No replacement found - manual review required`);
+      warnings.push(`Deprecated spec with no replacement`);
+    }
+  }
+}
+
+// Step 3: Handle not found
+if (!finalSpec) {
+  console.warn(`⚠️ WARNING: ${dependencyId} not found in SPEC_INDEX`);
+  console.warn(`⚠️ This spec may not exist or INDEX is stale`);
+  
+  // Check if --auto-add-refs flag is set
+  if (FLAGS.auto_add_refs) {
+    const addPlaceholder = await askUser(
+      `Add ${dependencyId} to SPEC_INDEX as placeholder? [Y/n]`
+    );
+    
+    if (addPlaceholder) {
+      // Add placeholder to SPEC_INDEX
+      const placeholder = {
+        id: dependencyId,
+        title: "[PLACEHOLDER - TO BE CREATED]",
+        path: "TBD",
+        repo: "unknown",
+        status: "placeholder",
+        version: "0.0.0",
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
+        author: "System",
+        dependencies: [],
+        dependents: [CURRENT_SPEC_ID],
+        metadata: {
+          created_by_workflow: "generate_spec",
+          reason: "Referenced but not found"
+        }
+      };
+      
+      SPEC_INDEX.specs.push(placeholder);
+      SPEC_INDEX.metadata.total_specs++;
+      SPEC_INDEX.metadata.by_status.placeholder++;
+      
+      console.log(`✅ Added ${dependencyId} as placeholder`);
+      finalSpec = placeholder;
+      warnings.push(`Added as placeholder - needs to be created`);
+    }
+  }
+}
+
+// Step 4: Format output
+if (finalSpec) {
+  const warningStr = warnings.length > 0 ? ` ⚠️ ${warnings.join('; ')}` : '';
+  const statusBadge = finalSpec.status === 'placeholder' ? ' [PLACEHOLDER]' : 
+                      finalSpec.status === 'deprecated' ? ' [DEPRECATED]' : '';
+  
+  return `- **${finalSpec.id}**${statusBadge} - ${finalSpec.title} - Spec Path: "${finalSpec.path}/spec.md" Repo: ${finalSpec.repo}${warningStr}`;
+} else {
+  return `- **${dependencyId}** - [NOT FOUND IN SPEC_INDEX] - Spec Path: "N/A" Repo: unknown ⚠️ Manual review required`;
+}
+
+// OLD CODE (replaced by above):
+// const spec = SPEC_INDEX.specs.find(s => s.id === dependencyId);
 
 if (spec) {
   // Found in index

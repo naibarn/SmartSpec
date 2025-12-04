@@ -71,8 +71,8 @@ Profiles define the **template structure**, **mandatory sections**, and **valida
 - `full` – enterprise‑grade SPEC, maximum safety & detail
 
 ### Choose a profile
-```
-/smartspec_generate_spec.md
+```bash
+/smartspec_generate_spec.md specs/feature/spec-XXX-your-feature/spec.md
 ```
 Then select the desired profile (basic, backend-service, financial, or full) when prompted.
 
@@ -91,8 +91,8 @@ Domains add specialized content to SPECs.
 - `internal` → relaxed security & flexible patterns
 
 ### How to apply
-```
-/smartspec_generate_spec.md
+```bash
+/smartspec_generate_spec.md specs/feature/spec-XXX-your-feature/spec.md
 ```
 Then specify the domain (fintech, healthcare, iot, ai, realtime, batch, or internal) when prompted.
 
@@ -257,39 +257,51 @@ This adds missing:
 SmartSpec V5 ships with six main workflows.
 
 ### 1) Generate SPEC
+```bash
+/smartspec_generate_spec.md <spec_path>
 ```
-/smartspec_generate_spec.md
-```
+Example: `/smartspec_generate_spec.md specs/feature/spec-004-financial-system/spec.md`
+
 Outputs a new SmartSpec v5‑format SPEC.
 
 ### 2) Generate Plan
+```bash
+/smartspec_generate_plan.md <spec_path>
 ```
-/smartspec_generate_plan.md
-```
-Generates project plan from requirements.
+Example: `/smartspec_generate_plan.md specs/feature/spec-004-financial-system/spec.md`
+
+Generates project plan from SPEC requirements.
 
 ### 3) Generate Tasks
+```bash
+/smartspec_generate_tasks.md <spec_path>
 ```
-/smartspec_generate_tasks.md
-```
-Converts SPEC → tasks.md
+Example: `/smartspec_generate_tasks.md specs/feature/spec-004-financial-system/spec.md`
+
+Converts SPEC → tasks.md with checkboxes and subtasks.
 
 ### 4) Generate Kilo Prompt
+```bash
+/smartspec_generate_kilo_prompt.md <tasks_path>
 ```
-/smartspec_generate_kilo_prompt.md
-```
+Example: `/smartspec_generate_kilo_prompt.md specs/feature/spec-004-financial-system/tasks.md`
+
 Converts tasks.md → kilo prompt with full safety constraints.
 
 ### 5) Sync SPEC and Tasks
+```bash
+/smartspec_sync_spec_tasks.md <spec_path> <tasks_path>
 ```
-/smartspec_sync_spec_tasks.md
-```
+Example: `/smartspec_sync_spec_tasks.md specs/feature/spec-004-financial-system/spec.md specs/feature/spec-004-financial-system/tasks.md`
+
 Synchronizes SPEC with tasks.md to ensure consistency.
 
 ### 6) Verify Tasks Progress
+```bash
+/smartspec_verify_tasks_progress.md <tasks_path>
 ```
-/smartspec_verify_tasks_progress.md
-```
+Example: `/smartspec_verify_tasks_progress.md specs/feature/spec-004-financial-system/tasks.md`
+
 Verifies and tracks progress of implementation tasks.
 
 ---
@@ -309,38 +321,38 @@ Includes:
 
 # 🧪 17. Example Usage
 ### Create a fintech SPEC
+```bash
+/smartspec_generate_spec.md specs/feature/spec-004-financial-system/spec.md
 ```
-/smartspec_generate_spec.md
-```
-Then specify: financial profile, fintech domain, stride-full security, full performance
+Then specify in conversation: financial profile, fintech domain, stride-full security, full performance
 
 ### Generate project plan
+```bash
+/smartspec_generate_plan.md specs/feature/spec-004-financial-system/spec.md
 ```
-/smartspec_generate_plan.md
-```
-Creates structured project plan from requirements.
+Creates structured project plan from SPEC requirements.
 
 ### Generate tasks from SPEC
+```bash
+/smartspec_generate_tasks.md specs/feature/spec-004-financial-system/spec.md
 ```
-/smartspec_generate_tasks.md
-```
-Input: specs/feature/spec-004-financial-system/spec.md
+Generates detailed task breakdown with checkboxes and subtasks.
 
 ### Generate Kilo Code prompt
+```bash
+/smartspec_generate_kilo_prompt.md specs/feature/spec-004-financial-system/tasks.md
 ```
-/smartspec_generate_kilo_prompt.md
-```
-Input: specs/feature/spec-004-financial-system/tasks.md
+Generates implementation prompts for Kilo Code from tasks.md.
 
 ### Sync SPEC with tasks
-```
-/smartspec_sync_spec_tasks.md
+```bash
+/smartspec_sync_spec_tasks.md specs/feature/spec-004-financial-system/spec.md specs/feature/spec-004-financial-system/tasks.md
 ```
 Ensures SPEC and tasks.md are synchronized.
 
 ### Verify implementation progress
-```
-/smartspec_verify_tasks_progress.md
+```bash
+/smartspec_verify_tasks_progress.md specs/feature/spec-004-financial-system/tasks.md
 ```
 Tracks and validates task completion status.
 

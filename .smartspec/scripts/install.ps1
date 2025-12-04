@@ -107,15 +107,20 @@ Write-Host "  1) Kilo Code"
 Write-Host "  2) Roo Code"
 Write-Host "  3) Claude Code"
 Write-Host "  4) All of the above"
-$choice = Read-Host "Enter choice [1-4]"
+$choice = Read-Host "Enter choice [1-4] (default: 1)"
+
+# Default to 1 if empty
+if ([string]::IsNullOrWhiteSpace($choice)) {
+    $choice = "1"
+}
 
 switch ($choice) {
-    1 { $PLATFORMS = @("kilocode") }
-    2 { $PLATFORMS = @("roo") }
-    3 { $PLATFORMS = @("claude") }
-    4 { $PLATFORMS = @("kilocode", "roo", "claude") }
+    "1" { $PLATFORMS = @("kilocode") }
+    "2" { $PLATFORMS = @("roo") }
+    "3" { $PLATFORMS = @("claude") }
+    "4" { $PLATFORMS = @("kilocode", "roo", "claude") }
     default { 
-        Write-Host "Invalid choice" -ForegroundColor Red
+        Write-Host "Invalid choice: $choice" -ForegroundColor Red
         exit 1
     }
 }
@@ -175,10 +180,15 @@ foreach ($platform in $PLATFORMS) {
                 Write-Host "    1) Overwrite all (recommended for updates)"
                 Write-Host "    2) Skip all (keep existing versions)"
                 Write-Host "    3) Cancel installation"
-                $overwriteChoice = Read-Host "  Enter choice [1-3]"
+                $overwriteChoice = Read-Host "  Enter choice [1-3] (default: 1)"
+                
+                # Default to 1 if empty
+                if ([string]::IsNullOrWhiteSpace($overwriteChoice)) {
+                    $overwriteChoice = "1"
+                }
                 
                 switch ($overwriteChoice) {
-                    1 {
+                    "1" {
                         # Backup existing SmartSpec workflows
                         $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
                         $BACKUP_DIR = "${TARGET_DIR}.smartspec.backup.$timestamp"
@@ -192,7 +202,7 @@ foreach ($platform in $PLATFORMS) {
                         Copy-Item "$WORKFLOWS_DIR\smartspec_*.md" $TARGET_DIR -Force -ErrorAction SilentlyContinue
                         Write-Host "  ✅ $PLATFORM_NAME`: Workflows merged ($($existingSmartSpec.Count) updated)" -ForegroundColor Green
                     }
-                    2 {
+                    "2" {
                         # Copy only new workflows (skip existing)
                         $copied = 0
                         $newWorkflows = Get-ChildItem -Path $WORKFLOWS_DIR -Filter "smartspec_*.md"
@@ -205,7 +215,7 @@ foreach ($platform in $PLATFORMS) {
                         }
                         Write-Host "  ✅ $PLATFORM_NAME`: $copied new workflow(s) added" -ForegroundColor Green
                     }
-                    3 {
+                    "3" {
                         Write-Host "  ❌ Installation cancelled for $PLATFORM_NAME" -ForegroundColor Yellow
                         continue
                     }

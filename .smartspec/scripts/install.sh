@@ -121,14 +121,19 @@ echo "  1) Kilo Code"
 echo "  2) Roo Code"
 echo "  3) Claude Code"
 echo "  4) All of the above"
-read -p "Enter choice [1-4]: " choice
+read -p "Enter choice [1-4] (default: 1): " choice
+
+# Default to 1 if empty
+if [ -z "$choice" ]; then
+    choice=1
+fi
 
 case $choice in
     1) PLATFORMS=("kilocode") ;;
     2) PLATFORMS=("roo") ;;
     3) PLATFORMS=("claude") ;;
     4) PLATFORMS=("kilocode" "roo" "claude") ;;
-    *) echo -e "${RED}Invalid choice${NC}"; exit 1 ;;
+    *) echo -e "${RED}Invalid choice: $choice${NC}"; exit 1 ;;
 esac
 
 # Step 3: Install workflows
@@ -188,7 +193,12 @@ for platform in "${PLATFORMS[@]}"; do
             echo "    1) Overwrite all (recommended for updates)"
             echo "    2) Skip all (keep existing versions)"
             echo "    3) Cancel installation"
-            read -p "  Enter choice [1-3]: " overwrite_choice
+            read -p "  Enter choice [1-3] (default: 1): " overwrite_choice
+            
+            # Default to 1 if empty
+            if [ -z "$overwrite_choice" ]; then
+                overwrite_choice=1
+            fi
             
             case $overwrite_choice in
                 1)

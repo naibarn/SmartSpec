@@ -17,12 +17,14 @@ $ARGUMENTS
 - `specs/feature/spec-004/tasks.md --tasks T001-T010`
 - `specs/feature/spec-004/tasks.md --kilocode`
 - `specs/feature/spec-004/tasks.md --claude`
+- `specs/feature/spec-004/tasks.md --claude --with-subagents`
 - `specs/feature/spec-004/tasks.md --roocode`
 - `specs/feature/spec-004/tasks.md --phase 1-2 --tasks T001-T010 --kilocode`
 - `specs/feature/spec-004/tasks.md --specindex=".smartspec/SPEC_INDEX.json"`
 
 **Default Behavior:**
 - Platform: `--claude` (most popular, if not specified)
+- Sub-agents: disabled (unless `--with-subagents` is specified for Claude Code)
 - Phase: all phases (if not specified)
 - Tasks: all tasks (if not specified)
 - SPEC_INDEX: auto-detect `.smartspec/SPEC_INDEX.json` if exists
@@ -40,7 +42,9 @@ $ARGUMENTS
 - Parse `--phase` parameter (single, comma-separated, or range)
 - Parse `--tasks` parameter (single, comma-separated, or range)
 - Parse platform flag: `--kilocode`, `--claude`, `--roocode`
+- Parse `--with-subagents` flag (only valid with `--claude`)
 - Default platform: `--claude` if none specified
+- Validate: If `--with-subagents` without `--claude`, show error
 
 ## 1. Resolve Paths
 
@@ -585,147 +589,100 @@ ELSE:
 
 Claude Code uses **user-created sub agents** for specialized expertise and domain separation.
 
-#### Step 1: Create Sub Agents (Do This First!)
+**Note:** Sub-agents are **OPTIONAL**. Only use them when:
+- The `--with-subagents` flag is specified
+- The project has `.claude/agents/` directory with agent definitions
+- You need specialized expertise for complex, multi-domain projects
 
-**Before starting implementation, create specialized sub agents:**
+**If `--with-subagents` is NOT specified:** Skip this section and use standard Claude Code instructions (interactive, single-agent approach).
 
-##### Database Agent
+#### Step 1: Reference Standard Sub-Agent Definitions
 
-```
-Create a sub agent specialized in database operations.
+**SmartSpec provides standard sub-agent definitions in `.claude/agents/`:**
 
-**Focus Areas:**
-- PostgreSQL database design
-- Prisma ORM
-- Database migrations
-- Query optimization
-- Indexing strategies
+- **Planner Agent** (`.claude/agents/planner/planner-smart.md`)
+  - Reads SmartSpec files and creates execution plans
+  - Maps tasks to appropriate agents
+  
+- **Backend Agent** (`.claude/agents/backend/backend-smart.md`)
+  - Implements business logic and services
+  - Follows project architecture patterns
+  
+- **Database Agent** (`.claude/agents/db/db-agent-smart.md`)
+  - Handles Prisma schema and migrations
+  - Optimizes database performance
+  
+- **API Agent** (`.claude/agents/api/api-agent-smart.md`)
+  - Builds REST/API layer
+  - Implements validation and error handling
+  
+- **Tester Agent** (`.claude/agents/tester/tester-smart.md`)
+  - Writes unit, integration, and e2e tests
+  - Ensures test coverage
+  
+- **Security Agent** (`.claude/agents/security/security-finance.md`)
+  - Audits for security vulnerabilities
+  - Ensures compliance (PCI DSS, GDPR, etc.)
 
-**Expertise:**
-- Schema design and normalization
-- Entity relationships
-- Data integrity constraints
-- Performance optimization
-- Migration safety
+**These agents are already created and ready to use.** You can customize them by editing the `.md` files.
 
-**Responsibilities:**
-All database-related tasks (T001-T015):
-- T001: Design database schema
-- T002: Create entity models
-- T003: Setup Prisma client
-- T004: Create migrations
-- T005: Add indexes
-- ... (all DB tasks)
+#### Step 2: Agent-Based Execution Workflow (When Using Sub-Agents)
 
-**Context:**
-- Project uses PostgreSQL 14
-- ORM: Prisma 5.x
-- Migration strategy: Incremental
-- Performance target: <100ms queries
-```
+**Recommended Workflow:**
 
-##### API Agent
-
-```
-Create a sub agent specialized in API development.
-
-**Focus Areas:**
-- Express.js REST APIs
-- Request validation
-- Error handling
-- Middleware
-- Authentication/Authorization
-
-**Expertise:**
-- RESTful API design
-- Input validation (Zod)
-- Error handling patterns
-- Security best practices
-- API documentation
-
-**Responsibilities:**
-All API-related tasks (T016-T030):
-- T016: Setup Express server
-- T017: Create user endpoints
-- T018: Add validation middleware
-- T019: Implement error handling
-- T020: Add authentication
-- ... (all API tasks)
-
-**Context:**
-- Framework: Express.js 4.x
-- Validation: Zod
-- Auth: JWT
-- Error handling: Centralized
-- Documentation: OpenAPI 3.0
+**Step 1: Planning (Planner Agent)**
+```text
+Use the "planner" agent (`.claude/agents/planner/planner-smart.md`) to:
+1. Read the SmartSpec SPEC and Tasks
+2. Create a phase-by-phase execution plan
+3. Map tasks to appropriate agents (db, backend, api, tester, security)
+4. Return a structured checklist
 ```
 
-##### Test Agent
-
-```
-Create a sub agent specialized in testing.
-
-**Focus Areas:**
-- Jest unit testing
-- Integration testing
-- Test coverage
-- Mocking strategies
-- E2E testing
-
-**Expertise:**
-- Test design and structure
-- Mocking and stubbing
-- Coverage optimization
-- Test performance
-- CI/CD integration
-
-**Responsibilities:**
-All testing tasks (T031-T045):
-- T031: Setup Jest
-- T032: Write unit tests
-- T033: Write integration tests
-- T034: Add E2E tests
-- T035: Achieve 80% coverage
-- ... (all test tasks)
-
-**Context:**
-- Framework: Jest 29.x
-- Coverage target: 80%
-- E2E: Supertest
-- Mocking: jest.mock
-- CI: GitHub Actions
-```
-
-#### Step 2: Agent-Based Execution Strategy
-
-**Phase-by-Phase Workflow:**
-
-**Phase 1: Database (DB Agent)**
-1. Activate Database Agent
-2. DB Agent handles T001-T015
-3. Complete all database tasks
+**Step 2: Database (DB Agent)**
+```text
+Use the "db" agent (`.claude/agents/db/db-agent-smart.md`) to:
+1. Design and implement Prisma schema
+2. Create database migrations
+3. Add indexes and constraints
 4. Validate schema and migrations
-5. Hand off to API Agent
+```
 
-**Phase 2: API (API Agent)**
-1. Activate API Agent
-2. API Agent handles T016-T030
-3. Implement all endpoints
-4. Validate API contracts
-5. Hand off to Test Agent
+**Step 3: Backend (Backend Agent)**
+```text
+Use the "backend" agent (`.claude/agents/backend/backend-smart.md`) to:
+1. Implement business logic and services
+2. Create repositories and data access layers
+3. Follow project architecture patterns
+4. Ensure production-ready code
+```
 
-**Phase 3: Testing (Test Agent)**
-1. Activate Test Agent
-2. Test Agent handles T031-T045
-3. Write all tests
-4. Achieve coverage targets
-5. Report final status
+**Step 4: API (API Agent)**
+```text
+Use the "api" agent (`.claude/agents/api/api-agent-smart.md`) to:
+1. Implement HTTP routes and controllers
+2. Add request/response validation
+3. Implement error handling
+4. Connect to backend services
+```
 
-**Phase 4: Integration (Main Agent)**
-1. Main agent coordinates
-2. Integration testing
-3. Final validation
-4. Documentation
+**Step 5: Testing (Tester Agent)**
+```text
+Use the "tester" agent (`.claude/agents/tester/tester-smart.md`) to:
+1. Write unit tests for services
+2. Write integration tests for APIs
+3. Achieve coverage targets
+4. Report test results
+```
+
+**Step 6: Security Review (Security Agent)**
+```text
+Use the "security" agent (`.claude/agents/security/security-finance.md`) to:
+1. Audit authentication and authorization
+2. Check for security vulnerabilities
+3. Verify compliance requirements
+4. Suggest security improvements
+```
 
 **Benefits:**
 - ✅ Specialized expertise per domain

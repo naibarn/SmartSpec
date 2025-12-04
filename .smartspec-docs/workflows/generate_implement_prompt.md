@@ -1,114 +1,106 @@
-_# `/smartspec_generate_implement_prompt.md`
+# Workflow: /smartspec_generate_implement_prompt.md
 
-**Generates a single, comprehensive prompt file for automated execution by platforms like Kilo Code, Roo Code, and Claude Code.**
-
----
-
-## 1. Summary
-
-This command is the bridge between your `tasks.md` and powerful, agent-based coding platforms. It creates a single, deep-context prompt file that contains all the information an AI agent needs to perform a series of tasks autonomously.
-
-- **What it solves:** It packages your requirements into a format that automated platforms can execute directly, eliminating the need for manual copy-pasting for these specific tools.
-- **When to use it:** Use this command when your target platform is **Kilo Code, Roo Code, or Claude Code**—platforms that can read a prompt file and execute it.
+This workflow generates a comprehensive, context-rich implementation prompt file from a `tasks.md` file. It is designed to be used with automated AI platforms like Kilo Code, Claude Code, and Roo Code.
 
 ---
 
-## 2. Target Platforms & Execution Model
+## 1. Core Functionality
 
-This command is **specifically designed for platforms that support file-based execution**. It is **NOT** for manual copy-paste workflows like those used with Cursor or Antigravity.
+-   **Input:** A `tasks.md` file containing a list of implementation tasks.
+-   **Output:** A single Markdown file (`implement-prompt-*.md`) containing all the necessary context for an AI to start working.
+-   **Platforms:** Supports Kilo Code, Claude Code, and Roo Code with platform-specific instructions.
 
-| Platform | How to Execute the Generated Prompt | Workflow |
+---
+
+## 2. How to Use
+
+### Command Structure
+
+```bash
+/smartspec_generate_implement_prompt.md <path_to_tasks.md> [options]
+```
+
+### Options
+
+| Flag | Description | Default |
 | :--- | :--- | :--- |
-| **Kilo Code** | `kilocode execute "<prompt_file>"` | Fully Automated |
-| **Roo Code** | `roo run "<prompt_file>"` | Fully Automated |
-| **Claude Code** | Upload the file and instruct Claude to execute it. | Semi-Automated |
+| `--kilocode` | Generate prompt with Kilo Code specific instructions. | | 
+| `--claude` | Generate prompt with Claude Code specific instructions. | **claude** |
+| `--roocode` | Generate prompt with Roo Code specific instructions. | |
+| `--with-subagents` | **(Claude Only)** Enable Sub-Agent workflow. Requires `.claude/agents/` folder. | Disabled |
+| `--tasks <range>` | Specify a range of tasks to include (e.g., `T001-T010`). | All tasks |
+| `--phase <range>` | Specify a range of phases to include (e.g., `1-3`). | All phases |
 
 ---
 
-## 3. Usage
+## 3. Platform-Specific Examples
+
+### Example 1: Kilo Code (`--kilocode`)
+
+Generates a prompt that leverages Kilo Code's multi-mode architecture and automatic sub-task decomposition.
 
 ```bash
-/smartspec_generate_implement_prompt.md <tasks_path> --tasks <task_id_or_range> --<platform>
+/smartspec_generate_implement_prompt.md specs/feature/tasks.md --kilocode
 ```
+
+**Resulting Prompt Includes:**
+-   **Platform Instructions (Kilo Code):**
+    -   `Mode:` Use `Code Generation` mode.
+    -   `Sub-Tasks:` Enable automatic sub-task decomposition.
+    -   `Validation:` Run `npm test` and `npm run lint` after each phase.
+
+### Example 2: Claude Code with Sub-Agents (`--claude --with-subagents`)
+
+Generates a prompt designed for Claude Code's multi-agent workflow. It references the pre-defined agents in the `.claude/agents/` directory.
+
+```bash
+/smartspec_generate_implement_prompt.md specs/feature/tasks.md --claude --with-subagents
+```
+
+**Resulting Prompt Includes:**
+-   **Platform Instructions (Claude Code):**
+    -   Instructions to use the `planner-smart.md` agent to create a plan.
+    -   A step-by-step guide for using the `db-agent-smart`, `backend-smart`, `api-agent-smart`, `tester-smart`, and `security-finance` agents.
+    -   **[Read the Full Guide on Claude Sub-Agents](../guides/claude_sub_agents.md)**
+
+### Example 3: Standard Claude Code (`--claude`)
+
+If `--with-subagents` is not used, it generates a standard prompt for a single, interactive Claude Code session.
+
+```bash
+/smartspec_generate_implement_prompt.md specs/feature/tasks.md --claude
+```
+
+**Resulting Prompt Includes:**
+-   General instructions for an interactive coding session.
+-   No references to sub-agents.
+
+### Example 4: Roo Code (`--roocode`)
+
+Generates a prompt for Roo Code's safety-first, sequential workflow.
+
+```bash
+/smartspec_generate_implement_prompt.md specs/feature/tasks.md --roocode
+```
+
+**Resulting Prompt Includes:**
+-   **Platform Instructions (Roo Code):**
+    -   `Mode:` Use `Safe Execution` mode.
+    -   `Workflow:` Execute tasks strictly in order.
+    -   `Preview:` Show a diff preview before applying changes.
 
 ---
 
-## 4. Parameters & Options
+## 4. The Deep-Context Assembly Process
 
-| Option | Value | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `--tasks` | `<task_id_or_range>` | (all) | The ID of the task(s) to include. Supports single tasks (`T001`), ranges (`T001-T005`), or comma-separated lists (`T001,T003`). |
-| `--kilocode` | (flag) | (unset) | Generates a prompt with instructions specifically for the Kilo Code platform. |
-| `--roocode` | (flag) | (unset) | Generates a prompt with instructions specifically for the Roo Code platform. |
-| `--claude` | (flag) | ✅ **Yes** | Generates a prompt with instructions specifically for the Claude Code platform. This is the default if no platform is specified. |
+This workflow gathers information from multiple sources to create a rich and detailed prompt. This process ensures the AI has all the necessary context to generate high-quality, accurate code from the first attempt.
 
----
+### The 5 Layers of Context
 
-## 5. Platform-Specific Examples
+1.  **Project & Task Context (The "Why"):** High-level overview of the project and the specific task's goal.
+2.  **File & Code Context (The "Where"):** Relevant existing code snippets and file structures.
+3.  **Dependency Context (The "How"):** Information about related tasks, libraries, and APIs.
+4.  **Platform-Specific Instructions (The "Rules"):** Tailored instructions for the target AI platform (Kilo, Claude, or Roo).
+5.  **Output & Validation Context (The "What"):** Clear definition of the expected output and the commands to validate it.
 
-This section provides clear examples of the prompt output for each supported platform, highlighting the differences in their instructions.
-
-### **Example 1: Kilo Code (`--kilocode`)**
-
-Kilo Code excels at **automatic sub-task decomposition**. The prompt instructs it to use this capability.
-
-**Command:**
-```bash
-/smartspec_generate_implement_prompt.md ... --tasks T001-T002 --kilocode
-```
-
-**Resulting Prompt (Key Section):**
-```markdown
-## Platform Instructions (Kilo Code)
-
-- **Mode:** Use `Code Generation` mode.
-- **Sub-Tasks:** **Enable automatic sub-task decomposition.** Break down each task into smaller, verifiable steps before implementation.
-- **Validation:** Run `npm test` and `npm run lint` after each top-level task is complete.
-```
-
-### **Example 2: Claude Code (`--claude`)**
-
-Claude Code uses a **sub-agent architecture**. The prompt instructs it to activate the relevant agents.
-
-**Command:**
-```bash
-/smartspec_generate_implement_prompt.md ... --tasks T001-T002 --claude
-```
-
-**Resulting Prompt (Key Section):**
-```markdown
-## Platform Instructions (Claude Code)
-
-- **Mode:** Use `Multi-Agent` mode.
-- **Sub-Agents:** **Activate `DatabaseAgent` for schema tasks and `APIAgent` for route creation.**
-- **Validation:** The `ReviewerAgent` will run validation checks after each agent completes its work.
-```
-
-### **Example 3: Roo Code (`--roocode`)**
-
-Roo Code is focused on a **safety-first, sequential workflow**. The prompt emphasizes validation and previews.
-
-**Command:**
-```bash
-/smartspec_generate_implement_prompt.md ... --tasks T001-T002 --roocode
-```
-
-**Resulting Prompt (Key Section):**
-```markdown
-## Platform Instructions (Roo Code)
-
-- **Mode:** Use `Safe Execution` mode.
-- **Workflow:** Execute tasks strictly in the order they appear. Do not proceed to the next task if the current one fails validation.
-- **Preview:** Show a diff preview of all file changes before applying them.
-- **Validation:** Run `npm test` and confirm success before committing changes.
-```
-
----
-
-## 6. Troubleshooting
-
-| Problem | Cause | Solution |
-| :--- | :--- | :--- |
-| **"Platform not supported"** | You are trying to use this for Cursor/Antigravity. | Use `/smartspec_generate_cursor_prompt.md` instead. |
-| **Kilo/Roo command fails** | The generated prompt may have issues. | Check the prompt file for obvious errors. Ensure the platform flag (`--kilocode`, etc.) was used correctly. |
-| **Claude doesn't understand** | The instruction to Claude was not clear. | Be explicit. Say: "Read the uploaded file and execute the implementation tasks described inside, following the platform instructions provided." |
+This deep context is what enables the AI to perform complex tasks correctly and efficiently.

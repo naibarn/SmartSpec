@@ -1,0 +1,30 @@
+{
+  "version": "5.0",
+  "last_updated": "2025-01-04T00:00:00Z",
+  "specs": [
+    {
+      "id": "spec-example-001",
+      "path": "specs/feature/spec-example-001/spec.md",
+      "title": "Example Feature Specification",
+      "status": "active",
+      "profile": "backend-service",
+      "domain": "fintech",
+      "dependencies": [],
+      "dependents": [],
+      "metadata": {
+        "created_at": "2025-01-04T00:00:00Z",
+        "updated_at": "2025-01-04T00:00:00Z",
+        "author": "System",
+        "version": "1.0",
+        "total_tasks": 0,
+        "completed_tasks": 0
+      }
+    }
+  ],
+  "stats": {
+    "total_specs": 1,
+    "active_specs": 1,
+    "deprecated_specs": 0,
+    "placeholder_specs": 0
+  }
+}

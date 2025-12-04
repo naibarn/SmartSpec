@@ -26,8 +26,8 @@ if (Test-Path $SMARTSPEC_DIR) {
     Remove-Item -Recurse -Force $SMARTSPEC_DIR
 }
 
-# Step 1: Download workflows
-Write-Host "📥 Downloading SmartSpec workflows..."
+# Step 1: Download workflows and knowledge base
+Write-Host "📥 Downloading SmartSpec workflows and knowledge base..."
 
 if (Get-Command git -ErrorAction SilentlyContinue) {
     # Use git sparse checkout
@@ -37,11 +37,15 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     git remote add origin $SMARTSPEC_REPO
     git config core.sparseCheckout true
     ".kilocode/workflows/" | Out-File -Encoding ASCII .git\info\sparse-checkout
+    ".smartspec/" | Out-File -Encoding ASCII -Append .git\info\sparse-checkout
     git pull -q origin main 2>&1 | Out-Null
     Move-Item .kilocode\workflows .\workflows
-    Remove-Item -Recurse -Force .kilocode, .git
+    if (Test-Path ".smartspec") {
+        Copy-Item -Recurse .smartspec\* .
+    }
+    Remove-Item -Recurse -Force .kilocode, .smartspec, .git -ErrorAction SilentlyContinue
     Pop-Location
-    Write-Host "✅ Downloaded workflows via git" -ForegroundColor Green
+    Write-Host "✅ Downloaded workflows and knowledge base via git" -ForegroundColor Green
 } else {
     # Download as zip
     $zipPath = "smartspec.zip"
@@ -56,8 +60,11 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     Expand-Archive -Path $zipPath -DestinationPath . -Force
     New-Item -ItemType Directory -Force -Path $WORKFLOWS_DIR | Out-Null
     Copy-Item -Recurse "SmartSpec-main\.kilocode\workflows\*" $WORKFLOWS_DIR\
+    if (Test-Path "SmartSpec-main\.smartspec") {
+        Copy-Item -Recurse "SmartSpec-main\.smartspec\*" $SMARTSPEC_DIR\
+    }
     Remove-Item -Recurse -Force SmartSpec-main, $zipPath
-    Write-Host "✅ Downloaded workflows via zip" -ForegroundColor Green
+    Write-Host "✅ Downloaded workflows and knowledge base via zip" -ForegroundColor Green
 }
 
 # Step 2: Detect platforms

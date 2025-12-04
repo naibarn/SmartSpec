@@ -1,0 +1,25 @@
+# User-specific SmartSpec files (do not commit)
+.smartspec/SPEC_INDEX.json
+.smartspec/config.json
+.smartspec/workflows/
+.smartspec/sync.sh
+.smartspec/sync.ps1
+.smartspec/version.txt
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

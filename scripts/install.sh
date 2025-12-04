@@ -40,21 +40,26 @@ if [ -d "$SMARTSPEC_DIR" ]; then
     rm -rf "$SMARTSPEC_DIR"
 fi
 
-# Step 1: Clone or download workflows
-echo "📥 Downloading SmartSpec workflows..."
+# Step 1: Clone or download workflows and knowledge base
+echo "📥 Downloading SmartSpec workflows and knowledge base..."
 if command -v git &> /dev/null; then
-    # Use git sparse checkout (only .kilocode/workflows/)
+    # Use git sparse checkout (workflows + knowledge base)
     mkdir -p "$SMARTSPEC_DIR"
     cd "$SMARTSPEC_DIR"
     git init -q
     git remote add origin "$SMARTSPEC_REPO"
     git config core.sparseCheckout true
     echo ".kilocode/workflows/" >> .git/info/sparse-checkout
+    echo ".smartspec/" >> .git/info/sparse-checkout
     git pull -q origin main
     mv .kilocode/workflows ./workflows
-    rm -rf .kilocode .git
+    # Copy knowledge base files (examples only, not user files)
+    if [ -d ".smartspec" ]; then
+        cp -r .smartspec/* .
+    fi
+    rm -rf .kilocode .smartspec .git
     cd ..
-    echo -e "${GREEN}✅ Downloaded workflows via git${NC}"
+    echo -e "${GREEN}✅ Downloaded workflows and knowledge base via git${NC}"
 else
     # Download as zip
     if command -v curl &> /dev/null; then
@@ -69,8 +74,12 @@ else
     unzip -q smartspec.zip
     mkdir -p "$WORKFLOWS_DIR"
     mv SmartSpec-main/.kilocode/workflows/* "$WORKFLOWS_DIR/"
+    # Copy knowledge base files (examples only, not user files)
+    if [ -d "SmartSpec-main/.smartspec" ]; then
+        cp -r SmartSpec-main/.smartspec/* "$SMARTSPEC_DIR/"
+    fi
     rm -rf SmartSpec-main smartspec.zip
-    echo -e "${GREEN}✅ Downloaded workflows via zip${NC}"
+    echo -e "${GREEN}✅ Downloaded workflows and knowledge base via zip${NC}"
 fi
 
 # Step 2: Detect platforms

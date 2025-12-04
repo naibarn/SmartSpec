@@ -1,87 +1,87 @@
 # Manual Update Checkboxes Guide
 
-คู่มือการ update checkboxes ใน tasks.md ด้วยตัวเอง
+Guide for manually updating checkboxes in tasks.md
 
 ---
 
-## 📋 สถานการณ์ที่ต้องใช้
+## 📋 When to Use Manual Update
 
-### เมื่อไหร่ต้อง Manual Update?
+### When is Manual Update Needed?
 
-1. **`/smartspec_implement_tasks` ไม่ mark checkboxes**
-   - Workflow เสร็จแล้ว แต่ checkboxes ยังเป็น `[ ]`
-   - ต้อง manual update เพื่อ track progress
+1. **`/smartspec_implement_tasks` doesn't mark checkboxes**
+   - Workflow completed but checkboxes remain `[ ]`
+   - Need manual update to track progress
 
-2. **`/smartspec_verify_tasks_progress` ยังไม่รัน**
-   - ยังไม่ได้รัน verify workflow
-   - ต้องการ mark checkboxes ก่อน
+2. **`/smartspec_verify_tasks_progress` not run yet**
+   - Haven't run verify workflow yet
+   - Want to mark checkboxes beforehand
 
 3. **Manual Implementation**
-   - ทำงานเองโดยไม่ใช้ workflows
-   - ต้อง mark checkboxes เพื่อ track progress
+   - Working without using workflows
+   - Need to mark checkboxes to track progress
 
 4. **Partial Implementation**
-   - ทำงานบางส่วนเสร็จแล้ว
-   - ต้อง mark เฉพาะ tasks ที่เสร็จ
+   - Some tasks completed
+   - Need to mark only completed tasks
 
 ---
 
-## 🔧 วิธีที่ 1: ใช้ sed (เร็วที่สุด)
+## 🔧 Method 1: Using sed (Fastest)
 
-### Mark Task เดียว
+### Mark Single Task
 
 ```bash
-# Mark T001 เสร็จ
+# Mark T001 as complete
 sed -i 's/^- \[ \] \(T001:\)/- [x] \1/' specs/feature/spec-004/tasks.md
 
-# ตรวจสอบ
+# Verify
 grep "^- \[x\] T001:" specs/feature/spec-004/tasks.md
 ```
 
 ---
 
-### Mark หลาย Tasks (Range)
+### Mark Multiple Tasks (Range)
 
 ```bash
-# Mark T001-T010 เสร็จ
+# Mark T001-T010 as complete
 sed -i 's/^- \[ \] \(T00[1-9]:\|T010:\)/- [x] \1/' specs/feature/spec-004/tasks.md
 
-# ตรวจสอบ
+# Verify
 grep "^- \[x\] T0[01][0-9]:" specs/feature/spec-004/tasks.md
 ```
 
 ---
 
-### Mark Tasks เฉพาะเจาะจง
+### Mark Specific Tasks
 
 ```bash
-# Mark T001, T003, T005 เสร็จ
+# Mark T001, T003, T005 as complete
 sed -i 's/^- \[ \] \(T001:\|T003:\|T005:\)/- [x] \1/' specs/feature/spec-004/tasks.md
 
-# ตรวจสอบ
+# Verify
 grep "^- \[x\] T00[135]:" specs/feature/spec-004/tasks.md
 ```
 
 ---
 
-### Mark ทุก Tasks ใน Phase
+### Mark All Tasks in a Phase
 
 ```bash
-# Mark ทุก tasks ใน Phase 1 (T001-T020)
+# Mark all tasks in Phase 1 (T001-T020)
 sed -i 's/^- \[ \] \(T0[01][0-9]:\|T020:\)/- [x] \1/' specs/feature/spec-004/tasks.md
 
-# ตรวจสอบ
+# Verify
 grep "^- \[x\] T0[012][0-9]:" specs/feature/spec-004/tasks.md
 ```
 
 ---
 
-## 🔧 วิธีที่ 2: ใช้ Bash Script (ยืดหยุ่น)
+## 🔧 Method 2: Using Bash Script (Flexible)
 
-### สร้าง Script
+### Create Script
 
 ```bash
-cat > /tmp/update_checkboxes.sh << 'EOF'
+cat > /tmp/update_checkboxes.sh << 'SCRIPT_EOF'
 #!/bin/bash
 
 # Usage: ./update_checkboxes.sh <tasks.md> <task_ids>
@@ -122,14 +122,14 @@ done
 
 echo ""
 echo "✅ Updated $UPDATED tasks"
-EOF
+SCRIPT_EOF
 
 chmod +x /tmp/update_checkboxes.sh
 ```
 
 ---
 
-### ใช้งาน Script
+### Using the Script
 
 ```bash
 # Mark T001-T010
@@ -144,9 +144,9 @@ chmod +x /tmp/update_checkboxes.sh
 
 ---
 
-## 🔧 วิธีที่ 3: ใช้ Python Script (แม่นยำที่สุด)
+## 🔧 Method 3: Using Python Script (Most Accurate)
 
-### สร้าง Script
+### Create Script
 
 ```python
 #!/usr/bin/env python3
@@ -261,9 +261,10 @@ if __name__ == '__main__':
 
 ---
 
-### บันทึก Script
+### Save the Script
 
 ```bash
+# Save to file
 cat > /tmp/update_checkboxes.py << 'PYTHON_SCRIPT'
 [... paste script above ...]
 PYTHON_SCRIPT
@@ -273,7 +274,7 @@ chmod +x /tmp/update_checkboxes.py
 
 ---
 
-### ใช้งาน Script
+### Using the Script
 
 ```bash
 # Mark T001-T010
@@ -312,22 +313,22 @@ python3 /tmp/update_checkboxes.py specs/feature/spec-004/tasks.md "T001-T010,T01
 
 ---
 
-## 🔧 วิธีที่ 4: ใช้ Text Editor (Manual)
+## 🔧 Method 4: Using Text Editor (Manual)
 
 ### Visual Studio Code
 
-1. เปิด `tasks.md`
-2. กด `Ctrl+H` (Find and Replace)
+1. Open `tasks.md`
+2. Press `Ctrl+H` (Find and Replace)
 3. Find: `- [ ] T001:`
 4. Replace: `- [x] T001:`
-5. กด "Replace All" หรือ "Replace" ทีละตัว
+5. Click "Replace All" or "Replace" one by one
 
 ---
 
 ### Vim
 
 ```bash
-# เปิดไฟล์
+# Open file
 vim specs/feature/spec-004/tasks.md
 
 # Replace T001
@@ -345,13 +346,13 @@ vim specs/feature/spec-004/tasks.md
 ### Nano
 
 ```bash
-# เปิดไฟล์
+# Open file
 nano specs/feature/spec-004/tasks.md
 
-# กด Ctrl+\ (Replace)
+# Press Ctrl+\ (Replace)
 # Search for: - [ ] T001:
 # Replace with: - [x] T001:
-# กด A (Replace All)
+# Press A (Replace All)
 
 # Save and exit
 # Ctrl+O (Save)
@@ -360,9 +361,9 @@ nano specs/feature/spec-004/tasks.md
 
 ---
 
-## 📊 ตัวอย่างการใช้งาน
+## 📊 Usage Examples
 
-### Scenario 1: Mark Tasks หลัง Implementation
+### Scenario 1: Mark Tasks After Implementation
 
 ```bash
 # 1. Implement tasks
@@ -383,7 +384,7 @@ grep "^- \[x\] T0[012][0-9]:" specs/feature/spec-004/tasks.md
 ### Scenario 2: Mark Specific Tasks
 
 ```bash
-# คุณทำ T001, T003, T005 เสร็จแล้ว
+# You completed T001, T003, T005
 python3 /tmp/update_checkboxes.py specs/feature/spec-004/tasks.md "T001,T003,T005"
 
 # Verify
@@ -395,7 +396,7 @@ python3 /tmp/update_checkboxes.py specs/feature/spec-004/tasks.md "T001,T003,T00
 ### Scenario 3: Mark Entire Phase
 
 ```bash
-# Phase 1 (T001-T020) เสร็จแล้ว
+# Phase 1 (T001-T020) completed
 python3 /tmp/update_checkboxes.py specs/feature/spec-004/tasks.md "T001-T020"
 
 # Verify
@@ -407,7 +408,7 @@ python3 /tmp/update_checkboxes.py specs/feature/spec-004/tasks.md "T001-T020"
 ### Scenario 4: Unmark Tasks (Rollback)
 
 ```bash
-# Unmark T001-T010 (ถ้าต้องการทำใหม่)
+# Unmark T001-T010 (if need to redo)
 sed -i 's/^- \[x\] \(T00[1-9]:\|T010:\)/- [ ] \1/' specs/feature/spec-004/tasks.md
 
 # Verify
@@ -418,19 +419,19 @@ grep "^- \[ \] T0[01][0-9]:" specs/feature/spec-004/tasks.md
 
 ## ✅ Best Practices
 
-### 1. ตรวจสอบก่อน Update
+### 1. Check Before Update
 
 ```bash
-# ดู tasks ที่ยังไม่เสร็จ
+# See incomplete tasks
 grep "^- \[ \] T[0-9]" specs/feature/spec-004/tasks.md
 
-# ดู tasks ที่เสร็จแล้ว
+# See completed tasks
 grep "^- \[x\] T[0-9]" specs/feature/spec-004/tasks.md
 ```
 
 ---
 
-### 2. Backup ก่อน Update
+### 2. Backup Before Update
 
 ```bash
 # Backup tasks.md
@@ -439,13 +440,13 @@ cp specs/feature/spec-004/tasks.md specs/feature/spec-004/tasks.md.backup
 # Update
 sed -i 's/^- \[ \] \(T001:\)/- [x] \1/' specs/feature/spec-004/tasks.md
 
-# ถ้าผิดพลาด → Restore
+# If mistake → Restore
 cp specs/feature/spec-004/tasks.md.backup specs/feature/spec-004/tasks.md
 ```
 
 ---
 
-### 3. Verify หลัง Update
+### 3. Verify After Update
 
 ```bash
 # Update
@@ -457,7 +458,7 @@ python3 /tmp/update_checkboxes.py specs/feature/spec-004/tasks.md "T001-T010"
 
 ---
 
-### 4. Commit หลัง Update
+### 4. Commit After Update
 
 ```bash
 # Update checkboxes
@@ -472,44 +473,44 @@ git commit -m "chore: Mark T001-T010 as complete"
 
 ## 🚨 Troubleshooting
 
-### ปัญหา: sed ไม่ทำงาน (macOS)
+### Issue: sed doesn't work (macOS)
 
-**สาเหตุ:** macOS ใช้ BSD sed ต้องระบุ backup extension
+**Cause:** macOS uses BSD sed which requires backup extension
 
-**วิธีแก้:**
+**Solution:**
 ```bash
 # macOS
 sed -i.bak 's/^- \[ \] \(T001:\)/- [x] \1/' tasks.md
 
-# หรือติดตั้ง GNU sed
+# Or install GNU sed
 brew install gnu-sed
 gsed -i 's/^- \[ \] \(T001:\)/- [x] \1/' tasks.md
 ```
 
 ---
 
-### ปัญหา: Update ผิด Task
+### Issue: Updated Wrong Task
 
-**สาเหตุ:** Pattern ไม่ตรง
+**Cause:** Pattern doesn't match
 
-**วิธีแก้:**
+**Solution:**
 ```bash
-# ตรวจสอบ pattern ก่อน
+# Check pattern first
 grep "^- \[ \] T001:" tasks.md
 
-# ถ้าไม่เจอ → ดู format จริง
+# If not found → Check actual format
 grep "T001" tasks.md
 
-# แก้ไข pattern ให้ตรง
+# Fix pattern to match
 ```
 
 ---
 
-### ปัญหา: Script ไม่ทำงาน
+### Issue: Script Doesn't Run
 
-**สาเหตุ:** ไม่มี execute permission
+**Cause:** No execute permission
 
-**วิธีแก้:**
+**Solution:**
 ```bash
 chmod +x /tmp/update_checkboxes.sh
 chmod +x /tmp/update_checkboxes.py
@@ -519,26 +520,26 @@ chmod +x /tmp/update_checkboxes.py
 
 ## 📚 Related Workflows
 
-### แทนที่ Manual Update
+### Better Alternative to Manual Update
 
 ```bash
-# วิธีที่ดีกว่า: ใช้ verify_tasks_progress
+# Better: Use verify_tasks_progress
 /smartspec_verify_tasks_progress specs/feature/spec-004/tasks.md
 
-# Workflow จะ:
-# 1. ตรวจสอบ tasks ที่เสร็จแล้ว
-# 2. Mark checkboxes อัตโนมัติ
-# 3. สร้าง progress report
+# This workflow will:
+# 1. Check completed tasks
+# 2. Mark checkboxes automatically
+# 3. Generate progress report
 ```
 
 ---
 
-## ✅ สรุป
+## ✅ Summary
 
-### เลือกวิธีไหนดี?
+### Which Method to Use?
 
-| วิธี | ความเร็ว | ความแม่นยำ | ความยืดหยุ่น | แนะนำสำหรับ |
-|------|---------|-----------|-------------|------------|
+| Method | Speed | Accuracy | Flexibility | Recommended For |
+|--------|-------|----------|-------------|-----------------|
 | **sed** | ⚡⚡⚡ | ⭐⭐ | ⭐⭐ | Quick updates |
 | **Bash Script** | ⚡⚡ | ⭐⭐⭐ | ⭐⭐⭐ | Multiple tasks |
 | **Python Script** | ⚡⚡ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | Complex updates |
@@ -546,13 +547,13 @@ chmod +x /tmp/update_checkboxes.py
 
 ---
 
-### คำแนะนำ:
+### Recommendations:
 
-1. **ใช้ sed** → สำหรับ quick updates (1-2 tasks)
-2. **ใช้ Python Script** → สำหรับ bulk updates (10+ tasks)
-3. **ใช้ verify_tasks_progress** → ดีที่สุด! (auto-detect + mark)
+1. **Use sed** → For quick updates (1-2 tasks)
+2. **Use Python Script** → For bulk updates (10+ tasks)
+3. **Use verify_tasks_progress** → Best! (auto-detect + mark)
 
 ---
 
-**ไฟล์นี้เป็นส่วนหนึ่งของ SmartSpec Documentation**  
+**This file is part of SmartSpec Documentation**  
 **Repository:** https://github.com/naibarn/SmartSpec

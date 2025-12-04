@@ -164,49 +164,380 @@ IF task.time_hours > 8 AND --breakdown flag:
   → Replace task with subtasks in selected_tasks
 ```
 
-### Breakdown Algorithm
+### Breakdown Algorithm (Enhanced with Smart Time Estimation)
 
-**Step 1: Calculate subtask count**
+**Step 1: Analyze task complexity**
 ```
-target_hours = 3  // optimal subtask size
-subtask_count = ceil(task.time_hours / target_hours)
-hours_per_subtask = task.time_hours / subtask_count
+complexity_score = calculate_task_complexity(task)
+
+Factors:
+- file_count: len(task.files)
+- avg_file_size: average of file.size_lines (if available)
+- risk_level: HIGH=3, MEDIUM=2, LOW=1
+- dependency_count: len(task.dependencies)
+
+Formula:
+complexity = (file_count * 0.3) + (avg_file_size/100 * 0.2) + 
+             (risk_level * 0.3) + (dependency_count * 0.2)
+
+Normalize to 1-10 scale:
+- 1-3: Simple task
+- 4-7: Medium complexity
+- 8-10: High complexity
 ```
 
-**Step 2: Analyze task components**
+**Step 2: Analyze component complexity**
+```
+FOR each component IN components:
+  component_complexity = calculate_component_complexity(component)
+  
+  Type multipliers:
+  - Model: 1.0 (simple data structures)
+  - Service: 1.5 (business logic)
+  - Controller: 1.3 (API handling)
+  - Middleware: 1.2 (cross-cutting concerns)
+  - Tests: 0.8 (straightforward testing)
+  - Integration: 2.0 (external dependencies)
+  
+  Base factors:
+  - file_count: number of files in component
+  - external_deps: external libraries/APIs used
+  - file_relationships: imports between files
+  
+  component_complexity = (base_score) * type_multiplier
+  
+Example:
+- User model (1 file, no deps): 2 * 1.0 = 2
+- AuthService (1 file, uses bcrypt): 4 * 1.5 = 6
+- AuthController (2 files, uses service): 3 * 1.3 = 4
+- Auth middleware (1 file, uses JWT): 3 * 1.2 = 4
+- Tests (1 file, uses jest): 2 * 0.8 = 2
+
+Total complexity: 2 + 6 + 4 + 4 + 2 = 18
+```
+
+**Step 3: Distribute time proportionally**
+```
+total_complexity = sum(component_complexity for all components)
+
+FOR each component:
+  ratio = component_complexity / total_complexity
+  component_hours = task.time_hours * ratio
+  
+  # Ensure bounds (subtasks should be 1.5h - 5h)
+  component_hours = max(1.5, min(5, component_hours))
+
+# Adjust to match total hours
+subtask_hours_sum = sum(component_hours)
+IF subtask_hours_sum != task.time_hours:
+  scale_factor = task.time_hours / subtask_hours_sum
+  FOR each component:
+    component_hours *= scale_factor
+
+Example (12h task):
+- Model: 12h * (2/18) = 1.3h → 1.5h (min bound)
+- Service: 12h * (6/18) = 4h → 4h
+- Controller: 12h * (4/18) = 2.7h → 2.7h
+- Middleware: 12h * (4/18) = 2.7h → 2.7h
+- Tests: 12h * (2/18) = 1.3h → 1.5h (min bound)
+
+Sum: 12.4h (need to scale)
+Scale: 12/12.4 = 0.968
+
+Final:
+- Model: 1.5h * 0.968 = 1.5h
+- Service: 4h * 0.968 = 3.9h → 4h
+- Controller: 2.7h * 0.968 = 2.6h → 3h
+- Middleware: 2.7h * 0.968 = 2.6h → 2h
+- Tests: 1.5h * 0.968 = 1.5h → 1h
+
+Total: 11.5h ≈ 12h ✅
+
+Note: Time is distributed based on complexity, not equally!
+```
+
+**Step 4: Analyze task components**
 ```
 Analyze task.description and task.files:
-- Identify logical components
-- Group related files
+- Identify logical components (Model, Service, Controller, etc.)
+- Group related files by component
 - Identify dependencies between components
+- Assign complexity scores (from Step 2)
+- Assign time estimates (from Step 3)
 ```
 
-**Step 3: Generate subtasks**
+**Step 5: Generate subtasks**
 ```
-Example:
+Example (with Smart Time Estimation):
 T050: Implement authentication system (12h)
-→ 4 subtasks (3h each)
 
-T050.1: Create User model and database schema (3h)
+Complexity analysis:
+- Model: 2/18 complexity → 1.5h (simple)
+- Service: 6/18 complexity → 4h (complex, business logic)
+- Controller: 4/18 complexity → 3h (medium)
+- Middleware+Tests: 4/18 complexity → 3.5h → 3h (combined)
+
+Subtasks:
+T050.1: Create User model and database schema (1.5h)
   Files: src/models/User.ts, prisma/schema.prisma
   Dependencies: None
+  Complexity: 2/10 (simple data structures)
 
-T050.2: Implement AuthService with login/register (3h)
+T050.2: Implement AuthService with login/register (4h)
   Files: src/services/AuthService.ts
   Dependencies: T050.1
+  Complexity: 6/10 (business logic, bcrypt, JWT)
 
 T050.3: Create AuthController and API endpoints (3h)
   Files: src/controllers/AuthController.ts, src/routes/auth.ts
   Dependencies: T050.2
+  Complexity: 4/10 (API handling, validation)
 
-T050.4: Add auth middleware and tests (3h)
+T050.4: Add auth middleware and tests (3.5h)
   Files: src/middleware/auth.ts, tests/auth.test.ts
-  Dependencies: T050.3
+  Dependencies: T050.2
+  Complexity: 4/10 (JWT verification, test coverage)
+
+Total: 12h ✅
+Note: Time distributed by complexity (not equal 3h each!)
 ```
 
-**Step 4: Update selected_tasks**
+**Step 6: Update selected_tasks**
 ```
 Replace T050 with [T050.1, T050.2, T050.3, T050.4]
+```
+
+### Quality Validation (Phase 5)
+
+**Step 7: Validate subtask quality**
+
+Before finalizing subtasks, run comprehensive validation:
+
+**Validation 1: Count Check**
+```
+IF subtask_count < 2:
+  ERROR: "Too few subtasks (minimum 2 required)"
+  STOP
+
+IF subtask_count > 8:
+  WARNING: "Too many subtasks ({count}), consider grouping related components"
+  # Continue but warn user
+```
+
+**Validation 2: Time Balance Check**
+```
+max_hours = max(subtask.hours for all subtasks)
+min_hours = min(subtask.hours for all subtasks)
+ratio = max_hours / min_hours
+
+IF ratio > 3:
+  WARNING: "Unbalanced subtasks (ratio: {ratio:.1f})"
+  
+  # Find candidates to combine
+  small_subtasks = [s for s in subtasks if s.hours < 2]
+  
+  IF len(small_subtasks) >= 2:
+    SUGGEST: "Consider combining {small_subtasks[0].id} ({small_subtasks[0].hours}h) 
+              and {small_subtasks[1].id} ({small_subtasks[1].hours}h)"
+    
+    # Auto-fix option
+    IF auto_fix_enabled:
+      combined_subtask = merge(small_subtasks[0], small_subtasks[1])
+      combined_subtask.hours = small_subtasks[0].hours + small_subtasks[1].hours
+      combined_subtask.files = small_subtasks[0].files + small_subtasks[1].files
+      
+      Remove small_subtasks[0] and small_subtasks[1]
+      Add combined_subtask
+      
+      RE-VALIDATE
+
+Example:
+Before: T050.1 (1.5h), T050.2 (4h), T050.3 (3h), T050.4 (1.5h)
+Ratio: 4/1.5 = 2.67 (< 3) ✅ Good balance
+
+Bad example: T060.1 (1h), T060.2 (5h), T060.3 (3h)
+Ratio: 5/1 = 5 (> 3) ⚠️ Unbalanced
+Suggestion: Combine T060.1 with another small task
+```
+
+**Validation 3: Dependency Check**
+```
+# Check all dependencies exist and are in correct order
+FOR each subtask IN subtasks:
+  FOR each dependency IN subtask.dependencies:
+    IF dependency NOT IN previous_subtasks:
+      ERROR: "{subtask.id} depends on {dependency} which comes after it or doesn't exist"
+      STOP
+
+# Check for circular dependencies
+dependency_graph = build_graph(subtasks)
+IF has_cycle(dependency_graph):
+  ERROR: "Circular dependency detected"
+  cycles = find_cycles(dependency_graph)
+  SHOW: "Cycle: {' → '.join(cycles)} → {cycles[0]}"
+  STOP
+
+Example:
+Valid:
+- T050.1 (no deps)
+- T050.2 (depends on T050.1) ✅
+- T050.3 (depends on T050.2) ✅
+
+Invalid:
+- T050.1 (depends on T050.3) ❌
+- T050.2 (depends on T050.1) ✅
+- T050.3 (depends on T050.2) ✅
+Error: T050.1 depends on T050.3 which comes after it
+
+Circular:
+- T050.1 (depends on T050.3)
+- T050.2 (depends on T050.1)
+- T050.3 (depends on T050.2)
+Error: Cycle: T050.1 → T050.3 → T050.2 → T050.1
+```
+
+**Validation 4: Completeness Check**
+```
+original_files = set(original_task.files)
+subtask_files = set(file for subtask in subtasks for file in subtask.files)
+
+missing = original_files - subtask_files
+extra = subtask_files - original_files
+
+IF missing:
+  WARNING: "Missing files in subtasks: {missing}"
+  SUGGEST: "Add missing files to appropriate subtasks"
+
+IF extra:
+  WARNING: "Extra files in subtasks (not in original): {extra}"
+  SUGGEST: "Remove extra files or add to original task"
+
+Example:
+Original files: [User.ts, AuthService.ts, AuthController.ts, auth.ts, auth.test.ts]
+Subtask files: [User.ts, AuthService.ts, AuthController.ts, auth.ts, auth.test.ts]
+Result: ✅ All files covered
+
+Bad example:
+Original files: [User.ts, AuthService.ts, AuthController.ts]
+Subtask files: [User.ts, AuthService.ts]
+Missing: [AuthController.ts]
+Warning: AuthController.ts not assigned to any subtask
+```
+
+**Validation 5: Component Coverage Check**
+```
+required_components = detect_required_components(original_task)
+subtask_components = [subtask.component for subtask in subtasks]
+
+FOR component IN required_components:
+  IF component NOT IN subtask_components:
+    WARNING: "Missing component: {component}"
+    SUGGEST: "Add subtask for {component} or merge with existing subtask"
+
+Example:
+Required: [Model, Service, Controller, Tests]
+Subtasks: [Model, Service, Controller, Tests]
+Result: ✅ All components covered
+
+Bad example:
+Required: [Model, Service, Controller, Middleware, Tests]
+Subtasks: [Model, Service, Controller]
+Missing: [Middleware, Tests]
+Warning: Middleware and Tests components not covered
+```
+
+**Validation 6: Provide Suggestions**
+```
+suggestions = []
+
+# Suggestion 1: Combine small subtasks
+IF ratio > 3 AND len(small_subtasks) >= 2:
+  suggestions.append({
+    type: "COMBINE",
+    message: "Combine small subtasks to balance workload",
+    subtasks: small_subtasks,
+    action: "Merge {small_subtasks[0].id} and {small_subtasks[1].id}"
+  })
+
+# Suggestion 2: Split large subtasks
+large_subtasks = [s for s in subtasks if s.hours > 5]
+IF large_subtasks:
+  suggestions.append({
+    type: "SPLIT",
+    message: "Consider splitting large subtasks (>5h)",
+    subtasks: large_subtasks,
+    action: "Split {large_subtasks[0].id} into smaller tasks"
+  })
+
+# Suggestion 3: Reorder for dependencies
+IF dependency_order_errors:
+  suggestions.append({
+    type: "REORDER",
+    message: "Reorder subtasks to satisfy dependencies",
+    action: "Move dependent subtasks after their dependencies"
+  })
+
+# Suggestion 4: Add missing components
+IF missing_components:
+  suggestions.append({
+    type: "ADD_COMPONENT",
+    message: "Add missing components",
+    components: missing_components,
+    action: "Create subtasks for {', '.join(missing_components)}"
+  })
+
+RETURN validation_result = {
+  valid: all_checks_passed,
+  errors: errors,
+  warnings: warnings,
+  suggestions: suggestions
+}
+
+IF errors:
+  SHOW errors
+  STOP (do not generate prompts)
+
+IF warnings:
+  SHOW warnings and suggestions
+  IF auto_fix_available:
+    APPLY auto-fixes
+    RE-VALIDATE
+  ELSE:
+    CONTINUE (generate prompts with warnings)
+```
+
+**Validation Summary Output:**
+```
+Example output:
+
+✅ Validation Results for T050 Breakdown:
+
+✅ Count: 4 subtasks (2-8 range)
+✅ Balance: max 4h, min 1.5h, ratio 2.67 (< 3)
+✅ Dependencies: Valid order, no circular dependencies
+✅ Completeness: All 5 files covered
+✅ Coverage: All components present (Model, Service, Controller, Tests)
+
+✅ All validations passed! Proceeding with prompt generation.
+
+---
+
+Bad example output:
+
+⚠️ Validation Results for T060 Breakdown:
+
+✅ Count: 3 subtasks (2-8 range)
+❌ Balance: max 5h, min 1h, ratio 5.0 (> 3) - UNBALANCED
+✅ Dependencies: Valid order
+⚠️ Completeness: Missing 1 file (middleware.ts)
+⚠️ Coverage: Missing component (Middleware)
+
+⚠️ Warnings found. Suggestions:
+1. Combine T060.1 (1h) and T060.3 (2h) to balance workload
+2. Add middleware.ts to appropriate subtask
+3. Create subtask for Middleware component
+
+Apply auto-fixes? [Y/n]
 ```
 
 ## 4. Build Context for Each Task

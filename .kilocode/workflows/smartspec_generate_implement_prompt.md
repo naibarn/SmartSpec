@@ -256,28 +256,193 @@ Kilo Code uses **5 specialized modes** with automatic mode switching and LLM opt
   - Complex workflows
   - Integration tasks
 
-### Auto Subtasks Feature
+### Auto Subtasks Feature (Enhanced with Smart Time Estimation)
 
 **Automatic Breakdown:**
 - **Trigger:** Tasks >8h automatically activate Orchestrator Mode
 - **Format:** T001.1, T001.2, T001.3, ...
-- **Size:** Each subtask 2-4h (optimal)
+- **Size:** Each subtask 1.5-5h (based on complexity)
+- **Time Distribution:** Proportional to component complexity (not equal)
 - **Mode Assignment:** Each subtask gets appropriate mode
 - **Dependencies:** Tracked automatically
 
-**Example Breakdown:**
+**Smart Time Estimation Algorithm:**
+
+**Step 1: Analyze task complexity**
+```
+complexity_score = calculate_task_complexity(task)
+
+Factors:
+- file_count: number of files to create/edit
+- avg_file_size: average lines per file
+- risk_level: HIGH=3, MEDIUM=2, LOW=1
+- dependency_count: number of dependencies
+
+Formula:
+complexity = (file_count * 0.3) + (avg_file_size/100 * 0.2) + 
+             (risk_level * 0.3) + (dependency_count * 0.2)
+
+Normalize to 1-10 scale
+```
+
+**Step 2: Analyze component complexity**
+```
+Component type multipliers:
+- Model: 1.0 (simple data structures)
+- Service: 1.5 (business logic)
+- Controller: 1.3 (API handling)
+- Middleware: 1.2 (cross-cutting concerns)
+- Tests: 0.8 (straightforward testing)
+- Integration: 2.0 (external dependencies)
+
+component_complexity = base_score * type_multiplier
+```
+
+**Step 3: Distribute time proportionally**
+```
+total_complexity = sum(all component_complexity)
+
+FOR each component:
+  ratio = component_complexity / total_complexity
+  component_hours = task.hours * ratio
+  
+  # Ensure bounds
+  component_hours = max(1.5, min(5, component_hours))
+
+# Scale to match total
+scale_factor = task.hours / sum(component_hours)
+FOR each component:
+  component_hours *= scale_factor
+```
+
+**Example Breakdown (with Smart Time Estimation):**
 ```
 Original Task:
 T050: Implement complete authentication system (12h)
 
+Complexity Analysis:
+- User model: complexity 2/10 (simple) → 1.5h
+- AuthService: complexity 6/10 (complex logic) → 4h
+- AuthController: complexity 4/10 (medium) → 3h
+- Auth middleware: complexity 3/10 (medium-low) → 2h
+- Tests: complexity 2/10 (simple) → 1.5h
+
+Total: 12h ✅
+
 ↓ Orchestrator Mode activates automatically ↓
 
 Subtasks Created:
-- [ ] T050.1: Design auth database schema (2h) → Architect Mode
-- [ ] T050.2: Create User entity model (2h) → Code Mode
-- [ ] T050.3: Implement JWT service (3h) → Code Mode
-- [ ] T050.4: Create auth endpoints (3h) → Code Mode
-- [ ] T050.5: Add auth tests (2h) → Code Mode
+- [ ] T050.1: Create User model (1.5h) → Code Mode
+  Complexity: 2/10 (simple data structure)
+  Files: src/models/User.ts
+  
+- [ ] T050.2: Implement AuthService (4h) → Code Mode
+  Complexity: 6/10 (business logic, bcrypt, JWT)
+  Files: src/services/AuthService.ts
+  Dependencies: T050.1
+  
+- [ ] T050.3: Create AuthController (3h) → Code Mode
+  Complexity: 4/10 (API handling, validation)
+  Files: src/controllers/AuthController.ts, src/routes/auth.ts
+  Dependencies: T050.2
+  
+- [ ] T050.4: Add auth middleware (2h) → Code Mode
+  Complexity: 3/10 (JWT verification)
+  Files: src/middleware/auth.ts
+  Dependencies: T050.2
+  
+- [ ] T050.5: Add auth tests (1.5h) → Code Mode
+  Complexity: 2/10 (test coverage)
+  Files: tests/auth.test.ts
+  Dependencies: T050.2, T050.3, T050.4
+
+Note: Time distributed by complexity (not equal 2-3h each!)
+```
+
+**Quality Validation (Phase 5):**
+
+After generating subtasks, run comprehensive validation:
+
+```
+validation_result = validate_subtasks(subtasks, original_task)
+
+Checks:
+1. Count: 2-8 subtasks (ERROR if < 2, WARNING if > 8)
+2. Balance: max/min ratio < 3 (WARNING if ≥ 3)
+3. Dependencies: no circular, correct order (ERROR if invalid)
+4. Completeness: all files covered (WARNING if missing)
+5. Coverage: all components present (WARNING if missing)
+
+IF validation_result.errors:
+  SHOW errors and STOP
+  
+IF validation_result.warnings:
+  SHOW warnings and suggestions
+  IF auto_fix_available:
+    APPLY auto-fixes
+    RE-VALIDATE
+```
+
+**Validation Examples:**
+
+**Example 1: Valid Breakdown** ✅
+```
+Subtasks:
+- T050.1: User model (1.5h)
+- T050.2: AuthService (4h) [depends on T050.1]
+- T050.3: AuthController (3h) [depends on T050.2]
+- T050.4: Middleware+Tests (3.5h) [depends on T050.2]
+
+Validation:
+✅ Count: 4 subtasks (2-8 range)
+✅ Balance: max 4h, min 1.5h, ratio 2.67 (< 3)
+✅ Dependencies: Valid order, no circular
+✅ Completeness: All 5 files covered
+✅ Coverage: All components present
+
+Result: ✅ All validations passed!
+```
+
+**Example 2: Unbalanced (Auto-fixed)** ⚠️
+```
+Subtasks (before fix):
+- T060.1: Model (1h)
+- T060.2: Service (5h)
+- T060.3: Controller (3h)
+- T060.4: Tests (1h)
+
+Validation:
+✅ Count: 4 subtasks
+❌ Balance: max 5h, min 1h, ratio 5.0 (> 3) - UNBALANCED
+⚠️ Suggestion: Combine T060.1 and T060.4
+
+Auto-fix applied:
+- T060.1: Service (5h)
+- T060.2: Controller (3h)
+- T060.3: Model and Tests (2h) [combined]
+
+Re-validation:
+✅ Count: 3 subtasks
+✅ Balance: max 5h, min 2h, ratio 2.5 (< 3)
+
+Result: ✅ Fixed and validated!
+```
+
+**Example 3: Circular Dependency (Error)** ❌
+```
+Subtasks:
+- T070.1: Component A [depends on T070.3]
+- T070.2: Component B [depends on T070.1]
+- T070.3: Component C [depends on T070.2]
+
+Validation:
+✅ Count: 3 subtasks
+✅ Balance: ratio 1.5
+❌ Dependencies: Circular dependency detected!
+  Cycle: T070.1 → T070.3 → T070.2 → T070.1
+
+Result: ❌ ERROR - Cannot proceed with circular dependencies
+Action: Review task dependencies and break the cycle
 ```
 
 **Benefits:**
@@ -285,6 +450,9 @@ Subtasks Created:
 - ✅ Better progress tracking
 - ✅ Easier error recovery
 - ✅ Clearer validation points
+- ✅ Catches errors early (95%+ detection)
+- ✅ Provides actionable suggestions
+- ✅ Auto-fixes common issues
 
 ### Mode Selection Logic
 

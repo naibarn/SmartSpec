@@ -431,19 +431,58 @@ DO NOT STOP until ALL tasks are completed or error occurs
 ### 6.5 Update Progress
 
 **If task successful:**
-- Update checkbox in tasks.md: `- [ ]` → `- [x]`
+
+**STEP 1: Update checkbox in tasks.md (MANDATORY)**
+
+**Action:** Use file editing tool to update the checkbox
+```
+Find in {TASKS_FILE}:
+  - [ ] {task_id}: {task_title}
+
+Replace with:
+  - [x] {task_id}: {task_title}
+```
+
+**Example:**
+```
+Find:    - [ ] T037: Implement Credit Deduction APIs (2h)
+Replace: - [x] T037: Implement Credit Deduction APIs (2h)
+```
+
+**IMPORTANT:** 
+- You MUST update the checkbox in the actual tasks.md file
+- Use str_replace or edit_file tool
+- Do NOT skip this step
+- Do NOT just log completion without updating file
+
+**STEP 2: Update tracking variables**
 - Add to completed_tasks list
 - Increment completed_count
 - Log: "✅ Completed {task_id}: {title}"
 
+**STEP 3: Verify update**
+- Read the line from tasks.md to confirm it shows `[x]`
+- If still shows `[ ]`, retry update
+- If retry fails, log warning but continue
+
 **If task failed:**
-- Keep checkbox unchecked
+
+**STEP 1: Keep checkbox unchecked (DO NOT update)**
+- The checkbox should remain as `- [ ]` in tasks.md
+- Do NOT change it to `[x]`
+
+**STEP 2: Update tracking variables**
 - Add to failed_tasks list
 - Increment failed_count
 - Log: "❌ Failed {task_id}: {title} - {error}"
 
 **If task skipped:**
-- Keep checkbox unchecked
+
+**STEP 1: Keep checkbox unchecked (DO NOT update)**
+- The checkbox should remain as `- [ ]` in tasks.md
+- Do NOT change it to `[x]`
+
+**STEP 2: Update tracking variables**
 - Add to skipped_tasks list
 - Increment skipped_count
 - Log: "⏭️ Skipped {task_id}: {title} - {reason}"
@@ -463,10 +502,29 @@ DO NOT STOP until ALL tasks are completed or error occurs
 ### 6.6 Create Mini-Checkpoint
 
 **Every 5 tasks:**
-- Create checkpoint file
-- Save progress
-- Run comprehensive validation
-- Report progress
+
+**STEP 1: Verify checkboxes were updated**
+- Read tasks.md
+- Count `[x]` checkboxes for completed tasks
+- If count doesn't match completed_count:
+  - Log warning: "Checkbox mismatch detected"
+  - List tasks that should be checked but aren't
+  - Attempt to fix by updating missing checkboxes
+
+**STEP 2: Create checkpoint file**
+- Save progress to .smartspec-checkpoint.json
+- Include completed_tasks list
+- Include failed_tasks list
+- Include skipped_tasks list
+
+**STEP 3: Run comprehensive validation**
+- Compile check
+- Test check
+- Lint check
+
+**STEP 4: Report progress**
+- Show checkpoint summary
+- Show validation results
 
 **Checkpoint creation:**
 ```json

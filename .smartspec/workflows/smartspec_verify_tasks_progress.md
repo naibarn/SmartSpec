@@ -192,6 +192,37 @@ else:
 4. Start phase 3 after phase 2 validated
 
 ---
+
+## 🔧 Suggested Workflows
+
+Based on the issues found, run these workflows to fix problems:
+
+### If compilation/type errors found:
+```bash
+/smartspec_fix_errors specs/feature/spec-004-financial-system
+```
+
+### If tests are missing or incomplete:
+```bash
+/smartspec_generate_tests specs/feature/spec-004-financial-system --target-coverage 80
+```
+
+### If code quality issues found:
+```bash
+/smartspec_refactor_code specs/feature/spec-004-financial-system
+```
+
+### If SPEC_INDEX.json is outdated:
+```bash
+/smartspec_reindex_specs --spec specs/feature/spec-004-financial-system
+```
+
+### To continue implementation:
+```bash
+/smartspec_implement_tasks specs/feature/spec-004-financial-system/tasks.md --start-from T00X
+```
+
+---
 ```
 
 ## 5. Update tasks.md (Optional)
@@ -260,6 +291,23 @@ If user confirms, update tasks.md with status markers
 1. แก้ blockers ก่อน (มี X tasks รอ)
 2. Complete phase 2 checkpoint
 3. เริ่ม phase 3 หลัง phase 2 validated
+
+🔧 Workflows ที่แนะนำ:
+
+[IF มี compilation/type errors]
+→ /smartspec_fix_errors specs/feature/spec-004-financial-system
+
+[IF ขาด tests หรือ coverage ต่ำ]
+→ /smartspec_generate_tests specs/feature/spec-004-financial-system --target-coverage 80
+
+[IF มีปัญหา code quality]
+→ /smartspec_refactor_code specs/feature/spec-004-financial-system
+
+[IF SPEC_INDEX.json ไม่ตรง]
+→ /smartspec_reindex_specs --spec specs/feature/spec-004-financial-system
+
+[IF ต้องการทำงานต่อ]
+→ /smartspec_implement_tasks specs/feature/spec-004-financial-system/tasks.md --start-from T00X
 
 🔄 Run อีกครั้งเพื่อ update progress:
 [Command]

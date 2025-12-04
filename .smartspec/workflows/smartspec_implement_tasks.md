@@ -245,6 +245,27 @@ interface Task {
 
 ## 6. Execute Tasks (Main Loop)
 
+**IMPORTANT: This is a LOOP - You MUST iterate through ALL tasks in FILTERED_TASKS**
+
+**Loop structure:**
+```
+FOR each task in FILTERED_TASKS:
+  1. Check dependencies
+  2. Read task details
+  3. Implement task
+  4. Validate task
+  5. Update progress
+  6. Report completion
+  7. Continue to NEXT task
+  
+DO NOT STOP until ALL tasks are completed or error occurs
+```
+
+**Progress tracking:**
+- Track: current_task_index, total_tasks, completed_count, failed_count
+- Report after each task: "Completed {current}/{total} tasks"
+- At end: "All {total} tasks completed" or "Stopped at {current}/{total}"
+
 **For each task in FILTERED_TASKS:**
 
 ### 6.1 Check Dependencies
@@ -412,17 +433,32 @@ interface Task {
 **If task successful:**
 - Update checkbox in tasks.md: `- [ ]` → `- [x]`
 - Add to completed_tasks list
+- Increment completed_count
 - Log: "✅ Completed {task_id}: {title}"
 
 **If task failed:**
 - Keep checkbox unchecked
 - Add to failed_tasks list
+- Increment failed_count
 - Log: "❌ Failed {task_id}: {title} - {error}"
 
 **If task skipped:**
 - Keep checkbox unchecked
 - Add to skipped_tasks list
+- Increment skipped_count
 - Log: "⏭️ Skipped {task_id}: {title} - {reason}"
+
+**Report progress after EACH task:**
+```
+📊 Progress: {current_task_index}/{total_tasks} tasks processed
+   ✅ Completed: {completed_count}
+   ❌ Failed: {failed_count}
+   ⏭️ Skipped: {skipped_count}
+   ⏳ Remaining: {total_tasks - current_task_index}
+```
+
+**IMPORTANT: After reporting progress, CONTINUE to next task in loop**
+**DO NOT STOP until all tasks are processed**
 
 ### 6.6 Create Mini-Checkpoint
 
@@ -466,16 +502,18 @@ interface Task {
 ### 6.8 Safety Constraints
 
 **Enforce hard limits:**
-- ❌ Maximum 10 tasks per execution cycle
 - ❌ Maximum 5 file edits per task
 - ❌ Maximum 50 lines per str_replace
 - ❌ Maximum 2 retry attempts per operation
 - ❌ STOP at 3 consecutive errors
 
+**Note:** There is NO limit on number of tasks per execution
+**The loop MUST continue until ALL tasks in FILTERED_TASKS are processed**
+
 **If limit reached:**
-- Create checkpoint
-- Report progress
-- Pause execution
+- For file edits/str_replace: Report error and skip task
+- For consecutive errors: Create checkpoint and stop
+- Report progress before stopping
 
 ## 7. Phase Checkpoint
 
@@ -514,6 +552,19 @@ interface Task {
 - Do NOT continue to next phase
 
 ## 8. Final Report
+
+**COMPLETION CHECK:**
+```
+IF current_task_index == total_tasks:
+  status = "COMPLETE - All tasks processed"
+ELSE IF failed_count >= 3:
+  status = "STOPPED - Too many failures"
+ELSE:
+  status = "PARTIAL - Stopped at task {current_task_index}/{total_tasks}"
+```
+
+**IMPORTANT: Only reach this section after processing ALL tasks in FILTERED_TASKS**
+**If you reach here early, you have NOT completed the loop correctly**
 
 **Generate comprehensive report:**
 
@@ -636,6 +687,19 @@ Next actions:
 {If need to re-implement specific tasks:}
 ```bash
 /smartspec_implement_tasks.md {path} --tasks {failed_task_ids} --force-all
+```
+
+---
+
+**FINAL VERIFICATION:**
+```
+Processed tasks: {current_task_index}/{total_tasks}
+
+IF current_task_index == total_tasks:
+  ✅ SUCCESS - All tasks in FILTERED_TASKS were processed
+ELSE:
+  ❌ ERROR - Loop terminated early, not all tasks processed
+  ⚠️ This indicates a workflow execution error
 ```
 
 ---

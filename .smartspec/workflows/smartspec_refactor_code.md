@@ -448,9 +448,27 @@ Display final summary:
 
 💡 Next Steps:
   1. Review refactored code
-  2. Update documentation
-  3. Deploy to staging
-  4. Continue: /smartspec_verify_tasks_progress <spec-dir>/tasks.md
+  2. Run tests: npm test
+  3. Update documentation (if needed)
+  4. Commit: git add . && git commit -m "refactor: Improve code quality in spec-XXX"
+  
+  🔧 Suggested Workflows:
+  
+  ✅ Refactoring complete! Consider these next actions:
+  
+  1. Ensure tests still pass:
+     npm test
+     # If failures found:
+     /smartspec_fix_errors <spec-dir>
+  
+  2. Check test coverage:
+     /smartspec_generate_tests <spec-dir> --target-coverage 80
+  
+  3. Verify overall progress:
+     /smartspec_verify_tasks_progress <spec-dir>/tasks.md
+  
+  4. Continue implementation:
+     /smartspec_implement_tasks <spec-dir>/tasks.md --skip-completed
 ```
 
 ## Common Refactoring Patterns

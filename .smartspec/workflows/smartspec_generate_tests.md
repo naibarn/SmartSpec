@@ -514,11 +514,29 @@ Display final summary:
   - Test report: <spec-dir>/test-generation-report-YYYYMMDD.md
   - Coverage report: coverage/index.html
 
-💡 Next Steps:
+  💡 Next Steps:
   1. Review generated tests
-  2. Run: npm test
+  2. Run tests: npm test
   3. Add manual tests for complex scenarios (if needed)
-  4. Continue: /smartspec_verify_tasks_progress <spec-dir>/tasks.md
+  4. Commit: git add . && git commit -m "test: Add tests for spec-XXX"
+  
+  🔧 Suggested Workflows:
+  
+  ✅ Tests generated! Consider these next actions:
+  
+  1. Fix any test failures:
+     npm test
+     # If failures found:
+     /smartspec_fix_errors <spec-dir>
+  
+  2. Improve code quality:
+     /smartspec_refactor_code <spec-dir>
+  
+  3. Verify overall progress:
+     /smartspec_verify_tasks_progress <spec-dir>/tasks.md
+  
+  4. Continue implementation:
+     /smartspec_implement_tasks <spec-dir>/tasks.md --skip-completed
 ```
 
 ## Test Patterns and Best Practices

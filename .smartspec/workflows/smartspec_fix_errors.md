@@ -245,8 +245,24 @@ Generated: YYYY-MM-DD HH:MM:SS
    💡 Next Steps:
      1. Review fixed code
      2. Fix remaining errors manually (if any)
-     3. Run: /smartspec_verify_tasks_progress <spec-dir>/tasks.md
-     4. Continue: /smartspec_implement_tasks <spec-dir>/tasks.md --skip-completed
+     3. Run tests: npm test
+     4. Commit changes: git add . && git commit -m "fix: Auto-fix errors in spec-XXX"
+   
+   🔧 Suggested Workflows:
+   
+   ✅ Errors fixed! Consider these next actions:
+   
+   1. Generate tests for fixed code:
+      /smartspec_generate_tests <spec-dir> --target-coverage 80
+   
+   2. Check code quality:
+      /smartspec_refactor_code <spec-dir>
+   
+   3. Verify overall progress:
+      /smartspec_verify_tasks_progress <spec-dir>/tasks.md
+   
+   4. Continue implementation:
+      /smartspec_implement_tasks <spec-dir>/tasks.md --skip-completed
    ```
 
 ## Common Fix Patterns

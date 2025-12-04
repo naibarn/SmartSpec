@@ -16,6 +16,7 @@ $ARGUMENTS
 - `specs/feature/spec-004/tasks.md --tasks T001,T002,T003`
 - `specs/feature/spec-004/tasks.md --tasks T001-T010`
 - `specs/feature/spec-004/tasks.md --kilocode`
+- `specs/feature/spec-004/tasks.md --kilocode --nosubtasks`
 - `specs/feature/spec-004/tasks.md --claude`
 - `specs/feature/spec-004/tasks.md --claude --with-subagents`
 - `specs/feature/spec-004/tasks.md --roocode`
@@ -24,7 +25,8 @@ $ARGUMENTS
 
 **Default Behavior:**
 - Platform: `--claude` (most popular, if not specified)
-- Sub-agents: disabled (unless `--with-subagents` is specified for Claude Code)
+- Sub-tasks (Kilo Code): enabled (unless `--nosubtasks` is specified)
+- Sub-agents (Claude Code): disabled (unless `--with-subagents` is specified)
 - Phase: all phases (if not specified)
 - Tasks: all tasks (if not specified)
 - SPEC_INDEX: auto-detect `.smartspec/SPEC_INDEX.json` if exists
@@ -42,8 +44,10 @@ $ARGUMENTS
 - Parse `--phase` parameter (single, comma-separated, or range)
 - Parse `--tasks` parameter (single, comma-separated, or range)
 - Parse platform flag: `--kilocode`, `--claude`, `--roocode`
+- Parse `--nosubtasks` flag (only valid with `--kilocode`)
 - Parse `--with-subagents` flag (only valid with `--claude`)
 - Default platform: `--claude` if none specified
+- Validate: If `--nosubtasks` without `--kilocode`, show error
 - Validate: If `--with-subagents` without `--claude`, show error
 
 ## 1. Resolve Paths
@@ -204,6 +208,8 @@ validation_commands:
 ```markdown
 ## 🤖 KILO CODE PLATFORM INSTRUCTIONS
 
+**Sub-Task Mode:** {IF --nosubtasks: "Disabled"} {ELSE: "Enabled (Default)"}
+
 ### Multi-Mode Architecture
 
 Kilo Code uses **5 specialized modes** with automatic mode switching and LLM optimization.
@@ -262,7 +268,11 @@ Kilo Code uses **5 specialized modes** with automatic mode switching and LLM opt
 
 ### Auto Subtasks Feature (Enhanced with Smart Time Estimation)
 
-**Automatic Breakdown:**
+{IF --nosubtasks: "**Sub-Tasks are DISABLED for this run.** Execute tasks sequentially as listed without decomposition."}
+
+{ELSE: "**Sub-Tasks are ENABLED (Default).** Use Orchestrator Mode to break down complex tasks."}
+
+**Automatic Breakdown (When Enabled):**
 - **Trigger:** Tasks >8h automatically activate Orchestrator Mode
 - **Format:** T001.1, T001.2, T001.3, ...
 - **Size:** Each subtask 1.5-5h (based on complexity)

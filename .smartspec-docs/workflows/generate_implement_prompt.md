@@ -25,9 +25,10 @@ This workflow generates a comprehensive, context-rich implementation prompt file
 | Flag | Description | Default |
 | :--- | :--- | :--- |
 | `--kilocode` | Generate prompt with Kilo Code specific instructions. | | 
+| `--nosubtasks` | **(Kilo Only)** Disable automatic sub-task decomposition. | Enabled |
 | `--claude` | Generate prompt with Claude Code specific instructions. | **claude** |
-| `--roocode` | Generate prompt with Roo Code specific instructions. | |
 | `--with-subagents` | **(Claude Only)** Enable Sub-Agent workflow. Requires `.claude/agents/` folder. | Disabled |
+| `--roocode` | Generate prompt with Roo Code specific instructions. | |
 | `--tasks <range>` | Specify a range of tasks to include (e.g., `T001-T010`). | All tasks |
 | `--phase <range>` | Specify a range of phases to include (e.g., `1-3`). | All phases |
 
@@ -35,9 +36,9 @@ This workflow generates a comprehensive, context-rich implementation prompt file
 
 ## 3. Platform-Specific Examples
 
-### Example 1: Kilo Code (`--kilocode`)
+### Example 1: Kilo Code with Sub-Tasks (Default)
 
-Generates a prompt that leverages Kilo Code's multi-mode architecture and automatic sub-task decomposition.
+Generates a prompt that leverages Kilo Code's Orchestrator Mode to automatically break down complex tasks.
 
 ```bash
 /smartspec_generate_implement_prompt.md specs/feature/tasks.md --kilocode
@@ -45,13 +46,26 @@ Generates a prompt that leverages Kilo Code's multi-mode architecture and automa
 
 **Resulting Prompt Includes:**
 -   **Platform Instructions (Kilo Code):**
-    -   `Mode:` Use `Code Generation` mode.
-    -   `Sub-Tasks:` Enable automatic sub-task decomposition.
-    -   `Validation:` Run `npm test` and `npm run lint` after each phase.
+    -   `Sub-Task Mode: Enabled (Default)`
+    -   Instructions to use `Orchestrator Mode` for automatic decomposition.
+    -   **[Read the Full Guide on Kilo Code Sub-Tasks](../guides/kilo_code_subtasks.md)**
 
-### Example 2: Claude Code with Sub-Agents (`--claude --with-subagents`)
+### Example 2: Kilo Code without Sub-Tasks
 
-Generates a prompt designed for Claude Code's multi-agent workflow. It references the pre-defined agents in the `.claude/agents/` directory.
+For simpler tasks, you can disable sub-task decomposition.
+
+```bash
+/smartspec_generate_implement_prompt.md specs/feature/tasks.md --kilocode --nosubtasks
+```
+
+**Resulting Prompt Includes:**
+-   **Platform Instructions (Kilo Code):**
+    -   `Sub-Task Mode: Disabled`
+    -   Instructions to use `Code Generation` mode and execute tasks sequentially.
+
+### Example 3: Claude Code with Sub-Agents
+
+Generates a prompt for Claude Code's multi-agent workflow, referencing pre-defined agents.
 
 ```bash
 /smartspec_generate_implement_prompt.md specs/feature/tasks.md --claude --with-subagents
@@ -59,35 +73,16 @@ Generates a prompt designed for Claude Code's multi-agent workflow. It reference
 
 **Resulting Prompt Includes:**
 -   **Platform Instructions (Claude Code):**
-    -   Instructions to use the `planner-smart.md` agent to create a plan.
-    -   A step-by-step guide for using the `db-agent-smart`, `backend-smart`, `api-agent-smart`, `tester-smart`, and `security-finance` agents.
+    -   A step-by-step guide for using the `planner`, `db`, `backend`, `api`, `tester`, and `security` agents.
     -   **[Read the Full Guide on Claude Sub-Agents](../guides/claude_sub_agents.md)**
 
-### Example 3: Standard Claude Code (`--claude`)
+### Example 4: Standard Claude Code
 
-If `--with-subagents` is not used, it generates a standard prompt for a single, interactive Claude Code session.
+Generates a standard prompt for a single, interactive Claude Code session.
 
 ```bash
 /smartspec_generate_implement_prompt.md specs/feature/tasks.md --claude
 ```
-
-**Resulting Prompt Includes:**
--   General instructions for an interactive coding session.
--   No references to sub-agents.
-
-### Example 4: Roo Code (`--roocode`)
-
-Generates a prompt for Roo Code's safety-first, sequential workflow.
-
-```bash
-/smartspec_generate_implement_prompt.md specs/feature/tasks.md --roocode
-```
-
-**Resulting Prompt Includes:**
--   **Platform Instructions (Roo Code):**
-    -   `Mode:` Use `Safe Execution` mode.
-    -   `Workflow:` Execute tasks strictly in order.
-    -   `Preview:` Show a diff preview before applying changes.
 
 ---
 

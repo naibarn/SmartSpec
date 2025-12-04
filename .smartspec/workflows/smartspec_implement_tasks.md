@@ -14,11 +14,13 @@ $ARGUMENTS
 - `specs/feature/spec-004/tasks.md --phase 1`
 - `specs/feature/spec-004/tasks.md --phase 1-3`
 - `specs/feature/spec-004/tasks.md --tasks T001-T010`
+- `specs/feature/spec-004/tasks.md --start-from T033`
 - `specs/feature/spec-004/tasks.md --resume`
 - `specs/feature/spec-004/tasks.md --skip-completed`
 - `specs/feature/spec-004/tasks.md --force-all`
 - `specs/feature/spec-004/tasks.md --validate-only`
 - `specs/feature/spec-004/tasks.md --phase 1-2 --skip-completed`
+- `specs/feature/spec-004/tasks.md --start-from T033 --kilocode`
 - `specs/feature/spec-004/tasks.md --tasks T033 --kilocode`
 
 **Default Behavior:**
@@ -35,6 +37,7 @@ $ARGUMENTS
 - Extract path from first argument
 - Parse `--phase` parameter (single, comma-separated, or range)
 - Parse `--tasks` parameter (single, comma-separated, or range)
+- Parse `--start-from` parameter (start from specified task to end)
 - Parse `--resume` flag (continue from last checkpoint)
 - Parse `--skip-completed` flag (default, skip checked tasks)
 - Parse `--force-all` flag (ignore checkboxes, re-implement all)
@@ -177,6 +180,12 @@ interface Task {
 - If `--tasks T001-T010`: Include T001 through T010
 - If no `--tasks`: Include all tasks (within selected phases)
 
+**Apply start-from filter:**
+- If `--start-from T033`: Include T033 and all tasks after T033 until end of file
+- Example: `--start-from T033` with tasks T001-T050 → Include T033-T050
+- Can combine with `--phase`: `--start-from T033 --phase 4` → Start from T033 within Phase 4 only
+- **Note:** `--start-from` takes precedence over `--tasks` parameter
+
 **Apply resume filter:**
 - If `--resume` and checkpoint exists: Start from checkpoint.next_task
 
@@ -195,10 +204,10 @@ interface Task {
 - Total tasks in file: 45
 - Completed tasks: 15
 - Pending tasks: 30
-- Filtered tasks: 10 (T016-T025)
-- Estimated effort: 40 hours
+- Filtered tasks: 18 (T033-T050)
+- Estimated effort: 72 hours
 - Mode: Skip completed
-- Resume: Yes (from T016)
+- Start from: T033 (continue to end)
 ```
 
 ## 5. Validate Environment

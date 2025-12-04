@@ -92,6 +92,7 @@ These workflows help maintain and improve code quality on a spec-scoped basis:
 **Troubleshooting:** 
 - If workflows don't mark task checkboxes automatically, see [MANUAL_UPDATE_CHECKBOXES.md](MANUAL_UPDATE_CHECKBOXES.md) for manual update methods.
 - If using Kilo Code and experiencing `line_count` errors, see [KILOCODE_MODE_GUIDE.md](KILOCODE_MODE_GUIDE.md) for `--kilocode` flag usage.
+- To resume implementation from a specific task to the end, see [START_FROM_GUIDE.md](START_FROM_GUIDE.md) for `--start-from` parameter usage.
 
 
 ---

@@ -1,38 +1,23 @@
-# SmartSpec: AI-Native Development Framework
+# SmartSpec: The AI-Native Development Framework
 
 **The structured workflow that brings quality, consistency, and speed to your AI-powered development.**
 
 ---
 
+## ✨ Supported Platforms
+
+SmartSpec V5 supports your favorite AI coding platforms with a single-command installation:
+
+- **Kilo Code** - For autonomous AI agent-driven development.
+- **Claude Code** - For deep analysis with sub-agents.
+- **Cursor / VSCode / Google Antigravity** - For supercharging your manual "vibe coding" workflow.
+- **Roo Code** - For safety-first, workflow-driven development.
+
+---
+
 ## 🚀 Quick Start
 
-### 1. What is SmartSpec?
-
-SmartSpec is a command-line tool that orchestrates AI coding assistants (like Cursor, Claude, Kilo Code) by providing them with a structured plan. It turns chaotic "vibe coding" into a predictable, high-quality process.
-
-**It solves the core problem of AI development: AI agents lack long-term context and architectural vision.** SmartSpec provides that vision.
-
-### 2. How it Works: The 3-Step Workflow
-
-1.  **Generate a SPEC:**
-    ```bash
-    /smartspec_generate_spec.md <path_to_spec>
-    ```
-    Answer a few questions to get a comprehensive blueprint (`spec.md`) for your feature.
-
-2.  **Generate Tasks:**
-    ```bash
-    /smartspec_generate_tasks.md <path_to_spec>
-    ```
-    Get a detailed checklist of implementation tasks (`tasks.md`).
-
-3.  **Generate a Prompt & Vibe:**
-    ```bash
-    /smartspec_generate_implement_prompt.md <path_to_tasks> --task T001
-    ```
-    Get a context-rich prompt for your favorite AI tool and start coding.
-
-### 3. Installation
+### 1. Installation
 
 Get up and running in 30 seconds.
 
@@ -46,11 +31,28 @@ curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/s
 iwr -useb https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/install.ps1 | iex
 ```
 
+### 2. The 3-Step Workflow
+
+1.  **Generate a SPEC:** Create a comprehensive blueprint for your feature.
+    ```bash
+    /smartspec_generate_spec.md specs/my-feature/spec.md
+    ```
+
+2.  **Generate Tasks:** Get a detailed checklist of implementation tasks.
+    ```bash
+    /smartspec_generate_tasks.md specs/my-feature/spec.md
+    ```
+
+3.  **Generate a Prompt & Vibe:** Get a context-rich prompt for your AI tool.
+    ```bash
+    /smartspec_generate_implement_prompt.md specs/my-feature/tasks.md --task T001
+    ```
+
 ---
 
 ## 🤔 Why SmartSpec? From Vibe Coding Chaos to Structured Velocity
 
-AI coding is fast, but it's often chaotic. SmartSpec brings the structure needed for sustainable speed.
+AI coding is fast, but it's often chaotic. SmartSpec provides the architectural backbone that AI agents lack.
 
 | | **Traditional "Vibe Coding"** | **SmartSpec-Powered Development** |
 | :--- | :--- | :--- |
@@ -59,12 +61,26 @@ AI coding is fast, but it's often chaotic. SmartSpec brings the structure needed
 | **Architecture** | Ignored or drifts | **Enforced** (Defined in SPEC) |
 | **Outcome** | Code snippets, tech debt | Production-ready application |
 
-<details>
-<summary>Click to expand for detailed workflows and advanced features</summary>
+---
+
+## 📖 Core Commands
+
+Here are the core workflows. Click the link for full documentation on each command, including all parameters, options, and examples.
+
+| Command | Description | Full Documentation |
+| :--- | :--- | :--- |
+| `/smartspec_generate_spec.md` | Creates a new SPEC document from an idea. | [📄 View Docs](.smartspec-docs/workflows/generate_spec.md) |
+| `/smartspec_generate_plan.md` | Creates a high-level project plan from a SPEC. | [📄 View Docs](.smartspec-docs/workflows/generate_plan.md) |
+| `/smartspec_generate_tasks.md` | Breaks down a SPEC into a detailed `tasks.md` checklist. | [📄 View Docs](.smartspec-docs/workflows/generate_tasks.md) |
+| `/smartspec_generate_implement_prompt.md` | Generates a context-rich prompt for your AI assistant. | [📄 View Docs](.smartspec-docs/workflows/generate_implement_prompt.md) |
+| `/smartspec_implement_tasks.md` | Autonomously implements tasks using an AI agent. | [📄 View Docs](.smartspec-docs/workflows/implement_tasks.md) |
+| `/smartspec_reverse_to_spec.md` | Reverse-engineers an existing codebase into a SPEC. | [📄 View Docs](.smartspec-docs/workflows/reverse_to_spec.md) |
+| `/smartspec_sync_spec_tasks.md` | Synchronizes a `tasks.md` file with its source SPEC. | [📄 View Docs](.smartspec-docs/workflows/sync_spec_tasks.md) |
+| `/smartspec_verify_tasks_progress.md` | Verifies and tracks the progress of implementation. | [📄 View Docs](.smartspec-docs/workflows/verify_tasks_progress.md) |
 
 ---
 
-## 💡 Detailed Workflow: Supercharge Your Vibe Coding
+## 💡 Vibe Coding Workflows
 
 SmartSpec integrates seamlessly with your favorite tools.
 
@@ -89,53 +105,6 @@ Take 5-10 minutes upfront to generate a `spec.md` and `tasks.md`. This small inv
 2.  **Execute Autonomously:** `/smartspec_implement_tasks.md`
 3.  **Review:** Come back to review the completed, high-quality code.
 
-#### **3. The Hybrid Approach (Most Common)**
-
-- **Automate the Grunt Work:** Use `/smartspec_implement_tasks.md --tasks T001-T010` for boilerplate.
-- **Vibe the Complex Parts:** Use `/smartspec_generate_implement_prompt.md --task T011` for core logic in Cursor/VSCode.
-- **Return to Automation:** Let the agent finish the rest.
-
----
-
-## 📖 Core Commands
-
-| Command | Description | Full Documentation |
-| :--- | :--- | :--- |
-| `/smartspec_generate_spec.md <path>` | Creates a new SPEC document from a high-level idea. | [📄 View Docs](.smartspec-docs/workflows/generate_spec.md) |
-| `/smartspec_generate_plan.md <spec_path>` | Creates a high-level project plan from a SPEC. | [📄 View Docs](.smartspec-docs/workflows/generate_plan.md) |
-| `/smartspec_generate_tasks.md <spec_path>` | Breaks down a SPEC into a detailed `tasks.md` checklist. | [📄 View Docs](.smartspec-docs/workflows/generate_tasks.md) |
-| `/smartspec_generate_implement_prompt.md <tasks_path>` | Generates a context-rich prompt for a specific task. | [📄 View Docs](.smartspec-docs/workflows/generate_implement_prompt.md) |
-| `/smartspec_implement_tasks.md <tasks_path>` | Autonomously implements tasks using an agent like Kilo Code. | [📄 View Docs](.smartspec-docs/workflows/implement_tasks.md) |
-| `/smartspec_reverse_to_spec.md <src_path>` | Reverse-engineers an existing codebase into a SPEC. | [📄 View Docs](.smartspec-docs/workflows/reverse_to_spec.md) |
-| `/smartspec_sync_spec_tasks.md` | Synchronizes a `tasks.md` file with its source SPEC. | [📄 View Docs](.smartspec-docs/workflows/sync_spec_tasks.md) |
-| `/smartspec_verify_tasks_progress.md <tasks_path>` | Verifies and tracks progress of implementation tasks. | [📄 View Docs](.smartspec-docs/workflows/verify_tasks_progress.md) |
-
----
-
-## 🎯 Quick Start Example: Building a Credit Purchase Feature
-
-1.  **Generate the SPEC:**
-    ```bash
-    /smartspec_generate_spec.md specs/credit-purchase/spec.md
-    ```
-    (Choose `fintech` domain, `financial` profile)
-
-2.  **Generate Tasks:**
-    ```bash
-    /smartspec_generate_tasks.md specs/credit-purchase/spec.md
-    ```
-    This creates `tasks.md` with tasks like `T001: Setup database schema`, `T002: Create POST /api/credit/purchase endpoint`, etc.
-
-3.  **Implement (Hybrid Approach):**
-    ```bash
-    # Automate the boilerplate
-    /smartspec_implement_tasks.md specs/credit-purchase/tasks.md --tasks T001-T003
-
-    # Manually implement the payment logic
-    /smartspec_generate_implement_prompt.md specs/credit-purchase/tasks.md --task T004
-    # (paste into Cursor)
-    ```
-
 ---
 
 ## 🧩 Advanced Features
@@ -158,34 +127,16 @@ Take 5-10 minutes upfront to generate a `spec.md` and `tasks.md`. This small inv
 | `iot` | Device identity, OTA updates |
 | `ai` | Model evaluation, bias mitigation |
 
-### Configuration & Meta-Tags
-
-- **Project Config:** Use `smartspec.config.json` to set default profiles and domains.
-- **Org Config:** Use `.smartspec/config.json` for organization-wide rules.
-- **Meta-Tags:** Use `<!-- @critical security -->` to protect sections from being overwritten.
-
 ---
 
 ## 🏛️ For the LLM: How to Read This Repository
 
 - **Project Goal:** To provide structure and architectural governance to AI-driven software development.
-- **Key Artifacts:** `spec.md` (the blueprint), `tasks.md` (the checklist), `.kilocode/workflows/` (the logic).
-- **Core Principle:** Follow the workflow: `spec.md` → `tasks.md` → implementation.
-
----
-
-## 🐛 Troubleshooting
-
-| Problem | Solution |
-| :--- | :--- |
-| **SPEC missing sections** | Re-run `/smartspec_generate_spec.md` with a more comprehensive profile (e.g., `full`). |
-| **Tasks out of sync** | Run `/smartspec_sync_spec_tasks.md`. |
-| **Validation errors** | Check the ERROR-level rules in the output. |
+- **Key Artifacts:** `spec.md` (the blueprint), `tasks.md` (the checklist), `.kilocode/workflows/` (the logic), `.smartspec-docs/` (the documentation).
+- **Core Principle:** Follow the workflow: `spec.md` → `tasks.md` → implementation. To understand a command, read its corresponding file in `.smartspec-docs/workflows/`.
 
 ---
 
 ## 📄 License
 
 Licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
-
-</details>

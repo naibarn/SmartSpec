@@ -322,7 +322,36 @@ Auto-implement tasks with safety constraints, progress tracking, and validation.
 - ✅ Safety constraints enforcement
 - ✅ Comprehensive reporting
 
-### 6) Sync SPEC and Tasks
+### 6) Generate Cursor/Antigravity Prompts
+```bash
+/smartspec_generate_cursor_prompt.md <tasks_path> --task <task_selection> [options]
+```
+Example: `/smartspec_generate_cursor_prompt.md specs/feature/spec-004-financial-system/tasks.md --task T001`
+
+Generates user-friendly prompts from tasks.md for Cursor/Antigravity vibe coding.
+
+**Options:**
+- `--task T001` → Single task
+- `--task T001,T002,T003` → Multiple tasks (comma-separated)
+- `--task T001-T010` → Task range
+- `--task T050 --breakdown` → Auto-breakdown large tasks (>8h)
+- `--subtask T050.1,T050.2` → Specific subtasks
+- `--skip-completed` → Skip tasks marked [x]
+- `--antigravity` → Optimize for Antigravity (default: cursor)
+- `--all` → Generate one prompt per task
+
+**Features:**
+- ✅ Simple, non-technical prompts
+- ✅ Step-by-step instructions
+- ✅ Context preservation (previous tasks, dependencies)
+- ✅ Code structure examples
+- ✅ Platform-specific tips (Cursor/Antigravity)
+- ✅ Subtask breakdown for large tasks
+- ✅ Hybrid workflow support (switch between platforms)
+
+**Output:** `cursor-prompt-<tasks>.md` or multiple files with `--all`
+
+### 7) Sync SPEC and Tasks
 ```bash
 /smartspec_sync_spec_tasks.md <spec_path> <tasks_path>
 ```
@@ -330,7 +359,7 @@ Example: `/smartspec_sync_spec_tasks.md specs/feature/spec-004-financial-system/
 
 Synchronizes SPEC with tasks.md to ensure consistency.
 
-### 6) Verify Tasks Progress
+### 8) Verify Tasks Progress
 ```bash
 /smartspec_verify_tasks_progress.md <tasks_path>
 ```
@@ -398,6 +427,35 @@ Generates implementation prompts from tasks.md with platform-specific instructio
 /smartspec_implement_tasks.md specs/feature/spec-004-financial-system/tasks.md
 ```
 Auto-implement tasks with safety constraints and progress tracking.
+
+### Generate Cursor Prompts (Vibe Coding)
+```bash
+# Single task
+/smartspec_generate_cursor_prompt.md specs/feature/spec-004-financial-system/tasks.md --task T001
+
+# Multiple tasks
+/smartspec_generate_cursor_prompt.md specs/feature/spec-004-financial-system/tasks.md --task T001-T005
+
+# Large task with breakdown
+/smartspec_generate_cursor_prompt.md specs/feature/spec-004-financial-system/tasks.md --task T050 --breakdown
+
+# Skip completed tasks
+/smartspec_generate_cursor_prompt.md specs/feature/spec-004-financial-system/tasks.md --task T011-T020 --skip-completed
+```
+Generates simple, user-friendly prompts for Cursor/Antigravity.
+
+**Hybrid Workflow Example:**
+```bash
+# Phase 1: Use Kilo Code (autonomous)
+kilo code implement tasks.md --task T001-T010
+
+# Phase 2: Switch to Cursor (manual control)
+/smartspec_generate_cursor_prompt.md tasks.md --task T011-T015 --skip-completed
+# Copy prompt to Cursor and implement
+
+# Phase 3: Back to Kilo Code
+kilo code implement tasks.md --task T016-T050 --skip-completed
+```
 
 **Resume from checkpoint:**
 ```bash

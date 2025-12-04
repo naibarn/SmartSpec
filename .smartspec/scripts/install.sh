@@ -196,7 +196,7 @@ for platform in "${PLATFORMS[@]}"; do
             exit 1
         fi
         # Create symlink (relative path for portability)
-        ln -s "../../$WORKFLOWS_DIR" "$TARGET_DIR"
+        ln -s "../$WORKFLOWS_DIR" "$TARGET_DIR"
         echo -e "  ${GREEN}✅ $PLATFORM_NAME: Symlink created${NC}"
     else
         # Copy files

@@ -186,7 +186,7 @@ foreach ($platform in $PLATFORMS) {
             exit 1
         }
         # Create symlink (relative path)
-        $sourcePath = "..\..\$WORKFLOWS_DIR"
+        $sourcePath = "..\$WORKFLOWS_DIR"
         New-Item -ItemType SymbolicLink -Path $TARGET_DIR -Target $sourcePath | Out-Null
         Write-Host "  ✅ $PLATFORM_NAME`: Symlink created" -ForegroundColor Green
     } else {

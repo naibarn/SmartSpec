@@ -87,7 +87,38 @@ These options control how the command operates and handles files.
 
 **Result:** A highly detailed `spec.md` with comprehensive security (STRIDE), performance, and audit sections, tailored for the fintech domain.
 
-### **Example 3: Editing an Existing SPEC to Update Security**
+### **Example 3: Creating a New SPEC from a Detailed User Request**
+
+**Goal:** Generate a comprehensive SPEC for a new, complex feature by providing a detailed, multi-line description directly in the command.
+
+**User's Idea (The `description_or_path` argument):**
+
+> "I need to build a real-time collaborative whiteboard feature.
+> Key requirements:
+> - Users can create, join, and share whiteboards via a unique URL.
+> - It must support basic drawing tools: pen, eraser, shapes (circle, square), and text boxes.
+> - All actions must be synced in real-time (<200ms latency) across all participants using WebSockets.
+> - The backend should be built on Node.js and the frontend in React.
+> - User authentication is handled by a separate, existing service, so we just need to validate a JWT token.
+> - All whiteboard data must be saved to a PostgreSQL database."
+
+**Command:**
+
+```bash
+/smartspec_generate_spec.md "I need to build a real-time collaborative whiteboard feature. Key requirements: - Users can create, join, and share whiteboards via a unique URL. - It must support basic drawing tools: pen, eraser, shapes (circle, square), and text boxes. - All actions must be synced in real-time (<200ms latency) across all participants using WebSockets. - The backend should be built on Node.js and the frontend in React. - User authentication is handled by a separate, existing service, so we just need to validate a JWT token. - All whiteboard data must be saved to a PostgreSQL database." --profile=full --security=stride-basic --domain=saas
+```
+
+**Result:**
+
+This command generates a highly detailed `spec.md` file. The AI uses the rich description to populate multiple sections:
+
+*   **`## 2. Functional Requirements`**: The drawing tools, sharing mechanism, and real-time sync are listed as key features.
+*   **`## 4. Technical Specifications`**: The tech stack (Node.js, React, WebSockets, PostgreSQL) is documented.
+*   **`## 5. Data Models`**: A preliminary data model for `Whiteboard` and `DrawingAction` is created.
+*   **`## 6. Security`**: The JWT validation requirement is noted under an `Authentication` subsection.
+*   **`## 8. Performance`**: The `<200ms` latency requirement is added as a key performance indicator (KPI).
+
+### **Example 4: Editing an Existing SPEC to Update Security**
 
 **Goal:** Update the security section of an existing SPEC without touching other critical parts.
 

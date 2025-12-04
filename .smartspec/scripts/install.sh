@@ -58,15 +58,14 @@ if command -v git &> /dev/null; then
     git init -q
     git remote add origin "$SMARTSPEC_REPO"
     git config core.sparseCheckout true
-    echo ".kilocode/workflows/" >> .git/info/sparse-checkout
     echo ".smartspec/" >> .git/info/sparse-checkout
     git pull -q origin main
-    mv .kilocode/workflows ./workflows
-    # Copy knowledge base files (examples only, not user files)
+    # Move all files from .smartspec/ to current directory
     if [ -d ".smartspec" ]; then
-        cp -r .smartspec/* .
+        mv .smartspec/* .
+        mv .smartspec/.gitignore . 2>/dev/null || true
     fi
-    rm -rf .kilocode .smartspec .git
+    rm -rf .smartspec .git
     cd ..
     echo -e "${GREEN}✅ Downloaded workflows and knowledge base via git${NC}"
 else

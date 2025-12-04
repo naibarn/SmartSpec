@@ -46,14 +46,16 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     git init -q
     git remote add origin $SMARTSPEC_REPO
     git config core.sparseCheckout true
-    ".kilocode/workflows/" | Out-File -Encoding ASCII .git\info\sparse-checkout
-    ".smartspec/" | Out-File -Encoding ASCII -Append .git\info\sparse-checkout
+    ".smartspec/" | Out-File -Encoding ASCII .git\info\sparse-checkout
     git pull -q origin main 2>&1 | Out-Null
-    Move-Item .kilocode\workflows .\workflows
+    # Move all files from .smartspec/ to current directory
     if (Test-Path ".smartspec") {
-        Copy-Item -Recurse .smartspec\* .
+        Move-Item .smartspec\* . -Force
+        if (Test-Path ".smartspec\.gitignore") {
+            Move-Item .smartspec\.gitignore . -Force -ErrorAction SilentlyContinue
+        }
     }
-    Remove-Item -Recurse -Force .kilocode, .smartspec, .git -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force .smartspec, .git -ErrorAction SilentlyContinue
     Pop-Location
     Write-Host "✅ Downloaded workflows and knowledge base via git" -ForegroundColor Green
 } else {

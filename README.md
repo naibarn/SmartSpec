@@ -19,9 +19,15 @@ SmartSpec V5 supports your favorite AI coding platforms with a single-command in
 
 ## 🚀 Quick Start
 
-### 1. Installation
+### 1. Installation & Updates
 
-Get up and running in 30 seconds.
+**To install for the first time:**
+
+Use the following command for your operating system.
+
+**To update to the latest version:**
+
+Simply run the same installation command again. The script will automatically detect your existing installation and update it to the latest version, preserving your custom workflows.
 
 **Unix / macOS / Linux:**
 ```bash

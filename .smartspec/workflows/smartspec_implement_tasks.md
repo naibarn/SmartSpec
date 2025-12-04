@@ -19,6 +19,7 @@ $ARGUMENTS
 - `specs/feature/spec-004/tasks.md --force-all`
 - `specs/feature/spec-004/tasks.md --validate-only`
 - `specs/feature/spec-004/tasks.md --phase 1-2 --skip-completed`
+- `specs/feature/spec-004/tasks.md --tasks T033 --kilocode`
 
 **Default Behavior:**
 - Mode: `--skip-completed` (skip checked tasks)
@@ -26,6 +27,7 @@ $ARGUMENTS
 - Tasks: all tasks (if not specified)
 - Resume: false (start from beginning)
 - Validate-only: false (implement + validate)
+- Kilocode: false (direct implementation)
 
 ## 0. Parse Arguments & Detect Input
 
@@ -37,6 +39,7 @@ $ARGUMENTS
 - Parse `--skip-completed` flag (default, skip checked tasks)
 - Parse `--force-all` flag (ignore checkboxes, re-implement all)
 - Parse `--validate-only` flag (validate only, no implementation)
+- Parse `--kilocode` flag (use Kilo Code sub-task mode)
 
 **Detect input type:**
 - If path is directory: Look for `tasks.md` in directory
@@ -262,6 +265,58 @@ interface Task {
 ### 6.3 Implement Task (If Not Validate-Only)
 
 **If `--validate-only` flag: SKIP implementation, go to validation**
+
+**If `--kilocode` flag: Use Kilo Code Sub-Task Mode**
+
+**Kilo Code Sub-Task Mode (when `--kilocode` flag is set):**
+
+1. **Analyze task complexity:**
+   - Estimate total lines of code needed
+   - Count number of methods/functions
+   - Identify logical sub-components
+
+2. **If task is COMPLEX (>50 lines OR >2 methods):**
+   - **Create sub-tasks using Kilo Code's sub-task feature:**
+     ```
+     Create a new sub-task in code mode:
+     Goal: [First logical component]
+     
+     Create a new sub-task in code mode:
+     Goal: [Second logical component]
+     
+     ...
+     ```
+   
+   - **Sub-task breakdown strategy:**
+     - Each sub-task should target <50 lines of code
+     - Each sub-task should implement 1-2 methods max
+     - Sub-tasks should be sequential (not parallel)
+   
+   - **Example breakdown for T033 (Credit Transaction Service):**
+     ```
+     Sub-task 1: Create transaction.service.ts skeleton
+     Goal: Create file with imports, class definition, and constructor
+     
+     Sub-task 2: Implement createTransaction() method
+     Goal: Add createTransaction() method with validation and database insert
+     
+     Sub-task 3: Implement getTransactionHistory() method
+     Goal: Add getTransactionHistory() method with query building and execution
+     
+     Sub-task 4: Add error handling
+     Goal: Add try-catch blocks and error logging to all methods
+     ```
+   
+   - **Execute sub-tasks sequentially:**
+     - Wait for each sub-task to complete
+     - Verify each sub-task output
+     - If sub-task fails: Retry or break down further
+
+3. **If task is SIMPLE (≤50 lines AND ≤2 methods):**
+   - Implement directly without sub-tasks
+   - Use standard file size strategy (below)
+
+**Standard Implementation Mode (when `--kilocode` flag is NOT set):**
 
 **Apply file size strategy:**
 

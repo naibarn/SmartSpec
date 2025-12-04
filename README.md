@@ -89,7 +89,9 @@ These workflows help maintain and improve code quality on a spec-scoped basis:
 
 **Note:** All quality workflows operate on a **spec-scoped basis** for optimal performance in large projects. See [SPEC_SCOPED_WORKFLOWS.md](SPEC_SCOPED_WORKFLOWS.md) for details.
 
-**Troubleshooting:** If workflows don't mark task checkboxes automatically, see [MANUAL_UPDATE_CHECKBOXES.md](MANUAL_UPDATE_CHECKBOXES.md) for manual update methods.
+**Troubleshooting:** 
+- If workflows don't mark task checkboxes automatically, see [MANUAL_UPDATE_CHECKBOXES.md](MANUAL_UPDATE_CHECKBOXES.md) for manual update methods.
+- If using Kilo Code and experiencing `line_count` errors, see [KILOCODE_MODE_GUIDE.md](KILOCODE_MODE_GUIDE.md) for `--kilocode` flag usage.
 
 
 ---

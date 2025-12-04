@@ -1,4 +1,4 @@
-># `/smartspec_generate_implement_prompt.md`
+# `/smartspec_generate_implement_prompt.md`
 
 **(Alias: `/kilo`)**
 
@@ -15,17 +15,28 @@ This is the central command for the manual, AI-assisted "Vibe Coding" workflow. 
 
 ---
 
-## 2. Usage
+## 2. Clarification: `generate_implement_prompt` vs. `implement_tasks`
+
+There is a critical distinction between these two commands:
+
+- **`/smartspec_implement_tasks.md`**: This is for **full automation**. The AI agent takes the `tasks.md` and runs the implementation autonomously, writing code directly to your files.
+- **`/smartspec_generate_implement_prompt.md`**: This is for **manual, AI-assisted coding**. Its only job is to **GENERATE A PROMPT**. It does **NOT** write any code. You take the generated prompt and use it in a separate tool like Cursor.
+
+**Key takeaway:** This command is a **prompt generator**, not a code implementer.
+
+---
+
+## 3. Usage
 
 ```bash
-/smartspec_generate_implement_prompt.md <tasks_path> --tasks <task_id> [options...]
+/smartspec_generate_implement_prompt.md <tasks_path> --tasks <task_id_or_range> [options...]
 # Alias
-/kilo <tasks_path> --tasks <task_id> [options...]
+/kilo <tasks_path> --tasks <task_id_or_range> [options...]
 ```
 
 ---
 
-## 3. Parameters & Options
+## 4. Parameters & Options
 
 ### **Primary Argument**
 
@@ -37,92 +48,96 @@ This is the central command for the manual, AI-assisted "Vibe Coding" workflow. 
 
 | Option | Value | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `--tasks` | `<task_id>` | (none) | ✅ **Required.** The ID of the single task you want to generate a prompt for. | `--tasks T004` |
+| `--tasks` | `<task_id_or_range>` | (none) | ✅ **Required.** The ID of the task(s) you want to generate a prompt for. Supports single tasks (`T001`), ranges (`T001-T005`), or comma-separated lists (`T001,T003`). |
 | `--include-files` | `<glob_pattern>` | (auto) | Includes the content of specified files in the context. Supports glob patterns. | `--include-files "src/utils/*.ts"` |
 | `--no-related-code` | (flag) | (unset) | Prevents the AI from automatically searching for and including related code snippets from the existing codebase. |
 
 ---
 
-## 4. The Prompt Generation Process
+## 5. How Multiple Tasks are Handled
+
+This is a key point of clarification:
+
+- **One Prompt File:** Even if you specify multiple tasks (e.g., `--tasks T001-T005`), the command generates **ONE single prompt file** (e.g., `implement-prompt-T001-T005.md`).
+- **Sequential Tasks in One Prompt:** Inside that single file, the tasks are presented sequentially. The prompt will guide the AI to implement them in the correct order, one after the other.
+
+**Example Command:**
+```bash
+/kilo specs/services/user-profile/tasks.md --tasks T001-T003
+```
+
+**Resulting Prompt Structure (in `implement-prompt-T001-T003.md`):**
+
+> ### Task 1 of 3: T001 - Create User Model
+> (Context and instructions for T001)
+>
+> ---
+>
+> ### Task 2 of 3: T002 - Create Database Migration
+> (Context and instructions for T002, noting that it depends on T001)
+>
+> ---
+>
+> ### Task 3 of 3: T003 - Implement User Service
+> (Context and instructions for T003, noting it uses the model from T001)
+
+This structure allows you to paste one large prompt into Cursor and have it work through a series of related tasks in a single session.
+
+---
+
+## 6. The Deep-Context Assembly Process
 
 When you run this command, the AI performs a deep-context assembly:
 
-1.  **Task Extraction:** It reads the specified task (`--tasks <task_id>`) from `tasks.md`.
-2.  **SPEC Context:** It finds the associated `spec.md` and extracts the sections most relevant to the task (e.g., Data Models, API Specification, Business Rules).
-3.  **Supporting Document Context:** It automatically finds and includes relevant parts of supporting documents like `openapi.yaml` or `data-model.md`.
-4.  **Code Context (Auto):** It searches the codebase for existing files or code snippets that are relevant to the task (e.g., related utility functions, type definitions) and includes them. This can be disabled with `--no-related-code`.
+1.  **Task Extraction:** It reads the specified task(s) from `tasks.md`.
+2.  **SPEC Context:** It finds the associated `spec.md` and extracts the sections most relevant to the task(s).
+3.  **Supporting Document Context:** It automatically finds and includes relevant parts of supporting documents like `openapi.yaml`.
+4.  **Code Context (Auto):** It searches the codebase for existing files or code snippets that are relevant.
 5.  **Explicit File Context:** It includes the full content of any files you specify with `--include-files`.
 6.  **Prompt Assembly:** It combines all this context into a single, perfectly formatted Markdown prompt, ready for you to copy.
 
 ---
 
-## 5. Detailed Examples
+## 7. Detailed Examples
 
-### **Example 1: Generating a Basic Prompt for an API Task**
+### **Example 1: Generating a Prompt for a Single API Task**
 
-**Goal:** Generate a prompt to implement the business logic for an API endpoint.
+**Goal:** Generate a prompt to implement the business logic for one API endpoint.
 
 ```bash
 /kilo specs/services/user-profile/tasks.md --tasks T005
 ```
 
-**Result:** A detailed prompt is generated in the chat. It will automatically include:
-- The description of task `T005`.
-- The `API Specification` and `Data Models` sections from `user-profile/spec.md`.
-- The contents of `user-profile/openapi.yaml` if it exists.
-- Any existing type definitions from `src/types/user.ts` if found.
+**Result:** A file `implement-prompt-T005.md` is created containing a detailed prompt for only task `T005`.
 
-### **Example 2: Generating a Prompt and Explicitly Including a Utility File**
+### **Example 2: Generating a Prompt for a Sequence of Tasks**
 
-**Goal:** Generate a prompt for a task that relies on a specific utility function, and you want to make sure the AI sees it.
+**Goal:** Generate a single prompt to create a model, a service, and a controller.
 
 ```bash
-/kilo specs/features/new-feature/tasks.md --tasks T021 --include-files "src/utils/string-helpers.ts"
+/kilo specs/features/new-feature/tasks.md --tasks T021-T023
 ```
 
-**Result:** The generated prompt will be identical to the basic one, but will now also contain the full source code of the `src/utils/string-helpers.ts` file inside a `<file>` block, ensuring the AI knows exactly how to use it.
-
-### **Example 3: Generating a Prompt for a Frontend Component**
-
-**Goal:** Generate a prompt to create a new React component, but prevent the AI from pulling in backend code.
-
-```bash
-/kilo specs/frontend/tasks.md --tasks T045 --no-related-code --include-files "src/components/ui/Button.tsx"
-```
-
-**Result:** The AI generates a prompt for task `T045`. The `--no-related-code` flag stops it from automatically searching for backend files. Instead, you explicitly provide the `Button.tsx` component as the primary context, guiding the AI to build the new component in a similar style.
+**Result:** A single file `implement-prompt-T021-T023.md` is created. Inside, it will have three sections, one for each task, ordered sequentially.
 
 ---
 
-## 6. How to Use with Cursor / Google Antigravity
+## 8. How to Use with Cursor / Google Antigravity
 
-This workflow is the same as described in the `/implement_tasks` documentation:
-
-1.  **Generate the Prompt:** Run `/kilo` with the desired task ID.
+1.  **Generate the Prompt:** Run `/kilo` with the desired task ID(s).
 2.  **Copy the Entire Prompt:** A new file (`implement-prompt-Txxx.md`) is created and its content is displayed. Copy the entire text.
 3.  **Paste into your AI Assistant:** Paste the complete prompt into the chat panel of Cursor or Google Antigravity.
-4.  **Review and Apply:** The AI will now generate the code with full context. Review its suggestions and apply them.
+4.  **Review and Apply:** The AI will now generate the code for all the tasks in the prompt, one by one.
 
 ---
 
-## 7. Troubleshooting
+## 9. Troubleshooting
 
 | Problem | Cause | Solution |
 | :--- | :--- | :--- |
-| **"Task ID not found"** | The task ID is incorrect or doesn't exist in the file. | Check the `tasks.md` file for the correct task ID. Remember, you can only specify one task ID. |
-| **Prompt is missing context** | The `spec.md` or other supporting files are missing or in a different directory. | Ensure all related SmartSpec files (`spec.md`, `openapi.yaml`, etc.) are co-located in the same directory as `tasks.md`. |
-| **AI generates incorrect code** | The context in the `spec.md` is insufficient, or the auto-included code is misleading. | 1. Improve the detail in the `spec.md`. 2. Use `--no-related-code` to prevent the AI from finding irrelevant code. 3. Use `--include-files` to force the inclusion of the exact files you want the AI to see. |
-
----
-
-## 8. For the LLM
-
-- **Primary Goal:** To assemble a detailed, context-rich prompt for a single, specific task ID.
-- **Key Entities:** `tasks_path`, `--tasks` (required, single ID), `--include-files`, `--no-related-code`.
-- **Workflow Position:** This is the **fourth step** (manual path) in the core workflow, used for iterative, human-in-the-loop development.
-- **Input Artifacts:** `tasks.md`, `spec.md`, and any other supporting or source code files it can find.
-- **Output Artifact:** A natural language text prompt written to a file (`implement-prompt-Txxx.md`) and displayed to the user.
-
+| **"Task ID not found"** | The task ID is incorrect. | Check the `tasks.md` file for the correct task ID. |
+| **Prompt is missing context** | The `spec.md` or other supporting files are missing. | Ensure all related SmartSpec files are in the same directory as `tasks.md`. |
+| **AI generates incorrect code** | The context in the `spec.md` may be insufficient. | Improve the detail in the `spec.md` and re-generate the prompt. Use `--include-files` to force-feed specific context to the AI. |
 
 ---
 

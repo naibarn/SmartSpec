@@ -121,11 +121,20 @@ echo "  1) Kilo Code"
 echo "  2) Roo Code"
 echo "  3) Claude Code"
 echo "  4) All of the above"
-read -p "Enter choice [1-4] (default: 1): " choice
+
+# Try to read user input
+if [ -t 0 ]; then
+    # stdin is a terminal, read normally
+    read -p "Enter choice [1-4] (default: 1): " choice
+else
+    # stdin is piped, try to read from /dev/tty
+    read -p "Enter choice [1-4] (default: 1): " choice < /dev/tty 2>/dev/null || choice=""
+fi
 
 # Default to 1 if empty
 if [ -z "$choice" ]; then
     choice=1
+    echo "Using default: $choice"
 fi
 
 case $choice in
@@ -193,11 +202,18 @@ for platform in "${PLATFORMS[@]}"; do
             echo "    1) Overwrite all (recommended for updates)"
             echo "    2) Skip all (keep existing versions)"
             echo "    3) Cancel installation"
-            read -p "  Enter choice [1-3] (default: 1): " overwrite_choice
+            
+            # Try to read user input
+            if [ -t 0 ]; then
+                read -p "  Enter choice [1-3] (default: 1): " overwrite_choice
+            else
+                read -p "  Enter choice [1-3] (default: 1): " overwrite_choice < /dev/tty 2>/dev/null || overwrite_choice=""
+            fi
             
             # Default to 1 if empty
             if [ -z "$overwrite_choice" ]; then
                 overwrite_choice=1
+                echo "  Using default: $overwrite_choice"
             fi
             
             case $overwrite_choice in

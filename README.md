@@ -11,6 +11,63 @@ This README is written as a **production‑grade guide**, integrating all capabi
 
 ---
 
+# 🚀 Quick Start - Installation
+
+SmartSpec V5 supports **3 AI coding platforms** with a **single-command installation**:
+- **Kilo Code** - Autonomous AI agent with Orchestrator mode
+- **Roo Code** - Safety-first workflow-driven development
+- **Claude Code** - Deep analysis with sub-agents
+
+### Installation (One Command)
+
+**Unix / Mac / Linux:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/scripts/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+iwr -useb https://raw.githubusercontent.com/naibarn/SmartSpec/main/scripts/install.ps1 | iex
+```
+
+**What it does:**
+- ✅ Auto-detects your platforms (Kilo Code, Roo Code, Claude Code)
+- ✅ Downloads workflows to `.smartspec/workflows/`
+- ✅ Creates symlinks (or copies) to platform directories
+- ✅ Sets up auto-sync (if using copies)
+- ✅ Ready to use in 30 seconds!
+
+### Updating
+
+**If using symlinks (automatic):**
+```bash
+cd .smartspec/workflows
+git pull
+# Changes reflect immediately in all platforms
+```
+
+**If using copies (manual sync):**
+```bash
+cd .smartspec/workflows
+git pull
+cd ../..
+.smartspec/sync.sh      # Unix/Mac/Linux
+.smartspec/sync.ps1     # Windows
+```
+
+### Uninstalling
+
+```bash
+bash .smartspec/../scripts/uninstall.sh
+```
+
+Or manually:
+```bash
+rm -rf .smartspec .kilocode/workflows .roo/commands .claude/commands
+```
+
+---
+
 # 🧭 1. What is SmartSpec V5?
 SmartSpec V5 is a framework that standardizes how complex software specifications are:
 - **Created** (SPEC)

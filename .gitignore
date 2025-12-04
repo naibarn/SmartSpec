@@ -1,7 +1,6 @@
 # User-specific SmartSpec files (do not commit)
 .smartspec/SPEC_INDEX.json
 .smartspec/config.json
-.smartspec/workflows/
 .smartspec/sync.sh
 .smartspec/sync.ps1
 .smartspec/version.txt

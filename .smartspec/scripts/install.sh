@@ -60,10 +60,10 @@ if command -v git &> /dev/null; then
     git config core.sparseCheckout true
     echo ".smartspec/" >> .git/info/sparse-checkout
     git pull -q origin main
-    # Move all files from .smartspec/ to current directory
+    # Move all files and directories from .smartspec/ to current directory
     if [ -d ".smartspec" ]; then
-        mv .smartspec/* .
-        mv .smartspec/.gitignore . 2>/dev/null || true
+        # Use find to move both files and directories, including hidden files
+        find .smartspec -mindepth 1 -maxdepth 1 -exec mv {} . \;
     fi
     rm -rf .smartspec .git
     cd ..

@@ -48,12 +48,9 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     git config core.sparseCheckout true
     ".smartspec/" | Out-File -Encoding ASCII .git\info\sparse-checkout
     git pull -q origin main 2>&1 | Out-Null
-    # Move all files from .smartspec/ to current directory
+    # Move all files and directories from .smartspec/ to current directory
     if (Test-Path ".smartspec") {
-        Move-Item .smartspec\* . -Force
-        if (Test-Path ".smartspec\.gitignore") {
-            Move-Item .smartspec\.gitignore . -Force -ErrorAction SilentlyContinue
-        }
+        Get-ChildItem -Path ".smartspec" -Force | Move-Item -Destination . -Force
     }
     Remove-Item -Recurse -Force .smartspec, .git -ErrorAction SilentlyContinue
     Pop-Location

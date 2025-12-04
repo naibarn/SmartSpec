@@ -85,6 +85,7 @@ These workflows help maintain and improve code quality on a spec-scoped basis:
 | `/smartspec_generate_tests.md` | Generate unit, integration, and e2e tests. | [**[Details]**](.smartspec-docs/workflows/generate_tests.md) |
 | `/smartspec_refactor_code.md` | Refactor code to improve quality and reduce complexity. | [**[Details]**](.smartspec-docs/workflows/refactor_code.md) |
 | `/smartspec_reindex_specs.md` | Re-index SPEC_INDEX.json to keep it accurate. | [**[Details]**](.smartspec-docs/workflows/reindex_specs.md) |
+| `/smartspec_validate_index.md` | Validate SPEC_INDEX.json integrity and health. | [**[Details]**](.smartspec-docs/workflows/validate_index.md) |
 
 **Note:** All quality workflows operate on a **spec-scoped basis** for optimal performance in large projects. See [SPEC_SCOPED_WORKFLOWS.md](SPEC_SCOPED_WORKFLOWS.md) for details.
 

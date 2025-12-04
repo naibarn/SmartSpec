@@ -225,9 +225,15 @@ Based on the issues found, run these workflows to fix problems:
 ---
 ```
 
-## 5. Update tasks.md (Optional)
+## 5. Update tasks.md (Auto-Update Checkboxes)
 
-Option to mark completed tasks in tasks.md:
+**Automatically update checkboxes for completed tasks:**
+
+For each task that is verified as complete:
+- Update checkbox: `- [ ] T001:` → `- [x] T001:`
+- This helps track progress and fix cases where implementation didn't mark tasks
+
+**Update logic:**
 
 ```markdown
 ### Task T001: [Title] - ✅ COMPLETE
@@ -256,8 +262,25 @@ Option to mark completed tasks in tasks.md:
 Path: Same directory as tasks.md
 Filename: `progress-report-YYYYMMDD.md`
 
-### 6.2 Optionally Update tasks.md
-If user confirms, update tasks.md with status markers
+### 6.2 Auto-Update tasks.md Checkboxes
+
+**For each completed task:**
+```bash
+# Update checkbox from [ ] to [x]
+sed -i "s/^- \[ \] \(${TASK_ID}:\)/- [x] \1/" "${TASKS_FILE}"
+```
+
+**Log updates:**
+```
+✅ Updated checkbox for T001: Initialize Project
+✅ Updated checkbox for T002: Setup Database
+...
+```
+
+**Benefits:**
+- Fixes cases where `/smartspec_implement_tasks` didn't mark tasks
+- Provides accurate progress tracking
+- Enables `--skip-completed` to work correctly
 
 ## 7. Report (Thai)
 

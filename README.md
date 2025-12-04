@@ -254,7 +254,7 @@ This adds missing:
 ---
 
 # 🛠️ 15. Workflow Summary
-SmartSpec V5 ships with six main workflows.
+SmartSpec V5 ships with seven main workflows.
 
 ### 1) Generate SPEC
 ```bash
@@ -280,15 +280,49 @@ Example: `/smartspec_generate_tasks.md specs/feature/spec-004-financial-system/s
 
 Converts SPEC → tasks.md with checkboxes and subtasks.
 
-### 4) Generate Kilo Prompt
+### 4) Generate Implementation Prompt
 ```bash
-/smartspec_generate_kilo_prompt.md <tasks_path>
+/smartspec_generate_implement_prompt.md <tasks_path> [options]
 ```
-Example: `/smartspec_generate_kilo_prompt.md specs/feature/spec-004-financial-system/tasks.md`
+Example: `/smartspec_generate_implement_prompt.md specs/feature/spec-004-financial-system/tasks.md`
 
-Converts tasks.md → kilo prompt with full safety constraints.
+Converts tasks.md → implementation prompt with platform-specific instructions.
 
-### 5) Sync SPEC and Tasks
+**Options:**
+- `--phase 1` or `--phase 1-3` → Filter specific phases
+- `--tasks T001-T010` → Filter specific tasks
+- `--kilocode` → Generate for Kilo Code (auto subtasks, mode switching)
+- `--claude` → Generate for Claude Code (sub agents, interactive) [default]
+- `--roocode` → Generate for Roo Code
+- `--specindex="path"` → Custom SPEC_INDEX path
+
+**Output:** `implement-prompt-<spec-id>-<timestamp>.md`
+
+### 5) Implement Tasks (Auto)
+```bash
+/smartspec_implement_tasks.md <tasks_path|prompt_path|folder> [options]
+```
+Example: `/smartspec_implement_tasks.md specs/feature/spec-004-financial-system/tasks.md`
+
+Auto-implement tasks with safety constraints, progress tracking, and validation.
+
+**Options:**
+- `--phase 1-3` → Implement specific phases only
+- `--tasks T001-T010` → Implement specific tasks only
+- `--resume` → Continue from last checkpoint
+- `--skip-completed` → Skip checked tasks [default]
+- `--force-all` → Re-implement all tasks (ignore checkboxes)
+- `--validate-only` → Validate only, no implementation
+
+**Features:**
+- ✅ Progress tracking (updates checkboxes in tasks.md)
+- ✅ Checkpoint system (every 5 tasks)
+- ✅ Resume functionality
+- ✅ Dependency checking
+- ✅ Safety constraints enforcement
+- ✅ Comprehensive reporting
+
+### 6) Sync SPEC and Tasks
 ```bash
 /smartspec_sync_spec_tasks.md <spec_path> <tasks_path>
 ```
@@ -338,11 +372,47 @@ Creates structured project plan from SPEC requirements.
 ```
 Generates detailed task breakdown with checkboxes and subtasks.
 
-### Generate Kilo Code prompt
+### Generate Implementation Prompt
 ```bash
-/smartspec_generate_kilo_prompt.md specs/feature/spec-004-financial-system/tasks.md
+/smartspec_generate_implement_prompt.md specs/feature/spec-004-financial-system/tasks.md
 ```
-Generates implementation prompts for Kilo Code from tasks.md.
+Generates implementation prompts from tasks.md with platform-specific instructions.
+
+**For Kilo Code:**
+```bash
+/smartspec_generate_implement_prompt.md specs/feature/spec-004-financial-system/tasks.md --kilocode
+```
+
+**For Claude Code (default):**
+```bash
+/smartspec_generate_implement_prompt.md specs/feature/spec-004-financial-system/tasks.md --claude
+```
+
+**For specific phases/tasks:**
+```bash
+/smartspec_generate_implement_prompt.md specs/feature/spec-004-financial-system/tasks.md --phase 1-2 --tasks T001-T010
+```
+
+### Auto-Implement Tasks
+```bash
+/smartspec_implement_tasks.md specs/feature/spec-004-financial-system/tasks.md
+```
+Auto-implement tasks with safety constraints and progress tracking.
+
+**Resume from checkpoint:**
+```bash
+/smartspec_implement_tasks.md specs/feature/spec-004-financial-system/tasks.md --resume
+```
+
+**Implement specific phase:**
+```bash
+/smartspec_implement_tasks.md specs/feature/spec-004-financial-system/tasks.md --phase 1
+```
+
+**Validate only:**
+```bash
+/smartspec_implement_tasks.md specs/feature/spec-004-financial-system/tasks.md --validate-only
+```
 
 ### Sync SPEC with tasks
 ```bash
@@ -361,7 +431,7 @@ Tracks and validates task completion status.
 # 🧭 18. Troubleshooting
 - **SPEC missing sections** → run `/smartspec_generate_spec.md` with appropriate profile
 - **Validation errors** → check ERROR‑level rules in output
-- **Kilo prompt missing tasks** → re‑run `/smartspec_generate_tasks.md`
+- **Implementation prompt missing tasks** → re‑run `/smartspec_generate_tasks.md`
 - **Tasks out of sync** → run `/smartspec_sync_spec_tasks.md`
 - **Domain mismatch** → check `smartspec.config.json`
 

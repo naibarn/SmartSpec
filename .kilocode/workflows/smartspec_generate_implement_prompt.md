@@ -49,6 +49,11 @@ $ARGUMENTS
 - Default platform: `--claude` if none specified
 - Validate: If `--nosubtasks` without `--kilocode`, show error
 - Validate: If `--with-subagents` without `--claude`, show error
+- Validate: Only ONE platform flag allowed (--kilocode, --claude, or --roocode)
+- Validate: If --with-subagents, verify `.claude/agents/` folder and all required agent files exist
+- Validate: Task range must be valid (e.g., T001-T010)
+- Validate: Phase range must be valid (e.g., 1-3)
+- Validate: `tasks.md` file must exist and not be empty
 
 ## 1. Resolve Paths
 
@@ -1853,3 +1858,35 @@ For auto-implementation, use: /smartspec_implement_tasks.md
 ---
 
 Context: $ARGUMENTS
+
+
+---
+
+## X. Error Handling & Messages
+
+This section defines the clear, user-friendly error messages for validation failures.
+
+### Error: Multiple Platform Flags
+- **Trigger:** More than one of `--kilocode`, `--claude`, `--roocode` is used.
+- **Message:** `Error: Multiple platform flags detected. Use only ONE platform flag.`
+- **Solution:** `Example: --kilocode OR --claude`
+
+### Error: Invalid Flag Combination
+- **Trigger:** `--nosubtasks` without `--kilocode`, or `--with-subagents` without `--claude`.
+- **Message:** `Error: --nosubtasks can only be used with --kilocode.`
+- **Solution:** `Remove --nosubtasks or add --kilocode.`
+
+### Error: Missing Sub-Agent Files
+- **Trigger:** `--with-subagents` is used, but `.claude/agents/` or required files are missing.
+- **Message:** `Error: --with-subagents requires the .claude/agents/ directory with all standard agent files.`
+- **Solution:** `Run 'cp -r .smartspec-docs/templates/claude-agents .claude/agents' to create them.`
+
+### Error: Invalid Task/Phase Range
+- **Trigger:** Range is invalid (e.g., `T010-T001`, `3-1`).
+- **Message:** `Error: Invalid range. Start must be less than or equal to end.`
+- **Solution:** `Use ascending order: --tasks T001-T010`
+
+### Error: File Not Found or Empty
+- **Trigger:** `tasks.md` does not exist or is empty.
+- **Message:** `Error: tasks.md not found or is empty.`
+- **Solution:** `Ensure the path is correct and the file contains tasks. You can generate tasks with /smartspec_generate_tasks.md.`

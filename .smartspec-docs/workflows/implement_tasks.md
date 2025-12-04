@@ -54,9 +54,16 @@ The `smartspec_implement_tasks` workflow automatically implements tasks defined 
 ### Scope Options
 
 | Option | Description | Example |
-|--------|-------------|---------|
+|--------|-------------|---------|------|
 | `--phase <n>` | Implement specific phase(s) | `--phase 1` or `--phase 1,2,3` or `--phase 1-3` |
 | `--tasks <id>` | Implement specific task(s) | `--tasks T001` or `--tasks T001,T002` or `--tasks T001-T010` |
+| `--start-from <id>` | Start from specific task to end | `--start-from T033` (implements T033 to end) |
+
+### Execution Options
+
+| Option | Description | Example |
+|--------|-------------|---------|------|
+| `--kilocode` | Use Kilo Code sub-task mode for complex tasks (≥2h) | `--kilocode` |
 
 ### Resume Options
 
@@ -90,6 +97,16 @@ See [IMPLEMENT_TASKS_DETAILED_GUIDE.md](../../IMPLEMENT_TASKS_DETAILED_GUIDE.md)
 **Resume from checkpoint:**
 ```bash
 /smartspec_implement_tasks specs/feature/spec-004/tasks.md --resume
+```
+
+**Start from specific task to end:**
+```bash
+/smartspec_implement_tasks specs/feature/spec-004/tasks.md --start-from T033
+```
+
+**Use Kilo Code sub-task mode:**
+```bash
+/smartspec_implement_tasks specs/feature/spec-004/tasks.md --start-from T033 --kilocode
 ```
 
 ---
@@ -176,6 +193,11 @@ Resume from checkpoint:
 - **[Fix Errors](./fix_errors.md)** - Auto-fix compilation/type errors
 - **[Generate Tests](./generate_tests.md)** - Generate test files
 - **[Refactor Code](./refactor_code.md)** - Improve code quality
+
+## Additional Guides
+
+- **[START_FROM_GUIDE.md](../../START_FROM_GUIDE.md)** - How to use `--start-from` parameter
+- **[KILOCODE_MODE_GUIDE.md](../../KILOCODE_MODE_GUIDE.md)** - How to use `--kilocode` parameter
 
 ---
 

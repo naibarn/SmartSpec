@@ -99,16 +99,16 @@ Take 5-10 minutes upfront to generate a `spec.md` and `tasks.md`. This small inv
 
 ## 📖 Core Commands
 
-| Command | Description |
-| :--- | :--- |
-| `/smartspec_generate_spec.md <path>` | Creates a new SPEC document from a high-level idea. |
-| `/smartspec_generate_plan.md <spec_path>` | Creates a high-level project plan from a SPEC. |
-| `/smartspec_generate_tasks.md <spec_path>` | Breaks down a SPEC into a detailed `tasks.md` checklist. |
-| `/smartspec_generate_implement_prompt.md <tasks_path>` | Generates a context-rich prompt for a specific task. |
-| `/smartspec_implement_tasks.md <tasks_path>` | Autonomously implements tasks using an agent like Kilo Code. |
-| `/smartspec_reverse_to_spec.md <src_path>` | Reverse-engineers an existing codebase into a SPEC. |
-| `/smartspec_sync_spec_tasks.md` | Synchronizes a `tasks.md` file with its source SPEC. |
-| `/smartspec_verify_tasks_progress.md <tasks_path>` | Verifies and tracks progress of implementation tasks. |
+| Command | Description | Full Documentation |
+| :--- | :--- | :--- |
+| `/smartspec_generate_spec.md <path>` | Creates a new SPEC document from a high-level idea. | [📄 View Docs](.smartspec-docs/workflows/generate_spec.md) |
+| `/smartspec_generate_plan.md <spec_path>` | Creates a high-level project plan from a SPEC. | [📄 View Docs](.smartspec-docs/workflows/generate_plan.md) |
+| `/smartspec_generate_tasks.md <spec_path>` | Breaks down a SPEC into a detailed `tasks.md` checklist. | [📄 View Docs](.smartspec-docs/workflows/generate_tasks.md) |
+| `/smartspec_generate_implement_prompt.md <tasks_path>` | Generates a context-rich prompt for a specific task. | [📄 View Docs](.smartspec-docs/workflows/generate_implement_prompt.md) |
+| `/smartspec_implement_tasks.md <tasks_path>` | Autonomously implements tasks using an agent like Kilo Code. | [📄 View Docs](.smartspec-docs/workflows/implement_tasks.md) |
+| `/smartspec_reverse_to_spec.md <src_path>` | Reverse-engineers an existing codebase into a SPEC. | [📄 View Docs](.smartspec-docs/workflows/reverse_to_spec.md) |
+| `/smartspec_sync_spec_tasks.md` | Synchronizes a `tasks.md` file with its source SPEC. | [📄 View Docs](.smartspec-docs/workflows/sync_spec_tasks.md) |
+| `/smartspec_verify_tasks_progress.md <tasks_path>` | Verifies and tracks progress of implementation tasks. | [📄 View Docs](.smartspec-docs/workflows/verify_tasks_progress.md) |
 
 ---
 

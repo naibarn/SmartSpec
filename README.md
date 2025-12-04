@@ -29,6 +29,8 @@ Use the following command for your operating system.
 
 Simply run the same installation command again. The script will automatically detect your existing installation and update it to the latest version, preserving your custom workflows.
 
+**Note:** The installation script copies workflows from `.smartspec/workflows/` (master source) to platform-specific folders (`.kilocode/workflows/`, `.roo/commands/`, etc.). Always edit workflows in `.smartspec/workflows/` and run `.smartspec/sync.sh` to sync changes to all platforms.
+
 **Unix / macOS / Linux:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/install.sh | bash
@@ -114,7 +116,7 @@ SmartSpec is more than just a workflow; it's a complete orchestration system wit
 **Key Files:**
 - `README.md`: High-level overview.
 - `.smartspec-docs/workflows/`: Detailed documentation for each command. This is your **primary source of truth** for command usage, parameters, and examples.
-- `.kilocode/workflows/`: The underlying workflow definitions.
+- `.smartspec/workflows/`: The master workflow definitions. **Always edit workflows here, not in platform-specific folders.**
 
 When a user asks how to use a command, first consult the corresponding file in `.smartspec-docs/workflows/` to provide a detailed, accurate answer.
 

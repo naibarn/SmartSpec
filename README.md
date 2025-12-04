@@ -75,6 +75,22 @@ Each command corresponds to a workflow that you can customize. Click on a comman
 
 ---
 
+## 🔧 Quality Improvement Commands
+
+These workflows help maintain and improve code quality on a spec-scoped basis:
+
+| Command | Description | Full Docs |
+| :--- | :--- | :--- |
+| `/smartspec_fix_errors.md` | Auto-fix compilation, type, and runtime errors. | [**[Details]**](.smartspec-docs/workflows/fix_errors.md) |
+| `/smartspec_generate_tests.md` | Generate unit, integration, and e2e tests. | [**[Details]**](.smartspec-docs/workflows/generate_tests.md) |
+| `/smartspec_refactor_code.md` | Refactor code to improve quality and reduce complexity. | [**[Details]**](.smartspec-docs/workflows/refactor_code.md) |
+| `/smartspec_reindex_specs.md` | Re-index SPEC_INDEX.json to keep it accurate. | [**[Details]**](.smartspec-docs/workflows/reindex_specs.md) |
+
+**Note:** All quality workflows operate on a **spec-scoped basis** for optimal performance in large projects. See [SPEC_SCOPED_WORKFLOWS.md](SPEC_SCOPED_WORKFLOWS.md) for details.
+
+
+---
+
 ### Choosing the Right Prompt Generation Workflow
 
 SmartSpec offers two distinct commands for generating prompts, each tailored for a different execution model. Understanding the difference is key to a smooth workflow.

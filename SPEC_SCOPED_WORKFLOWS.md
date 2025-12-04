@@ -310,3 +310,213 @@ Spec-scoped workflows make SmartSpec practical for large projects by:
 ✅ **Matching** user mental model (specs, not services)  
 
 Use spec identifiers to run workflows efficiently, even in projects with hundreds of specs!
+# Updates to SPEC_SCOPED_WORKFLOWS.md
+
+## New Section: Maintaining SPEC_INDEX.json
+
+### Why Re-Indexing is Important
+
+SPEC_INDEX.json can become outdated when:
+- New files are added to a spec
+- Files are renamed or moved
+- Specs are added or removed
+- External repositories are integrated
+- Dependencies between specs change
+
+**Solution:** Use `/smartspec_reindex_specs` to keep SPEC_INDEX.json accurate.
+
+### Re-Indexing Workflows
+
+#### Re-Index All Specs
+```bash
+/smartspec_reindex_specs
+```
+
+This will:
+1. Scan all specs in `specs/` directory
+2. Identify new, modified, and removed specs
+3. Detect related files using 5 strategies
+4. Update SPEC_INDEX.json
+5. Generate detailed report
+
+#### Re-Index Specific Spec
+```bash
+/smartspec_reindex_specs --spec specs/feature/spec-004-financial-system
+```
+
+Use this when you've modified a single spec and want to update only its entry.
+
+#### Verify Without Changes
+```bash
+/smartspec_reindex_specs --verify
+```
+
+This checks SPEC_INDEX.json for issues without making changes:
+- Missing files
+- Outdated entries
+- Circular dependencies
+- Invalid JSON
+
+#### Include External Repositories
+```bash
+/smartspec_reindex_specs --external-repo /path/to/shared-repo
+```
+
+For projects that share services across multiple repositories:
+- Scans external repo for related files
+- Adds them to `external_files[]` in SPEC_INDEX.json
+- Prefixes with repo identifier (e.g., `@shared/services/auth.service.ts`)
+
+### File Detection Strategies
+
+The re-index workflow uses 5 strategies to find files related to each spec:
+
+1. **Parse spec.md** - Looks for file paths in spec content
+2. **Search by spec ID** - Finds files with spec ID in comments
+3. **Analyze tasks.md** - Extracts file paths from task descriptions
+4. **Service/Model inference** - Infers file paths from service/model names
+5. **Git history** - Finds files modified around the same time as spec
+
+### Example SPEC_INDEX.json Structure
+
+```json
+{
+  "version": "1.0",
+  "last_updated": "2024-01-15T10:30:00Z",
+  "external_repos": {
+    "shared": "/path/to/shared-repo"
+  },
+  "specs": {
+    "spec-004-financial-system": {
+      "spec_id": "spec-004-financial-system",
+      "title": "Financial System",
+      "spec_path": "specs/feature/spec-004-financial-system/spec.md",
+      "tasks_path": "specs/feature/spec-004-financial-system/tasks.md",
+      "files": [
+        "src/services/credit.service.ts",
+        "src/services/payment.service.ts",
+        "src/models/transaction.model.ts"
+      ],
+      "external_files": [
+        "@shared/services/common-payment.service.ts"
+      ],
+      "dependencies": [
+        "spec-001-auth",
+        "spec-002-database"
+      ],
+      "last_indexed": "2024-01-15T10:30:00Z",
+      "status": "implemented"
+    }
+  }
+}
+```
+
+### When to Re-Index
+
+**Recommended times to run re-index:**
+
+1. **After major changes** - When you've added/removed multiple files
+2. **Before quality workflows** - To ensure accurate scoping
+3. **Weekly maintenance** - Keep index fresh in active projects
+4. **After merging** - When merging branches with spec changes
+5. **Before releases** - Verify all specs are properly indexed
+
+### Best Practices
+
+1. **Backup automatically** - Re-index workflow backs up before changes
+2. **Review the report** - Check what changed in the re-index report
+3. **Commit SPEC_INDEX.json** - Track changes in version control
+4. **Use --verify first** - Check for issues before making changes
+5. **Configure external repos** - Set up `.smartspec/config.json` for external repos
+
+---
+
+## Updated: Test Generation Workflow
+
+### Handling Existing Test Files
+
+The `smartspec_generate_tests` workflow now detects existing test files:
+
+**Before:**
+- Always created new test files
+- Could overwrite existing tests
+- No awareness of current coverage
+
+**After:**
+- Checks for existing test files first
+- Analyzes current test coverage
+- Only generates tests for uncovered parts
+- **Appends** new tests (never overwrites!)
+
+### Example Workflow
+
+```bash
+/smartspec_generate_tests specs/feature/spec-004-financial-system --target-coverage 80
+```
+
+**What happens:**
+
+1. **Load scope** from SPEC_INDEX.json:
+   - `src/services/credit.service.ts`
+   - `src/services/payment.service.ts`
+   - `src/models/transaction.model.ts`
+
+2. **Check for existing tests:**
+   ```
+   📝 Test File Analysis:
+     ✅ credit.service.spec.ts - EXISTS
+        Current: 12 test cases, 65% coverage
+        Missing: errorHandler(), calculateInterest()
+        Action: Append 5 new test cases
+     
+     ❌ payment.service.spec.ts - NOT FOUND
+        Action: Create new file with 15 test cases
+     
+     ✅ transaction.model.spec.ts - EXISTS
+        Current: 8 test cases, 90% coverage
+        Action: No new tests needed (already above target)
+   ```
+
+3. **Generate only missing tests:**
+   - Append 5 test cases to `credit.service.spec.ts`
+   - Create new `payment.service.spec.ts` with 15 test cases
+   - Skip `transaction.model.spec.ts` (already has good coverage)
+
+4. **Result:**
+   - No duplicate tests
+   - Existing tests preserved
+   - Coverage increased from 65% to 82%
+
+### Test File Patterns Detected
+
+The workflow checks common test file patterns:
+- `src/services/credit.service.spec.ts` (same directory)
+- `src/services/__tests__/credit.service.test.ts` (Jest convention)
+- `test/unit/services/credit.service.spec.ts` (separate test directory)
+- `tests/services/credit.service.test.ts` (alternative test directory)
+
+---
+
+## Summary of New Features
+
+### 1. ✅ Test Generation Improvements
+- Detects existing test files
+- Analyzes current coverage
+- Appends instead of overwrites
+- Avoids duplicate tests
+
+### 2. ✅ Re-Index Workflow
+- Keeps SPEC_INDEX.json accurate
+- Supports external repositories
+- Uses 5 file detection strategies
+- Generates detailed reports
+- Validates and backs up automatically
+
+### 3. ✅ Total Workflows: 14
+- 10 core workflows
+- 4 quality improvement workflows (including reindex)
+
+### 4. ✅ Performance
+- Spec-scoped operations: ~10x faster
+- Smart test generation: No duplicates
+- Accurate indexing: Better scoping

@@ -141,14 +141,49 @@ You will receive:
 
 For each file that needs tests:
 
-1. **Analyze Source Code**
+1. **Check for Existing Test Files**
+   ```bash
+   # Common test file patterns
+   # For src/services/credit.service.ts, check:
+   # - src/services/credit.service.spec.ts
+   # - src/services/__tests__/credit.service.test.ts
+   # - test/unit/services/credit.service.spec.ts
+   # - tests/services/credit.service.test.ts
+   ```
+   
+   **If test file exists:**
+   - Read existing test file
+   - Analyze current test coverage for this file
+   - Identify missing test cases (uncovered functions/branches)
+   - **Only generate tests for uncovered parts**
+   - Append new tests to existing file (don't overwrite!)
+   
+   **If test file doesn't exist:**
+   - Create new test file
+   - Generate complete test suite
+   
+   **Display:**
+   ```
+   📝 Test File Analysis:
+     ✅ credit.service.spec.ts - EXISTS
+        Current: 12 test cases, 65% coverage
+        Missing: errorHandler(), calculateInterest()
+        Action: Append 5 new test cases
+     
+     ❌ payment.service.spec.ts - NOT FOUND
+        Action: Create new file with 15 test cases
+   ```
+
+2. **Analyze Source Code**
    - Read the source file
    - Identify all exported functions/methods/classes
    - Analyze parameters, return types, and dependencies
    - Identify edge cases and error scenarios
+   - **Cross-check with existing tests to avoid duplication**
 
-2. **Generate Unit Tests**
-   
+3. **Generate Unit Tests**
+
+
    **Test File Structure:**
    ```typescript
    import { ClassName } from './source-file';

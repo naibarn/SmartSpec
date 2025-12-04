@@ -67,6 +67,24 @@ Each command corresponds to a workflow that you can customize. Click on a comman
 
 ---
 
+### Choosing the Right Prompt Generation Workflow
+
+SmartSpec offers two distinct commands for generating prompts, each tailored for a different execution model. Understanding the difference is key to a smooth workflow.
+
+| Feature | `/generate_implement_prompt` | `/generate_cursor_prompt` |
+| :--- | :--- | :--- |
+| **Target Platform** | **Kilo Code, Roo Code, Claude Code** | **Cursor, Google Antigravity** |
+| **Execution Model** | 🤖 **Automated Execution** | 🧑‍💻 **Manual Copy/Paste** |
+| **User Action** | Run `kilocode execute "<file>"` or `roo run "<file>"` | Copy each prompt section and paste it into the AI assistant. |
+| **Output Format** | **One continuous document** with all context. | **One file with multiple, distinct prompt sections.** |
+| **Prompt Philosophy** | Written for an **AI Agent** to execute autonomously. | Written for a **Human Developer** to guide an AI assistant. |
+| **Best Use Case** | Implementing a sequence of related tasks in a single, powerful session. | Implementing tasks one-by-one in an interactive, "vibe coding" session. |
+| **Analogy** | Giving a detailed project brief to a senior developer. | Writing a clear to-do list for a junior developer. |
+
+**In short:** Use `generate_implement_prompt` for automated platforms and `generate_cursor_prompt` for interactive, manual coding.
+
+---
+
 ## 🏛️ Architecture Overview
 
 SmartSpec acts as an orchestration layer, separating the specification and planning phase from the code implementation phase. This ensures all development work is grounded in a clear, agreed-upon blueprint.

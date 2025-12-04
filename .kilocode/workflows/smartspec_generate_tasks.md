@@ -69,14 +69,64 @@ Parse `$ARGUMENTS` to find `--specindex` parameter:
   - If specified in knowledge base, use that path
   - Otherwise, use default: `SPEC_INDEX_PATH = ".smartspec/SPEC_INDEX.json"`
 
-**Step 2: Validate SPEC_INDEX file exists**
-- Check if `SPEC_INDEX_PATH` exists and is readable
-- If file does not exist:
-  - STOP immediately
-  - Report error: "SPEC_INDEX file not found at: {SPEC_INDEX_PATH}"
-  - Ask user to either:
-    - Create the file, OR
-    - Provide correct path via --specindex parameter
+**Step 2: Check and optionally create SPEC_INDEX (Enhanced with Auto-Creation)**
+
+Check if `SPEC_INDEX_PATH` exists:
+```bash
+test -f ${SPEC_INDEX_PATH} && echo "EXISTS" || echo "NOT_EXISTS"
+```
+
+If NOT_EXISTS:
+```
+1. ⚠️ WARNING: "SPEC_INDEX.json not found at: {SPEC_INDEX_PATH}"
+2. ❓ Ask user: "Create new SPEC_INDEX.json? [Y/n]"
+
+3. If user confirms (Y):
+   a. Create .smartspec/ directory (if not exists):
+      mkdir -p .smartspec
+   
+   b. Create SPEC_INDEX.json with initial structure:
+      {
+        "version": "5.0",
+        "created": "<current_timestamp>",
+        "last_updated": "<current_timestamp>",
+        "specs": [],
+        "metadata": {
+          "total_specs": 0,
+          "by_status": {
+            "draft": 0,
+            "active": 0,
+            "deprecated": 0,
+            "placeholder": 0
+          },
+          "by_repo": {},
+          "validation": {
+            "last_validated": "<current_timestamp>",
+            "status": "valid",
+            "errors": [],
+            "warnings": [],
+            "health_score": 100
+          }
+        }
+      }
+   
+   c. Add current spec to INDEX:
+      - Extract spec ID, title, path from SPEC file
+      - Add as first entry
+      - Update metadata
+   
+   d. Save SPEC_INDEX.json
+   
+   e. Log: "✅ Created SPEC_INDEX.json with current spec"
+   
+   f. Continue with tasks generation
+
+4. If user declines (n):
+   a. ⚠️ WARNING: "Continuing without SPEC_INDEX"
+   b. ⚠️ "Dependency resolution will be skipped"
+   c. Set SPEC_INDEX_AVAILABLE = false
+   d. Continue with tasks generation (without dependency info)
+```
 
 **Step 3: Parse SPEC_INDEX and extract metadata**
 - Based on file extension:

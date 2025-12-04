@@ -135,16 +135,60 @@ Read configuration in priority order:
 
 Parse flags from $ARGUMENTS and merge with config.
 
-### 1.1 Load SPEC_INDEX.json for Dependency Resolution
+### 1.1 Load or Create SPEC_INDEX.json (Enhanced with Auto-Creation)
 
-If `.smartspec/SPEC_INDEX.json` exists:
-- Load the entire spec index into memory
-- This will be used to resolve spec dependencies with full path and repo information
+**Step 1: Check if SPEC_INDEX.json exists**
+
+Check for `.smartspec/SPEC_INDEX.json`:
+```bash
+test -f .smartspec/SPEC_INDEX.json && echo "EXISTS" || echo "NOT_EXISTS"
+```
+
+**Step 2: If NOT exists, create it (Auto-Creation)**
+
+If NOT_EXISTS:
+```
+1. Create .smartspec/ directory (if not exists):
+   mkdir -p .smartspec
+
+2. Create SPEC_INDEX.json with initial structure:
+   {
+     "version": "5.0",
+     "created": "<current_timestamp>",
+     "last_updated": "<current_timestamp>",
+     "specs": [],
+     "metadata": {
+       "total_specs": 0,
+       "by_status": {
+         "draft": 0,
+         "active": 0,
+         "deprecated": 0,
+         "placeholder": 0
+       },
+       "by_repo": {},
+       "validation": {
+         "last_validated": "<current_timestamp>",
+         "status": "valid",
+         "errors": [],
+         "warnings": [],
+         "health_score": 100
+       }
+     }
+   }
+
+3. Log: "✅ Created SPEC_INDEX.json"
+```
+
+**Step 3: Load SPEC_INDEX.json into memory**
+
+If EXISTS (or just created):
+- Read `.smartspec/SPEC_INDEX.json`
+- Parse JSON structure
+- Store in SPEC_REGISTRY for lookup
 - Structure: `{ "specs": [{ "id": "...", "title": "...", "path": "...", "repo": "..." }] }`
+- This will be used to resolve spec dependencies with full path and repo information
 
-If file doesn't exist:
-- Dependencies will be listed without path/repo information
-- Show warning in output
+**Note:** With auto-creation, SPEC_INDEX.json will always exist after this step
 
 ---
 
@@ -1868,7 +1912,7 @@ From user input or existing SPEC, extract:
 
 ---
 
-**Step 4: Look up each dependency in SPEC_INDEX.json**
+**Step 4: Validate and look up each dependency in SPEC_INDEX.json (Enhanced with Validation)**
 
 For each dependency ID:
 ```javascript
@@ -1876,12 +1920,62 @@ const spec = SPEC_INDEX.specs.find(s => s.id === dependencyId);
 
 if (spec) {
   // Found in index
+  if (spec.status === "placeholder") {
+    // Warn about placeholder
+    console.warn(`⚠️ WARNING: ${dependencyId} is a placeholder (not yet created)`);
+  }
   return `- **${spec.id}** - ${spec.title} - Spec Path: "${spec.path}/spec.md" Repo: ${spec.repo}`;
+  
 } else {
-  // Not found
+  // Not found - validate and optionally add placeholder
+  console.warn(`⚠️ WARNING: ${dependencyId} not found in SPEC_INDEX`);
+  console.warn(`⚠️ This spec may not exist or INDEX is stale`);
+  
+  // Check if --auto-add-refs flag is set
+  if (FLAGS.auto_add_refs) {
+    // Ask user to add placeholder
+    const addPlaceholder = await askUser(
+      `Add ${dependencyId} to SPEC_INDEX as placeholder? [Y/n]`
+    );
+    
+    if (addPlaceholder) {
+      // Add placeholder to SPEC_INDEX
+      const placeholder = {
+        id: dependencyId,
+        title: "[PLACEHOLDER - TO BE CREATED]",
+        path: "TBD",
+        repo: "unknown",
+        status: "placeholder",
+        version: "0.0.0",
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
+        author: "System",
+        dependencies: [],
+        dependents: [CURRENT_SPEC_ID]
+      };
+      
+      SPEC_INDEX.specs.push(placeholder);
+      SPEC_INDEX.metadata.total_specs++;
+      SPEC_INDEX.metadata.by_status.placeholder++;
+      
+      console.log(`✅ Added ${dependencyId} as placeholder`);
+      
+      return `- **${dependencyId}** - [PLACEHOLDER - TO BE CREATED] - Spec Path: "TBD" Repo: unknown`;
+    }
+  }
+  
+  // Not found and not added as placeholder
   return `- **${dependencyId}** - [NOT FOUND IN SPEC_INDEX] - Spec Path: "N/A" Repo: unknown`;
 }
 ```
+
+**Validation Logic:**
+1. ✅ If spec found and active → use it
+2. ⚠️ If spec found but placeholder → warn user
+3. ⚠️ If spec not found → warn user
+4. ❓ If --auto-add-refs flag → ask to add placeholder
+5. ✅ If user confirms → add placeholder to INDEX
+6. ❌ If user declines → continue with "NOT FOUND" marker
 
 ---
 
@@ -2411,9 +2505,132 @@ fs.writeFileSync(reportPath, reportContent, 'utf-8');
 
 ---
 
-## 14. Report Output
+## 14. Update SPEC_INDEX.json (Auto-Update)
 
-### 14.1 Standard Report (Thai)
+**After spec generation, automatically update SPEC_INDEX.json**
+
+### 14.1 Load Current SPEC_INDEX
+
+```javascript
+const indexPath = '.smartspec/SPEC_INDEX.json';
+const specIndex = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
+```
+
+### 14.2 Find or Create Entry
+
+```javascript
+const specId = GENERATED_SPEC.id; // e.g., "spec-core-001"
+let specEntry = specIndex.specs.find(s => s.id === specId);
+
+if (!specEntry) {
+  // New spec - create entry
+  specEntry = {
+    id: specId,
+    title: GENERATED_SPEC.title,
+    path: GENERATED_SPEC.path, // Relative path to spec directory
+    repo: GENERATED_SPEC.repo || "private",
+    status: GENERATED_SPEC.status || "draft",
+    version: GENERATED_SPEC.version,
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+    author: GENERATED_SPEC.author,
+    dependencies: GENERATED_SPEC.dependencies || [],
+    dependents: []
+  };
+  
+  specIndex.specs.push(specEntry);
+  console.log(`✅ Added ${specId} to SPEC_INDEX`);
+  
+} else {
+  // Existing spec - update entry
+  specEntry.title = GENERATED_SPEC.title;
+  specEntry.path = GENERATED_SPEC.path;
+  specEntry.status = GENERATED_SPEC.status || specEntry.status;
+  specEntry.version = GENERATED_SPEC.version;
+  specEntry.updated = new Date().toISOString();
+  specEntry.author = GENERATED_SPEC.author;
+  specEntry.dependencies = GENERATED_SPEC.dependencies || [];
+  // Keep: id, repo, created, dependents (calculated separately)
+  
+  console.log(`✅ Updated ${specId} in SPEC_INDEX`);
+}
+```
+
+### 14.3 Update Metadata
+
+```javascript
+// Update total count
+specIndex.metadata.total_specs = specIndex.specs.length;
+
+// Update by_status counts
+const byStatus = {};
+for (const spec of specIndex.specs) {
+  byStatus[spec.status] = (byStatus[spec.status] || 0) + 1;
+}
+specIndex.metadata.by_status = byStatus;
+
+// Update by_repo counts
+const byRepo = {};
+for (const spec of specIndex.specs) {
+  byRepo[spec.repo] = (byRepo[spec.repo] || 0) + 1;
+}
+specIndex.metadata.by_repo = byRepo;
+
+// Update last_updated
+specIndex.last_updated = new Date().toISOString();
+
+console.log(`✅ Updated SPEC_INDEX metadata`);
+```
+
+### 14.4 Recalculate Dependents
+
+```javascript
+// Clear all dependents
+for (const spec of specIndex.specs) {
+  spec.dependents = [];
+}
+
+// Recalculate dependents
+for (const spec of specIndex.specs) {
+  for (const depId of spec.dependencies) {
+    const depSpec = specIndex.specs.find(s => s.id === depId);
+    if (depSpec && !depSpec.dependents.includes(spec.id)) {
+      depSpec.dependents.push(spec.id);
+    }
+  }
+}
+
+console.log(`✅ Recalculated dependents`);
+```
+
+### 14.5 Save SPEC_INDEX
+
+```javascript
+fs.writeFileSync(
+  indexPath,
+  JSON.stringify(specIndex, null, 2),
+  'utf-8'
+);
+
+console.log(`✅ Saved SPEC_INDEX.json`);
+```
+
+### 14.6 Log Summary
+
+```
+✅ SPEC_INDEX.json updated:
+- Spec: ${specId}
+- Action: ${specEntry.created === specEntry.updated ? 'Added' : 'Updated'}
+- Total specs: ${specIndex.metadata.total_specs}
+- Dependencies: ${specEntry.dependencies.length}
+- Dependents: ${specEntry.dependents.length}
+```
+
+---
+
+## 15. Report Output
+
+### 15.1 Standard Report (Thai)
 
 ```
 ✅ สร้าง SPEC เรียบร้อยแล้ว

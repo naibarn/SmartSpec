@@ -272,48 +272,45 @@ interface Task {
 
 1. **Analyze task complexity:**
    - Estimate total lines of code needed
-   - Count number of methods/functions
-   - Identify logical sub-components
+   - Count number of methods/functions to implement
+   - Consider file modifications required
 
-2. **If task is COMPLEX (>50 lines OR >2 methods):**
-   - **Create sub-tasks using Kilo Code's sub-task feature:**
+2. **If task is COMPLEX (>50 lines OR >2 methods OR multiple files):**
+   - **Delegate to Kilo Code's automatic sub-task breakdown:**
      ```
      Create a new sub-task in code mode:
-     Goal: [First logical component]
+     T033 Goal: Implement credit transaction service with createTransaction() and getTransactionHistory() methods
+     ```
+   
+   - **How it works:**
+     - Kilo Code will automatically detect task complexity
+     - Kilo Code will break down the task into smaller sub-tasks
+     - Each sub-task will be <50 lines to avoid `line_count` errors
+     - Sub-tasks execute sequentially
+   
+   - **Example for T033 (Credit Transaction Service):**
+     ```
+     Instead of implementing directly:
+     T033 Goal: Implement credit transaction service
      
+     Use Kilo Code sub-task mode:
      Create a new sub-task in code mode:
-     Goal: [Second logical component]
+     T033 Goal: Implement credit transaction service with createTransaction() and getTransactionHistory() methods
      
-     ...
+     Kilo Code will automatically break this into:
+     - Sub-task 1: Create skeleton
+     - Sub-task 2: Implement createTransaction()
+     - Sub-task 3: Implement getTransactionHistory()
+     - Sub-task 4: Add error handling
      ```
    
-   - **Sub-task breakdown strategy:**
-     - Each sub-task should target <50 lines of code
-     - Each sub-task should implement 1-2 methods max
-     - Sub-tasks should be sequential (not parallel)
-   
-   - **Example breakdown for T033 (Credit Transaction Service):**
-     ```
-     Sub-task 1: Create transaction.service.ts skeleton
-     Goal: Create file with imports, class definition, and constructor
-     
-     Sub-task 2: Implement createTransaction() method
-     Goal: Add createTransaction() method with validation and database insert
-     
-     Sub-task 3: Implement getTransactionHistory() method
-     Goal: Add getTransactionHistory() method with query building and execution
-     
-     Sub-task 4: Add error handling
-     Goal: Add try-catch blocks and error logging to all methods
-     ```
-   
-   - **Execute sub-tasks sequentially:**
-     - Wait for each sub-task to complete
-     - Verify each sub-task output
-     - If sub-task fails: Retry or break down further
+   - **Important:**
+     - DO NOT manually specify sub-tasks
+     - Let Kilo Code detect and break down automatically
+     - Just prefix with "Create a new sub-task in code mode:"
 
-3. **If task is SIMPLE (≤50 lines AND ≤2 methods):**
-   - Implement directly without sub-tasks
+3. **If task is SIMPLE (≤50 lines AND ≤2 methods AND single file):**
+   - Implement directly without sub-task mode
    - Use standard file size strategy (below)
 
 **Standard Implementation Mode (when `--kilocode` flag is NOT set):**

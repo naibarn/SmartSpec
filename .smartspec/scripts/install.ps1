@@ -15,15 +15,25 @@ Write-Host "======================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Check if already installed
+$UPDATE_MODE = $false
 if (Test-Path $SMARTSPEC_DIR) {
-    Write-Host "⚠️  SmartSpec is already installed" -ForegroundColor Yellow
-    $reply = Read-Host "Do you want to reinstall? [y/N]"
-    if ($reply -notmatch "^[Yy]$") {
-        Write-Host "Installation cancelled."
-        exit 0
+    $UPDATE_MODE = $true
+    Write-Host "🔄 SmartSpec is already installed" -ForegroundColor Cyan
+    Write-Host "📦 Updating to latest version..." -ForegroundColor Cyan
+    Write-Host ""
+    
+    # Backup custom workflows (if any)
+    if (Test-Path $WORKFLOWS_DIR) {
+        Write-Host "💾 Backing up existing workflows..."
+        Copy-Item -Recurse $WORKFLOWS_DIR "${WORKFLOWS_DIR}.backup"
+        Write-Host "  ✅ Backup created" -ForegroundColor Green
     }
-    Write-Host "🗑️  Removing existing installation..."
+    
+    # Remove old installation (but keep backup)
+    Write-Host "🗑️  Removing old installation..."
     Remove-Item -Recurse -Force $SMARTSPEC_DIR
+    Write-Host "  ✅ Old installation removed" -ForegroundColor Green
+    Write-Host ""
 }
 
 # Step 1: Download workflows and knowledge base

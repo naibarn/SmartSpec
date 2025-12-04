@@ -28,16 +28,25 @@ echo -e "${BLUE}======================================${NC}"
 echo ""
 
 # Check if already installed
+UPDATE_MODE=false
 if [ -d "$SMARTSPEC_DIR" ]; then
-    echo -e "${YELLOW}⚠️  SmartSpec is already installed${NC}"
-    read -p "Do you want to reinstall? [y/N] " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Installation cancelled."
-        exit 0
+    UPDATE_MODE=true
+    echo -e "${BLUE}🔄 SmartSpec is already installed${NC}"
+    echo -e "${BLUE}📦 Updating to latest version...${NC}"
+    echo ""
+    
+    # Backup custom workflows (if any)
+    if [ -d "$WORKFLOWS_DIR" ]; then
+        echo "💾 Backing up existing workflows..."
+        cp -r "$WORKFLOWS_DIR" "${WORKFLOWS_DIR}.backup"
+        echo -e "  ${GREEN}✅ Backup created${NC}"
     fi
-    echo "🗑️  Removing existing installation..."
+    
+    # Remove old installation (but keep backup)
+    echo "🗑️  Removing old installation..."
     rm -rf "$SMARTSPEC_DIR"
+    echo -e "  ${GREEN}✅ Old installation removed${NC}"
+    echo ""
 fi
 
 # Step 1: Clone or download workflows and knowledge base

@@ -1,99 +1,107 @@
-# `/smartspec_generate_implement_prompt.md`
+># `/smartspec_generate_implement_prompt.md`
 
-**Generates a context-rich prompt for a specific task, ready for use in an AI coding assistant.**
+**(Alias: `/kilo`)**
+
+**Generates a comprehensive, context-rich prompt for a specific task, ready for use in AI coding assistants like Cursor or Google Antigravity.**
 
 ---
 
 ## 1. Summary
 
-This is the core command for the "Vibe Coding" workflow. It takes a specific task from `tasks.md` and gathers all relevant context from the `spec.md` to create a high-quality, detailed prompt. This prompt can then be pasted into an AI coding tool like Cursor, VSCode+Claude, or ChatGPT.
+This is the central command for the manual, AI-assisted "Vibe Coding" workflow. It acts as a powerful context assembler. You point it to a task, and it intelligently gathers all relevant information—from the `spec.md`, `openapi.yaml`, data models, and even existing source code—to create a perfect, self-contained prompt.
 
-- **What it solves:** It eliminates the need to manually copy-paste context. It provides the AI with everything it needs to know (data models, API specs, business rules) to complete the task correctly the first time.
-- **When to use it:** This is your main, day-to-day command during development when you are manually implementing tasks with an AI assistant.
+- **What it solves:** It eliminates the tedious and error-prone process of manually copy-pasting context for an AI. It provides the AI with a "complete world view" for the task, dramatically improving the accuracy and quality of the generated code.
+- **When to use it:** This is your primary, day-to-day command during development when you are implementing tasks with an AI assistant.
 
 ---
 
 ## 2. Usage
 
 ```bash
-/smartspec_generate_implement_prompt.md <tasks_path> [--task <task_id>]
+/smartspec_generate_implement_prompt.md <tasks_path> --tasks <task_id> [options...]
+# Alias
+/kilo <tasks_path> --tasks <task_id> [options...]
 ```
 
-### Parameters
+---
+
+## 3. Parameters & Options
+
+### **Primary Argument**
 
 | Name | Type | Required? | Description | Example |
 | :--- | :--- | :--- | :--- | :--- |
 | `tasks_path` | `string` | ✅ Yes | The full path to the source `tasks.md` file. | `specs/features/new-login/tasks.md` |
 
-### Options
+### **Options**
 
-| Name | Type | Required? | Description | Example |
-| :--- | :--- | :--- | :--- | :--- |
-| `--task <task_id>` | `string` | ✅ Yes | The ID of the task you want to generate a prompt for. | `--task T004` |
-
----
-
-## 3. Input
-
-- A `tasks.md` file.
-- The associated `spec.md` file (must be in the same directory).
-- The ID of the task to be implemented.
+| Option | Value | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `--tasks` | `<task_id>` | (none) | ✅ **Required.** The ID of the single task you want to generate a prompt for. | `--tasks T004` |
+| `--include-files` | `<glob_pattern>` | (auto) | Includes the content of specified files in the context. Supports glob patterns. | `--include-files "src/utils/*.ts"` |
+| `--no-related-code` | (flag) | (unset) | Prevents the AI from automatically searching for and including related code snippets from the existing codebase. |
 
 ---
 
-## 4. Output
+## 4. The Prompt Generation Process
 
-A context-rich prompt is generated and displayed in the chat. This prompt is designed to be copied and pasted directly into your AI coding tool.
+When you run this command, the AI performs a deep-context assembly:
 
-**Example Prompt Output:**
-
-> **Context:**
-> 
-> You are building a credit purchase system. Here is the relevant context from the `spec.md`:
-> 
-> **Data Model:**
-> - `credits` (id, user_id, amount)
-> - `users` (id, name, email)
-> 
-> **API Specification:**
-> - `POST /api/credit/purchase`
->   - Body: `{ userId: string, amount: number }`
-> 
-> **Business Rules:**
-> - Users cannot purchase more than 1,000 credits at a time.
-> - A record must be created in the `credit_transactions` table.
-> 
-> ---
-> 
-> **Task:**
-> 
-> Implement the business logic for the `POST /api/credit/purchase` endpoint. This includes:
-> 1.  Validating the request body.
-> 2.  Checking the business rules (max purchase amount).
-> 3.  Updating the user's credit balance.
-> 4.  Creating a transaction record.
-> 5.  Returning a success response.
+1.  **Task Extraction:** It reads the specified task (`--tasks <task_id>`) from `tasks.md`.
+2.  **SPEC Context:** It finds the associated `spec.md` and extracts the sections most relevant to the task (e.g., Data Models, API Specification, Business Rules).
+3.  **Supporting Document Context:** It automatically finds and includes relevant parts of supporting documents like `openapi.yaml` or `data-model.md`.
+4.  **Code Context (Auto):** It searches the codebase for existing files or code snippets that are relevant to the task (e.g., related utility functions, type definitions) and includes them. This can be disabled with `--no-related-code`.
+5.  **Explicit File Context:** It includes the full content of any files you specify with `--include-files`.
+6.  **Prompt Assembly:** It combines all this context into a single, perfectly formatted Markdown prompt, ready for you to copy.
 
 ---
 
 ## 5. Detailed Examples
 
-### Example 1: Generating a prompt for an API endpoint task
+### **Example 1: Generating a Basic Prompt for an API Task**
 
-1.  **Prerequisite:** You have `tasks.md` with a task `T005: Implement business logic...`.
-2.  **Run the command:**
-    ```bash
-    /smartspec_generate_implement_prompt.md specs/services/user-profile/tasks.md --task T005
-    ```
+**Goal:** Generate a prompt to implement the business logic for an API endpoint.
 
-**Result:** A detailed prompt appears in the chat, ready for you to copy into Cursor or your preferred tool.
+```bash
+/kilo specs/services/user-profile/tasks.md --tasks T005
+```
+
+**Result:** A detailed prompt is generated in the chat. It will automatically include:
+- The description of task `T005`.
+- The `API Specification` and `Data Models` sections from `user-profile/spec.md`.
+- The contents of `user-profile/openapi.yaml` if it exists.
+- Any existing type definitions from `src/types/user.ts` if found.
+
+### **Example 2: Generating a Prompt and Explicitly Including a Utility File**
+
+**Goal:** Generate a prompt for a task that relies on a specific utility function, and you want to make sure the AI sees it.
+
+```bash
+/kilo specs/features/new-feature/tasks.md --tasks T021 --include-files "src/utils/string-helpers.ts"
+```
+
+**Result:** The generated prompt will be identical to the basic one, but will now also contain the full source code of the `src/utils/string-helpers.ts` file inside a `<file>` block, ensuring the AI knows exactly how to use it.
+
+### **Example 3: Generating a Prompt for a Frontend Component**
+
+**Goal:** Generate a prompt to create a new React component, but prevent the AI from pulling in backend code.
+
+```bash
+/kilo specs/frontend/tasks.md --tasks T045 --no-related-code --include-files "src/components/ui/Button.tsx"
+```
+
+**Result:** The AI generates a prompt for task `T045`. The `--no-related-code` flag stops it from automatically searching for backend files. Instead, you explicitly provide the `Button.tsx` component as the primary context, guiding the AI to build the new component in a similar style.
 
 ---
 
-## 6. How to Verify the Result
+## 6. How to Use with Cursor / Google Antigravity
 
-1.  **Read the prompt:** Ensure the generated prompt contains the correct task and all relevant context from the `spec.md`.
-2.  **Use the prompt:** The ultimate test is to use the prompt with your AI assistant. A good prompt should result in high-quality, correct code with minimal need for re-prompting.
+This workflow is the same as described in the `/implement_tasks` documentation:
+
+1.  **Generate the Prompt:** Run `/kilo` with the desired task ID.
+2.  **Copy the Entire Prompt:** A new file (`implement-prompt-Txxx.md`) is created and its content is displayed. Copy the entire text.
+3.  **Paste into your AI Assistant:** Paste the complete prompt into the chat panel of Cursor or Google Antigravity.
+4.  **Review and Apply:** The AI will now generate the code with full context. Review its suggestions and apply them.
 
 ---
 
@@ -101,16 +109,16 @@ A context-rich prompt is generated and displayed in the chat. This prompt is des
 
 | Problem | Cause | Solution |
 | :--- | :--- | :--- |
-| **"Task ID not found"** | The task ID you provided does not exist in the `tasks.md` file. | Check the `tasks.md` file for the correct task ID. |
-| **Prompt is missing context** | The `spec.md` file is missing or in a different directory. | Ensure the `spec.md` file is in the same directory as the `tasks.md` file. |
-| **AI generates incorrect code** | The context in the `spec.md` may be incorrect or insufficient. | Improve the detail in the `spec.md` and re-generate the prompt. |
+| **"Task ID not found"** | The task ID is incorrect or doesn't exist in the file. | Check the `tasks.md` file for the correct task ID. Remember, you can only specify one task ID. |
+| **Prompt is missing context** | The `spec.md` or other supporting files are missing or in a different directory. | Ensure all related SmartSpec files (`spec.md`, `openapi.yaml`, etc.) are co-located in the same directory as `tasks.md`. |
+| **AI generates incorrect code** | The context in the `spec.md` is insufficient, or the auto-included code is misleading. | 1. Improve the detail in the `spec.md`. 2. Use `--no-related-code` to prevent the AI from finding irrelevant code. 3. Use `--include-files` to force the inclusion of the exact files you want the AI to see. |
 
 ---
 
 ## 8. For the LLM
 
-- **Primary Goal:** To assemble a detailed, context-rich prompt for a specific task ID.
-- **Key Entities:** `tasks_path`, `task_id`.
-- **Workflow Position:** This is the **fourth step** (manual path) in the core workflow.
-- **Input Artifacts:** `tasks.md`, `spec.md`.
-- **Output Artifact:** A natural language text prompt displayed to the user.
+- **Primary Goal:** To assemble a detailed, context-rich prompt for a single, specific task ID.
+- **Key Entities:** `tasks_path`, `--tasks` (required, single ID), `--include-files`, `--no-related-code`.
+- **Workflow Position:** This is the **fourth step** (manual path) in the core workflow, used for iterative, human-in-the-loop development.
+- **Input Artifacts:** `tasks.md`, `spec.md`, and any other supporting or source code files it can find.
+- **Output Artifact:** A natural language text prompt written to a file (`implement-prompt-Txxx.md`) and displayed to the user.

@@ -200,52 +200,210 @@ validation_commands:
 ```markdown
 ## 🤖 KILO CODE PLATFORM INSTRUCTIONS
 
-**Auto Subtasks:** ENABLED
-- Tasks >8h will automatically break into subtasks
-- No manual intervention needed
-- Subtask format: T001.1, T001.2, etc.
+### Multi-Mode Architecture
 
-**Mode Switching:** AUTOMATIC
-Kilo Code will automatically switch between modes based on task type:
+Kilo Code uses **5 specialized modes** with automatic mode switching and LLM optimization.
 
-| Mode | Purpose | When Used | LLM |
-|------|---------|-----------|-----|
-| **Architect** | Design decisions, architecture planning | Design tasks, system planning | Optimized for architecture |
-| **Code** | Implementation, file editing, coding | Most implementation tasks | Optimized for code generation |
-| **Debug** | Error fixing, troubleshooting | When validation fails, errors occur | Optimized for debugging |
-| **Ask** | Clarification, user input needed | Ambiguous requirements, decisions | Optimized for Q&A |
-| **Orchestrator** | Coordinating multiple tasks, workflow | Complex multi-step operations | Optimized for coordination |
+#### Modes Overview
 
-**Mode Selection Examples:**
+**1. Architect Mode** - Design & Planning
+- **Purpose:** System design, architecture decisions, schema design
+- **Auto-selected for:** Tasks with keywords "design", "architecture", "schema", "plan"
+- **Optimized LLM:** Architecture reasoning model
+- **Best for:**
+  - Database schema design (T001: Design database schema)
+  - System architecture planning (T005: Plan microservices architecture)
+  - API contract definition (T010: Define REST API contracts)
+  - Technology stack selection
+
+**2. Code Mode** - Implementation
+- **Purpose:** Code generation, file creation/editing, feature implementation
+- **Auto-selected for:** Tasks with keywords "create", "implement", "build", "add"
+- **Optimized LLM:** Code generation model
+- **Best for:**
+  - Entity/model creation (T020: Create User entity)
+  - Service implementation (T030: Implement auth service)
+  - Controller/endpoint creation (T040: Create user endpoints)
+  - Utility functions
+
+**3. Debug Mode** - Error Fixing
+- **Purpose:** Error analysis, bug fixing, troubleshooting
+- **Auto-selected for:** Tasks with keywords "fix", "debug", "resolve", "troubleshoot"
+- **Optimized LLM:** Debugging model
+- **Best for:**
+  - Compilation errors (T025: Fix TypeScript errors)
+  - Test failures (T035: Resolve failing tests)
+  - Runtime errors (T045: Debug memory leak)
+  - Performance issues
+
+**4. Ask Mode** - Clarification
+- **Purpose:** Requirement clarification, decision support, Q&A
+- **Auto-selected for:** Ambiguous requirements, multiple valid approaches
+- **Optimized LLM:** Q&A and reasoning model
+- **Best for:**
+  - Ambiguous requirements (T015: Clarify auth flow)
+  - Multiple options (T025: Choose REST vs GraphQL)
+  - Business logic clarification
+  - Missing information
+
+**5. Orchestrator Mode** - Task Coordination
+- **Purpose:** Subtask breakdown, task coordination, workflow management
+- **Auto-activated for:** Tasks >8 hours (automatic)
+- **Optimized LLM:** Coordination model
+- **Best for:**
+  - Large tasks (T050: Implement complete auth system - 12h)
+  - Multi-component tasks
+  - Complex workflows
+  - Integration tasks
+
+### Auto Subtasks Feature
+
+**Automatic Breakdown:**
+- **Trigger:** Tasks >8h automatically activate Orchestrator Mode
+- **Format:** T001.1, T001.2, T001.3, ...
+- **Size:** Each subtask 2-4h (optimal)
+- **Mode Assignment:** Each subtask gets appropriate mode
+- **Dependencies:** Tracked automatically
+
+**Example Breakdown:**
 ```
-T001: Design database schema → Architect Mode
-T002: Create entity models → Code Mode
-T003: Fix migration error → Debug Mode
-T004: Clarify business rule → Ask Mode
-T005: Coordinate API + DB tasks → Orchestrator Mode
+Original Task:
+T050: Implement complete authentication system (12h)
+
+↓ Orchestrator Mode activates automatically ↓
+
+Subtasks Created:
+- [ ] T050.1: Design auth database schema (2h) → Architect Mode
+- [ ] T050.2: Create User entity model (2h) → Code Mode
+- [ ] T050.3: Implement JWT service (3h) → Code Mode
+- [ ] T050.4: Create auth endpoints (3h) → Code Mode
+- [ ] T050.5: Add auth tests (2h) → Code Mode
 ```
 
-**LLM Selection:** AUTOMATIC
-- Each mode uses a different LLM optimized for that specific task type
+**Benefits:**
+- ✅ Prevents context overflow
+- ✅ Better progress tracking
+- ✅ Easier error recovery
+- ✅ Clearer validation points
+
+### Mode Selection Logic
+
+**Automatic Detection:**
+```
+IF task.hours > 8:
+  → Orchestrator Mode (create subtasks)
+ELSE IF task.title matches /design|architecture|schema|plan/i:
+  → Architect Mode
+ELSE IF task.title matches /fix|debug|resolve|troubleshoot/i:
+  → Debug Mode
+ELSE IF task.hasAmbiguity OR task.needsDecision:
+  → Ask Mode
+ELSE:
+  → Code Mode (default)
+```
+
+**You don't need to specify modes** - they're selected automatically based on:
+- Task title keywords
+- Task description content
+- Task duration (>8h)
+- File operations (CREATE/EDIT)
+- Error patterns
+
+### LLM Optimization
+
+**Per-Mode LLM Selection:**
+- Each mode uses a different LLM optimized for that task type
+- Automatic switching between LLMs
 - No manual configuration needed
-- Kilo Code handles LLM selection transparently
+- Cost optimization (cheaper models for simple tasks)
+- Speed optimization (faster models when possible)
+- Quality optimization (best model for each concern)
 
-**Execution Pattern:**
-1. Kilo Code reads full prompt
-2. Analyzes each task
-3. Selects appropriate mode automatically
-4. Switches LLM as needed
-5. Executes with optimal configuration
+### Execution Strategy
+
+**Autonomous Batch Processing:**
+
+1. **Read All Tasks**
+   - Parse tasks.md completely
+   - Identify task boundaries
+   - Note dependencies
+
+2. **Let Orchestrator Work**
+   - Tasks >8h: Wait for Orchestrator to create subtasks
+   - Don't manually break down large tasks
+   - Trust automatic breakdown
+
+3. **Execute Sequentially**
+   - Process tasks in order (T001, T002, T003, ...)
+   - Respect dependencies
+   - Skip if dependency not met
+
+4. **Mode Switching**
+   - Automatic mode selection per task
+   - Seamless transitions
+   - Context preserved across modes
+
+5. **Validate After Each Task**
+   - Run validation commands
+   - Check compilation
+   - Run relevant tests
+   - Verify changes
+
+6. **Track Progress**
+   - Update checkboxes: `- [ ]` → `- [x]`
+   - Log completed tasks
+   - Note any failures
+
+### Safety Constraints
+
+**Hard Limits:**
+- Maximum 10 tasks per execution cycle
+- Maximum 5 file edits per task
+- Maximum 50 lines per str_replace
+- Stop at 3 consecutive errors
 
 **Validation:**
-- Automatic after each task
-- Uses validation commands from tasks.md
-- Retries on failure (max 2 attempts)
+- Compile after every task
+- Test after every task
+- Lint after every task
+- Retry on failure (max 2 attempts)
 
-**Checkpoints:**
-- Automatic every 5 tasks
-- Manual checkpoint on user request
-- Auto-save on context limit
+### Error Handling
+
+**On Error:**
+1. Automatically switch to Debug Mode
+2. Analyze error messages
+3. Attempt fix (max 2 attempts)
+4. If still failing: Stop and report
+
+**On 3 Consecutive Errors:**
+- STOP execution immediately
+- Create checkpoint
+- Report errors with details
+- Request manual intervention
+
+### Checkpoints
+
+**Automatic Checkpoints:**
+- Every 5 tasks
+- At phase boundaries
+- On context limit (80% tokens)
+- On error threshold
+
+**Checkpoint Contents:**
+- Last completed task
+- Failed tasks list
+- Skipped tasks list
+- Validation status
+- Files modified
+- Next task to execute
+
+### Trust the System
+
+✅ **Let Orchestrator handle large tasks** - Don't manually break down tasks >8h
+✅ **Trust automatic mode switching** - Don't specify modes manually
+✅ **Trust LLM selection** - System picks optimal LLM per mode
+✅ **Focus on clear task descriptions** - Good descriptions enable better mode detection
 
 ---
 ```
@@ -255,31 +413,183 @@ T005: Coordinate API + DB tasks → Orchestrator Mode
 ```markdown
 ## 🤖 CLAUDE CODE PLATFORM INSTRUCTIONS
 
-**Sub Agents:** AVAILABLE
-You can create specialized agents for different concerns:
+### Sub Agents Architecture
 
-**Recommended Agent Structure:**
+Claude Code uses **user-created sub agents** for specialized expertise and domain separation.
+
+#### Step 1: Create Sub Agents (Do This First!)
+
+**Before starting implementation, create specialized sub agents:**
+
+##### Database Agent
+
 ```
-1. DB Agent → Handle all database-related tasks
-2. API Agent → Handle all API endpoint tasks
-3. Test Agent → Handle all testing tasks
-4. Integration Agent → Handle integration and coordination
+Create a sub agent specialized in database operations.
+
+**Focus Areas:**
+- PostgreSQL database design
+- Prisma ORM
+- Database migrations
+- Query optimization
+- Indexing strategies
+
+**Expertise:**
+- Schema design and normalization
+- Entity relationships
+- Data integrity constraints
+- Performance optimization
+- Migration safety
+
+**Responsibilities:**
+All database-related tasks (T001-T015):
+- T001: Design database schema
+- T002: Create entity models
+- T003: Setup Prisma client
+- T004: Create migrations
+- T005: Add indexes
+- ... (all DB tasks)
+
+**Context:**
+- Project uses PostgreSQL 14
+- ORM: Prisma 5.x
+- Migration strategy: Incremental
+- Performance target: <100ms queries
 ```
 
-**Creating Sub Agents:**
-```typescript
-// Example: Create DB Agent
-"Create a sub agent specialized in database operations.
-Focus: PostgreSQL, migrations, entity models, queries.
-Responsibilities: T001-T010 (database tasks)"
+##### API Agent
 
-// Example: Create API Agent
-"Create a sub agent specialized in API development.
-Focus: Express.js, endpoints, validation, error handling.
-Responsibilities: T011-T025 (API tasks)"
+```
+Create a sub agent specialized in API development.
+
+**Focus Areas:**
+- Express.js REST APIs
+- Request validation
+- Error handling
+- Middleware
+- Authentication/Authorization
+
+**Expertise:**
+- RESTful API design
+- Input validation (Zod)
+- Error handling patterns
+- Security best practices
+- API documentation
+
+**Responsibilities:**
+All API-related tasks (T016-T030):
+- T016: Setup Express server
+- T017: Create user endpoints
+- T018: Add validation middleware
+- T019: Implement error handling
+- T020: Add authentication
+- ... (all API tasks)
+
+**Context:**
+- Framework: Express.js 4.x
+- Validation: Zod
+- Auth: JWT
+- Error handling: Centralized
+- Documentation: OpenAPI 3.0
 ```
 
-**Execution:** INTERACTIVE
+##### Test Agent
+
+```
+Create a sub agent specialized in testing.
+
+**Focus Areas:**
+- Jest unit testing
+- Integration testing
+- Test coverage
+- Mocking strategies
+- E2E testing
+
+**Expertise:**
+- Test design and structure
+- Mocking and stubbing
+- Coverage optimization
+- Test performance
+- CI/CD integration
+
+**Responsibilities:**
+All testing tasks (T031-T045):
+- T031: Setup Jest
+- T032: Write unit tests
+- T033: Write integration tests
+- T034: Add E2E tests
+- T035: Achieve 80% coverage
+- ... (all test tasks)
+
+**Context:**
+- Framework: Jest 29.x
+- Coverage target: 80%
+- E2E: Supertest
+- Mocking: jest.mock
+- CI: GitHub Actions
+```
+
+#### Step 2: Agent-Based Execution Strategy
+
+**Phase-by-Phase Workflow:**
+
+**Phase 1: Database (DB Agent)**
+1. Activate Database Agent
+2. DB Agent handles T001-T015
+3. Complete all database tasks
+4. Validate schema and migrations
+5. Hand off to API Agent
+
+**Phase 2: API (API Agent)**
+1. Activate API Agent
+2. API Agent handles T016-T030
+3. Implement all endpoints
+4. Validate API contracts
+5. Hand off to Test Agent
+
+**Phase 3: Testing (Test Agent)**
+1. Activate Test Agent
+2. Test Agent handles T031-T045
+3. Write all tests
+4. Achieve coverage targets
+5. Report final status
+
+**Phase 4: Integration (Main Agent)**
+1. Main agent coordinates
+2. Integration testing
+3. Final validation
+4. Documentation
+
+**Benefits:**
+- ✅ Specialized expertise per domain
+- ✅ Clear responsibility boundaries
+- ✅ Context isolation
+- ✅ Parallel conceptual work
+
+### Deep Analysis Capabilities
+
+**Leverage Best-in-Class Repo-wide Reasoning:**
+
+**Before Starting:**
+```
+Analyze this entire codebase and identify:
+1. All authentication-related code
+2. Current security patterns
+3. Database access patterns
+4. Error handling approaches
+5. Testing strategies
+
+Use this analysis to guide implementation and maintain consistency.
+```
+
+**Benefits:**
+- ✅ Understand existing patterns
+- ✅ Maintain consistency
+- ✅ Avoid duplication
+- ✅ Identify refactoring opportunities
+
+### Interactive Execution
+
+**Execution Style:** INTERACTIVE
 - Manual task selection
 - User-driven validation
 - Flexible checkpoint timing
@@ -289,29 +599,95 @@ Responsibilities: T011-T025 (API tasks)"
 - You decide when to switch approaches
 - Can pause and resume anytime
 - More flexibility in execution order
+- User confirms each major decision
 
-**Validation:**
-- Run validation commands manually after each task
-- Check output and decide whether to continue
-- Fix errors before proceeding
+### Validation Strategy
 
-**Checkpoints:**
-- Create checkpoints manually at logical points
+**Per-Agent Validation:**
+- DB Agent: Schema validation, migration testing
+- API Agent: Endpoint testing, contract validation
+- Test Agent: Coverage verification, test quality
+
+**Manual Validation:**
+1. Run validation commands after each task
+2. Check output and decide whether to continue
+3. Fix errors before proceeding
+4. User confirms validation results
+
+**Validation Commands:**
+```bash
+# After each task
+{validation_commands.compile}
+{validation_commands.test}
+{validation_commands.lint}
+```
+
+### Checkpoint Strategy
+
+**Manual Checkpoints:**
+- Create checkpoints at logical points
 - Recommended: After each phase
 - Can checkpoint anytime for safety
+- User decides checkpoint timing
 
-**Workflow Example:**
+**Checkpoint Contents:**
+- Phase completed
+- Tasks completed
+- Validation status
+- Next phase to start
+
+### Interactive Decision Making
+
+**When to Ask User:**
+- Ambiguous requirements
+- Multiple valid approaches
+- Architecture decisions
+- Trade-off analysis
+- Missing information
+
+**How to Ask:**
 ```
-1. Read full prompt
-2. Create specialized sub agents (optional)
-3. Start with Phase 1, Task T001
-4. Implement task
-5. Run validation commands manually
-6. If pass: Continue to T002
-7. If fail: Debug and fix
-8. Checkpoint after Phase 1 complete
-9. Continue to Phase 2
+"I see two approaches for implementing authentication:
+
+Option 1: JWT with refresh tokens
+  Pros: Stateless, scalable
+  Cons: Token revocation complexity
+
+Option 2: Session-based with Redis
+  Pros: Easy revocation, server control
+  Cons: Stateful, Redis dependency
+
+Which approach do you prefer?"
 ```
+
+### Workflow Example
+
+```
+1. Read full prompt and analyze codebase
+2. Create specialized sub agents (DB, API, Test)
+3. Activate DB Agent
+4. DB Agent: Execute T001-T015 (database tasks)
+5. Validate database phase
+6. Checkpoint: Phase 1 complete
+7. Activate API Agent
+8. API Agent: Execute T016-T030 (API tasks)
+9. Validate API phase
+10. Checkpoint: Phase 2 complete
+11. Activate Test Agent
+12. Test Agent: Execute T031-T045 (test tasks)
+13. Validate test phase
+14. Checkpoint: Phase 3 complete
+15. Main Agent: Integration and final validation
+16. Report completion
+```
+
+### Best Practices
+
+✅ **Create sub agents early** - Setup specialized agents before starting
+✅ **Use deep analysis** - Leverage repo-wide reasoning for consistency
+✅ **Interactive decisions** - Involve user in key decisions
+✅ **Phase-based execution** - Complete one phase before moving to next
+✅ **Validate frequently** - Check after each task and phase
 
 ---
 ```
@@ -321,21 +697,346 @@ Responsibilities: T011-T025 (API tasks)"
 ```markdown
 ## 🤖 ROO CODE PLATFORM INSTRUCTIONS
 
-(To be documented based on Roo Code capabilities)
+### Workflow-Driven Development
 
-**Execution Pattern:**
-- Follow similar incremental approach
-- One task at a time
-- Validate after each task
-- Stop at checkpoints
+Roo Code uses **structured workflow phases** with emphasis on safety and preview.
 
-**Validation:**
-- Use validation commands from tasks.md
-- Verify after each task completion
+#### Workflow Phases
 
-**Checkpoints:**
-- Create checkpoints at phase boundaries
-- Save progress regularly
+**1. Plan Mode** - Task planning and breakdown
+**2. Implement Mode** - Code implementation with preview
+**3. Review Mode** - Comprehensive diff review
+**4. Execute Mode** - Testing and validation
+**5. Explain Mode** - Documentation and explanation
+
+### Safety-First Approach
+
+**Key Features:**
+- ✅ **Full diff preview** before any changes (best-in-class)
+- ✅ **Approval gates** at each phase
+- ✅ **Incremental changes** (small, safe edits)
+- ✅ **Easy rollback** if issues found
+- ✅ **Validation gates** before proceeding
+
+### Workflow Structure
+
+```
+For each Phase:
+  1. Plan Mode: Break down into steps
+  2. Implement Mode: Generate changes
+  3. Review Mode: Preview all diffs
+  4. User Approval: Review and approve
+  5. Apply Changes: Execute approved changes
+  6. Execute Mode: Run tests and validate
+  7. Confirm or Rollback: Verify success
+```
+
+### Phase Execution Template
+
+#### Phase 1: Plan Mode
+
+```markdown
+## Phase X: [Phase Name]
+
+### Planning
+
+**Tasks:**
+- T001: Design database schema (3h)
+- T002: Create entity models (2h)
+- T003: Setup Prisma client (1h)
+
+**Steps:**
+1. Design schema structure
+2. Create Prisma schema file
+3. Generate migration files
+4. Setup Prisma client
+
+**Files:**
+- prisma/schema.prisma (to create)
+- docs/database-design.md (to create)
+
+**Dependencies:**
+- None (first phase)
+
+**Estimated Duration:** 6 hours
+```
+
+#### Phase 2: Implement Mode
+
+```markdown
+### Implementation
+
+**Task T001: Design database schema (3h)**
+
+**Files to Create:**
+- `prisma/schema.prisma` (~200 lines - MEDIUM)
+- `docs/database-design.md` (~100 lines - SMALL)
+
+**Implementation:**
+[Generate code here]
+```
+
+#### Phase 3: Review Mode
+
+```markdown
+### Review
+
+**Preview All Changes:**
+
+```diff
+File: prisma/schema.prisma (NEW FILE)
+
++ generator client {
++   provider = "prisma-client-js"
++ }
++
++ datasource db {
++   provider = "postgresql"
++   url      = env("DATABASE_URL")
++ }
++
++ model User {
++   id        String   @id @default(uuid())
++   email     String   @unique
++   password  String
++   createdAt DateTime @default(now())
++   updatedAt DateTime @updatedAt
++   sessions  Session[]
++ }
+
+File: docs/database-design.md (NEW FILE)
+
++ # Database Design
++
++ ## User Table
++ - id: UUID primary key
++ - email: Unique email address
++ ...
+```
+
+**Review Checklist:**
+- [ ] Schema structure correct
+- [ ] Relations defined properly
+- [ ] Indexes added
+- [ ] No syntax errors
+- [ ] Documentation complete
+
+**Safety Check:**
+- [ ] No breaking changes
+- [ ] Backward compatible
+- [ ] No security issues
+- [ ] Performance acceptable
+
+**[APPROVAL REQUIRED]**
+Review complete. Approve changes? (y/n)
+```
+
+#### Phase 4: Execute Mode
+
+```markdown
+### Execution
+
+**After Approval:**
+
+1. **Apply Changes**
+   ```bash
+   create prisma/schema.prisma
+   create docs/database-design.md
+   ```
+
+2. **Validate**
+   ```bash
+   npx prisma generate
+   npx prisma validate
+   ```
+
+3. **Test**
+   ```bash
+   npm test -- schema.test.ts
+   ```
+
+**Validation Results:**
+```
+✅ Prisma client generated successfully
+✅ Schema validation passed
+✅ Tests passed (3/3)
+```
+
+**[CONFIRMATION]**
+Changes applied successfully. Proceed to next task? (y/n)
+```
+
+#### Phase 5: Rollback (If Needed)
+
+```markdown
+### Rollback Procedure
+
+**If Any Validation Fails:**
+
+1. **Identify Failure**
+   - Which validation failed
+   - Error messages
+   - Root cause
+
+2. **Rollback Changes**
+   ```bash
+   git restore .
+   ```
+
+3. **Report Error**
+   ```
+   ❌ Validation Failed: [validation type]
+   
+   Error: [error message]
+   
+   Root Cause: [analysis]
+   
+   Suggested Fix: [fix description]
+   
+   Retry: [y/n]
+   ```
+
+4. **Fix and Retry**
+   - Apply suggested fix
+   - Re-run from Implement Mode
+   - Preview changes again
+```
+
+### Incremental Changes Strategy
+
+**For Large Changes:**
+
+1. **Break into Smaller Steps**
+   ```
+   Large Task: Implement auth system (12h)
+   
+   Break into phases:
+   - Phase 1: Database (2h)
+   - Phase 2: Models (2h)
+   - Phase 3: Service (3h)
+   - Phase 4: Endpoints (3h)
+   - Phase 5: Tests (2h)
+   ```
+
+2. **Execute Phase by Phase**
+   - Complete Phase 1
+   - Validate Phase 1
+   - Commit Phase 1
+   - Proceed to Phase 2
+
+3. **Validate After Each Phase**
+   - Compilation
+   - Tests
+   - Integration
+   - Commit
+
+**Benefits:**
+- ✅ Smaller, safer changes
+- ✅ Easier to review
+- ✅ Easier to rollback
+- ✅ Clear progress tracking
+
+### Safety Gates
+
+**Mandatory Gates:**
+
+1. **Before Apply:**
+   - Preview all diffs
+   - User approval required
+
+2. **After Apply:**
+   - Compilation check
+   - Test execution
+   - Lint check
+
+3. **Before Proceed:**
+   - All validations pass
+   - User confirmation
+
+**Gate Failure:**
+- Automatic rollback
+- Error report
+- Fix suggestions
+- Retry option
+
+### Frontend-Specific Optimizations
+
+**For React/Vue/Angular:**
+
+1. **Component-Based Workflow**
+   ```
+   Phase 1: Component structure
+   Phase 2: Component logic
+   Phase 3: Component styles
+   Phase 4: Component tests
+   ```
+
+2. **Preview in Browser**
+   - Start dev server
+   - Preview changes live
+   - Visual verification
+
+3. **Hot Reload Testing**
+   - Make changes
+   - Preview immediately
+   - Validate visually
+
+**For Node.js:**
+
+1. **Module-Based Workflow**
+   ```
+   Phase 1: Module structure
+   Phase 2: Module logic
+   Phase 3: Module tests
+   Phase 4: Module integration
+   ```
+
+2. **API Testing**
+   - Start server
+   - Test endpoints
+   - Validate responses
+
+### Validation Strategy
+
+**After Each Phase:**
+```bash
+# Compilation
+{validation_commands.compile}
+
+# Tests
+{validation_commands.test}
+
+# Linting
+{validation_commands.lint}
+```
+
+**Validation Checklist:**
+- [ ] Compilation passes
+- [ ] All tests passing
+- [ ] No lint errors
+- [ ] No breaking changes
+
+### Checkpoint Strategy
+
+**Checkpoint Timing:**
+- After each phase completion
+- After validation passes
+- Before major changes
+- User-requested checkpoints
+
+**Checkpoint Contents:**
+- Phase completed
+- Files modified
+- Validation status
+- Next phase to start
+
+### Best Practices
+
+✅ **Preview first** - Always review diffs before applying
+✅ **Incremental changes** - Small, safe edits
+✅ **Validate frequently** - After each phase
+✅ **Easy rollback** - Commit after each phase
+✅ **User approval** - Confirm before major changes
 
 ---
 ```

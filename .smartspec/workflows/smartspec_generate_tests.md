@@ -21,20 +21,32 @@ You will receive:
 
 ### Phase 1: Analyze Current Coverage
 
-1. **Run Coverage Report**
+1. **Load SPEC_INDEX.json**
    ```bash
-   npm test -- --coverage --json --outputFile=coverage.json
+   cat .smartspec/SPEC_INDEX.json
+   ```
+   - Parse JSON to get spec metadata
+   - Extract `spec.files[]` array for the given spec_id
+   - If `--file` option provided, use only that file
+   - Otherwise, use all files from `spec.files[]`
+   - **SCOPE**: Only analyze files listed in spec.files[] (not entire project!)
+
+2. **Run Coverage Report (scoped)**
+   ```bash
+   # Only run tests related to scoped files
+   npm test -- --coverage --json --outputFile=coverage.json --testPathPattern=<scoped-test-files>
    ```
    - Parse coverage data from coverage.json
    - Extract coverage percentages for lines, statements, functions, branches
+   - **Filter coverage data to only scoped files**
 
-2. **Identify Uncovered Code**
-   - List files with no tests
-   - List functions with no coverage
-   - List branches with no coverage
-   - List specific line numbers that are uncovered
+3. **Identify Uncovered Code (scoped)**
+   - List scoped files with no tests
+   - List functions with no coverage (in scoped files only)
+   - List branches with no coverage (in scoped files only)
+   - List specific line numbers that are uncovered (in scoped files only)
 
-3. **Calculate Test Gap**
+4. **Calculate Test Gap**
    ```
    Current Coverage: XX.XX%
    Target Coverage: XX%
@@ -44,7 +56,7 @@ You will receive:
    Estimated tests needed: ~XX-XX test cases
    ```
 
-4. **Display Coverage Summary**
+5. **Display Coverage Summary**
    ```
    📊 Current Test Coverage:
      Lines: XX.XX%
@@ -293,18 +305,18 @@ For each file that needs tests:
 
 ### Phase 4: Run and Verify Tests
 
-1. **Run All Tests**
+1. **Run Generated Tests (scoped)**
    ```bash
-   npm test
+   npm test -- --testPathPattern=<scoped-test-files>
    ```
-   - Check if all tests pass
+   - Check if generated tests pass
    - If tests fail → fix test code and retry
 
-2. **Run Coverage Report**
+2. **Run Coverage Report (scoped)**
    ```bash
-   npm test -- --coverage
+   npm test -- --testPathPattern=<scoped-test-files> -- --coverage
    ```
-   - Get new coverage percentages
+   - Get new coverage percentages for scoped files
    - Compare with target
 
 3. **Analyze Coverage Gap**

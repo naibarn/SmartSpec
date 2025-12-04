@@ -21,79 +21,60 @@ You will receive:
 
 ### Phase 1: Analyze Code Quality
 
-1. **Run Static Analysis Tools**
-   
-   **ESLint:**
+1. **Load SPEC_INDEX.json**
    ```bash
-   npx eslint . --format json > eslint-report.json
+   cat .smartspec/SPEC_INDEX.json
+   ```
+   - Parse JSON to get spec metadata
+   - Extract `spec.files[]` array for the given spec_id
+   - If `--file` option provided, use only that file
+   - Otherwise, use all files from `spec.files[]`
+   - **SCOPE**: Only analyze files listed in spec.files[] (not entire project!)
+
+2. **Run Static Analysis Tools (scoped)**
+   
+   **ESLint (scoped):**
+   ```bash
+   # Only lint files in scope
+   npx eslint <file1> <file2> ... --format json > eslint-report.json
    ```
    
-   **TypeScript Compiler (Strict Mode):**
+   **TypeScript Compiler (Strict Mode, scoped):**
    ```bash
-   npx tsc --noEmit --strict
+   # Only check files in scope
+   npx tsc --noEmit --strict <file1> <file2> ...
    ```
 
-2. **Detect Code Smells**
+3. **Detect Code Smells (scoped)**
    
    **High Complexity:**
-   - Functions with cyclomatic complexity > 10
-   - Functions longer than 50 lines
-   - Deeply nested code (> 4 levels)
+   - Functions with cyclomatic complexity > 10 (in scoped files only)
+   - Functions longer than 50 lines (in scoped files only)
+   - Deeply nested code (> 4 levels) (in scoped files only)
    
    **Code Duplication:**
-   - Duplicated code blocks (> 5 lines)
-   - Similar functions across files
-   - Copy-pasted logic
+   - Duplicated code blocks (> 5 lines) (within scoped files)
+   - Similar functions across scoped files
+   - Copy-pasted logic (within scoped files)
    
    **Naming Issues:**
-   - Non-descriptive variable names (a, b, tmp, data, etc.)
-   - Inconsistent naming conventions
-   - Misleading names
+   - Non-descriptive variable names (a, b, tmp, data, etc.) (in scoped files)
+   - Inconsistent naming conventions (in scoped files)
+   - Misleading names (in scoped files)
    
    **Unused Code:**
-   - Unused imports
-   - Unused variables
-   - Unused functions
-   - Dead code paths
+   - Unused imports (in scoped files)
+   - Unused variables (in scoped files)
+   - Unused functions (in scoped files)
+   - Dead code paths (in scoped files)
    
    **Other Smells:**
-   - Long parameter lists (> 5 parameters)
-   - God classes (too many responsibilities)
-   - Feature envy (excessive use of another class)
-   - Primitive obsession (should use objects)
+   - Long parameter lists (> 5 parameters) (in scoped files)
+   - God classes (too many responsibilities) (in scoped files)
+   - Feature envy (excessive use of another class) (in scoped files)
+   - Primitive obsession (should use objects) (in scoped files)
 
-3. **Calculate Code Metrics**
-   ```json
-   {
-     "total_files": 34,
-     "total_lines": 5000,
-     "average_complexity": 8.5,
-     "high_complexity_functions": 12,
-     "duplicated_blocks": 8,
-     "unused_code_items": 15,
-     "long_functions": 6,
-     "long_parameter_lists": 4,
-     "code_smells": 45
-   }
-   ```
-
-4. **Display Analysis Results**
-   ```
-   🔍 Code Quality Analysis:
-   
-   📊 Metrics:
-     Average Complexity: 8.5
-     High Complexity Functions: 12
-     Duplicated Blocks: 8
-     Unused Code Items: 15
-     Code Smells: 45
-   
-   ⚠️  Issues Found:
-     CRITICAL: 5 issues
-     HIGH: 12 issues
-     MEDIUM: 18 issues
-     LOW: 10 issues
-   ```
+4. **Calculate Code Metrics (scoped)**
 
 ### Phase 2: Create Refactoring Plan
 

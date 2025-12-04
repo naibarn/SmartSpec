@@ -21,32 +21,47 @@ You will receive:
 
 ### Phase 1: Detect Errors
 
-1. **Read Progress Report**
+1. **Load SPEC_INDEX.json**
+   ```bash
+   cat .smartspec/SPEC_INDEX.json
+   ```
+   - Parse JSON to get spec metadata
+   - Extract `spec.files[]` array for the given spec_id
+   - If `--file` option provided, use only that file
+   - Otherwise, use all files from `spec.files[]`
+   - **SCOPE**: Only scan files listed in spec.files[] (not entire project!)
+
+2. **Read Progress Report**
    - Look for `progress-report-*.md` in the spec directory
    - Extract all reported errors
+   - Filter errors to only those in scoped files
 
-2. **Run TypeScript Compiler**
+3. **Run TypeScript Compiler (scoped)**
    ```bash
    cd <project-root>
-   npx tsc --noEmit --pretty false 2>&1
+   # Only check files in scope
+   npx tsc --noEmit --pretty false <file1> <file2> ... 2>&1
    ```
    - Parse compilation errors
    - Extract file paths, line numbers, error codes, and messages
+   - **Only process errors from scoped files**
 
-3. **Run ESLint (if available)**
+4. **Run ESLint (scoped)**
    ```bash
-   npx eslint . --format json 2>&1
+   # Only lint files in scope
+   npx eslint <file1> <file2> ... --format json 2>&1
    ```
    - Parse linting errors
    - Filter only errors (not warnings)
+   - **Only process errors from scoped files**
 
-4. **Categorize Errors by Severity**
+5. **Categorize Errors by Severity**
    - **CRITICAL**: Compilation errors that prevent build
    - **HIGH**: Type errors that may cause runtime errors
    - **MEDIUM**: Linting errors that should be fixed
    - **LOW**: Warnings and minor issues
 
-5. **Display Error Summary**
+6. **Display Error Summary**
    ```
    🔍 Found X errors:
      CRITICAL: X errors

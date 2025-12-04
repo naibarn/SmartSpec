@@ -78,7 +78,7 @@
 
 **Bad (Compressed):**
 ```
-SPEC-003: Access Control ServiceStatus: UPDATEDVersion: 3.3.0Author: Manus AI...
+SPEC-003: Access Control ServiceStatus: UPDATEDVersion: 3.3.0Author: SmartSpec Team...
 ```
 - 2000+ characters on one line
 - Cannot scan quickly
@@ -91,7 +91,7 @@ SPEC-003: Access Control ServiceStatus: UPDATEDVersion: 3.3.0Author: Manus AI...
 
 **Status:** UPDATED
 **Version:** 3.3.0
-**Author:** Manus AI
+**Author:** SmartSpec Team
 **Created:** 2025-01-15
 **Last Updated:** 2024-11-30
 ```

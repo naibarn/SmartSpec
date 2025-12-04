@@ -387,6 +387,6 @@ POST /credit/add
 
 ---
 
-**Reviewed by:** Manus AI  
+**Reviewed by:** SmartSpec Team  
 **Date:** 2025-12-03  
 **Status:** ✅ READY FOR PRODUCTION

@@ -185,11 +185,11 @@
 ### เหตุผล:
 
 1. **Platform-Agnostic Design**
-   - `implement_tasks` ออกแบบให้ทำงานกับ Manus (AI agent)
+   - `implement_tasks` ออกแบบให้ทำงานกับ AI agent
    - ไม่ขึ้นกับ platform เฉพาะ
 
 2. **Direct Implementation**
-   - Implement โดยตรงผ่าน Manus
+   - Implement โดยตรงผ่าน AI agent
    - ไม่ต้องสร้าง prompt แยก
 
 3. **Unified Workflow**
@@ -200,7 +200,7 @@
 
 ## 🎯 Use Cases และ Workflows ที่ถูกต้อง
 
-### Use Case 1: Implement ด้วย Manus (Direct)
+### Use Case 1: Implement with Direct Implementation
 
 ```bash
 # ใช้ implement_tasks โดยตรง
@@ -317,7 +317,7 @@ cat specs/feature/spec-004/cursor-prompt-spec-004.md
 
 ### วิธีแก้:
 
-**Option 1: ใช้ Manus แทน (แนะนำ!)**
+**Option 1: Use direct implementation (แนะนำ!)**
 ```bash
 # ไม่มี hard limit, auto-continue
 /smartspec_implement_tasks specs/feature/spec-004/tasks.md
@@ -363,14 +363,14 @@ cat specs/feature/spec-004/cursor-prompt-spec-004.md
 
 4. **Kilo Code hard limit เป็นข้อจำกัดของ platform**
    - ไม่ใช่ SmartSpec
-   - แก้ได้ด้วยการแตก batches หรือใช้ Manus
+   - แก้ได้ด้วยการแตก batches หรือใช้ AI agent
 
 ---
 
 ### 🚀 คำแนะนำ:
 
 **สำหรับโปรเจคขนาดใหญ่ (100+ tasks):**
-- ✅ ใช้ `/smartspec_implement_tasks` (Manus)
+- ✅ ใช้ `/smartspec_implement_tasks` (AI agent)
 - ✅ Auto-continue, checkpoint/resume
 - ✅ ไม่มี hard limit
 

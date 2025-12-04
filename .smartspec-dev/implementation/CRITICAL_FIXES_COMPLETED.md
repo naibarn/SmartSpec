@@ -284,7 +284,7 @@
 
 ## ผู้รับผิดชอบ
 
-**Reviewed by:** Manus AI  
+**Reviewed by:** SmartSpec Team  
 **Approved by:** [Pending]  
 **Date:** 2025-12-03
 

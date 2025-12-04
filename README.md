@@ -22,12 +22,12 @@ SmartSpec V5 supports **3 AI coding platforms** with a **single-command installa
 
 **Unix / Mac / Linux:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/install.sh | bash
 ```
 
 **Windows (PowerShell):**
 ```powershell
-iwr -useb https://raw.githubusercontent.com/naibarn/SmartSpec/main/scripts/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/install.ps1 | iex
 ```
 
 **What it does:**

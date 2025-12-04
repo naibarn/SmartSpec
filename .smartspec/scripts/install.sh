@@ -90,44 +90,46 @@ else
     echo -e "${GREEN}✅ Downloaded workflows and knowledge base via zip${NC}"
 fi
 
-# Step 2: Detect platforms
+# Step 2: Detect platforms and ask user
 echo ""
 echo "🔍 Detecting platforms..."
-PLATFORMS=()
 
+DETECTED_PLATFORMS=()
 if [ -d ".kilocode" ]; then
-    PLATFORMS+=("kilocode")
+    DETECTED_PLATFORMS+=("kilocode")
     echo -e "  ${GREEN}✅ Kilo Code detected${NC}"
 fi
 
 if [ -d ".roo" ]; then
-    PLATFORMS+=("roo")
+    DETECTED_PLATFORMS+=("roo")
     echo -e "  ${GREEN}✅ Roo Code detected${NC}"
 fi
 
 if [ -d ".claude" ]; then
-    PLATFORMS+=("claude")
+    DETECTED_PLATFORMS+=("claude")
     echo -e "  ${GREEN}✅ Claude Code detected${NC}"
 fi
 
-if [ ${#PLATFORMS[@]} -eq 0 ]; then
-    echo -e "${YELLOW}⚠️  No platforms detected${NC}"
-    echo ""
-    echo "Which platforms do you want to install?"
-    echo "  1) Kilo Code"
-    echo "  2) Roo Code"
-    echo "  3) Claude Code"
-    echo "  4) All of the above"
-    read -p "Enter choice [1-4]: " choice
-    
-    case $choice in
-        1) PLATFORMS=("kilocode") ;;
-        2) PLATFORMS=("roo") ;;
-        3) PLATFORMS=("claude") ;;
-        4) PLATFORMS=("kilocode" "roo" "claude") ;;
-        *) echo -e "${RED}Invalid choice${NC}"; exit 1 ;;
-    esac
+if [ ${#DETECTED_PLATFORMS[@]} -eq 0 ]; then
+    echo -e "  ${YELLOW}⚠️  No platforms detected${NC}"
 fi
+
+# Always ask user which platforms to install
+echo ""
+echo "Which platforms do you want to install/update?"
+echo "  1) Kilo Code"
+echo "  2) Roo Code"
+echo "  3) Claude Code"
+echo "  4) All of the above"
+read -p "Enter choice [1-4]: " choice
+
+case $choice in
+    1) PLATFORMS=("kilocode") ;;
+    2) PLATFORMS=("roo") ;;
+    3) PLATFORMS=("claude") ;;
+    4) PLATFORMS=("kilocode" "roo" "claude") ;;
+    *) echo -e "${RED}Invalid choice${NC}"; exit 1 ;;
+esac
 
 # Step 3: Try symlinks first
 echo ""
@@ -176,18 +178,32 @@ for platform in "${PLATFORMS[@]}"; do
     # Create parent directory
     mkdir -p "$(dirname "$TARGET_DIR")"
     
-    # Remove existing
-    if [ -e "$TARGET_DIR" ]; then
-        rm -rf "$TARGET_DIR"
+    # Backup existing workflows if they exist and are not symlinks
+    if [ -e "$TARGET_DIR" ] && [ ! -L "$TARGET_DIR" ]; then
+        BACKUP_DIR="${TARGET_DIR}.backup.$(date +%Y%m%d_%H%M%S)"
+        echo -e "  ${YELLOW}💾 Backing up existing workflows to $(basename "$BACKUP_DIR")${NC}"
+        mv "$TARGET_DIR" "$BACKUP_DIR"
+    elif [ -L "$TARGET_DIR" ]; then
+        # Remove old symlink
+        rm -f "$TARGET_DIR"
     fi
     
     # Install
     if [ "$USE_SYMLINKS" = true ]; then
+        # Verify source directory exists
+        if [ ! -d "$WORKFLOWS_DIR" ]; then
+            echo -e "  ${RED}❌ Error: Workflows directory not found: $WORKFLOWS_DIR${NC}"
+            exit 1
+        fi
         # Create symlink (relative path for portability)
         ln -s "../../$WORKFLOWS_DIR" "$TARGET_DIR"
         echo -e "  ${GREEN}✅ $PLATFORM_NAME: Symlink created${NC}"
     else
         # Copy files
+        if [ ! -d "$WORKFLOWS_DIR" ]; then
+            echo -e "  ${RED}❌ Error: Workflows directory not found: $WORKFLOWS_DIR${NC}"
+            exit 1
+        fi
         cp -r "$WORKFLOWS_DIR" "$TARGET_DIR"
         echo -e "  ${GREEN}✅ $PLATFORM_NAME: Files copied${NC}"
     fi

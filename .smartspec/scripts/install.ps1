@@ -76,45 +76,47 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     Write-Host "✅ Downloaded workflows and knowledge base via zip" -ForegroundColor Green
 }
 
-# Step 2: Detect platforms
+# Step 2: Detect platforms and ask user
 Write-Host ""
 Write-Host "🔍 Detecting platforms..."
-$PLATFORMS = @()
 
+$DETECTED_PLATFORMS = @()
 if (Test-Path ".kilocode") {
-    $PLATFORMS += "kilocode"
+    $DETECTED_PLATFORMS += "kilocode"
     Write-Host "  ✅ Kilo Code detected" -ForegroundColor Green
 }
 
 if (Test-Path ".roo") {
-    $PLATFORMS += "roo"
+    $DETECTED_PLATFORMS += "roo"
     Write-Host "  ✅ Roo Code detected" -ForegroundColor Green
 }
 
 if (Test-Path ".claude") {
-    $PLATFORMS += "claude"
+    $DETECTED_PLATFORMS += "claude"
     Write-Host "  ✅ Claude Code detected" -ForegroundColor Green
 }
 
-if ($PLATFORMS.Count -eq 0) {
-    Write-Host "⚠️  No platforms detected" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Which platforms do you want to install?"
-    Write-Host "  1) Kilo Code"
-    Write-Host "  2) Roo Code"
-    Write-Host "  3) Claude Code"
-    Write-Host "  4) All of the above"
-    $choice = Read-Host "Enter choice [1-4]"
-    
-    switch ($choice) {
-        1 { $PLATFORMS = @("kilocode") }
-        2 { $PLATFORMS = @("roo") }
-        3 { $PLATFORMS = @("claude") }
-        4 { $PLATFORMS = @("kilocode", "roo", "claude") }
-        default { 
-            Write-Host "Invalid choice" -ForegroundColor Red
-            exit 1
-        }
+if ($DETECTED_PLATFORMS.Count -eq 0) {
+    Write-Host "  ⚠️  No platforms detected" -ForegroundColor Yellow
+}
+
+# Always ask user which platforms to install
+Write-Host ""
+Write-Host "Which platforms do you want to install/update?"
+Write-Host "  1) Kilo Code"
+Write-Host "  2) Roo Code"
+Write-Host "  3) Claude Code"
+Write-Host "  4) All of the above"
+$choice = Read-Host "Enter choice [1-4]"
+
+switch ($choice) {
+    1 { $PLATFORMS = @("kilocode") }
+    2 { $PLATFORMS = @("roo") }
+    3 { $PLATFORMS = @("claude") }
+    4 { $PLATFORMS = @("kilocode", "roo", "claude") }
+    default { 
+        Write-Host "Invalid choice" -ForegroundColor Red
+        exit 1
     }
 }
 
@@ -162,19 +164,37 @@ foreach ($platform in $PLATFORMS) {
     $parentDir = Split-Path -Parent $TARGET_DIR
     New-Item -ItemType Directory -Force -Path $parentDir | Out-Null
     
-    # Remove existing
+    # Backup existing workflows if they exist and are not symlinks
     if (Test-Path $TARGET_DIR) {
-        Remove-Item -Recurse -Force $TARGET_DIR
+        $item = Get-Item $TARGET_DIR
+        if ($item.LinkType -ne "SymbolicLink") {
+            $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+            $BACKUP_DIR = "${TARGET_DIR}.backup.$timestamp"
+            Write-Host "  💾 Backing up existing workflows to $(Split-Path -Leaf $BACKUP_DIR)" -ForegroundColor Yellow
+            Move-Item $TARGET_DIR $BACKUP_DIR
+        } else {
+            # Remove old symlink
+            Remove-Item $TARGET_DIR -Force
+        }
     }
     
     # Install
     if ($USE_SYMLINKS) {
+        # Verify source directory exists
+        if (-not (Test-Path $WORKFLOWS_DIR)) {
+            Write-Host "  ❌ Error: Workflows directory not found: $WORKFLOWS_DIR" -ForegroundColor Red
+            exit 1
+        }
         # Create symlink (relative path)
         $sourcePath = "..\..\$WORKFLOWS_DIR"
         New-Item -ItemType SymbolicLink -Path $TARGET_DIR -Target $sourcePath | Out-Null
         Write-Host "  ✅ $PLATFORM_NAME`: Symlink created" -ForegroundColor Green
     } else {
         # Copy files
+        if (-not (Test-Path $WORKFLOWS_DIR)) {
+            Write-Host "  ❌ Error: Workflows directory not found: $WORKFLOWS_DIR" -ForegroundColor Red
+            exit 1
+        }
         Copy-Item -Recurse $WORKFLOWS_DIR $TARGET_DIR
         Write-Host "  ✅ $PLATFORM_NAME`: Files copied" -ForegroundColor Green
     }

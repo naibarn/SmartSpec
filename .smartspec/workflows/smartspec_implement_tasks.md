@@ -270,16 +270,15 @@ interface Task {
 
 **Kilo Code Sub-Task Mode (when `--kilocode` flag is set):**
 
-1. **Analyze task complexity:**
-   - Estimate total lines of code needed
-   - Count number of methods/functions to implement
-   - Consider file modifications required
+1. **Check task estimated hours:**
+   - Read estimated hours from task definition
+   - Example: `T005: Set Up BullMQ 5.x (2h)` → hours = 2
 
-2. **If task is COMPLEX (>50 lines OR >2 methods OR multiple files):**
+2. **If task is COMPLEX (estimated hours >= 2):**
    - **Delegate to Kilo Code's automatic sub-task breakdown:**
      ```
      Create a new sub-task in code mode:
-     T033 Goal: Implement credit transaction service with createTransaction() and getTransactionHistory() methods
+     T005 Goal: Set Up BullMQ 5.x for Background Job Processing
      ```
    
    - **How it works:**
@@ -288,20 +287,22 @@ interface Task {
      - Each sub-task will be <50 lines to avoid `line_count` errors
      - Sub-tasks execute sequentially
    
-   - **Example for T033 (Credit Transaction Service):**
+   - **Example for T005 (Set Up BullMQ - 2h):**
      ```
-     Instead of implementing directly:
-     T033 Goal: Implement credit transaction service
+     Task definition:
+     - [ ] T005: Set Up BullMQ 5.x for Background Job Processing (2h)
      
-     Use Kilo Code sub-task mode:
+     SmartSpec detects: 2h >= 2 → COMPLEX
+     
+     SmartSpec sends to Kilo Code:
      Create a new sub-task in code mode:
-     T033 Goal: Implement credit transaction service with createTransaction() and getTransactionHistory() methods
+     T005 Goal: Set Up BullMQ 5.x for Background Job Processing
      
      Kilo Code will automatically break this into:
-     - Sub-task 1: Create skeleton
-     - Sub-task 2: Implement createTransaction()
-     - Sub-task 3: Implement getTransactionHistory()
-     - Sub-task 4: Add error handling
+     - Sub-task 1: Install BullMQ dependencies
+     - Sub-task 2: Create queue configuration
+     - Sub-task 3: Implement job processor
+     - Sub-task 4: Add error handling and logging
      ```
    
    - **Important:**
@@ -309,9 +310,22 @@ interface Task {
      - Let Kilo Code detect and break down automatically
      - Just prefix with "Create a new sub-task in code mode:"
 
-3. **If task is SIMPLE (≤50 lines AND ≤2 methods AND single file):**
+3. **If task is SIMPLE (estimated hours < 2):**
    - Implement directly without sub-task mode
    - Use standard file size strategy (below)
+   
+   - **Example for T001 (Add field - 0.5h):**
+     ```
+     Task definition:
+     - [ ] T001: Add user ID field to User model (0.5h)
+     
+     SmartSpec detects: 0.5h < 2 → SIMPLE
+     
+     SmartSpec sends to Kilo Code:
+     T001 Goal: Add user ID field to User model
+     
+     Direct implementation (no sub-task mode)
+     ```
 
 **Standard Implementation Mode (when `--kilocode` flag is NOT set):**
 

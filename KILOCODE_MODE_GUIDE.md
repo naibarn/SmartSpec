@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `--kilocode` parameter enables **Kilo Code's automatic sub-task breakdown** when implementing SmartSpec tasks. This helps avoid Kilo Code's `line_count` limitation and error loops by delegating complex tasks to Kilo Code's built-in sub-task system.
+The `--kilocode` parameter enables **Kilo Code's automatic sub-task breakdown** for complex tasks. SmartSpec determines complexity based on **estimated hours** in your tasks.md file, and delegates large tasks (≥2 hours) to Kilo Code's built-in sub-task system.
 
 ---
 
@@ -24,40 +24,52 @@ The `--kilocode` parameter enables **Kilo Code's automatic sub-task breakdown** 
 
 ### How It Works
 
-When you use the `--kilocode` flag, SmartSpec changes how it sends tasks to Kilo Code:
+SmartSpec uses **estimated hours** from your tasks.md to determine complexity:
 
-**Without `--kilocode` (Direct Implementation):**
+**Task Definition Example:**
+```markdown
+- [ ] T005: Set Up BullMQ 5.x for Background Job Processing (2h)
+- [ ] T001: Add user ID field to User model (0.5h)
 ```
-T033 Goal: Implement credit transaction service
-```
-→ Kilo tries to implement entire task in one go  
-→ May hit `line_count` error if >25 lines
 
-**With `--kilocode` (Sub-Task Mode):**
+**Without `--kilocode`:**
 ```
-Create a new sub-task in code mode:
-T033 Goal: Implement credit transaction service with createTransaction() and getTransactionHistory() methods
+Both tasks implemented directly (may fail for large tasks)
 ```
-→ **Kilo Code automatically detects complexity**  
-→ **Kilo Code breaks down into smaller sub-tasks**  
-→ Each sub-task <50 lines → No `line_count` errors!
+
+**With `--kilocode`:**
+```
+T005 (2h >= 2) → COMPLEX → Sub-task mode
+T001 (0.5h < 2) → SIMPLE → Direct implementation
+```
 
 ---
 
 ## Key Concept
 
-**You DON'T manually specify sub-tasks.**
+**Complexity is based on estimated hours, not lines of code.**
 
-SmartSpec simply:
-1. Analyzes if task is COMPLEX (>50 lines OR >2 methods OR multiple files)
-2. If COMPLEX: Prefixes task with `Create a new sub-task in code mode:`
-3. **Kilo Code does the rest automatically**
+### SIMPLE Tasks (< 2 hours)
+- Implemented directly
+- No sub-task overhead
+- Fast execution
 
-**Kilo Code's AI will:**
-- Detect task complexity
-- Break down into logical sub-tasks
-- Execute sub-tasks sequentially
-- Each sub-task <50 lines
+**Example:**
+```markdown
+- [ ] T001: Add user ID field to User model (0.5h)
+```
+→ Direct implementation
+
+### COMPLEX Tasks (≥ 2 hours)
+- Delegated to Kilo Code sub-task mode
+- Automatic breakdown
+- Avoids `line_count` errors
+
+**Example:**
+```markdown
+- [ ] T005: Set Up BullMQ 5.x for Background Job Processing (2h)
+```
+→ Sub-task mode
 
 ---
 
@@ -66,7 +78,7 @@ SmartSpec simply:
 ### Basic Usage
 
 ```bash
-/smartspec_implement_tasks specs/feature/spec-004/tasks.md --tasks T033 --kilocode
+/smartspec_implement_tasks specs/feature/spec-004/tasks.md --tasks T005 --kilocode
 ```
 
 ### With Other Flags
@@ -79,40 +91,45 @@ SmartSpec simply:
 /smartspec_implement_tasks specs/feature/spec-004/tasks.md --skip-completed --kilocode
 
 # Implement specific task range with kilocode mode
-/smartspec_implement_tasks specs/feature/spec-004/tasks.md --tasks T033-T040 --kilocode
+/smartspec_implement_tasks specs/feature/spec-004/tasks.md --tasks T005-T010 --kilocode
 ```
 
 ---
 
-## Example: T033 Credit Transaction Service
+## Example: T005 Set Up BullMQ (2h)
 
 ### Scenario
 
-**Task:** T033 - Implement credit transaction service  
+**Task Definition:**
+```markdown
+- [ ] T005: Set Up BullMQ 5.x for Background Job Processing (2h)
+```
+
 **Requirements:**
-- Create `transaction.service.ts`
-- Implement `createTransaction()` method
-- Implement `getTransactionHistory()` method
+- Install BullMQ dependencies
+- Create queue configuration
+- Implement job processor
 - Add error handling
 - Add logging
 
-**Estimated:** 120 lines, 5 methods
+**Estimated:** 2 hours
 
 ---
 
 ### Without `--kilocode` (May Fail)
 
 ```bash
-/smartspec_implement_tasks tasks.md --tasks T033
+/smartspec_implement_tasks tasks.md --tasks T005
 ```
 
 **What SmartSpec sends to Kilo:**
 ```
-T033 Goal: Implement credit transaction service
+T005 Goal: Set Up BullMQ 5.x for Background Job Processing
 ```
 
 **What happens:**
-- Kilo tries to create entire `transaction.service.ts` (120 lines)
+- Kilo tries to implement entire task in one go
+- Creates multiple files, 100+ lines total
 - Hits `line_count` limitation
 - Error: "required parameter 'line_count' was missing..."
 - Retry loop
@@ -123,82 +140,96 @@ T033 Goal: Implement credit transaction service
 ### With `--kilocode` (Success!)
 
 ```bash
-/smartspec_implement_tasks tasks.md --tasks T033 --kilocode
+/smartspec_implement_tasks tasks.md --tasks T005 --kilocode
 ```
 
 **What SmartSpec does:**
 
-1. **Analyzes T033:**
-   - Estimated: 120 lines
-   - Methods: 5 methods
-   - Complexity: **COMPLEX**
+1. **Reads task hours:**
+   ```
+   T005: Set Up BullMQ 5.x for Background Job Processing (2h)
+   ```
+   → Estimated hours: **2h**
 
-2. **Sends to Kilo Code:**
+2. **Checks complexity:**
+   ```
+   2h >= 2 → COMPLEX
+   ```
+
+3. **Sends to Kilo Code:**
    ```
    Create a new sub-task in code mode:
-   T033 Goal: Implement credit transaction service with createTransaction() and getTransactionHistory() methods
+   T005 Goal: Set Up BullMQ 5.x for Background Job Processing
    ```
 
-3. **Kilo Code automatically breaks down:**
-   - Sub-task 1: Create skeleton (imports, class, constructor) - 20 lines
-   - Sub-task 2: Implement createTransaction() - 30 lines
-   - Sub-task 3: Implement getTransactionHistory() - 30 lines
+4. **Kilo Code automatically breaks down:**
+   - Sub-task 1: Install BullMQ dependencies (package.json) - 15 lines
+   - Sub-task 2: Create queue configuration (queue.config.ts) - 30 lines
+   - Sub-task 3: Implement job processor (job.processor.ts) - 40 lines
    - Sub-task 4: Add error handling - 20 lines
-   - Sub-task 5: Add logging - 20 lines
+   - Sub-task 5: Add logging - 15 lines
 
-4. **Kilo executes sub-tasks sequentially:**
+5. **Kilo executes sub-tasks sequentially:**
    - Sub-task 1: ✅ Complete
    - Sub-task 2: ✅ Complete
    - Sub-task 3: ✅ Complete
    - Sub-task 4: ✅ Complete
    - Sub-task 5: ✅ Complete
 
-5. **Result:**
+6. **Result:**
    - Total: 120 lines implemented
    - No `line_count` errors!
-   - Task T033 completed ✅
+   - Task T005 completed ✅
 
 ---
 
 ## Complexity Detection
 
-SmartSpec classifies tasks as **SIMPLE** or **COMPLEX**:
-
-### SIMPLE Tasks (Direct Implementation)
+### SIMPLE Tasks (< 2 hours)
 
 **Criteria:**
-- ≤50 lines of code
-- ≤2 methods
-- Single file modification
+- Estimated hours < 2
 
 **Action:**
 - Implement directly (no sub-task mode)
 
-**Example:**
+**Examples:**
+```markdown
+- [ ] T001: Add user ID field to User model (0.5h)
+- [ ] T002: Update validation rules (1h)
+- [ ] T003: Fix typo in error message (0.25h)
+```
+
+**What SmartSpec sends:**
 ```
 T001 Goal: Add user ID field to User model
 ```
-→ Simple addition, ~10 lines → Direct implementation
+→ Direct implementation
 
 ---
 
-### COMPLEX Tasks (Sub-Task Mode)
+### COMPLEX Tasks (≥ 2 hours)
 
 **Criteria:**
-- >50 lines of code, OR
-- >2 methods, OR
-- Multiple file modifications
+- Estimated hours >= 2
 
 **Action:**
 - Use Kilo Code sub-task mode
 - Prefix with `Create a new sub-task in code mode:`
 
-**Example:**
+**Examples:**
+```markdown
+- [ ] T005: Set Up BullMQ 5.x for Background Job Processing (2h)
+- [ ] T010: Implement credit transaction service (4h)
+- [ ] T015: Create user authentication system (6h)
+```
+
+**What SmartSpec sends:**
 ```
 Create a new sub-task in code mode:
-T033 Goal: Implement credit transaction service with createTransaction() and getTransactionHistory() methods
+T005 Goal: Set Up BullMQ 5.x for Background Job Processing
 ```
-→ Complex service, 120 lines, 5 methods → Sub-task mode
+→ Kilo Code handles breakdown automatically
 
 ---
 
@@ -206,89 +237,62 @@ T033 Goal: Implement credit transaction service with createTransaction() and get
 
 ### ✅ Use `--kilocode` when:
 
-1. **Implementing large services/controllers:**
-   - Expected >50 lines
-   - Multiple methods
-   - Complex logic
+1. **Your tasks have varying complexity:**
+   - Some tasks are 0.5h (simple)
+   - Some tasks are 4h+ (complex)
+   - Want automatic handling
 
 2. **Experiencing Kilo Code errors:**
    - `line_count` errors
    - Retry loops
    - Truncation issues
 
-3. **Complex tasks:**
-   - Multiple logical components
-   - Need staged implementation
-   - Multiple file modifications
+3. **Working with large features:**
+   - Multi-file implementations
+   - Complex integrations
+   - System setup tasks
 
-4. **Want automatic breakdown:**
+4. **Want automatic optimization:**
    - Don't want to manually split tasks
    - Trust Kilo Code's AI to break down optimally
+   - Focus on planning, not execution details
 
 ---
 
 ### ❌ Don't use `--kilocode` when:
 
-1. **Tasks are already small:**
-   - <50 lines
-   - 1-2 methods only
-   - Single simple modification
+1. **All tasks are small:**
+   - All tasks < 2 hours
+   - No benefit from sub-task mode
 
 2. **Using different AI agent:**
    - Claude (no `line_count` limitation)
    - Cursor (IDE integration)
    - Roo Cline (VSCode extension)
 
-3. **Tasks are simple:**
-   - Configuration files
-   - Small utilities
-   - Type definitions
-   - Documentation updates
+3. **Tasks are already broken down:**
+   - Each task is already granular
+   - No need for further breakdown
 
 ---
 
 ## How Kilo Code Breaks Down Tasks
 
-**Kilo Code's AI analyzes:**
-- Task description
-- File size requirements
-- Number of methods/functions
-- Logical components
-- Dependencies
-
-**Kilo Code creates sub-tasks based on:**
-- **Skeleton first:** Imports, class definition, constructor
-- **One method per sub-task:** Each method in separate sub-task
-- **Cross-cutting concerns:** Error handling, logging, validation
-- **Size limit:** Each sub-task <50 lines
-
-**Example breakdown patterns:**
-
-### Service Implementation
+**When Kilo Code receives:**
 ```
-Sub-task 1: Create skeleton (imports, class, constructor)
-Sub-task 2: Implement method 1
-Sub-task 3: Implement method 2
-Sub-task 4: Add error handling
-Sub-task 5: Add logging
+Create a new sub-task in code mode:
+T005 Goal: Set Up BullMQ 5.x for Background Job Processing
 ```
 
-### Controller Implementation
-```
-Sub-task 1: Create skeleton (imports, class, dependencies)
-Sub-task 2: Implement GET endpoint
-Sub-task 3: Implement POST endpoint
-Sub-task 4: Add validation middleware
-Sub-task 5: Add error handling
-```
+**Kilo Code's AI:**
+1. Analyzes task requirements
+2. Estimates total complexity
+3. Identifies logical components
+4. Creates sub-tasks automatically
+5. Executes sub-tasks sequentially
+6. Each sub-task <50 lines (avoids `line_count` error)
 
-### Model Implementation
-```
-Sub-task 1: Create schema definition
-Sub-task 2: Add validation rules
-Sub-task 3: Add instance methods
-Sub-task 4: Add static methods
-```
+**You don't control the breakdown** - Kilo Code's AI decides the optimal split.
 
 ---
 
@@ -296,12 +300,11 @@ Sub-task 4: Add static methods
 
 | Feature | Without `--kilocode` | With `--kilocode` |
 |---------|---------------------|-------------------|
-| **Task execution** | Direct implementation | Kilo Code sub-task mode |
-| **Task size** | Any size | Auto-split if complex |
+| **Complexity detection** | None | Hours-based |
+| **Task execution** | Direct | Sub-task mode (if ≥2h) |
 | **Error rate** | High (for large tasks) | Low |
 | **Sub-tasks** | None | Automatic (by Kilo) |
 | **Kilo limitations** | Hit often | Avoided |
-| **Speed** | Fast (if no errors) | Slightly slower |
 | **Success rate** | 60-70% | 90-95% |
 | **Manual work** | High (fix errors) | Low (automatic) |
 
@@ -309,7 +312,22 @@ Sub-task 4: Add static methods
 
 ## Best Practices
 
-### 1. ✅ Use with `--skip-completed`
+### 1. ✅ Estimate hours accurately in tasks.md
+
+```markdown
+- [ ] T001: Add field (0.5h)          ← SIMPLE
+- [ ] T005: Set up BullMQ (2h)        ← COMPLEX
+- [ ] T010: Build auth system (6h)    ← COMPLEX
+```
+
+**Why:**
+- Accurate hours → Correct complexity detection
+- Better sub-task breakdown
+- More predictable results
+
+---
+
+### 2. ✅ Use with `--skip-completed`
 
 ```bash
 /smartspec_implement_tasks tasks.md --skip-completed --kilocode
@@ -322,7 +340,7 @@ Sub-task 4: Add static methods
 
 ---
 
-### 2. ✅ Use for specific phases
+### 3. ✅ Use for specific phases
 
 ```bash
 /smartspec_implement_tasks tasks.md --phase 4 --kilocode
@@ -330,20 +348,8 @@ Sub-task 4: Add static methods
 
 **Why:**
 - Focus on complex phases
-- Phase 4-6 usually have large services
+- Phase 4-6 usually have large tasks (2h+)
 - Better control
-
----
-
-### 3. ✅ Combine with task range
-
-```bash
-/smartspec_implement_tasks tasks.md --tasks T033-T040 --kilocode
-```
-
-**Why:**
-- Target specific complex tasks
-- Leave simple tasks for direct implementation
 
 ---
 
@@ -363,7 +369,22 @@ Sub-task 4: Add static methods
 
 ## Troubleshooting
 
-### Issue 1: Still Getting `line_count` Errors
+### Issue 1: Task should be COMPLEX but treated as SIMPLE
+
+**Possible causes:**
+- Hours not specified in tasks.md
+- Hours < 2 but task is actually complex
+
+**Solutions:**
+1. Update estimated hours in tasks.md:
+   ```markdown
+   - [ ] T005: Set Up BullMQ (2h)  ← Add hours
+   ```
+2. Or manually split task into smaller tasks
+
+---
+
+### Issue 2: Still Getting `line_count` Errors
 
 **Possible causes:**
 - Sub-task still too large (Kilo's breakdown not optimal)
@@ -372,13 +393,13 @@ Sub-task 4: Add static methods
 
 **Solutions:**
 1. Check sub-task size in Kilo UI
-2. Manually create smaller sub-task
-3. Report to Kilo Code team
+2. Increase estimated hours (forces sub-task mode)
+3. Manually create smaller sub-task
 4. Use different AI agent temporarily
 
 ---
 
-### Issue 2: Too Many Sub-Tasks Created
+### Issue 3: Too Many Sub-Tasks Created
 
 **Possible causes:**
 - Task complexity overestimated by Kilo
@@ -391,30 +412,21 @@ Sub-task 4: Add static methods
 
 ---
 
-### Issue 3: Sub-Tasks Not Created
+### Issue 4: Hours not parsed correctly
 
 **Possible causes:**
-- Task is SIMPLE (≤50 lines, ≤2 methods)
-- `--kilocode` flag not recognized
-- Workflow not updated
+- Hours format incorrect
+- Missing parentheses
 
 **Solutions:**
-1. Check task size estimate (may actually be simple)
-2. Verify flag syntax: `--kilocode` (not `--kilo-code`)
-3. Update SmartSpec: Run installation script again
-
----
-
-### Issue 4: Kilo Code Doesn't Recognize Sub-Task Command
-
-**Possible causes:**
-- Kilo Code version outdated
-- Command syntax changed
-
-**Solutions:**
-1. Update Kilo Code to latest version
-2. Check Kilo Code documentation
-3. Try alternative: Manually split task in tasks.md
+1. Use correct format: `(2h)` or `(0.5h)`
+2. Examples:
+   ```markdown
+   ✅ - [ ] T005: Set Up BullMQ (2h)
+   ✅ - [ ] T001: Add field (0.5h)
+   ❌ - [ ] T005: Set Up BullMQ 2h
+   ❌ - [ ] T005: Set Up BullMQ (2 hours)
+   ```
 
 ---
 
@@ -422,21 +434,27 @@ Sub-task 4: Add static methods
 
 ### What SmartSpec Does
 
-**Phase 1: Task Analysis**
+**Phase 1: Parse Task Hours**
 ```
 FOR each task in selected tasks:
-  1. Read task description
-  2. Estimate lines of code
-  3. Count methods/functions
-  4. Count files to modify
+  1. Read task definition
+  2. Extract hours from pattern: (Xh)
+  3. Parse hours as number
   
-  5. IF (lines > 50 OR methods > 2 OR files > 1):
-       complexity = COMPLEX
-     ELSE:
-       complexity = SIMPLE
+  Example:
+    "T005: Set Up BullMQ (2h)" → hours = 2
+    "T001: Add field (0.5h)" → hours = 0.5
 ```
 
-**Phase 2: Task Execution**
+**Phase 2: Determine Complexity**
+```
+IF hours >= 2:
+  complexity = COMPLEX
+ELSE:
+  complexity = SIMPLE
+```
+
+**Phase 3: Execute Task**
 ```
 IF complexity == COMPLEX AND --kilocode flag present:
   Send to Kilo Code:
@@ -454,23 +472,18 @@ ELSE:
 
 ---
 
-### What Kilo Code Does
+### Hours Parsing Examples
 
-When Kilo Code receives:
-```
-Create a new sub-task in code mode:
-T033 Goal: Implement credit transaction service
-```
+| Task Definition | Parsed Hours | Complexity |
+|----------------|--------------|------------|
+| `T001: Add field (0.5h)` | 0.5 | SIMPLE |
+| `T002: Update validation (1h)` | 1 | SIMPLE |
+| `T003: Fix bug (1.5h)` | 1.5 | SIMPLE |
+| `T005: Set up BullMQ (2h)` | 2 | COMPLEX |
+| `T010: Build service (4h)` | 4 | COMPLEX |
+| `T015: Create auth (6h)` | 6 | COMPLEX |
 
-**Kilo Code's AI:**
-1. Analyzes task requirements
-2. Estimates total complexity
-3. Identifies logical components
-4. Creates sub-tasks automatically
-5. Executes sub-tasks sequentially
-6. Each sub-task <50 lines (avoids `line_count` error)
-
-**You don't control the breakdown** - Kilo Code's AI decides the optimal split.
+**Threshold:** 2 hours
 
 ---
 
@@ -478,10 +491,10 @@ T033 Goal: Implement credit transaction service
 
 ### Key Benefits
 
-1. ✅ **Avoid Kilo Code limitations**
-   - No `line_count` errors
-   - No retry loops
-   - No truncation issues
+1. ✅ **Hours-based complexity detection**
+   - Uses your existing task estimates
+   - No manual analysis needed
+   - Accurate and predictable
 
 2. ✅ **Automatic breakdown by Kilo Code**
    - No manual task splitting
@@ -493,10 +506,10 @@ T033 Goal: Implement credit transaction service
    - Fewer manual interventions
    - Faster overall completion
 
-4. ✅ **Better error handling**
-   - Isolated failures (one sub-task, not entire task)
-   - Easier debugging
-   - Clear error messages
+4. ✅ **Avoids Kilo Code limitations**
+   - No `line_count` errors
+   - No retry loops
+   - No truncation issues
 
 ---
 
@@ -504,13 +517,15 @@ T033 Goal: Implement credit transaction service
 
 **Without `--kilocode`:**
 ```
-SmartSpec → Kilo Code: "Do T033"
+T005 (2h) → Kilo Code: "Do T005"
 Kilo Code: *tries to do everything* → ERROR (too large)
 ```
 
 **With `--kilocode`:**
 ```
-SmartSpec → Kilo Code: "Create sub-task: Do T033"
+T005 (2h >= 2) → COMPLEX
+
+SmartSpec → Kilo Code: "Create sub-task: Do T005"
 Kilo Code: *analyzes* → "OK, I'll break this into 5 sub-tasks"
 Kilo Code: *executes sub-task 1* → ✅
 Kilo Code: *executes sub-task 2* → ✅
@@ -525,7 +540,7 @@ Kilo Code: *executes sub-task 5* → ✅
 
 ```bash
 # Basic usage
-/smartspec_implement_tasks tasks.md --tasks T033 --kilocode
+/smartspec_implement_tasks tasks.md --tasks T005 --kilocode
 
 # With skip-completed
 /smartspec_implement_tasks tasks.md --skip-completed --kilocode
@@ -534,9 +549,11 @@ Kilo Code: *executes sub-task 5* → ✅
 /smartspec_implement_tasks tasks.md --phase 4 --kilocode
 
 # For task range
-/smartspec_implement_tasks tasks.md --tasks T033-T040 --kilocode
+/smartspec_implement_tasks tasks.md --tasks T005-T010 --kilocode
 ```
+
+**Remember:** Complexity is based on **estimated hours** (≥2h = COMPLEX), not lines of code!
 
 ---
 
-**Use `--kilocode` to let Kilo Code automatically break down complex tasks and avoid `line_count` errors!** 🚀
+**Use `--kilocode` to let Kilo Code automatically break down complex tasks (≥2h) and avoid `line_count` errors!** 🚀

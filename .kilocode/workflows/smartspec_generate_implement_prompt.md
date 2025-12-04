@@ -39,6 +39,45 @@ $ARGUMENTS
 - If found: Parse and load into SPEC_REGISTRY
 - If not found: Continue without dependency resolution (log warning)
 
+**Dependency Resolution with Circular Detection:**
+
+When resolving dependencies from SPEC_INDEX:
+
+1. **Initialize tracking:**
+   - Create VISITED_SPECS = [] (track resolution path)
+   - Create RESOLVED_SPECS = {} (cache resolved specs)
+   - Set MAX_DEPTH = 10 (prevent infinite loops)
+
+2. **For each dependency:**
+   - Check if spec_id in VISITED_SPECS
+   - If yes: **Circular dependency detected**
+     - Build dependency chain: A → B → C → A
+     - Error: "Circular dependency detected: {chain}"
+     - Stop resolution for this branch
+   - If no: Add to VISITED_SPECS and continue
+
+3. **Depth limit:**
+   - Track current depth in resolution tree
+   - If depth > MAX_DEPTH:
+     - Warning: "Max dependency depth ({MAX_DEPTH}) reached. Stopping resolution."
+     - This prevents infinite loops from undetected cycles
+
+4. **Resolution strategy:**
+   - Use breadth-first search (BFS) to avoid deep recursion
+   - Cache resolved specs to avoid re-processing
+   - Log dependency tree for debugging
+
+**Example dependency tree log:**
+```
+✓ Resolving dependencies for spec-004
+  ├─ spec-001 (auth-service) ✓
+  ├─ spec-002 (user-service) ✓
+  │  └─ spec-001 (already resolved) ✓
+  └─ spec-003 (payment-service) ✓
+     └─ spec-001 (already resolved) ✓
+✓ Total dependencies resolved: 3 specs
+```
+
 **Parse Arguments:**
 - Extract tasks.md path
 - Parse `--phase` parameter (single, comma-separated, or range)
@@ -47,13 +86,63 @@ $ARGUMENTS
 - Parse `--nosubtasks` flag (only valid with `--kilocode`)
 - Parse `--with-subagents` flag (only valid with `--claude`)
 - Default platform: `--claude` if none specified
-- Validate: If `--nosubtasks` without `--kilocode`, show error
-- Validate: If `--with-subagents` without `--claude`, show error
-- Validate: Only ONE platform flag allowed (--kilocode, --claude, or --roocode)
-- Validate: If --with-subagents, verify `.claude/agents/` folder and all required agent files exist
-- Validate: Task range must be valid (e.g., T001-T010)
-- Validate: Phase range must be valid (e.g., 1-3)
-- Validate: `tasks.md` file must exist and not be empty
+
+**Validation (Execute in order, stop at first error):**
+
+1. **Validate tasks.md file:**
+   - Check file exists at specified path
+   - If not found: `Error: tasks.md not found at '{path}'`
+   - Check file is not empty (size > 0)
+   - If empty: `Error: tasks.md is empty. Generate tasks first with /smartspec_generate_tasks.md`
+
+2. **Validate platform flags:**
+   - Count platform flags (--kilocode, --claude, --roocode)
+   - If count > 1: `Error: Multiple platform flags detected. Use only ONE: --kilocode OR --claude OR --roocode`
+   - If count == 0: Set default to `--claude`
+
+3. **Validate flag combinations:**
+   - If `--nosubtasks` without `--kilocode`:
+     `Error: --nosubtasks can only be used with --kilocode`
+   - If `--with-subagents` without `--claude`:
+     `Error: --with-subagents can only be used with --claude`
+
+4. **Validate sub-agent files (if --with-subagents):**
+   - Check `.claude/agents/` directory exists
+   - If not: `Error: .claude/agents/ directory not found. Required for --with-subagents`
+   - Check required agent files exist:
+     - `.claude/agents/planner/planner-smart.md`
+     - `.claude/agents/db/db-agent-smart.md`
+     - `.claude/agents/backend/backend-smart.md`
+     - `.claude/agents/api/api-agent-smart.md`
+     - `.claude/agents/tester/tester-smart.md`
+     - `.claude/agents/security/security-finance.md`
+   - If any missing: `Error: Missing agent file: {filename}. Run setup: cp -r .smartspec-docs/templates/claude-agents .claude/agents`
+
+5. **Validate task range (if --tasks specified):**
+   - Parse range format (e.g., T001-T010, T001,T002,T003)
+   - If range (T###-T###):
+     - Extract start and end numbers
+     - If start > end: `Error: Invalid task range '{range}'. Start must be <= end. Use: T001-T010`
+   - If comma-separated: Validate each task ID format (T### pattern)
+
+6. **Validate phase range (if --phase specified):**
+   - Parse range format (e.g., 1-3, 1,2,3)
+   - If range (#-#):
+     - Extract start and end numbers
+     - If start > end: `Error: Invalid phase range '{range}'. Start must be <= end. Use: 1-3`
+     - If start < 1: `Error: Phase numbers must be >= 1`
+
+7. **Validate SPEC_INDEX (if specified or auto-detected):**
+   - If file exists:
+     - Try to parse as JSON
+     - If parse fails: `Warning: SPEC_INDEX.json is invalid. Continuing without dependency resolution.`
+     - Log the JSON error for debugging
+
+**Validation Success:**
+- Log: `✓ All validations passed`
+- Log: `✓ Platform: {platform}`
+- Log: `✓ Tasks: {task_selection}`
+- Log: `✓ Output: {output_filename}`
 
 ## 1. Resolve Paths
 
@@ -62,10 +151,30 @@ Set TASKS_DIR = directory of tasks.md
 Extract SPEC_ID from path or tasks.md metadata
 
 **Determine output filename:**
-- Pattern: `implement-prompt-<spec-id>-<timestamp>.md`
-- Example: `implement-prompt-spec-004-20250104-143022.md`
-- If file exists: Use timestamped version
-- Output location: TASKS_DIR/
+
+1. **Generate base filename:**
+   - Pattern: `implement-prompt-{spec-id}-{timestamp}.md`
+   - Timestamp format: YYYYMMDD-HHmmss
+   - Example: `implement-prompt-spec-004-20250104-143022.md`
+
+2. **Check for existing file:**
+   - Check if file exists at TASKS_DIR/{filename}
+   - If exists: **NEVER overwrite**
+     - Add milliseconds to timestamp: YYYYMMDD-HHmmss-{ms}
+     - Example: `implement-prompt-spec-004-20250104-143022-789.md`
+     - Retry up to 10 times with different milliseconds
+     - If all attempts fail: Error "Cannot generate unique filename"
+
+3. **Output location:**
+   - Primary: TASKS_DIR/ (same directory as tasks.md)
+   - Fallback: Current working directory (if TASKS_DIR not writable)
+
+4. **File protection:**
+   - Create file with write-once semantics
+   - Log: `✓ Output file: {filename}`
+   - Log: `✓ Location: {full_path}`
+
+**Safety guarantee:** Existing prompt files are NEVER overwritten or modified.
 
 ## 2. Read & Parse tasks.md
 
@@ -152,11 +261,26 @@ validation_commands:
 - performance-requirements.md
 - Other relevant files
 
-**Read content for context integration**
+**Read content for context integration:**
 
-**If referenced file not found:**
-- Log warning: "Referenced openapi.yaml not found in TASKS_DIR"
+For each detected file:
+1. **Check file exists and is readable**
+   - If file exists: Read full content
+   - If file not found: Log warning and skip
+   - If file not readable: Log warning and skip
+
+2. **Validate file size**
+   - If file > 1MB: Log warning "Large file detected: {filename} ({size}MB)"
+   - Consider truncating or summarizing large files
+
+3. **Handle file read errors gracefully**
+   - If read fails: Log error but continue
+   - Include note in prompt: "Note: {filename} could not be read"
+
+**Missing file handling:**
+- If referenced file not found: Log warning "Referenced {filename} not found in TASKS_DIR"
 - Continue with note in prompt about missing file
+- Do not fail the entire workflow
 
 ## 5. Generate Prompt Header
 

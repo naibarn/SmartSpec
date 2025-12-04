@@ -114,6 +114,12 @@ When a user asks how to use a command, first consult the corresponding file in `
 
 ---
 
+## 🎓 Learning & Support
+
+- **[Troubleshooting Guide](.smartspec-docs/guides/troubleshooting.md)** - Solve common errors and issues.
+
+---
+
 ## Troubleshooting
 
 **Command not found:**

@@ -75,7 +75,7 @@ The `smartspec_implement_tasks` workflow automatically implements tasks defined 
 
 ## Examples
 
-See [IMPLEMENT_TASKS_DETAILED_GUIDE.md](../../IMPLEMENT_TASKS_DETAILED_GUIDE.md) for comprehensive examples and use cases.
+See [IMPLEMENT_TASKS_DETAILED_GUIDE.md](../guides/IMPLEMENT_TASKS_DETAILED_GUIDE.md) for comprehensive examples and use cases.
 
 ### Quick Examples
 
@@ -196,12 +196,12 @@ Resume from checkpoint:
 
 ## Additional Guides
 
-- **[START_FROM_GUIDE.md](../../START_FROM_GUIDE.md)** - How to use `--start-from` parameter
-- **[KILOCODE_MODE_GUIDE.md](../../KILOCODE_MODE_GUIDE.md)** - How to use `--kilocode` parameter
+- **[START_FROM_GUIDE.md](../guides/START_FROM_GUIDE.md)** - How to use `--start-from` parameter
+- **[KILOCODE_MODE_GUIDE.md](../guides/KILOCODE_MODE_GUIDE.md)** - How to use `--kilocode` parameter
 
 ---
 
 ## Full Documentation
 
 For detailed explanation, examples, and use cases, see:
-📚 **[IMPLEMENT_TASKS_DETAILED_GUIDE.md](../../IMPLEMENT_TASKS_DETAILED_GUIDE.md)**
+📚 **[IMPLEMENT_TASKS_DETAILED_GUIDE.md](../guides/IMPLEMENT_TASKS_DETAILED_GUIDE.md)**

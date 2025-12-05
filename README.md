@@ -87,12 +87,12 @@ These workflows help maintain and improve code quality on a spec-scoped basis:
 | `/smartspec_reindex_specs.md` | Re-index SPEC_INDEX.json to keep it accurate. | [**[Details]**](.smartspec-docs/workflows/reindex_specs.md) |
 | `/smartspec_validate_index.md` | Validate SPEC_INDEX.json integrity and health. | [**[Details]**](.smartspec-docs/workflows/validate_index.md) |
 
-**Note:** All quality workflows operate on a **spec-scoped basis** for optimal performance in large projects. See [SPEC_SCOPED_WORKFLOWS.md](SPEC_SCOPED_WORKFLOWS.md) for details.
+**Note:** All quality workflows operate on a **spec-scoped basis** for optimal performance in large projects. See [SPEC_SCOPED_WORKFLOWS.md](.smartspec-docs/guides/SPEC_SCOPED_WORKFLOWS.md) for details.
 
 **Troubleshooting:** 
-- If workflows don't mark task checkboxes automatically, see [MANUAL_UPDATE_CHECKBOXES.md](MANUAL_UPDATE_CHECKBOXES.md) for manual update methods.
-- If using Kilo Code and experiencing `line_count` errors, see [KILOCODE_MODE_GUIDE.md](KILOCODE_MODE_GUIDE.md) for `--kilocode` flag usage.
-- To resume implementation from a specific task to the end, see [START_FROM_GUIDE.md](START_FROM_GUIDE.md) for `--start-from` parameter usage.
+- If workflows don't mark task checkboxes automatically, see [MANUAL_UPDATE_CHECKBOXES.md](.smartspec-docs/guides/MANUAL_UPDATE_CHECKBOXES.md) for manual update methods.
+- If using Kilo Code and experiencing `line_count` errors, see [KILOCODE_MODE_GUIDE.md](.smartspec-docs/guides/KILOCODE_MODE_GUIDE.md) for `--kilocode` flag usage.
+- To resume implementation from a specific task to the end, see [START_FROM_GUIDE.md](.smartspec-docs/guides/START_FROM_GUIDE.md) for `--start-from` parameter usage.
 
 
 ---

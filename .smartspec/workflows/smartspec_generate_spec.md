@@ -260,24 +260,34 @@ If EXISTS (or just created):
 4. Overview
 5. When to Use / When NOT to Use
 6. Architecture (detailed)
-7. **Data Model & Schema** - Database schema, ER diagram (NEW)
-8. **Security Threat Model (STRIDE)** - Full by default
-9. **Performance Requirements** - Full metrics
-10. **Configuration Schema** - Complete
-11. Implementation Guide
-12. Testing Strategy (comprehensive)
-13. Monitoring & Observability (detailed)
-14. Examples (multiple scenarios)
-15. Related Specs
+7. **Business Rules & Logic** - Usage limits, stacking rules, expiration behavior (NEW)
+8. **Data Model & Schema** - Database schema, ER diagram
+9. **API Specification** - Complete endpoint documentation with schemas
+10. **External Integration Contracts** - Financial system, payment gateway integration (NEW)
+11. **Security Threat Model (STRIDE)** - Full by default
+12. **Performance Requirements** - Full metrics
+13. **Idempotency Requirements** - Duplicate prevention, retry safety (NEW)
+14. **Configuration Schema** - Complete
+15. **Environment Configuration** - .env structure, per-environment overrides (NEW)
+16. **Operational Requirements** - Deployment, DR, infrastructure (NEW)
+17. Implementation Guide
+18. Testing Strategy (comprehensive)
+19. Monitoring & Observability (detailed)
+20. Examples (multiple scenarios)
+21. Related Specs
 
 **Automatically includes:**
+- ✅ Business Rules & Logic (usage limits, stacking, expiration)
 - ✅ Data Model & Schema (tables, ER diagram)
+- ✅ API Specification (complete endpoint docs)
+- ✅ External Integration Contracts (request/response schemas, retry logic)
 - ✅ STRIDE threat model (full)
 - ✅ Performance Requirements (P50/P95/P99, TPS, SLA)
+- ✅ Idempotency requirements (duplicate prevention, retry safety)
+- ✅ Environment Configuration (.env, validation, per-env overrides)
+- ✅ Operational Requirements (deployment topology, DR, infra)
 - ✅ Audit logging requirements
-- ✅ Idempotency requirements
 - ✅ Data integrity checks
-- ✅ Disaster recovery
 - ✅ Compliance notes
 
 **Use Cases:**
@@ -1620,6 +1630,621 @@ POST /credit/add
   "idempotencyKey": "key_123"
 }
 // Response: 409 Conflict
+```
+```
+
+---
+
+### 7.8 Business Rules & Logic (Financial Profile)
+
+For financial profile, auto-generate comprehensive business rules:
+
+```markdown
+## Business Rules & Logic
+
+### Usage Limits
+
+**Per-User Limits:**
+- Maximum redemptions per user: [Specify based on context]
+- Redemption window: [e.g., 1 per day, 5 per month]
+- Cooldown period: [e.g., 24 hours between redemptions]
+
+**Per-Code Limits:**
+- Global usage limit: [e.g., 1000 total redemptions]
+- Per-user limit: [e.g., 1 redemption per user]
+- Concurrent redemption handling: Database unique constraint
+
+**Example:**
+```typescript
+interface UsageLimits {
+  maxRedemptionsPerUser: number;      // e.g., 5
+  redemptionWindowHours: number;      // e.g., 24
+  globalUsageLimit: number;           // e.g., 1000
+  perUserLimit: number;               // e.g., 1
+}
+```
+
+---
+
+### Stacking Rules
+
+**Promo Code Stacking:**
+- **Allowed:** [Yes/No]
+- **Conditions:** [e.g., Maximum 2 codes per transaction]
+- **Priority:** [e.g., Highest value first, FIFO]
+
+**Campaign Overlap:**
+- **Multiple qualifying campaigns:** [How to resolve - highest value, user choice, etc.]
+- **Conflicting rules:** [Priority order]
+
+**Example Scenarios:**
+
+| Scenario | Behavior |
+|----------|----------|
+| User has code A (10 credits) and code B (20 credits) | Apply code B only (highest value) |
+| User redeems code during active campaign | Code takes priority over campaign |
+| Code and campaign both apply | Stack if allowed, otherwise code wins |
+
+---
+
+### Expiration Behavior
+
+**Code Expiration:**
+- `expiresAt` field: Exact expiration timestamp
+- `null` expiration: [Never expires / Expires after 1 year / etc.]
+- Grace period: [e.g., None / 24 hours after expiration]
+
+**Redemption Deadline:**
+- Code must be redeemed before `expiresAt`
+- Expired codes return error: `PROMO_CODE_EXPIRED`
+- No partial redemptions after expiration
+
+**Campaign Expiration:**
+- Campaign end date applies to all codes in campaign
+- Individual code expiration takes precedence if earlier
+
+---
+
+### User Eligibility Rules
+
+**New Users:**
+- Eligible for "new user" codes only
+- Defined as: [e.g., Registered within last 30 days, No prior transactions]
+
+**Returning Users:**
+- Eligible for "returning user" codes
+- Defined as: [e.g., Registered > 30 days ago, Has prior transactions]
+
+**User Segments:**
+- Premium users: [Special codes or higher limits]
+- Suspended users: [Cannot redeem codes]
+- Banned users: [Blocked from all promotions]
+
+---
+
+### Edge Cases
+
+**Concurrent Redemptions:**
+- Same user, same code, simultaneous requests
+- **Handling:** Database unique constraint prevents duplicates
+- **Response:** First request succeeds, others return 409 Conflict
+
+**Partial Failures:**
+- Code validated but credit grant fails
+- **Handling:** Mark redemption as "pending", retry via queue
+- **User experience:** Show "processing" status
+
+**Code Deactivation:**
+- Admin deactivates code mid-campaign
+- **Behavior:** Existing redemptions honored, new redemptions blocked
+- **Notification:** [Yes/No - notify affected users]
+
+**Usage Limit Reached:**
+- Code reaches global usage limit during redemption
+- **Handling:** Atomic check-and-increment
+- **Response:** `PROMO_CODE_USAGE_LIMIT_REACHED`
+```
+
+---
+
+### 7.9 External Integration Contracts (Financial Profile)
+
+For financial profile with external integrations, generate detailed contracts:
+
+```markdown
+## External Integration Contracts
+
+### Financial System Integration
+
+**Purpose:** Grant credits to users after successful promo code redemption
+
+**Endpoint:** `POST /api/v1/financial/credit/grant`
+
+**Request Schema:**
+```typescript
+interface CreditGrantRequest {
+  userId: string;              // User ID to receive credit
+  amount: number;              // Credit amount (positive number)
+  source: 'promo_code';        // Fixed value for promo redemptions
+  sourceId: string;            // Promo code redemption ID
+  idempotencyKey: string;      // Unique key for idempotent retry
+  metadata: {
+    promoCode: string;         // Original promo code
+    campaignId?: string;       // Campaign ID if applicable
+    redemptionTimestamp: string; // ISO 8601 timestamp
+  };
+}
+```
+
+**Response Schema:**
+
+**Success (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "transactionId": "txn_abc123",
+    "userId": "user_123",
+    "amount": 100.00,
+    "newBalance": 1100.00,
+    "status": "completed"
+  }
+}
+```
+
+**Error Responses:**
+
+| HTTP Status | Error Code | Description | Retry? |
+|-------------|------------|-------------|--------|
+| 400 | `INVALID_REQUEST` | Invalid request parameters | No |
+| 404 | `USER_NOT_FOUND` | User does not exist | No |
+| 409 | `DUPLICATE_TRANSACTION` | Idempotency key conflict | No |
+| 429 | `RATE_LIMIT_EXCEEDED` | Too many requests | Yes (backoff) |
+| 500 | `INTERNAL_ERROR` | Internal server error | Yes (backoff) |
+| 503 | `SERVICE_UNAVAILABLE` | Service temporarily down | Yes (backoff) |
+
+---
+
+### Retry Strategy
+
+**Retry Policy:**
+- **Max attempts:** 5
+- **Backoff:** Exponential (2^attempt seconds)
+- **Retry on:** 429, 500, 503, network errors
+- **No retry on:** 400, 404, 409
+
+**Implementation:**
+```typescript
+async function grantCreditWithRetry(
+  request: CreditGrantRequest,
+  maxAttempts: number = 5
+): Promise<CreditGrantResponse> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await financialSystemClient.grantCredit(request);
+    } catch (error) {
+      const shouldRetry = [
+        429, // Rate limit
+        500, // Internal error
+        503  // Service unavailable
+      ].includes(error.status);
+      
+      if (!shouldRetry || attempt === maxAttempts) {
+        throw error;
+      }
+      
+      const backoffMs = Math.pow(2, attempt) * 1000;
+      await sleep(backoffMs);
+    }
+  }
+}
+```
+
+---
+
+### Dead Letter Queue (DLQ) Policy
+
+**When to DLQ:**
+- All retry attempts exhausted
+- Non-retryable errors (400, 404)
+- Timeout after 5 minutes
+
+**DLQ Processing:**
+- Manual review required
+- Alert sent to ops team
+- User notified of pending credit
+
+**DLQ Schema:**
+```typescript
+interface DLQMessage {
+  originalRequest: CreditGrantRequest;
+  error: {
+    code: string;
+    message: string;
+    lastAttemptTimestamp: string;
+  };
+  attempts: number;
+  enqueuedAt: string;
+}
+```
+
+---
+
+### Transaction Boundaries
+
+**Atomicity Guarantee:**
+1. Promo redemption record created (Promo System DB)
+2. Credit grant job enqueued (Message Queue)
+3. Credit granted (Financial System)
+
+**Failure Scenarios:**
+
+| Failure Point | Behavior | Recovery |
+|---------------|----------|----------|
+| After step 1, before step 2 | Redemption marked as "pending" | Retry job enqueue on next startup |
+| After step 2, before step 3 | Job in queue | BullMQ retries automatically |
+| Step 3 fails (retryable) | Job retries with backoff | Eventual success or DLQ |
+| Step 3 fails (non-retryable) | Job moves to DLQ | Manual intervention required |
+
+---
+
+### Idempotency Requirements
+
+**Cross-System Idempotency:**
+- Promo System generates unique `idempotencyKey` per redemption
+- Financial System MUST honor idempotency key
+- Same key + same payload = return cached result
+- Same key + different payload = return 409 Conflict
+
+**Key Format:**
+```typescript
+const idempotencyKey = `promo_${redemptionId}_${userId}`;
+```
+
+**Expiration:** 24 hours (Financial System responsibility)
+```
+
+---
+
+### 7.10 Environment Configuration (All Profiles)
+
+For all profiles, generate environment configuration section:
+
+```markdown
+## Environment Configuration
+
+### Environment Variables
+
+**Required Variables:**
+
+```bash
+# Application
+NODE_ENV=production              # Environment: development, staging, production
+PORT=3000                        # Server port
+LOG_LEVEL=info                   # Logging level: debug, info, warn, error
+
+# Database
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
+DATABASE_POOL_MIN=10             # Minimum connection pool size
+DATABASE_POOL_MAX=100            # Maximum connection pool size
+DATABASE_SSL=true                # Enable SSL for database connection
+
+# Redis
+REDIS_URL=redis://host:6379
+REDIS_PASSWORD=secret            # Redis password (optional)
+REDIS_DB=0                       # Redis database number (0-15)
+
+# Authentication
+JWT_SECRET=your-secret-key       # JWT signing secret (min 32 characters)
+JWT_EXPIRY=24h                   # JWT token expiration
+
+# External Services
+FINANCIAL_SYSTEM_URL=https://api.financial.example.com
+FINANCIAL_SYSTEM_API_KEY=key_xxx # API key for financial system
+
+# Monitoring
+METRICS_PORT=9090                # Prometheus metrics port
+SENTRY_DSN=https://...           # Sentry error tracking DSN (optional)
+```
+
+**Optional Variables:**
+
+```bash
+# Feature Flags
+ENABLE_PROMO_STACKING=false      # Allow multiple promo codes per transaction
+ENABLE_CAMPAIGN_ANALYTICS=true   # Enable campaign analytics
+
+# Rate Limiting
+RATE_LIMIT_ENABLED=true          # Enable rate limiting
+RATE_LIMIT_MAX_REQUESTS=100      # Max requests per window
+RATE_LIMIT_WINDOW=3600           # Window in seconds (1 hour)
+
+# Performance
+CACHE_ENABLED=true               # Enable Redis caching
+CACHE_TTL=300                    # Cache TTL in seconds (5 minutes)
+```
+
+---
+
+### Configuration Validation
+
+**Validation Schema:**
+
+```typescript
+import { z } from 'zod';
+
+export const EnvSchema = z.object({
+  // Application
+  NODE_ENV: z.enum(['development', 'staging', 'production']),
+  PORT: z.coerce.number().int().positive().default(3000),
+  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  
+  // Database
+  DATABASE_URL: z.string().url(),
+  DATABASE_POOL_MIN: z.coerce.number().int().positive().default(10),
+  DATABASE_POOL_MAX: z.coerce.number().int().positive().default(100),
+  DATABASE_SSL: z.coerce.boolean().default(true),
+  
+  // Redis
+  REDIS_URL: z.string().url(),
+  REDIS_PASSWORD: z.string().optional(),
+  REDIS_DB: z.coerce.number().int().min(0).max(15).default(0),
+  
+  // Authentication
+  JWT_SECRET: z.string().min(32),
+  JWT_EXPIRY: z.string().regex(/^\d+[smhd]$/).default('24h'),
+  
+  // External Services
+  FINANCIAL_SYSTEM_URL: z.string().url(),
+  FINANCIAL_SYSTEM_API_KEY: z.string().min(10),
+  
+  // Monitoring
+  METRICS_PORT: z.coerce.number().int().positive().default(9090),
+  SENTRY_DSN: z.string().url().optional(),
+  
+  // Feature Flags
+  ENABLE_PROMO_STACKING: z.coerce.boolean().default(false),
+  ENABLE_CAMPAIGN_ANALYTICS: z.coerce.boolean().default(true),
+  
+  // Rate Limiting
+  RATE_LIMIT_ENABLED: z.coerce.boolean().default(true),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(100),
+  RATE_LIMIT_WINDOW: z.coerce.number().int().positive().default(3600),
+  
+  // Performance
+  CACHE_ENABLED: z.coerce.boolean().default(true),
+  CACHE_TTL: z.coerce.number().int().positive().default(300),
+});
+
+export type Env = z.infer<typeof EnvSchema>;
+
+// Validate on startup
+export function validateEnv(): Env {
+  try {
+    return EnvSchema.parse(process.env);
+  } catch (error) {
+    console.error('❌ Environment validation failed:');
+    console.error(error.errors);
+    process.exit(1);
+  }
+}
+```
+
+---
+
+### Per-Environment Overrides
+
+**Development (.env.development):**
+```bash
+NODE_ENV=development
+LOG_LEVEL=debug
+DATABASE_SSL=false
+CACHE_ENABLED=false
+RATE_LIMIT_ENABLED=false
+```
+
+**Staging (.env.staging):**
+```bash
+NODE_ENV=staging
+LOG_LEVEL=info
+DATABASE_URL=postgresql://user:pass@staging-db:5432/dbname
+FINANCIAL_SYSTEM_URL=https://api-staging.financial.example.com
+```
+
+**Production (.env.production):**
+```bash
+NODE_ENV=production
+LOG_LEVEL=warn
+DATABASE_URL=postgresql://user:pass@prod-db:5432/dbname
+DATABASE_POOL_MAX=200
+FINANCIAL_SYSTEM_URL=https://api.financial.example.com
+SENTRY_DSN=https://xxx@sentry.io/xxx
+```
+
+---
+
+### Secure Secret Handling
+
+**DO NOT commit secrets to version control!**
+
+**Recommended Approaches:**
+
+1. **Local Development:** `.env` file (gitignored)
+2. **Staging/Production:** Secret management service
+   - AWS Secrets Manager
+   - Google Cloud Secret Manager
+   - HashiCorp Vault
+   - Kubernetes Secrets
+
+**Example (AWS Secrets Manager):**
+```typescript
+import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+
+async function loadSecrets() {
+  const client = new SecretsManagerClient({ region: 'ap-southeast-1' });
+  const response = await client.send(
+    new GetSecretValueCommand({ SecretId: 'prod/promo-system' })
+  );
+  
+  const secrets = JSON.parse(response.SecretString!);
+  
+  process.env.JWT_SECRET = secrets.JWT_SECRET;
+  process.env.DATABASE_URL = secrets.DATABASE_URL;
+  process.env.FINANCIAL_SYSTEM_API_KEY = secrets.FINANCIAL_SYSTEM_API_KEY;
+}
+```
+```
+
+---
+
+### 7.11 Operational Requirements (Financial Profile)
+
+For financial profile, generate comprehensive operational requirements:
+
+```markdown
+## Operational Requirements
+
+### Deployment Topology
+
+**Architecture:**
+- **Load Balancer:** AWS ALB / Google Cloud Load Balancer
+- **Application Servers:** 3+ instances (multi-AZ)
+- **Database:** PostgreSQL 16+ (primary + 2 read replicas)
+- **Cache:** Redis 7+ cluster (3 nodes)
+- **Message Queue:** Redis (same cluster or separate)
+
+**Regions:**
+- **Primary:** [e.g., ap-southeast-1 (Singapore)]
+- **DR:** [e.g., ap-southeast-2 (Sydney)]
+
+**High Availability:**
+- **Application:** Auto-scaling group (min 3, max 10 instances)
+- **Database:** Multi-AZ deployment with automatic failover
+- **Redis:** Cluster mode with replication
+
+**Diagram:**
+```
+                    ┌─────────────┐
+                    │ Load Balancer│
+                    └──────┬──────┘
+                           │
+           ┌───────────────┼───────────────┐
+           │               │               │
+      ┌────▼────┐     ┌────▼────┐     ┌────▼────┐
+      │ App 1   │     │ App 2   │     │ App 3   │
+      │ (AZ-A)  │     │ (AZ-B)  │     │ (AZ-C)  │
+      └────┬────┘     └────┬────┘     └────┬────┘
+           │               │               │
+           └───────────────┼───────────────┘
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+         ┌────▼────┐              ┌────▼────┐
+         │ PostgreSQL│              │ Redis   │
+         │ Primary   │              │ Cluster │
+         │ + Replicas│              │ (3 nodes)│
+         └───────────┘              └─────────┘
+```
+
+---
+
+### Infrastructure Dependencies
+
+**Required Services:**
+
+| Service | Version | Purpose | Critical? |
+|---------|---------|---------|----------|
+| PostgreSQL | 16+ | Primary database | Yes |
+| Redis | 7+ | Cache + Queue | Yes |
+| Node.js | 22.x | Runtime | Yes |
+| AWS ALB / GCP LB | Latest | Load balancing | Yes |
+| Prometheus | 2.x | Metrics | No |
+| Grafana | 10.x | Dashboards | No |
+| Sentry | Latest | Error tracking | No |
+
+**Network Requirements:**
+- **Outbound:** HTTPS (443) to Financial System API
+- **Inbound:** HTTP (80), HTTPS (443) from load balancer
+- **Internal:** PostgreSQL (5432), Redis (6379)
+- **Monitoring:** Prometheus (9090)
+
+---
+
+### Disaster Recovery
+
+**Recovery Point Objective (RPO):** < 1 minute
+- **Database:** Continuous replication to DR region
+- **Redis:** Snapshot every 5 minutes
+- **Application:** Stateless (no data loss)
+
+**Recovery Time Objective (RTO):** < 5 minutes
+- **Automated failover:** Database and Redis
+- **Manual failover:** Application instances (DNS switch)
+
+**Backup Strategy:**
+
+**Database:**
+- **Frequency:** Automated snapshots every 6 hours
+- **Retention:** 30 days
+- **Location:** S3 / Google Cloud Storage (cross-region)
+- **Testing:** Monthly restore test
+
+**Redis:**
+- **Frequency:** RDB snapshots every 5 minutes
+- **Retention:** 7 days
+- **Location:** Persistent disk
+
+**Application Config:**
+- **Frequency:** On every change
+- **Location:** Git repository + secret manager
+- **Retention:** Indefinite (version controlled)
+
+---
+
+### Observability Retention Policies
+
+**Logs:**
+- **Retention:** 90 days (hot), 1 year (cold storage)
+- **Storage:** CloudWatch Logs / Google Cloud Logging
+- **Sampling:** 100% for errors, 10% for info
+
+**Metrics:**
+- **Retention:** 15 days (1-minute resolution), 1 year (5-minute resolution)
+- **Storage:** Prometheus + long-term storage (Thanos / Cortex)
+
+**Distributed Traces:**
+- **Retention:** 7 days
+- **Sampling:** 5% of requests (100% for errors)
+- **Storage:** Jaeger / Google Cloud Trace
+
+---
+
+### API Versioning Strategy
+
+**Versioning Scheme:** URL-based versioning
+
+**Format:** `/api/v{major}/{resource}`
+
+**Examples:**
+- `/api/v1/promo-system/redeem`
+- `/api/v2/promo-system/redeem`
+
+**Backward Compatibility:**
+- **Minor changes:** Additive only (new fields, new endpoints)
+- **Major changes:** New version (breaking changes)
+- **Deprecation:** 6 months notice, sunset after 12 months
+
+**Version Support:**
+- **Current version (v2):** Full support
+- **Previous version (v1):** Maintenance mode (bug fixes only)
+- **Deprecated versions:** No support
+
+**Migration Path:**
+```markdown
+1. Announce new version (v2) with migration guide
+2. Run v1 and v2 in parallel for 6 months
+3. Mark v1 as deprecated (6 months notice)
+4. Sunset v1 after 12 months total
 ```
 ```
 

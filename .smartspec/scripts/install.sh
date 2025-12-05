@@ -1,7 +1,7 @@
 #!/bin/bash
 # SmartSpec Multi-Platform Installer
-# Version: 5.0
-# Supports: Kilo Code, Roo Code, Claude Code
+# Version: 5.2
+# Supports: Kilo Code, Roo Code, Claude Code, Google Antigravity, Gemini CLI
 
 set -e  # Exit on error
 
@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 SMARTSPEC_REPO="https://github.com/naibarn/SmartSpec.git"
-SMARTSPEC_VERSION="v5.0"
+SMARTSPEC_VERSION="v5.2"
 SMARTSPEC_DIR=".smartspec"
 WORKFLOWS_DIR="$SMARTSPEC_DIR/workflows"
 
@@ -22,6 +22,8 @@ WORKFLOWS_DIR="$SMARTSPEC_DIR/workflows"
 KILOCODE_DIR=".kilocode/workflows"
 ROO_DIR=".roo/commands"
 CLAUDE_DIR=".claude/commands"
+ANTIGRAVITY_DIR=".agent/workflows"
+GEMINI_CLI_DIR=".gemini/commands"
 
 echo -e "${BLUE}🚀 SmartSpec Multi-Platform Installer${NC}"
 echo -e "${BLUE}======================================${NC}"
@@ -110,6 +112,16 @@ if [ -d ".claude" ]; then
     echo -e "  ${GREEN}✅ Claude Code detected${NC}"
 fi
 
+if [ -d ".agent" ]; then
+    DETECTED_PLATFORMS+=("antigravity")
+    echo -e "  ${GREEN}✅ Google Antigravity detected${NC}"
+fi
+
+if [ -d ".gemini" ]; then
+    DETECTED_PLATFORMS+=("gemini-cli")
+    echo -e "  ${GREEN}✅ Gemini CLI detected${NC}"
+fi
+
 if [ ${#DETECTED_PLATFORMS[@]} -eq 0 ]; then
     echo -e "  ${YELLOW}⚠️  No platforms detected${NC}"
 fi
@@ -120,15 +132,17 @@ echo "Which platforms do you want to install/update?"
 echo "  1) Kilo Code"
 echo "  2) Roo Code"
 echo "  3) Claude Code"
-echo "  4) All of the above"
+echo "  4) Google Antigravity"
+echo "  5) Gemini CLI"
+echo "  6) All of the above"
 
 # Try to read user input
 if [ -t 0 ]; then
     # stdin is a terminal, read normally
-    read -p "Enter choice [1-4] (default: 1): " choice
+    read -p "Enter choice [1-6] (default: 1): " choice
 else
     # stdin is piped, try to read from /dev/tty
-    read -p "Enter choice [1-4] (default: 1): " choice < /dev/tty 2>/dev/null || choice=""
+    read -p "Enter choice [1-6] (default: 1): " choice < /dev/tty 2>/dev/null || choice=""
 fi
 
 # Default to 1 if empty
@@ -141,7 +155,9 @@ case $choice in
     1) PLATFORMS=("kilocode") ;;
     2) PLATFORMS=("roo") ;;
     3) PLATFORMS=("claude") ;;
-    4) PLATFORMS=("kilocode" "roo" "claude") ;;
+    4) PLATFORMS=("antigravity") ;;
+    5) PLATFORMS=("gemini-cli") ;;
+    6) PLATFORMS=("kilocode" "roo" "claude" "antigravity" "gemini-cli") ;;
     *) echo -e "${RED}Invalid choice: $choice${NC}"; exit 1 ;;
 esac
 
@@ -164,6 +180,15 @@ for platform in "${PLATFORMS[@]}"; do
             TARGET_DIR="$CLAUDE_DIR"
             PLATFORM_NAME="Claude Code"
             ;;
+        antigravity)
+            TARGET_DIR="$ANTIGRAVITY_DIR"
+            PLATFORM_NAME="Google Antigravity"
+            ;;
+        gemini-cli)
+            TARGET_DIR="$GEMINI_CLI_DIR"
+            PLATFORM_NAME="Gemini CLI"
+            REQUIRES_TOML_CONVERSION=true
+            ;;
     esac
     
     # Create parent directory
@@ -173,6 +198,49 @@ for platform in "${PLATFORMS[@]}"; do
     if [ ! -d "$WORKFLOWS_DIR" ]; then
         echo -e "  ${RED}❌ Error: Workflows directory not found: $WORKFLOWS_DIR${NC}"
         exit 1
+    fi
+    
+    # Handle Gemini CLI TOML conversion
+    if [ "$platform" = "gemini-cli" ]; then
+        echo -e "  ${BLUE}🔄 Converting Markdown workflows to TOML format...${NC}"
+        
+        # Create target directory
+        mkdir -p "$TARGET_DIR"
+        
+        # Convert each workflow
+        CONVERTED=0
+        for md_file in "$WORKFLOWS_DIR"/smartspec_*.md; do
+            if [ ! -f "$md_file" ]; then
+                continue
+            fi
+            
+            filename=$(basename "$md_file" .md)
+            toml_file="$TARGET_DIR/${filename}.toml"
+            
+            # Simple inline conversion
+            # Extract first line as description
+            description=$(head -n 1 "$md_file" | sed 's/^# //' | sed 's/"/\\"/g')
+            if [ -z "$description" ]; then
+                description="SmartSpec workflow: ${filename//_/ }"
+            fi
+            
+            # Extract rest as prompt (escape special chars)
+            prompt=$(tail -n +2 "$md_file" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+            
+            # Create TOML file
+            cat > "$toml_file" <<EOF
+description = "$description"
+
+prompt = """
+$prompt
+"""
+EOF
+            
+            ((CONVERTED++))
+        done
+        
+        echo -e "  ${GREEN}✅ $PLATFORM_NAME: $CONVERTED workflows converted and installed${NC}"
+        continue
     fi
     
     # Handle existing workflows directory
@@ -315,9 +383,33 @@ for platform in $PLATFORMS; do
         kilocode) TARGET_DIR=".kilocode/workflows" ;;
         roo) TARGET_DIR=".roo/commands" ;;
         claude) TARGET_DIR=".claude/commands" ;;
+        antigravity) TARGET_DIR=".agent/workflows" ;;
+        gemini-cli) 
+            TARGET_DIR=".gemini/commands"
+            # Convert to TOML for Gemini CLI
+            if [ -d "$TARGET_DIR" ]; then
+                for md_file in "$WORKFLOWS_DIR"/smartspec_*.md; do
+                    if [ ! -f "$md_file" ]; then continue; fi
+                    filename=$(basename "$md_file" .md)
+                    toml_file="$TARGET_DIR/${filename}.toml"
+                    description=$(head -n 1 "$md_file" | sed 's/^# //' | sed 's/"/\\"/g')
+                    [ -z "$description" ] && description="SmartSpec workflow: ${filename//_/ }"
+                    prompt=$(tail -n +2 "$md_file" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+                    cat > "$toml_file" <<EOF
+description = "$description"
+
+prompt = """
+$prompt
+"""
+EOF
+                done
+                echo -e "  ${GREEN}✅ $platform synced (converted to TOML)${NC}"
+                continue
+            fi
+            ;;
     esac
     
-    # Sync only SmartSpec workflows
+    # Sync only SmartSpec workflows (Markdown platforms)
     if [ -d "$TARGET_DIR" ]; then
         cp "$WORKFLOWS_DIR"/smartspec_*.md "$TARGET_DIR/" 2>/dev/null || true
         echo -e "  ${GREEN}✅ $platform synced${NC}"
@@ -369,6 +461,8 @@ for platform in "${PLATFORMS[@]}"; do
         kilocode) echo "  - Kilo Code: /smartspec_generate_spec, /smartspec_generate_tasks, etc." ;;
         roo) echo "  - Roo Code: /smartspec_generate_spec, /smartspec_generate_tasks, etc." ;;
         claude) echo "  - Claude Code: /smartspec_generate_spec, /smartspec_generate_tasks, etc." ;;
+        antigravity) echo "  - Google Antigravity: /smartspec_generate_spec, /smartspec_generate_tasks, etc." ;;
+        gemini-cli) echo "  - Gemini CLI: /smartspec_generate_spec, /smartspec_generate_tasks, etc." ;;
     esac
 done
 

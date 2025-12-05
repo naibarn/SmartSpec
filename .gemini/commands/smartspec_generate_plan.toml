@@ -1,0 +1,2365 @@
+description = "---"
+
+prompt = """
+description: Generate comprehensive project plan (plan.md) from SPEC with milestones, detailed task breakdown, compliance requirements, and realistic timeline estimation. Supports --specindex, --nogenerate, and --output flags.
+handoffs:
+  - label: Generate Tasks
+    agent: smartspec.tasks
+    prompt: Generate tasks.md from this plan
+---
+
+## User Input
+```text
+$ARGUMENTS
+```
+
+**Patterns:** 
+- `specs/feature/spec-004/spec.md`
+- `--specindex=\"path/index.json\"` 
+- `--nogenerate` (dry run)
+- `--output=roadmap.md` (custom name)
+
+---
+
+## 0. Load SmartSpec Context
+
+Read required files:
+- `.smartspec/system_prompt.md`
+- `.smartspec/Knowledge-Base.md`
+- `.smartspec/constitution.md`
+- `SPEC_INDEX.json` (from `.smartspec/` or custom path)
+
+Parse flags:
+- `--specindex` → Custom SPEC_INDEX path
+- `--nogenerate` → DRY_RUN_MODE = true (analysis only, no file write)
+- `--output` → Custom output name (default: plan.md)
+
+---
+
+## 1. Resolve Paths
+
+Extract SPEC path from user input, determine SPEC_INDEX path, set output path: `SPEC_DIR/[output or plan.md]`
+
+---
+
+## 2. Analyze SPEC
+
+### 2.1 Parse SPEC Sections
+Read and extract:
+- **Metadata:** Title, version, domain, complexity
+- **Overview:** Purpose, scope, goals
+- **Architecture:** Services, components, integrations
+- **Implementation:** Technical requirements, patterns
+- **Testing:** Coverage requirements, test types
+- **Dependencies:** External services, internal dependencies
+- **Security:** Authentication, authorization, compliance
+- **Performance:** SLA, latency, throughput requirements
+
+### 2.2 Extract Key Information
+Analyze and determine:
+- **Complexity Level:** LOW / MEDIUM / HIGH / CRITICAL
+  - LOW: Simple CRUD, 1-2 services, < 10 tables
+  - MEDIUM: Standard backend, 3-5 services, 10-20 tables
+  - HIGH: Complex system, 6-10 services, 20-50 tables
+  - CRITICAL: Financial/Healthcare, 10+ services, 50+ tables, compliance
+
+- **Domain Type:** fintech / healthcare / iot / ai / realtime / batch / internal
+  - Detect from keywords, features, requirements
+
+- **Risk Level:** LOW / MEDIUM / HIGH / CRITICAL
+  - Assess from: external dependencies, compliance, data sensitivity, complexity
+
+- **Team Size:** Based on complexity and timeline
+  - LOW: 1-2 developers
+  - MEDIUM: 2-3 developers
+  - HIGH: 3-5 developers
+  - CRITICAL: 5-8 developers
+
+- **Timeline Constraints:** From SPEC or calculate based on complexity
+
+### 2.3 Identify Compliance Requirements
+Check if SPEC mentions:
+- **PCI DSS:** Payment processing, credit card handling
+- **HIPAA:** Healthcare, patient data
+- **GDPR:** EU user data, privacy
+- **SOC 2:** Security, availability, confidentiality
+- **ISO 27001:** Information security management
+
+If fintech domain detected → Add PCI DSS requirements automatically
+If healthcare domain detected → Add HIPAA requirements automatically
+
+---
+
+## 3. Calculate Timeline
+
+### 3.1 Base Timeline Calculation
+
+**Formula:**
+```
+Base Timeline = (Complexity Factor × Domain Factor × Service Count Factor)
+```
+
+**Complexity Factor:**
+- LOW: 8 weeks
+- MEDIUM: 12 weeks
+- HIGH: 16 weeks
+- CRITICAL: 20 weeks
+
+**Domain Factor:**
+- internal/batch: 1.0x
+- ai/iot/realtime: 1.1x
+- fintech/healthcare: 1.3x (compliance overhead)
+
+**Service Count Factor:**
+- 1-2 services: 1.0x
+- 3-5 services: 1.2x
+- 6-10 services: 1.5x
+- 10+ services: 2.0x
+
+### 3.2 Buffer Allocation
+
+Add buffer based on risk and complexity:
+- **Low complexity + Low risk:** +20% buffer
+- **Medium complexity + Medium risk:** +25% buffer
+- **High complexity + High risk:** +30% buffer
+- **Critical (fintech/healthcare):** +30-35% buffer
+
+**Example for Financial System:**
+- Base: 16 weeks (HIGH complexity × 1.3 fintech factor)
+- Buffer: +30% = 4.8 weeks ≈ 5 weeks
+- **Total: 21-22 weeks**
+
+### 3.3 Phase Distribution
+
+Distribute timeline across phases:
+- **Phase 1 (Foundation):** 10-15% of total
+- **Phase 2-4 (Core Development):** 50-60% of total
+- **Phase 5-6 (Integration & Testing):** 20-25% of total
+- **Phase 7 (Security & Compliance):** 10-15% of total (if applicable)
+- **Phase 8 (Deployment & Handover):** 5-10% of total
+
+---
+
+## 4. Generate Plan Structure
+
+### 4.1 Header Section
+
+```markdown
+# Project Plan - [Project Name]
+
+**Generated:** YYYY-MM-DD HH:mm  
+**Author:** SmartSpec Architect v5.0  
+**Source:** [SPEC-ID] v[X.Y.Z]  
+**Status:** PLANNING  
+**Domain:** [fintech/healthcare/iot/ai/realtime/batch/internal]  
+**Complexity:** [LOW/MEDIUM/HIGH/CRITICAL]  
+
+---
+
+## Executive Summary
+
+### Project Overview
+[Brief description from SPEC]
+
+### Timeline & Resources
+- **Duration:** X weeks (includes Y% buffer)
+- **Team Size:** Z developers
+- **Complexity:** [LEVEL]
+- **Risk Level:** [LEVEL]
+- **Domain:** [TYPE]
+
+### Timeline Guidance by Project Type
+- Simple projects: 8-12 weeks
+- Standard backend services: 12-16 weeks
+- Financial systems: 20-24 weeks (includes compliance)
+- Healthcare systems: 20-24 weeks (includes HIPAA)
+- Complex multi-service: 24-32 weeks
+
+### Buffer Allocation Strategy
+- Low complexity: +20% buffer
+- Medium complexity: +25% buffer
+- High complexity: +30% buffer
+- Financial/Healthcare/compliance: +30-35% buffer
+
+### Recommended Timeline for This Project
+- Core development: X weeks
+- Testing & QA: Y weeks
+- Security & compliance: Z weeks (if applicable)
+- Buffer & contingency: W weeks
+- **Total: [TOTAL] weeks**
+
+### Success Criteria
+[Extract from SPEC or define based on goals]
+- [ ] All functional requirements met
+- [ ] Performance targets achieved
+- [ ] Security requirements satisfied
+- [ ] Compliance requirements met (if applicable)
+- [ ] Documentation complete
+- [ ] Team trained and ready for production
+
+---
+```
+
+### 4.2 Milestones Section
+
+Generate 3-5 milestones based on project size:
+
+```markdown
+## 🎯 Milestones
+
+### M1: Foundation Complete (Week [X])
+
+**Deliverables:**
+- Project structure initialized
+- Development environment running
+- Database schema deployed
+- Authentication system functional
+- CI/CD pipeline configured
+
+**Acceptance Criteria:**
+- [ ] All team members can run project locally
+- [ ] Database migrations apply successfully
+- [ ] Users can register and login
+- [ ] JWT authentication works for protected endpoints
+- [ ] Unit tests pass (>80% coverage)
+- [ ] Integration tests pass for auth flow
+- [ ] CI/CD pipeline deploys to staging
+- [ ] Code review completed
+- [ ] Documentation updated (README, API docs)
+
+**Quality Gates:**
+- ✅ Zero critical bugs
+- ✅ Linting passes with no errors
+- ✅ Build succeeds in CI/CD
+- ✅ Security scan passes (no high/critical vulnerabilities)
+- ✅ Code coverage > 80%
+
+**Performance Validation:**
+- Auth operations: P95 < 100ms
+- Database queries: P99 < 50ms
+- API response time: P95 < 200ms
+
+**Sign-off Required:** Tech Lead, DevOps Lead
+
+**Go/No-Go Decision Criteria:**
+- All acceptance criteria met
+- All quality gates passed
+- No blocking issues
+- Team ready to proceed
+
+---
+
+### M2: Core Features Complete (Week [Y])
+
+**Deliverables:**
+[Generate based on SPEC - e.g., for fintech:]
+- Credit management system (add, deduct, balance, reserve)
+- Ledger system (immutable, hash-chained, tamper-proof)
+- Payment integration (Stripe/PromptPay/PayPal)
+- Saga orchestration (credit purchase, cost deduction, refund)
+- Audit logging system
+
+**Acceptance Criteria:**
+- [ ] All core business logic implemented
+- [ ] Credit operations work correctly (add, deduct, reserve, release)
+- [ ] Ledger entries are immutable and tamper-proof
+- [ ] Hash chain validation passes
+- [ ] Payment flow works end-to-end (test mode)
+- [ ] Webhooks handled correctly with signature validation
+- [ ] Sagas execute successfully with compensation
+- [ ] Idempotency prevents duplicate transactions
+- [ ] Audit logs capture all financial operations
+- [ ] Unit tests pass (>85% coverage)
+- [ ] Integration tests pass for all flows
+- [ ] Load testing shows acceptable performance
+
+**Quality Gates:**
+- ✅ Zero critical/high bugs
+- ✅ P99 latency < 300ms for core operations
+- ✅ No data integrity issues
+- ✅ Security review passed
+- ✅ Code coverage > 85%
+- ✅ All edge cases handled
+
+**Performance Validation:**
+- Credit operations: P95 < 100ms
+- Payment processing: P99 < 500ms
+- Saga execution: < 5 seconds end-to-end
+- Ledger writes: P99 < 200ms
+- Throughput: 500 TPS sustained
+
+**Security Validation:**
+- [ ] Authentication/Authorization working
+- [ ] Input validation on all endpoints
+- [ ] SQL injection prevention verified
+- [ ] XSS prevention verified
+- [ ] CSRF protection enabled
+- [ ] Rate limiting configured
+
+**Sign-off Required:** Tech Lead, Product Owner, QA Lead, Security Lead
+
+---
+
+### M3: Integration & Testing Complete (Week [Z])
+
+**Deliverables:**
+- All services integrated
+- API endpoints complete and documented
+- Admin dashboard functional
+- Monitoring and alerting configured
+- Security hardening complete
+- Compliance requirements met (if applicable)
+
+**Acceptance Criteria:**
+- [ ] All API endpoints documented (OpenAPI/Swagger)
+- [ ] End-to-end tests pass for critical flows
+- [ ] Admin dashboard shows real-time data
+- [ ] Monitoring dashboards configured (Grafana/Datadog/Prometheus)
+- [ ] Alerts configured for critical metrics
+- [ ] Security measures implemented:
+  - [ ] Rate limiting active (per-user and global)
+  - [ ] HTTPS/TLS enforced
+  - [ ] Input validation on all endpoints
+  - [ ] SQL injection prevention verified
+  - [ ] XSS prevention verified
+  - [ ] CSRF protection enabled
+  - [ ] Secure headers configured
+- [ ] Compliance requirements met:
+  - [ ] PCI DSS (if fintech)
+  - [ ] HIPAA (if healthcare)
+  - [ ] GDPR (if EU users)
+- [ ] Penetration testing completed
+- [ ] Load testing passed (target TPS sustained)
+- [ ] Stress testing passed (2x target TPS)
+
+**Quality Gates:**
+- ✅ Zero critical/high bugs
+- ✅ All security scans pass
+- ✅ Performance targets met
+- ✅ API documentation complete
+- ✅ Runbook documented
+- ✅ Disaster recovery tested
+
+**Performance Validation:**
+- System-wide P99: < 300ms
+- Throughput: [TARGET] TPS sustained
+- Error rate: < 0.1%
+- Availability: > 99.9% (3 nines)
+
+**Security Validation:**
+- [ ] OWASP Top 10 mitigated
+- [ ] Penetration test passed
+- [ ] Security audit completed
+- [ ] Vulnerability scan clean
+
+**Compliance Validation (if applicable):**
+- [ ] PCI DSS self-assessment completed
+- [ ] HIPAA security rule checklist completed
+- [ ] GDPR compliance verified
+- [ ] Audit logs immutable and complete
+
+**Sign-off Required:** Tech Lead, Security Team, QA Lead, Product Owner, Compliance Officer (if applicable)
+
+---
+
+### M4: Production Ready (Week [W])
+
+**Deliverables:**
+- Production deployment successful
+- Disaster recovery tested
+- Operational runbooks complete
+- Team training complete
+- Go-live checklist verified
+- Post-launch support plan ready
+
+**Acceptance Criteria:**
+- [ ] Production environment configured and secured
+- [ ] Database backups automated and tested (daily + point-in-time recovery)
+- [ ] Disaster recovery plan tested (RTO < 4h, RPO < 1h)
+- [ ] Rollback procedure tested
+- [ ] Monitoring alerts verified in production
+- [ ] On-call rotation established
+- [ ] Incident response plan documented
+- [ ] Operational runbooks complete:
+  - [ ] Deployment procedure
+  - [ ] Rollback procedure
+  - [ ] Common troubleshooting
+  - [ ] Scaling procedures
+  - [ ] Database maintenance
+  - [ ] Security incident response
+- [ ] Team trained on:
+  - [ ] System architecture
+  - [ ] Deployment process
+  - [ ] Monitoring and alerting
+  - [ ] Incident response
+  - [ ] On-call procedures
+- [ ] Go-live checklist completed:
+  - [ ] Production data migrated (if applicable)
+  - [ ] DNS configured
+  - [ ] SSL certificates installed and auto-renewal configured
+  - [ ] CDN configured (if applicable)
+  - [ ] Rate limiting configured
+  - [ ] Backup verified and restoration tested
+  - [ ] Monitoring verified
+  - [ ] Alerts verified and tested
+  - [ ] Stakeholders notified
+  - [ ] Communication plan ready
+
+**Quality Gates:**
+- ✅ Zero critical bugs
+- ✅ All production checks pass
+- ✅ Disaster recovery tested successfully
+- ✅ Performance validated in production
+- ✅ Security audit passed
+- ✅ Compliance audit passed (if applicable)
+
+**Production Validation:**
+- Smoke tests pass in production
+- Health checks return 200 OK
+- Metrics flowing to monitoring system
+- Alerts triggering correctly (test alerts sent)
+- Logs being collected and retained
+- Backup and restore tested
+
+**Sign-off Required:** CTO, Tech Lead, DevOps Lead, Security Team, Product Owner, Compliance Officer (if applicable)
+
+**Go/No-Go Decision Criteria:**
+- All acceptance criteria met
+- All quality gates passed
+- Team ready for on-call
+- Stakeholders aligned
+- Rollback plan tested and ready
+- Communication plan ready
+- Support team briefed
+
+---
+```
+
+### 4.3 Phases Section with Detailed Task Breakdown
+
+**CRITICAL FIX (Defect 1, 3, 4):** Add detailed task-level breakdown for each phase
+
+Generate phases based on SPEC complexity and domain. Each phase must include:
+- Objectives
+- Duration and team size
+- Task Groups with detailed tasks
+- Task ID format: `T{Phase}-{Number}` (e.g., T1-001, T1-002)
+- Each task must have:
+  - Specific description
+  - Acceptance criteria
+  - Effort estimation (hours)
+  - Dependencies (task IDs)
+  - Deliverables (files/artifacts)
+
+```markdown
+## 📋 Phases
+
+### Phase 1: Foundation & Setup (Weeks 1-[X])
+**Duration:** [X] weeks | **Team:** 2-3 devs | **Risk:** LOW
+
+**Objectives:**
+- Initialize project structure with best practices
+- Setup development environment (Docker, CI/CD)
+- Configure database with migrations
+- Implement authentication foundation
+- Establish code quality standards
+
+---
+
+#### Task Group 1: Project Initialization ([X] days)
+
+**T1-001: Create Repository Structure**
+- **Description:** Initialize Git repository with proper folder structure
+- **Acceptance Criteria:**
+  - Repository created with main/develop branches
+  - Folder structure: src/, tests/, docs/, scripts/, migrations/
+  - .gitignore configured for Node.js
+  - README.md with project overview
+- **Effort:** 2h
+- **Dependencies:** None
+- **Deliverables:** Repository structure, README.md
+
+**T1-002: Setup TypeScript Configuration**
+- **Description:** Configure TypeScript with strict mode
+- **Acceptance Criteria:**
+  - tsconfig.json with strict: true
+  - Path aliases configured (@/src, @/tests)
+  - Source maps enabled for debugging
+  - No compilation errors
+- **Effort:** 2h
+- **Dependencies:** T1-001
+- **Deliverables:** tsconfig.json
+
+**T1-003: Configure Code Quality Tools**
+- **Description:** Setup ESLint, Prettier, and Husky pre-commit hooks
+- **Acceptance Criteria:**
+  - ESLint configured with recommended rules
+  - Prettier configured for consistent formatting
+  - Husky pre-commit hooks working (lint + format)
+  - Code auto-formatted on commit
+- **Effort:** 3h
+- **Dependencies:** T1-002
+- **Deliverables:** .eslintrc.js, .prettierrc, .husky/pre-commit
+
+**T1-004: Setup Package Management**
+- **Description:** Configure package.json with scripts and dependencies
+- **Acceptance Criteria:**
+  - package.json with all required dependencies
+  - Scripts: dev, build, test, lint, format
+  - Lock file committed (package-lock.json or pnpm-lock.yaml)
+  - Dependencies installed successfully
+- **Effort:** 2h
+- **Dependencies:** T1-002
+- **Deliverables:** package.json, lock file
+
+---
+
+#### Task Group 2: Development Environment ([X] days)
+
+**T1-005: Configure Docker Compose**
+- **Description:** Setup Docker Compose for local development
+- **Acceptance Criteria:**
+  - docker-compose.yml with all services (app, db, redis, etc.)
+  - Environment variables configured (.env.example)
+  - docker-compose up starts all services
+  - Hot-reload working for development
+- **Effort:** 4h
+- **Dependencies:** T1-001
+- **Deliverables:** docker-compose.yml, .env.example, Dockerfile
+
+**T1-006: Configure Database Container**
+- **Description:** Setup PostgreSQL container with initialization
+- **Acceptance Criteria:**
+  - PostgreSQL 15+ container configured
+  - Database created automatically on startup
+  - Persistent volume configured
+  - Health check configured
+- **Effort:** 2h
+- **Dependencies:** T1-005
+- **Deliverables:** docker-compose.yml (updated)
+
+**T1-007: Configure Redis Container**
+- **Description:** Setup Redis container for caching and sessions
+- **Acceptance Criteria:**
+  - Redis 7+ container configured
+  - Persistent volume configured (optional)
+  - Health check configured
+  - Connection tested from app
+- **Effort:** 2h
+- **Dependencies:** T1-005
+- **Deliverables:** docker-compose.yml (updated)
+
+**T1-008: Setup Database Migrations Framework**
+- **Description:** Configure Prisma or Drizzle for database migrations
+- **Acceptance Criteria:**
+  - Migration framework installed and configured
+  - Initial migration created
+  - Migration commands work (up, down, status)
+  - Seed data script created
+- **Effort:** 3h
+- **Dependencies:** T1-006
+- **Deliverables:** prisma/schema.prisma or drizzle.config.ts, migrations/
+
+---
+
+#### Task Group 3: Database Schema Design ([X] days)
+
+**CRITICAL FIX (Defect 3):** Add explicit data model tasks
+
+[IF FINTECH DOMAIN DETECTED, ADD:]
+
+**T1-009: Design Ledger Table Schema**
+- **Description:** Design immutable ledger table for financial transactions
+- **Acceptance Criteria:**
+  - Schema includes: id, user_id, transaction_type, amount, balance_after, hash, previous_hash, metadata, created_at
+  - Immutability constraints defined (no UPDATE/DELETE)
+  - Hash chain for tamper detection
+  - Indexes on user_id, created_at, transaction_type
+  - Partitioning strategy defined (monthly)
+- **Effort:** 6h
+- **Dependencies:** T1-008
+- **Deliverables:** schema/ledger.sql, ER diagram snippet
+
+**T1-010: Design Credit Balance Table Schema**
+- **Description:** Design credit balance table with optimistic locking
+- **Acceptance Criteria:**
+  - Schema includes: user_id, balance, reserved_balance, version, updated_at
+  - Optimistic locking support (version column)
+  - Unique constraint on user_id
+  - Check constraint: balance >= 0, reserved_balance >= 0
+  - Index on user_id
+- **Effort:** 4h
+- **Dependencies:** T1-008
+- **Deliverables:** schema/credit_balance.sql
+
+**T1-011: Design Invoice Table Schema**
+- **Description:** Design invoice table for billing
+- **Acceptance Criteria:**
+  - Schema includes: id, user_id, invoice_number, amount, tax, total, status, issued_at, paid_at
+  - Status enum: DRAFT, ISSUED, PAID, VOID, REFUNDED
+  - Unique constraint on invoice_number
+  - Indexes on user_id, status, issued_at
+  - Foreign key to users table
+- **Effort:** 5h
+- **Dependencies:** T1-008
+- **Deliverables:** schema/invoice.sql
+
+**T1-012: Design Transaction Log (Audit) Table Schema**
+- **Description:** Design append-only audit log table
+- **Acceptance Criteria:**
+  - Schema includes: id, transaction_id, event_type, user_id, metadata, ip_address, user_agent, created_at
+  - Append-only table (no UPDATE/DELETE triggers)
+  - Partitioning by created_at (monthly)
+  - Indexes on transaction_id, user_id, event_type, created_at
+  - Retention policy defined (7 years for financial)
+- **Effort:** 6h
+- **Dependencies:** T1-008
+- **Deliverables:** schema/transaction_log.sql
+
+**T1-013: Design Saga State Table Schema**
+- **Description:** Design saga orchestration state table
+- **Acceptance Criteria:**
+  - Schema includes: saga_id, saga_type, current_step, status, payload, compensation_data, started_at, completed_at
+  - Status enum: PENDING, IN_PROGRESS, COMPLETED, FAILED, COMPENSATING, COMPENSATED
+  - Indexes on saga_type, status, started_at
+  - TTL policy for completed sagas (30 days)
+- **Effort:** 5h
+- **Dependencies:** T1-008
+- **Deliverables:** schema/saga_state.sql
+
+**T1-014: Create ER Diagram**
+- **Description:** Create comprehensive ER diagram showing all tables and relationships
+- **Acceptance Criteria:**
+  - Mermaid diagram showing all tables
+  - Relationships (1:1, 1:N, N:M) clearly marked
+  - Primary keys and foreign keys shown
+  - Key constraints documented
+  - Diagram embedded in documentation
+- **Effort:** 3h
+- **Dependencies:** T1-009, T1-010, T1-011, T1-012, T1-013
+- **Deliverables:** docs/er-diagram.md
+
+**T1-015: Implement Database Migrations**
+- **Description:** Create migration scripts for all tables
+- **Acceptance Criteria:**
+  - Prisma/Drizzle migrations for all tables
+  - Migration scripts tested (up and down)
+  - Seed data script for development
+  - Migration order correct (dependencies)
+- **Effort:** 8h
+- **Dependencies:** T1-014
+- **Deliverables:** prisma/migrations/ or drizzle/migrations/
+
+[END IF FINTECH]
+
+[FOR OTHER DOMAINS, GENERATE APPROPRIATE SCHEMA TASKS]
+
+---
+
+#### Task Group 4: Authentication Foundation ([X] days)
+
+**T1-016: Install Authentication Libraries**
+- **Description:** Install and configure JWT and bcrypt libraries
+- **Acceptance Criteria:**
+  - jsonwebtoken installed
+  - bcrypt installed
+  - Environment variables for JWT secret configured
+  - Token expiration configured (15min access, 7d refresh)
+- **Effort:** 1h
+- **Dependencies:** T1-004
+- **Deliverables:** package.json (updated)
+
+**T1-017: Create User Model**
+- **Description:** Create User model with Prisma/Drizzle
+- **Acceptance Criteria:**
+  - User schema: id, email, password_hash, name, role, created_at, updated_at
+  - Email unique constraint
+  - Role enum: USER, ADMIN
+  - Migration created
+- **Effort:** 2h
+- **Dependencies:** T1-008, T1-016
+- **Deliverables:** prisma/schema.prisma (updated), migration
+
+**T1-018: Implement Password Hashing**
+- **Description:** Create password hashing utility with bcrypt
+- **Acceptance Criteria:**
+  - hashPassword(password) function
+  - comparePassword(password, hash) function
+  - Salt rounds: 12
+  - Unit tests pass
+- **Effort:** 2h
+- **Dependencies:** T1-016
+- **Deliverables:** src/utils/password.ts, tests/utils/password.test.ts
+
+**T1-019: Implement JWT Generation and Validation**
+- **Description:** Create JWT utility functions
+- **Acceptance Criteria:**
+  - generateAccessToken(userId, role) function
+  - generateRefreshToken(userId) function
+  - verifyToken(token) function
+  - Token payload includes: userId, role, iat, exp
+  - Unit tests pass
+- **Effort:** 3h
+- **Dependencies:** T1-016
+- **Deliverables:** src/utils/jwt.ts, tests/utils/jwt.test.ts
+
+**T1-020: Implement User Registration Endpoint**
+- **Description:** Create POST /api/auth/register endpoint
+- **Acceptance Criteria:**
+  - Accepts: email, password, name
+  - Validates: email format, password strength (min 8 chars, 1 upper, 1 lower, 1 number)
+  - Hashes password before storing
+  - Returns: userId, accessToken, refreshToken
+  - Error handling: duplicate email, validation errors
+  - Integration test passes
+- **Effort:** 4h
+- **Dependencies:** T1-017, T1-018, T1-019
+- **Deliverables:** src/routes/auth.ts, tests/routes/auth.test.ts
+
+**T1-021: Implement User Login Endpoint**
+- **Description:** Create POST /api/auth/login endpoint
+- **Acceptance Criteria:**
+  - Accepts: email, password
+  - Validates credentials
+  - Returns: userId, accessToken, refreshToken
+  - Error handling: invalid credentials, account locked
+  - Rate limiting: 5 attempts per 15 minutes
+  - Integration test passes
+- **Effort:** 4h
+- **Dependencies:** T1-017, T1-018, T1-019
+- **Deliverables:** src/routes/auth.ts (updated), tests/routes/auth.test.ts (updated)
+
+**T1-022: Implement JWT Validation Middleware**
+- **Description:** Create authentication middleware for protected routes
+- **Acceptance Criteria:**
+  - Extracts token from Authorization header
+  - Verifies token signature and expiration
+  - Attaches user info to request object
+  - Returns 401 for invalid/expired tokens
+  - Unit tests pass
+- **Effort:** 3h
+- **Dependencies:** T1-019
+- **Deliverables:** src/middleware/auth.ts, tests/middleware/auth.test.ts
+
+**T1-023: Implement Refresh Token Endpoint**
+- **Description:** Create POST /api/auth/refresh endpoint
+- **Acceptance Criteria:**
+  - Accepts: refreshToken
+  - Validates refresh token
+  - Returns: new accessToken
+  - Invalidates old refresh token (optional)
+  - Integration test passes
+- **Effort:** 3h
+- **Dependencies:** T1-019, T1-022
+- **Deliverables:** src/routes/auth.ts (updated), tests/routes/auth.test.ts (updated)
+
+---
+
+#### Task Group 5: Core Infrastructure ([X] days)
+
+**T1-024: Setup Logging System**
+- **Description:** Configure Winston or Pino for structured logging
+- **Acceptance Criteria:**
+  - Logger configured with levels: error, warn, info, debug
+  - Structured logs with correlation IDs
+  - Log rotation configured (daily, max 30 days)
+  - Console output for development
+  - File output for production
+  - Unit tests pass
+- **Effort:** 4h
+- **Dependencies:** T1-004
+- **Deliverables:** src/utils/logger.ts, tests/utils/logger.test.ts
+
+**T1-025: Implement Caching Layer**
+- **Description:** Create Redis caching utility
+- **Acceptance Criteria:**
+  - Cache client configured
+  - get(key), set(key, value, ttl), del(key) functions
+  - Cache hit/miss metrics
+  - TTL support
+  - Unit tests pass
+- **Effort:** 6h
+- **Dependencies:** T1-007
+- **Deliverables:** src/utils/cache.ts, tests/utils/cache.test.ts
+
+**T1-026: Setup Input Validation**
+- **Description:** Configure Zod schemas for API validation
+- **Acceptance Criteria:**
+  - Zod installed
+  - Validation middleware created
+  - Example schemas for auth endpoints
+  - Type-safe request validation
+  - Error messages user-friendly
+  - Unit tests pass
+- **Effort:** 5h
+- **Dependencies:** T1-004
+- **Deliverables:** src/schemas/, src/middleware/validate.ts, tests/middleware/validate.test.ts
+
+**T1-027: Implement Error Handling**
+- **Description:** Create global error handler and custom error classes
+- **Acceptance Criteria:**
+  - Custom error classes: ValidationError, AuthError, NotFoundError, etc.
+  - Global error handler middleware
+  - Error responses standardized: { error: { code, message, details } }
+  - Stack traces hidden in production
+  - Errors logged with correlation IDs
+  - Unit tests pass
+- **Effort:** 4h
+- **Dependencies:** T1-024
+- **Deliverables:** src/utils/errors.ts, src/middleware/errorHandler.ts, tests/middleware/errorHandler.test.ts
+
+**T1-028: Setup Base Service Classes**
+- **Description:** Create base service class with DI support
+- **Acceptance Criteria:**
+  - BaseService class with common methods
+  - Dependency injection support
+  - Logger injected
+  - Cache injected
+  - Database client injected
+  - Unit tests pass
+- **Effort:** 6h
+- **Dependencies:** T1-024, T1-025
+- **Deliverables:** src/services/BaseService.ts, tests/services/BaseService.test.ts
+
+---
+
+#### Task Group 6: CI/CD Pipeline ([X] days)
+
+**T1-029: Configure GitHub Actions**
+- **Description:** Setup CI/CD pipeline with GitHub Actions
+- **Acceptance Criteria:**
+  - Workflow file created (.github/workflows/ci.yml)
+  - Triggers: push to main/develop, pull requests
+  - Jobs: lint, test, build
+  - Node.js version matrix (18, 20)
+  - Test coverage report generated
+  - Build artifacts cached
+- **Effort:** 4h
+- **Dependencies:** T1-004
+- **Deliverables:** .github/workflows/ci.yml
+
+**T1-030: Configure Deployment Pipeline**
+- **Description:** Setup deployment to staging environment
+- **Acceptance Criteria:**
+  - Deployment workflow created (.github/workflows/deploy.yml)
+  - Triggers: push to develop (staging), push to main (production)
+  - Environment secrets configured
+  - Database migrations run automatically
+  - Health check after deployment
+  - Rollback on failure
+- **Effort:** 6h
+- **Dependencies:** T1-029
+- **Deliverables:** .github/workflows/deploy.yml
+
+---
+
+**Phase 1 Exit Criteria:**
+
+**Acceptance Criteria:**
+- [ ] All team members can run project locally
+- [ ] Database migrations apply successfully
+- [ ] Users can register and login
+- [ ] JWT authentication works for protected endpoints
+- [ ] Unit tests pass (>80% coverage)
+- [ ] Integration tests pass for auth flow
+- [ ] CI/CD pipeline deploys to staging
+- [ ] Code review completed
+- [ ] Documentation updated (README, API docs)
+
+**Quality Gates:**
+- ✅ Zero critical bugs
+- ✅ Linting passes with no errors
+- ✅ Build succeeds in CI/CD
+- ✅ Security scan passes (no high/critical vulnerabilities)
+- ✅ Code coverage > 80%
+
+**Performance Validation:**
+- Auth operations: P95 < 100ms
+- Database queries: P99 < 50ms
+
+**Dependencies:**
+- Development environment access
+- Database credentials
+- JWT secret key
+- GitHub repository access
+
+**Deliverables:**
+- Working development environment
+- Database schema deployed
+- Authentication functional
+- Test suite passing (>80% coverage)
+- CI/CD pipeline operational
+
+**Risks:**
+- Database migration conflicts (LOW) → Mitigation: Detailed migration scripts, rollback tested
+- Environment setup issues on different OS (MEDIUM) → Mitigation: Docker standardization, detailed docs
+- Team onboarding delays (LOW) → Mitigation: Pair programming, documentation
+
+**Sign-off Required:** Tech Lead, DevOps Lead
+
+---
+
+[CONTINUE WITH PHASE 2, 3, 4, etc. based on SPEC requirements]
+
+
+### Phase 2: Core Domain Models (Weeks [X]-[Y])
+**Duration:** [X] weeks | **Team:** 3-4 devs | **Risk:** MEDIUM-HIGH
+
+**Objectives:**
+- Implement core business models and services
+- Setup service layer architecture with DI
+- Implement domain-specific logic
+- Ensure data integrity and consistency
+
+---
+
+[IF FINTECH DOMAIN DETECTED, ADD:]
+
+#### Task Group 1: Data Model Design (Financial) ([X] days)
+
+**T2-001: Design Credit System Data Flow**
+- **Description:** Document credit system data flow and state transitions
+- **Acceptance Criteria:**
+  - Flow diagram for credit purchase, usage, refund
+  - State transition diagram for credit transactions
+  - Edge cases documented (negative balance, concurrent operations)
+  - Idempotency strategy defined
+- **Effort:** 4h
+- **Dependencies:** T1-014
+- **Deliverables:** docs/credit-system-flow.md
+
+**T2-002: Design Ledger Integrity Mechanism**
+- **Description:** Design hash chain mechanism for ledger tamper detection
+- **Acceptance Criteria:**
+  - Hash algorithm selected (SHA-256)
+  - Hash chain logic documented
+  - Verification algorithm designed
+  - Performance impact analyzed
+- **Effort:** 5h
+- **Dependencies:** T1-009
+- **Deliverables:** docs/ledger-integrity.md
+
+**T2-003: Design Saga Patterns**
+- **Description:** Design saga patterns for distributed transactions
+- **Acceptance Criteria:**
+  - Credit Purchase Saga designed (steps, compensation)
+  - Cost Deduction Saga designed
+  - Refund Saga designed
+  - Timeout and retry strategies defined
+  - Idempotency keys strategy defined
+- **Effort:** 6h
+- **Dependencies:** T1-013
+- **Deliverables:** docs/saga-patterns.md
+
+---
+
+#### Task Group 2: Credit Service Implementation ([X] days)
+
+**CRITICAL FIX (Defect 4):** Add detailed Credit service tasks
+
+**T2-004: Implement Credit Balance Repository**
+- **Description:** Create repository for credit balance operations
+- **Acceptance Criteria:**
+  - getBalance(userId) method
+  - updateBalance(userId, amount, version) with optimistic locking
+  - reserveBalance(userId, amount) method
+  - releaseReservedBalance(userId, amount) method
+  - Transaction support
+  - Unit tests pass (>90% coverage)
+- **Effort:** 8h
+- **Dependencies:** T1-010, T1-028
+- **Deliverables:** src/repositories/CreditBalanceRepository.ts, tests/
+
+**T2-005: Implement Ledger Repository**
+- **Description:** Create repository for ledger operations
+- **Acceptance Criteria:**
+  - appendEntry(userId, type, amount, metadata) method
+  - getHistory(userId, pagination) method
+  - verifyIntegrity(userId) method (hash chain validation)
+  - Immutability enforced (append-only)
+  - Unit tests pass (>90% coverage)
+- **Effort:** 10h
+- **Dependencies:** T1-009, T1-028, T2-002
+- **Deliverables:** src/repositories/LedgerRepository.ts, tests/
+
+**T2-006: Implement Credit Balance Query**
+- **Description:** Create API endpoint GET /api/credit/balance
+- **Acceptance Criteria:**
+  - Returns: balance, reserved_balance, available_balance
+  - Authentication required
+  - Cached with 30s TTL
+  - Response time: P95 < 50ms
+  - Integration test passes
+- **Effort:** 4h
+- **Dependencies:** T2-004
+- **Deliverables:** src/routes/credit.ts, tests/routes/credit.test.ts
+
+**T2-007: Implement Credit Addition (Purchase)**
+- **Description:** Create API endpoint POST /api/credit/purchase
+- **Acceptance Criteria:**
+  - Accepts: amount, payment_method_id
+  - Validates: amount > 0, payment method valid
+  - Updates credit balance atomically
+  - Appends ledger entry
+  - Returns: new_balance, transaction_id
+  - Idempotency key support
+  - Integration test passes
+- **Effort:** 10h
+- **Dependencies:** T2-004, T2-005
+- **Deliverables:** src/routes/credit.ts (updated), src/services/CreditService.ts
+
+**T2-008: Implement Credit Deduction (Usage)**
+- **Description:** Create API endpoint POST /api/credit/deduct
+- **Acceptance Criteria:**
+  - Accepts: amount, reason, metadata
+  - Validates: amount > 0, sufficient balance
+  - Prevents negative balance (check constraint)
+  - Updates credit balance atomically
+  - Appends ledger entry
+  - Returns: new_balance, transaction_id
+  - Error handling: insufficient balance
+  - Integration test passes
+- **Effort:** 10h
+- **Dependencies:** T2-004, T2-005
+- **Deliverables:** src/services/CreditService.ts (updated), tests/
+
+**T2-009: Implement Reserved Balance Mechanism**
+- **Description:** Implement credit reservation for pending operations
+- **Acceptance Criteria:**
+  - reserveCredit(userId, amount, reason) method
+  - releaseReservedCredit(userId, reservationId) method
+  - commitReservedCredit(userId, reservationId) method
+  - Reservation timeout (1 hour)
+  - Prevents over-reservation (balance >= reserved)
+  - Unit tests pass
+- **Effort:** 12h
+- **Dependencies:** T2-004
+- **Deliverables:** src/services/CreditService.ts (updated), tests/
+
+**T2-010: Implement Credit Transaction History**
+- **Description:** Create API endpoint GET /api/credit/history
+- **Acceptance Criteria:**
+  - Returns: paginated transaction list
+  - Filters: date range, transaction type
+  - Sorting: newest first
+  - Pagination: cursor-based
+  - Response time: P95 < 100ms
+  - Integration test passes
+- **Effort:** 6h
+- **Dependencies:** T2-005
+- **Deliverables:** src/routes/credit.ts (updated), tests/
+
+---
+
+#### Task Group 3: Ledger Service Implementation ([X] days)
+
+**T2-011: Implement Hash Chain Generation**
+- **Description:** Implement hash chain for ledger entries
+- **Acceptance Criteria:**
+  - calculateHash(entry, previousHash) function
+  - SHA-256 algorithm
+  - Includes: userId, amount, type, timestamp, previousHash
+  - Unit tests pass
+- **Effort:** 4h
+- **Dependencies:** T2-002
+- **Deliverables:** src/utils/hash.ts, tests/utils/hash.test.ts
+
+**T2-012: Implement Ledger Integrity Verification**
+- **Description:** Create ledger integrity verification service
+- **Acceptance Criteria:**
+  - verifyLedgerIntegrity(userId) method
+  - Validates hash chain from first to last entry
+  - Returns: valid (boolean), broken_at (entry_id if invalid)
+  - Performance: < 1s for 10K entries
+  - Unit tests pass
+- **Effort:** 6h
+- **Dependencies:** T2-011
+- **Deliverables:** src/services/LedgerService.ts, tests/
+
+**T2-013: Implement Ledger Snapshot**
+- **Description:** Create periodic ledger snapshot for performance
+- **Acceptance Criteria:**
+  - Snapshot created daily (cron job)
+  - Stores: userId, balance_snapshot, last_entry_id, hash
+  - Verification starts from last snapshot
+  - Reduces verification time by 90%
+  - Unit tests pass
+- **Effort:** 8h
+- **Dependencies:** T2-012
+- **Deliverables:** src/services/LedgerService.ts (updated), src/jobs/ledgerSnapshot.ts
+
+---
+
+#### Task Group 4: Payment Service Integration ([X] days)
+
+**T2-014: Setup Stripe SDK**
+- **Description:** Install and configure Stripe SDK
+- **Acceptance Criteria:**
+  - Stripe SDK installed
+  - API keys configured (test and production)
+  - Webhook endpoint secret configured
+  - Test mode enabled for development
+- **Effort:** 2h
+- **Dependencies:** T1-004
+- **Deliverables:** package.json (updated), .env.example (updated)
+
+**T2-015: Implement Payment Method Management**
+- **Description:** Create endpoints for payment method management
+- **Acceptance Criteria:**
+  - POST /api/payment/methods - Add payment method
+  - GET /api/payment/methods - List payment methods
+  - DELETE /api/payment/methods/:id - Remove payment method
+  - Stripe customer created automatically
+  - Payment methods stored in Stripe (not locally)
+  - Integration tests pass
+- **Effort:** 10h
+- **Dependencies:** T2-014
+- **Deliverables:** src/routes/payment.ts, src/services/PaymentService.ts, tests/
+
+**T2-016: Implement Payment Intent Creation**
+- **Description:** Create payment intent for credit purchase
+- **Acceptance Criteria:**
+  - createPaymentIntent(userId, amount, paymentMethodId) method
+  - Stripe PaymentIntent created
+  - 3D Secure supported
+  - Idempotency key used
+  - Returns: client_secret for frontend
+  - Unit tests pass
+- **Effort:** 12h
+- **Dependencies:** T2-015
+- **Deliverables:** src/services/PaymentService.ts (updated), tests/
+
+**T2-017: Implement Payment Webhook Handler**
+- **Description:** Create webhook endpoint for Stripe events
+- **Acceptance Criteria:**
+  - POST /api/webhooks/stripe endpoint
+  - Signature verification (Stripe-Signature header)
+  - Handles: payment_intent.succeeded, payment_intent.failed
+  - Idempotency: duplicate webhooks ignored
+  - Triggers credit addition on success
+  - Logs all webhook events
+  - Integration tests pass
+- **Effort:** 12h
+- **Dependencies:** T2-016
+- **Deliverables:** src/routes/webhooks.ts, src/services/WebhookService.ts, tests/
+
+**T2-018: Implement Refund System**
+- **Description:** Create refund functionality
+- **Acceptance Criteria:**
+  - POST /api/payment/refunds - Create refund
+  - GET /api/payment/refunds/:id - Get refund status
+  - Supports: full refund, partial refund
+  - Stripe refund created
+  - Credit deducted on refund
+  - Ledger entry created
+  - Refund status tracked: PENDING, COMPLETED, FAILED
+  - Integration tests pass
+- **Effort:** 14h
+- **Dependencies:** T2-017
+- **Deliverables:** src/routes/payment.ts (updated), src/services/RefundService.ts, tests/
+
+---
+
+#### Task Group 5: Saga Orchestration ([X] days)
+
+**T2-019: Implement Saga Orchestrator**
+- **Description:** Create saga orchestration framework
+- **Acceptance Criteria:**
+  - SagaOrchestrator class
+  - executeSaga(sagaDefinition, payload) method
+  - Step execution with compensation
+  - State persistence (saga_state table)
+  - Timeout handling (configurable per step)
+  - Retry logic (exponential backoff)
+  - Unit tests pass
+- **Effort:** 16h
+- **Dependencies:** T1-013, T2-003
+- **Deliverables:** src/services/SagaOrchestrator.ts, tests/
+
+**T2-020: Implement Credit Purchase Saga**
+- **Description:** Create saga for credit purchase flow
+- **Acceptance Criteria:**
+  - Steps: Reserve Credit → Process Payment → Commit Credit → Update Ledger
+  - Compensation: Release Reserved Credit ← Refund Payment ← Revert Credit
+  - Idempotency keys used
+  - Timeout: 5 minutes total
+  - Integration test passes (success and failure scenarios)
+- **Effort:** 10h
+- **Dependencies:** T2-019
+- **Deliverables:** src/sagas/CreditPurchaseSaga.ts, tests/
+
+**T2-021: Implement Cost Deduction Saga**
+- **Description:** Create saga for cost deduction flow
+- **Acceptance Criteria:**
+  - Steps: Reserve Credit → Deduct Credit → Update Ledger → Trigger Service
+  - Compensation: Release Reserved Credit ← Revert Deduction
+  - Prevents double deduction
+  - Integration test passes
+- **Effort:** 8h
+- **Dependencies:** T2-019
+- **Deliverables:** src/sagas/CostDeductionSaga.ts, tests/
+
+**T2-022: Implement Refund Saga**
+- **Description:** Create saga for refund flow
+- **Acceptance Criteria:**
+  - Steps: Validate Refund → Process Stripe Refund → Deduct Credit → Update Ledger
+  - Compensation: Revert Credit ← Cancel Refund
+  - Partial refund support
+  - Integration test passes
+- **Effort:** 10h
+- **Dependencies:** T2-019, T2-018
+- **Deliverables:** src/sagas/RefundSaga.ts, tests/
+
+---
+
+**Phase 2 Exit Criteria:**
+
+**Acceptance Criteria:**
+- [ ] All core business logic implemented
+- [ ] Credit operations work correctly (add, deduct, reserve, release)
+- [ ] Ledger entries are immutable and tamper-proof
+- [ ] Hash chain validation passes
+- [ ] Payment flow works end-to-end (test mode)
+- [ ] Webhooks handled correctly with signature validation
+- [ ] Sagas execute successfully with compensation
+- [ ] Idempotency prevents duplicate transactions
+- [ ] Audit logs capture all financial operations
+- [ ] Unit tests pass (>85% coverage)
+- [ ] Integration tests pass for all flows
+- [ ] Load testing shows acceptable performance
+
+**Quality Gates:**
+- ✅ Zero critical/high bugs
+- ✅ P99 latency < 300ms for core operations
+- ✅ No data integrity issues
+- ✅ Security review passed
+- ✅ Code coverage > 85%
+- ✅ All edge cases handled
+
+**Performance Validation:**
+- Credit operations: P95 < 100ms
+- Payment processing: P99 < 500ms
+- Saga execution: < 5 seconds end-to-end
+- Ledger writes: P99 < 200ms
+- Throughput: 500 TPS sustained
+
+**Security Validation:**
+- [ ] Authentication/Authorization working
+- [ ] Input validation on all endpoints
+- [ ] SQL injection prevention verified
+- [ ] XSS prevention verified
+- [ ] CSRF protection enabled
+- [ ] Rate limiting configured
+- [ ] Webhook signature validation working
+
+**Deliverables:**
+- Credit service fully functional
+- Ledger service with integrity verification
+- Payment integration working (Stripe test mode)
+- Saga orchestration framework
+- Test suite passing (>85% coverage)
+
+**Risks:**
+- Payment provider delays (MEDIUM) → Mitigation: Mock provider for testing, queue for retry
+- Saga complexity (MEDIUM) → Mitigation: Comprehensive testing, clear documentation
+- Ledger performance (LOW) → Mitigation: Snapshots, indexing, partitioning
+
+**Sign-off Required:** Tech Lead, Product Owner, QA Lead, Security Lead
+
+---
+
+### Phase 3: Billing & Invoice System (Weeks [Y]-[Z])
+**Duration:** [X] weeks | **Team:** 3-4 devs | **Risk:** MEDIUM
+
+**Objectives:**
+- Implement billing cycle management
+- Create invoice generation system
+- Implement tax calculation
+- Setup invoice PDF generation
+- Integrate with payment system
+
+---
+
+#### Task Group 1: Billing Cycle Management ([X] days)
+
+**T3-001: Design Billing Cycle Schema**
+- **Description:** Design billing cycle and subscription tables
+- **Acceptance Criteria:**
+  - billing_cycles table: id, user_id, cycle_type, start_date, end_date, status
+  - subscriptions table: id, user_id, plan_id, status, billing_cycle
+  - Cycle types: MONTHLY, QUARTERLY, ANNUAL
+  - Status enum: ACTIVE, PAUSED, CANCELLED
+  - Migrations created
+- **Effort:** 4h
+- **Dependencies:** T1-008
+- **Deliverables:** schema/billing.sql, migration
+
+**T3-002: Implement Billing Cycle Configuration**
+- **Description:** Create billing cycle configuration service
+- **Acceptance Criteria:**
+  - createBillingCycle(userId, cycleType) method
+  - getBillingCycle(userId) method
+  - updateBillingCycle(userId, newCycleType) method
+  - Proration calculation for mid-cycle changes
+  - Unit tests pass
+- **Effort:** 8h
+- **Dependencies:** T3-001
+- **Deliverables:** src/services/BillingCycleService.ts, tests/
+
+**T3-003: Implement Billing Cycle Processor**
+- **Description:** Create cron job for billing cycle processing
+- **Acceptance Criteria:**
+  - Runs daily at 00:00 UTC
+  - Identifies cycles ending today
+  - Triggers invoice generation
+  - Sends billing reminders (3 days before)
+  - Logs all processing
+  - Unit tests pass
+- **Effort:** 10h
+- **Dependencies:** T3-002
+- **Deliverables:** src/jobs/billingCycleProcessor.ts, tests/
+
+---
+
+#### Task Group 2: Invoice Generation ([X] days)
+
+**T3-004: Implement Invoice Generator**
+- **Description:** Create invoice generation service
+- **Acceptance Criteria:**
+  - generateInvoice(userId, billingCycleId) method
+  - Calculates line items from usage
+  - Applies discounts and credits
+  - Calculates tax
+  - Generates unique invoice number (INV-YYYY-MM-XXXXX)
+  - Stores invoice in database
+  - Unit tests pass
+- **Effort:** 12h
+- **Dependencies:** T1-011, T3-002
+- **Deliverables:** src/services/InvoiceService.ts, tests/
+
+**T3-005: Implement Tax Calculation**
+- **Description:** Create tax calculation service
+- **Acceptance Criteria:**
+  - calculateTax(amount, region, taxType) method
+  - Supports: VAT, GST, Sales Tax
+  - Tax rates configurable per region
+  - Tax exemption support
+  - Rounding rules applied
+  - Unit tests pass (multiple regions)
+- **Effort:** 10h
+- **Dependencies:** None
+- **Deliverables:** src/services/TaxService.ts, tests/
+
+**T3-006: Implement Proration Logic**
+- **Description:** Create proration calculation for mid-cycle changes
+- **Acceptance Criteria:**
+  - calculateProration(oldPlan, newPlan, daysRemaining) method
+  - Daily proration calculation
+  - Handles: upgrades, downgrades, cancellations
+  - Credit applied for downgrades
+  - Charge applied for upgrades
+  - Unit tests pass (edge cases)
+- **Effort:** 12h
+- **Dependencies:** T3-002
+- **Deliverables:** src/services/ProrationService.ts, tests/
+
+**T3-007: Implement Invoice PDF Generation**
+- **Description:** Create PDF generation for invoices
+- **Acceptance Criteria:**
+  - generateInvoicePDF(invoiceId) method
+  - PDF includes: company logo, invoice details, line items, tax, total
+  - Professional template
+  - Stored in S3 or local storage
+  - URL returned for download
+  - Unit tests pass
+- **Effort:** 10h
+- **Dependencies:** T3-004
+- **Deliverables:** src/services/PDFService.ts, templates/invoice.html, tests/
+
+**T3-008: Implement Invoice Email Notification**
+- **Description:** Send invoice emails to users
+- **Acceptance Criteria:**
+  - sendInvoiceEmail(userId, invoiceId) method
+  - Email includes: invoice summary, PDF attachment, payment link
+  - Email template professional
+  - SendGrid or similar service integrated
+  - Retry logic on failure
+  - Unit tests pass
+- **Effort:** 8h
+- **Dependencies:** T3-007
+- **Deliverables:** src/services/EmailService.ts, templates/invoice-email.html, tests/
+
+---
+
+#### Task Group 3: Invoice API Endpoints ([X] days)
+
+**T3-009: Implement Invoice Listing**
+- **Description:** Create GET /api/invoices endpoint
+- **Acceptance Criteria:**
+  - Returns: paginated invoice list
+  - Filters: status, date range
+  - Sorting: newest first
+  - Includes: invoice_number, amount, tax, total, status, issued_at
+  - Response time: P95 < 100ms
+  - Integration test passes
+- **Effort:** 4h
+- **Dependencies:** T3-004
+- **Deliverables:** src/routes/invoices.ts, tests/
+
+**T3-010: Implement Invoice Detail**
+- **Description:** Create GET /api/invoices/:id endpoint
+- **Acceptance Criteria:**
+  - Returns: full invoice details with line items
+  - Includes: PDF download URL
+  - Authentication required
+  - Authorization: user can only view own invoices
+  - Integration test passes
+- **Effort:** 3h
+- **Dependencies:** T3-004
+- **Deliverables:** src/routes/invoices.ts (updated), tests/
+
+**T3-011: Implement Invoice Payment**
+- **Description:** Create POST /api/invoices/:id/pay endpoint
+- **Acceptance Criteria:**
+  - Accepts: payment_method_id
+  - Creates Stripe payment intent
+  - Updates invoice status to PAID on success
+  - Triggers credit addition
+  - Sends payment confirmation email
+  - Integration test passes
+- **Effort:** 8h
+- **Dependencies:** T2-016, T3-004
+- **Deliverables:** src/routes/invoices.ts (updated), tests/
+
+---
+
+**Phase 3 Exit Criteria:**
+
+**Acceptance Criteria:**
+- [ ] Billing cycles configured and processing
+- [ ] Invoices generated automatically
+- [ ] Tax calculated correctly for all regions
+- [ ] Invoice PDFs generated and accessible
+- [ ] Invoice emails sent successfully
+- [ ] Invoice payment flow working
+- [ ] Proration logic working for plan changes
+- [ ] Unit tests pass (>85% coverage)
+- [ ] Integration tests pass
+
+**Quality Gates:**
+- ✅ Zero critical/high bugs
+- ✅ Invoice generation < 5s
+- ✅ PDF generation < 3s
+- ✅ Email delivery > 99%
+- ✅ Code coverage > 85%
+
+**Performance Validation:**
+- Invoice generation: < 5s per invoice
+- PDF generation: < 3s per PDF
+- Tax calculation: < 100ms
+- API response time: P95 < 200ms
+
+**Deliverables:**
+- Billing cycle management system
+- Invoice generation system
+- Tax calculation service
+- PDF generation service
+- Email notification system
+- Test suite passing (>85% coverage)
+
+**Risks:**
+- Tax calculation complexity (MEDIUM) → Mitigation: Use tax service API (Stripe Tax, TaxJar)
+- PDF generation performance (LOW) → Mitigation: Async generation, caching
+- Email delivery issues (LOW) → Mitigation: Retry logic, monitoring
+
+**Sign-off Required:** Tech Lead, Product Owner, QA Lead, Finance Team
+
+---
+
+[END IF FINTECH]
+
+[FOR OTHER DOMAINS, GENERATE APPROPRIATE PHASE 2-3 TASKS]
+
+
+---
+
+## 5. Compliance & Security Requirements
+
+**CRITICAL FIX (Defect 2):** Add PCI DSS and compliance requirements
+
+[IF FINTECH DOMAIN DETECTED, ADD:]
+
+### 5.1 PCI DSS Compliance
+
+**Compliance Level:** Level 1 (> 6 million transactions/year) or Level 2-4 (based on volume)
+
+**Required Standards:**
+- **PCI DSS Requirement 1:** Install and maintain firewall configuration
+- **PCI DSS Requirement 2:** Do not use vendor-supplied defaults
+- **PCI DSS Requirement 3:** Protect stored cardholder data
+- **PCI DSS Requirement 4:** Encrypt transmission of cardholder data
+- **PCI DSS Requirement 5:** Protect systems against malware
+- **PCI DSS Requirement 6:** Develop and maintain secure systems
+- **PCI DSS Requirement 7:** Restrict access to cardholder data
+- **PCI DSS Requirement 8:** Identify and authenticate access
+- **PCI DSS Requirement 9:** Restrict physical access
+- **PCI DSS Requirement 10:** Track and monitor all access
+- **PCI DSS Requirement 11:** Regularly test security systems
+- **PCI DSS Requirement 12:** Maintain information security policy
+
+### 5.2 Security Deliverables by Phase
+
+#### Phase 2: Security Foundation
+- **T2-023: Implement Immutable Audit Logs**
+  - **Description:** Create append-only audit log system
+  - **Acceptance Criteria:**
+    - All financial operations logged
+    - Logs cannot be modified or deleted
+    - Includes: user_id, action, ip_address, user_agent, timestamp, metadata
+    - Retention: 7 years (financial compliance)
+    - Tamper detection mechanism
+  - **Effort:** 12h
+  - **Compliance:** PCI DSS Requirement 10
+  - **Deliverables:** src/services/AuditLogService.ts, tests/
+
+- **T2-024: Implement Payment Security Contract**
+  - **Description:** Secure Stripe integration with best practices
+  - **Acceptance Criteria:**
+    - API keys stored in environment variables (never in code)
+    - Webhook signature validation (Stripe-Signature header)
+    - TLS 1.2+ enforced for all API calls
+    - No cardholder data stored locally
+    - PCI SAQ-A compliance (Stripe handles card data)
+  - **Effort:** 8h
+  - **Compliance:** PCI DSS Requirement 6
+  - **Deliverables:** src/services/PaymentService.ts (updated), docs/pci-compliance.md
+
+- **T2-025: Implement Webhook Validation and Replay Protection**
+  - **Description:** Secure webhook handling
+  - **Acceptance Criteria:**
+    - Webhook signature verified (HMAC SHA-256)
+    - Duplicate webhooks rejected (idempotency keys)
+    - Replay attacks prevented (timestamp validation)
+    - Failed webhooks retried (exponential backoff)
+    - All webhook events logged
+  - **Effort:** 6h
+  - **Compliance:** PCI DSS Requirement 6
+  - **Deliverables:** src/services/WebhookService.ts (updated), tests/
+
+- **T2-026: Implement Encryption at Rest**
+  - **Description:** Encrypt sensitive data in database
+  - **Acceptance Criteria:**
+    - Database-level encryption enabled (PostgreSQL pgcrypto)
+    - Sensitive fields encrypted: email, phone, address
+    - Encryption keys rotated quarterly
+    - Key management documented
+    - No performance degradation (< 5%)
+  - **Effort:** 10h
+  - **Compliance:** PCI DSS Requirement 3
+  - **Deliverables:** migrations/encryption.sql, docs/encryption.md
+
+#### Phase 4: Security Hardening
+- **T4-012: Implement Rate Limiting**
+  - **Description:** Protect APIs from abuse
+  - **Acceptance Criteria:**
+    - Per-user rate limits: 100 req/min (authenticated)
+    - Global rate limits: 10,000 req/min
+    - IP-based rate limits: 20 req/min (unauthenticated)
+    - 429 Too Many Requests response
+    - Rate limit headers included (X-RateLimit-*)
+  - **Effort:** 6h
+  - **Compliance:** PCI DSS Requirement 6
+  - **Deliverables:** src/middleware/rateLimit.ts, tests/
+
+- **T4-013: Implement Security Headers**
+  - **Description:** Configure secure HTTP headers
+  - **Acceptance Criteria:**
+    - Strict-Transport-Security (HSTS)
+    - Content-Security-Policy (CSP)
+    - X-Content-Type-Options: nosniff
+    - X-Frame-Options: DENY
+    - X-XSS-Protection: 1; mode=block
+    - Referrer-Policy: strict-origin-when-cross-origin
+  - **Effort:** 3h
+  - **Compliance:** PCI DSS Requirement 6
+  - **Deliverables:** src/middleware/securityHeaders.ts
+
+- **T4-014: Implement Input Sanitization**
+  - **Description:** Prevent injection attacks
+  - **Acceptance Criteria:**
+    - SQL injection prevention (parameterized queries)
+    - XSS prevention (output encoding)
+    - NoSQL injection prevention
+    - Command injection prevention
+    - Path traversal prevention
+    - All inputs validated and sanitized
+  - **Effort:** 8h
+  - **Compliance:** PCI DSS Requirement 6
+  - **Deliverables:** src/middleware/sanitize.ts, tests/
+
+- **T4-015: Conduct Penetration Testing**
+  - **Description:** External security audit
+  - **Acceptance Criteria:**
+    - OWASP Top 10 tested
+    - Vulnerability scan completed
+    - Penetration test report received
+    - All high/critical vulnerabilities fixed
+    - Retest passed
+  - **Effort:** 40h (external vendor + fixes)
+  - **Compliance:** PCI DSS Requirement 11
+  - **Deliverables:** reports/pentest-report.pdf, fixes documented
+
+### 5.3 Compliance Checkpoints
+
+- **Phase 2 Exit:** Security foundation audit passed
+- **Phase 4 Exit:** PCI DSS self-assessment questionnaire (SAQ) completed
+- **Phase 6 Exit:** External security audit scheduled
+- **Production Launch:** PCI DSS compliance certificate obtained (if required)
+
+[END IF FINTECH]
+
+[IF HEALTHCARE DOMAIN DETECTED, ADD HIPAA REQUIREMENTS]
+
+[IF GDPR APPLICABLE, ADD GDPR REQUIREMENTS]
+
+---
+
+## 6. Testing Strategy & Coverage Targets
+
+**CRITICAL FIX (Defect 8):** Add detailed testing strategy with coverage split
+
+### 6.1 Overall Coverage Targets
+
+- **Overall Code Coverage:** 95%+
+- **Unit Tests:** 90%+ coverage
+- **Integration Tests:** 85%+ coverage
+- **E2E Tests:** Critical user flows only
+
+### 6.2 Test Types Breakdown
+
+#### 6.2.1 Unit Tests (Target: 90% coverage)
+
+**Scope:**
+- All business logic functions
+- All utility functions
+- All validation schemas
+- All service methods
+- All repository methods
+
+**Coverage by Layer:**
+- Service layer: 95%
+- Repository layer: 90%
+- Utility functions: 100%
+- Validation schemas: 100%
+- Business logic: 95%
+- Middleware: 85%
+
+**Tools:**
+- Jest or Vitest
+- @testing-library for React components (if applicable)
+- Sinon or Jest mocks for dependencies
+
+**Example Test Structure:**
+```typescript
+describe('CreditService', () => {
+  describe('addCredit', () => {
+    it('should add credit successfully', async () => { ... });
+    it('should throw error for negative amount', async () => { ... });
+    it('should update ledger entry', async () => { ... });
+    it('should handle concurrent requests', async () => { ... });
+  });
+});
+```
+
+#### 6.2.2 Integration Tests (Target: 85% coverage)
+
+**Scope:**
+- All API endpoints
+- All database operations
+- All external service integrations
+- All saga flows
+- All webhook handlers
+
+**Coverage by Component:**
+- API endpoints: 90%
+- Database operations: 85%
+- External services (mocked): 80%
+- Saga orchestration: 90%
+- Webhook handlers: 95%
+
+**Tools:**
+- Supertest for API testing
+- Test database (Docker container)
+- Nock or MSW for mocking external APIs
+
+**Example Test Structure:**
+```typescript
+describe('POST /api/credit/purchase', () => {
+  it('should purchase credit successfully', async () => {
+    const response = await request(app)
+      .post('/api/credit/purchase')
+      .send({ amount: 100, payment_method_id: 'pm_test' })
+      .expect(200);
+    
+    expect(response.body.new_balance).toBe(100);
+  });
+});
+```
+
+#### 6.2.3 End-to-End Tests (Critical flows only)
+
+**Scope:**
+- User registration + credit purchase
+- Credit usage + deduction
+- Payment processing + webhook
+- Refund request + processing
+- Billing cycle + invoice generation
+
+**Tools:**
+- Playwright or Cypress (if web UI)
+- Supertest (if API only)
+- Test environment with real database
+
+**Example Flows:**
+1. **Credit Purchase Flow:**
+   - User registers
+   - User adds payment method
+   - User purchases credit
+   - Webhook received
+   - Credit added to balance
+   - Ledger entry created
+
+2. **Refund Flow:**
+   - User requests refund
+   - Refund processed in Stripe
+   - Webhook received
+   - Credit deducted
+   - Ledger entry created
+
+#### 6.2.4 Security Tests
+
+**Scope:**
+- OWASP Top 10 coverage
+- Authentication/Authorization tests
+- Input validation tests
+- Injection attack tests
+- Rate limiting tests
+
+**Test Cases:**
+- **SQL Injection:** Attempt SQL injection in all inputs
+- **XSS:** Attempt script injection in all text fields
+- **CSRF:** Verify CSRF token validation
+- **Authentication:** Test JWT validation, expiration, refresh
+- **Authorization:** Test role-based access control
+- **Rate Limiting:** Test rate limit enforcement
+
+**Tools:**
+- OWASP ZAP or Burp Suite
+- Custom security test suite
+- Penetration testing (external vendor)
+
+#### 6.2.5 Performance Tests
+
+**Scope:**
+- Load testing: Sustained load
+- Stress testing: Peak load
+- Endurance testing: Long-duration load
+- Spike testing: Sudden load increase
+
+**Targets:**
+- **Load Testing:** 1000 TPS sustained for 1 hour
+- **Stress Testing:** 2000 TPS peak for 10 minutes
+- **Endurance Testing:** 500 TPS for 24 hours
+- **Spike Testing:** 0 → 5000 TPS in 1 minute
+
+**Tools:**
+- k6 or Artillery for load testing
+- Grafana for monitoring
+- Prometheus for metrics
+
+**Metrics to Monitor:**
+- Response time: P50, P95, P99
+- Throughput: Requests per second
+- Error rate: Percentage of failed requests
+- Resource usage: CPU, memory, disk, network
+
+**Example k6 Script:**
+```javascript
+import http from 'k6/http';
+import { check } from 'k6';
+
+export let options = {
+  stages: [
+    { duration: '5m', target: 1000 }, // Ramp up to 1000 TPS
+    { duration: '1h', target: 1000 }, // Sustain 1000 TPS
+    { duration: '5m', target: 0 },    // Ramp down
+  ],
+  thresholds: {
+    http_req_duration: ['p(95)<300'], // 95% of requests < 300ms
+    http_req_failed: ['rate<0.01'],   // Error rate < 1%
+  },
+};
+
+export default function () {
+  let res = http.get('https://api.example.com/credit/balance');
+  check(res, { 'status is 200': (r) => r.status === 200 });
+}
+```
+
+### 6.3 Test Execution Strategy
+
+**Development:**
+- Unit tests run on every commit (pre-commit hook)
+- Integration tests run on every push (CI/CD)
+- E2E tests run on pull requests
+
+**Staging:**
+- Full test suite run on deployment
+- Performance tests run weekly
+- Security scans run daily
+
+**Production:**
+- Smoke tests run after deployment
+- Synthetic monitoring (Datadog, New Relic)
+- Real user monitoring (RUM)
+
+### 6.4 Test Data Management
+
+**Strategy:**
+- **Unit Tests:** Mocked data, no database
+- **Integration Tests:** Test database, seeded data
+- **E2E Tests:** Staging database, realistic data
+- **Performance Tests:** Production-like data volume
+
+**Data Privacy:**
+- No production data in tests
+- Anonymized data for staging
+- Synthetic data generation (Faker.js)
+
+---
+
+## 7. External Dependencies & Service Contracts
+
+**CRITICAL FIX (Defect 7):** Add external dependencies and service contracts
+
+### 7.1 External Services
+
+[IF FINTECH DOMAIN DETECTED, ADD:]
+
+#### 7.1.1 Stripe Payment Gateway
+
+**Contract:** Stripe API v2023-10-16 or later
+
+**Required APIs:**
+- **Payment Intents API:** Create and confirm payment intents
+- **Payment Methods API:** Manage customer payment methods
+- **Customers API:** Create and manage customers
+- **Webhooks API:** Receive payment events
+- **Refunds API:** Process refunds
+
+**SLA:** 99.99% uptime (Stripe guarantee)
+
+**Authentication:** API keys (secret key, publishable key)
+
+**Rate Limits:**
+- 100 requests/second (default)
+- 1000 requests/second (on request)
+
+**Fallback Strategy:**
+- Queue failed requests for retry
+- Exponential backoff (1s, 2s, 4s, 8s, 16s)
+- Alert on-call if > 5 consecutive failures
+
+**Error Handling:**
+- `card_declined`: Notify user, suggest alternative payment method
+- `insufficient_funds`: Notify user, suggest lower amount
+- `rate_limit_error`: Retry with backoff
+- `api_error`: Queue for retry, alert on-call
+
+**Webhook Events:**
+- `payment_intent.succeeded`: Add credit to user balance
+- `payment_intent.failed`: Notify user, log failure
+- `charge.refunded`: Deduct credit from user balance
+- `customer.updated`: Update customer info
+
+**Testing:**
+- Test mode API keys for development
+- Test card numbers for various scenarios
+- Webhook testing with Stripe CLI
+
+#### 7.1.2 Email Service (SendGrid or AWS SES)
+
+**Contract:** SendGrid API v3 or AWS SES API
+
+**Required APIs:**
+- **Send Email API:** Send transactional emails
+- **Template API:** Manage email templates
+- **Suppression API:** Manage unsubscribe list
+
+**SLA:** 99.9% uptime
+
+**Authentication:** API key (SendGrid) or IAM credentials (AWS SES)
+
+**Rate Limits:**
+- SendGrid: 10,000 emails/day (free tier), unlimited (paid)
+- AWS SES: 14 emails/second (default), higher on request
+
+**Fallback Strategy:**
+- Queue failed emails for retry
+- Fallback to alternative provider (SendGrid → AWS SES)
+- Alert on-call if > 10 consecutive failures
+
+**Email Types:**
+- **Transactional:** Invoice, payment confirmation, password reset
+- **Marketing:** Promotional (requires opt-in)
+
+**Compliance:**
+- CAN-SPAM Act compliance (unsubscribe link)
+- GDPR compliance (consent required for EU users)
+
+[END IF FINTECH]
+
+### 7.2 Internal Service Contracts
+
+[IF MICROSERVICES ARCHITECTURE, ADD:]
+
+#### 7.2.1 Credit Service → Ledger Service
+
+**Interface:** `ILedgerService`
+
+**Methods:**
+```typescript
+interface ILedgerService {
+  recordTransaction(
+    userId: string,
+    type: TransactionType,
+    amount: number,
+    metadata: Record<string, any>
+  ): Promise<{ success: boolean; ledgerId: string }>;
+
+  getBalance(userId: string): Promise<{ balance: number; reserved: number }>;
+
+  verifyIntegrity(userId: string): Promise<{ valid: boolean; brokenAt?: string }>;
+}
+```
+
+**Response Format:**
+```typescript
+{
+  success: boolean;
+  ledgerId: string;
+  timestamp: string;
+}
+```
+
+**Error Codes:**
+- `LEDGER_WRITE_FAILED`: Failed to write ledger entry
+- `INTEGRITY_CHECK_FAILED`: Hash chain validation failed
+- `USER_NOT_FOUND`: User does not exist
+
+**SLA:**
+- Response time: P95 < 100ms
+- Availability: 99.9%
+
+#### 7.2.2 Payment Service → Credit Service
+
+**Interface:** `ICreditService`
+
+**Methods:**
+```typescript
+interface ICreditService {
+  addCredit(
+    userId: string,
+    amount: number,
+    source: string,
+    metadata: Record<string, any>
+  ): Promise<{ success: boolean; newBalance: number }>;
+
+  deductCredit(
+    userId: string,
+    amount: number,
+    reason: string,
+    metadata: Record<string, any>
+  ): Promise<{ success: boolean; newBalance: number }>;
+
+  reserveCredit(
+    userId: string,
+    amount: number,
+    reason: string
+  ): Promise<{ success: boolean; reservationId: string }>;
+
+  releaseReservedCredit(
+    userId: string,
+    reservationId: string
+  ): Promise<{ success: boolean }>;
+}
+```
+
+**Response Format:**
+```typescript
+{
+  success: boolean;
+  newBalance: number;
+  transactionId: string;
+}
+```
+
+**Error Codes:**
+- `INSUFFICIENT_BALANCE`: User does not have enough credit
+- `INVALID_AMOUNT`: Amount must be positive
+- `USER_NOT_FOUND`: User does not exist
+- `RESERVATION_NOT_FOUND`: Reservation ID invalid
+
+**SLA:**
+- Response time: P95 < 50ms
+- Availability: 99.95%
+
+[END IF MICROSERVICES]
+
+### 7.3 Database Dependencies
+
+**PostgreSQL:** Version 15+ required
+
+**Required Extensions:**
+- `pgcrypto`: Encryption functions
+- `uuid-ossp`: UUID generation
+- `pg_stat_statements`: Query performance monitoring
+
+**Connection Pool:**
+- Min connections: 10
+- Max connections: 100
+- Idle timeout: 30s
+- Connection timeout: 5s
+
+**Backup Strategy:**
+- Daily full backups (retained 30 days)
+- Point-in-time recovery (PITR) enabled
+- Backup tested monthly
+
+**Redis:** Version 7+ required
+
+**Use Cases:**
+- Session storage
+- API response caching
+- Rate limiting
+- Queue management (BullMQ)
+
+**Configuration:**
+- Max memory: 2GB
+- Eviction policy: allkeys-lru
+- Persistence: AOF (Append-Only File)
+- Replication: Master-slave (optional)
+
+---
+
+## 8. Resources & Team Allocation
+
+### 8.1 Team Structure
+
+**Recommended Team Size:** [X] developers
+
+**Roles:**
+- **Tech Lead:** 1 person (architecture, code review, technical decisions)
+- **Backend Developers:** [X] people (API, services, database)
+- **Frontend Developers:** [X] people (UI, if applicable)
+- **QA Engineer:** 1 person (testing, quality assurance)
+- **DevOps Engineer:** 0.5 person (CI/CD, infrastructure, part-time)
+- **Security Engineer:** 0.5 person (security review, compliance, part-time)
+
+### 8.2 Skills Required
+
+**Must Have:**
+- TypeScript/Node.js proficiency
+- PostgreSQL and database design
+- RESTful API design
+- Git and version control
+- Testing (Jest, Supertest)
+- Docker and containerization
+
+**Nice to Have:**
+- [IF FINTECH] Payment gateway integration (Stripe, PayPal)
+- [IF FINTECH] Financial system experience
+- Saga pattern and distributed transactions
+- Redis and caching strategies
+- CI/CD (GitHub Actions, GitLab CI)
+- Monitoring (Grafana, Datadog)
+
+### 8.3 Resource Allocation by Phase
+
+| Phase | Tech Lead | Backend Dev | Frontend Dev | QA | DevOps | Security |
+|-------|-----------|-------------|--------------|-----|--------|----------|
+| Phase 1 | 100% | 100% | 0% | 50% | 100% | 0% |
+| Phase 2 | 100% | 100% | 0% | 75% | 25% | 50% |
+| Phase 3 | 100% | 100% | 50% | 75% | 25% | 25% |
+| Phase 4 | 100% | 100% | 100% | 100% | 50% | 75% |
+| Phase 5 | 75% | 75% | 75% | 100% | 75% | 50% |
+| Phase 6 | 50% | 50% | 50% | 75% | 100% | 100% |
+
+### 8.4 Training & Onboarding
+
+**Week 1:**
+- System architecture overview
+- Codebase walkthrough
+- Development environment setup
+- Git workflow and branching strategy
+
+**Week 2:**
+- Domain knowledge training (fintech, healthcare, etc.)
+- Security best practices
+- Testing strategy and tools
+- Code review process
+
+**Ongoing:**
+- Pair programming sessions
+- Weekly tech talks
+- Code review feedback
+- Documentation updates
+
+---
+
+## 9. Risks & Mitigation
+
+### 9.1 Technical Risks
+
+| Risk | Impact | Likelihood | Mitigation |
+|------|---------|------------|-------------|
+| Payment provider integration delays | High | Medium | Mock provider for testing, queue for retry, alternative provider ready |
+| PCI DSS compliance failure | High | Low | Early security review, external audit, use Stripe (SAQ-A) |
+| Ledger consistency issues | High | Medium | Hash chain validation, periodic integrity checks, immutable design |
+| Database performance bottlenecks | Medium | Medium | Indexing strategy, query optimization, connection pooling, read replicas |
+| Saga orchestration complexity | Medium | High | Comprehensive testing, clear documentation, step-by-step debugging |
+| External API rate limiting | Medium | Low | Request queuing, exponential backoff, rate limit monitoring |
+
+### 9.2 Project Risks
+
+| Risk | Impact | Likelihood | Mitigation |
+|------|---------|------------|-------------|
+| Timeline delays | High | Medium | 30% buffer, regular progress reviews, early risk identification |
+| Team member unavailability | Medium | Medium | Knowledge sharing, documentation, cross-training |
+| Scope creep | High | High | Strict change control, prioritization, MVP focus |
+| Requirement changes | Medium | Medium | Agile approach, regular stakeholder communication |
+| Testing delays | Medium | Low | Parallel testing, automated test suite, dedicated QA |
+
+### 9.3 Business Risks
+
+| Risk | Impact | Likelihood | Mitigation |
+|------|---------|------------|-------------|
+| Regulatory compliance changes | High | Low | Monitor regulatory updates, flexible architecture |
+| Market competition | Medium | Medium | Fast iteration, MVP approach, user feedback |
+| Budget overruns | High | Low | Regular budget reviews, cost tracking, contingency fund |
+
+---
+
+## 10. Roadmap Integration
+
+**FEATURE MAPPING (SPEC → PLAN → TASKS):**
+
+[Generate based on SPEC sections]
+
+| Feature | SPEC Section | PLAN Phase | Tasks Range | Estimated Duration | Status |
+|---------|--------------|------------|-------------|-------------------|--------|
+| [Feature 1] | §[X] | Phase [Y] | T[Y]-001 to T[Y]-[Z] | [W] weeks | ⬜ Not Started |
+| [Feature 2] | §[X] | Phase [Y] | T[Y]-[Z] to T[Y]-[W] | [W] weeks | ⬜ Not Started |
+
+**DEPENDENCY GRAPH:**
+
+```
+[Database Schema] → [Core Services] → [Integration Layer] → [API Layer]
+        ↓                   ↓                  ↓
+   [Audit Log]       [Saga Engine]  →    [Monitoring]
+```
+
+---
+
+## 11. Monitoring & Observability
+
+### 11.1 Metrics to Track
+
+**Application Metrics:**
+- Request rate (requests/second)
+- Response time (P50, P95, P99)
+- Error rate (percentage)
+- Throughput (transactions/second)
+
+**Business Metrics:**
+- Credit purchases per day
+- Payment success rate
+- Refund rate
+- Invoice generation rate
+
+**Infrastructure Metrics:**
+- CPU usage
+- Memory usage
+- Disk I/O
+- Network I/O
+- Database connections
+
+### 11.2 Logging Strategy
+
+**Log Levels:**
+- **ERROR:** Application errors, exceptions
+- **WARN:** Warnings, deprecated usage
+- **INFO:** Important business events
+- **DEBUG:** Detailed debugging information
+
+**Structured Logging:**
+```json
+{
+  \"timestamp\": \"2025-12-04T10:30:00Z\",
+  \"level\": \"INFO\",
+  \"correlationId\": \"abc-123-def\",
+  \"userId\": \"user-456\",
+  \"action\": \"CREDIT_PURCHASE\",
+  \"amount\": 100,
+  \"status\": \"SUCCESS\"
+}
+```
+
+**Log Retention:**
+- Application logs: 30 days
+- Audit logs: 7 years (financial compliance)
+- Error logs: 90 days
+
+### 11.3 Alerting
+
+**Critical Alerts (PagerDuty/On-call):**
+- Error rate > 1%
+- Response time P99 > 1s
+- Database down
+- Payment gateway down
+- Disk usage > 90%
+
+**Warning Alerts (Slack/Email):**
+- Error rate > 0.5%
+- Response time P95 > 500ms
+- Memory usage > 80%
+- Failed background jobs > 10
+
+---
+
+## 12. Documentation Deliverables
+
+### 12.1 Technical Documentation
+
+- **Architecture Diagram:** System architecture, service interactions
+- **ER Diagram:** Database schema, relationships
+- **API Documentation:** OpenAPI/Swagger specification
+- **Deployment Guide:** Deployment procedures, environment setup
+- **Runbook:** Operational procedures, troubleshooting
+
+### 12.2 User Documentation
+
+- **User Guide:** How to use the system
+- **API Reference:** API endpoints, request/response formats
+- **FAQ:** Common questions and answers
+
+### 12.3 Compliance Documentation
+
+- **PCI DSS SAQ:** Self-assessment questionnaire (if fintech)
+- **HIPAA Documentation:** HIPAA compliance checklist (if healthcare)
+- **Security Audit Report:** Penetration test results
+- **Privacy Policy:** GDPR compliance (if EU users)
+
+---
+
+## 13. Post-Launch Support
+
+### 13.1 Support Plan
+
+**On-call Rotation:**
+- 24/7 on-call coverage
+- Rotation: Weekly
+- Escalation: Tech Lead → CTO
+
+**Incident Response:**
+- **P0 (Critical):** Response < 15 minutes, resolution < 4 hours
+- **P1 (High):** Response < 1 hour, resolution < 24 hours
+- **P2 (Medium):** Response < 4 hours, resolution < 3 days
+- **P3 (Low):** Response < 1 day, resolution < 1 week
+
+### 13.2 Maintenance Windows
+
+**Scheduled Maintenance:**
+- Weekly: Sunday 02:00-04:00 UTC (low traffic)
+- Monthly: First Sunday 02:00-06:00 UTC (major updates)
+
+**Emergency Maintenance:**
+- As needed for critical security patches
+- Notify users 1 hour in advance (if possible)
+
+### 13.3 Continuous Improvement
+
+**Weekly:**
+- Review error logs and fix bugs
+- Monitor performance metrics
+- Update documentation
+
+**Monthly:**
+- Review and optimize slow queries
+- Update dependencies
+- Security vulnerability scan
+
+**Quarterly:**
+- Architecture review
+- Performance optimization
+- Disaster recovery drill
+- Security audit
+
+---
+
+## 14. Success Criteria
+
+### 14.1 Functional Requirements
+
+- [ ] All features from SPEC implemented
+- [ ] All API endpoints working
+- [ ] All user flows tested
+- [ ] All edge cases handled
+
+### 14.2 Non-Functional Requirements
+
+- [ ] Performance targets met (P95 < 300ms)
+- [ ] Availability > 99.9%
+- [ ] Security requirements satisfied
+- [ ] Compliance requirements met
+
+### 14.3 Quality Requirements
+
+- [ ] Code coverage > 95%
+- [ ] Zero critical bugs
+- [ ] All security scans passed
+- [ ] Documentation complete
+
+### 14.4 Business Requirements
+
+- [ ] Stakeholder sign-off received
+- [ ] User acceptance testing passed
+- [ ] Go-live checklist completed
+- [ ] Support team trained
+
+---
+
+## 15. Appendices
+
+### Appendix A: Glossary
+
+[Define domain-specific terms]
+
+### Appendix B: References
+
+- SPEC document: [link]
+- Architecture diagrams: [link]
+- API documentation: [link]
+
+### Appendix C: Change Log
+
+| Date | Version | Changes | Author |
+|------|---------|---------|--------|
+| [Date] | 1.0 | Initial plan | SmartSpec Architect v5.0 |
+
+---
+
+**END OF PLAN**
+
+Generated by SmartSpec Architect v5.0
+"""

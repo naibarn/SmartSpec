@@ -1,0 +1,1028 @@
+description = "---"
+
+prompt = """
+name: smartspec_reverse_to_spec
+description: Reverse engineer existing projects to generate standardized SPEC document
+version: 1.0.0
+---
+
+# SmartSpec Reverse Engineering Workflow
+
+**Purpose:** แปลงโปรเจกต์ที่มีอยู่เดิม (existing project) ให้กลายเป็นเอกสาร SPEC ที่มีมาตรฐานระดับองค์กร
+
+**Supported Technologies:**
+- Languages: TypeScript, JavaScript
+- ORM: Prisma
+- Frameworks: Express, NestJS, Fastify
+- Spec Formats: OpenSpec, Speckit
+- Documentation: Markdown files (architecture.md, design.md, backlog.md, readme.md)
+
+**Output:** SPEC document with 8 core sections
+
+---
+
+## Overview
+
+คำสั่ง `/smartspec_reverse_to_spec` ใช้สำหรับสร้าง SPEC จากโปรเจกต์ที่พัฒนาไปแล้ว โดยใช้กลยุทธ์ **Hybrid Approach** ที่ผสมผสาน:
+
+1. **Static Analysis** - วิเคราะห์โค้ดเพื่อดึงข้อมูลที่แน่นอน (Data Model, API Routes, Security)
+2. **Document Parsing** - ดึงข้อมูลจากเอกสาร Markdown และ Spec files ที่มีอยู่
+3. **LLM-Assisted Analysis** - ใช้ AI ช่วยอนุมาน Business Logic และสร้างคำอธิบาย
+
+ผลลัพธ์คือ SPEC ที่รองรับ SmartSpec Workflow เต็มรูปแบบ:
+```
+SPEC → PLAN → TASKS → ROADMAP → IMPLEMENTATION
+```
+
+---
+
+## Instructions
+
+### Core Principles
+
+1. **Code is Source of Truth:** ข้อมูลจากโค้ดมีความสำคัญสูงสุด (priority: code > docs > specs)
+2. **Merge Intelligently:** รวมข้อมูลจากหลายแหล่งโดยแก้ไขความขัดแย้งอย่างชาญฉลาด
+3. **Flag Uncertainties:** ถ้าไม่แน่ใจ ให้ flag ไว้ให้ user review แทนที่จะเดา
+4. **Generate Readable Prose:** ใช้ LLM สร้างคำอธิบายที่อ่านง่าย ไม่ใช่แค่ dump ข้อมูล
+5. **Validate Completeness:** ตรวจสอบว่า SPEC ครบถ้วนตามมาตรฐาน SmartSpec
+
+### Workflow Phases
+
+คำสั่งนี้แบ่งเป็น 4 phases หลัก:
+
+**Phase 1: Project Scanning & Static Analysis**
+- สแกนโครงสร้างโปรเจกต์
+- วิเคราะห์ Prisma schema → Data Model
+- ตรวจจับ API routes → API Specification
+- ตรวจจับ middlewares → Security Requirements
+- ตรวจจับ dependencies → External Integrations
+
+**Phase 2: Document Parsing**
+- Parse Markdown files (readme.md, architecture.md, backlog.md)
+- Parse OpenSpec (API specification)
+- Parse Speckit (Use cases and business rules)
+
+**Phase 3: LLM-Assisted Analysis**
+- Infer business logic และ use cases จากโค้ด
+- Infer business rules และ validation logic
+- Generate prose สำหรับแต่ละ section
+
+**Phase 4: SPEC Generation**
+- Merge ข้อมูลจากทุก phase
+- Resolve conflicts
+- Generate SPEC 8 core sections
+- Generate diagrams (ER diagram, architecture diagram)
+- Validate completeness
+
+---
+
+## Phase 1: Project Scanning & Static Analysis
+
+### Task 1.1: Scan Project Structure
+
+**Goal:** สแกนโครงสร้างโปรเจกต์และระบุ technology stack
+
+**Actions:**
+1. สแกนไฟล์ทั้งหมดใน project directory (ยกเว้น node_modules, .git, dist, build)
+2. ระบุไฟล์ TypeScript/JavaScript ทั้งหมด
+3. หา `package.json` และวิเคราะห์ dependencies
+4. ตรวจจับ framework (Express, NestJS, Fastify)
+5. หา Prisma schema file (`schema.prisma`)
+
+**Output:**
+```typescript
+{
+  rootPath: string;
+  files: string[];
+  framework: 'express' | 'nestjs' | 'fastify';
+  prismaSchema?: string;
+  packageJson: any;
+}
+```
+
+**Example:**
+```
+📂 Scanning project: ./my-fintech-app
+✅ Found 127 TypeScript files
+✅ Framework detected: NestJS
+✅ Prisma schema found: ./prisma/schema.prisma
+✅ Dependencies: 45 packages
+```
+
+---
+
+### Task 1.2: Parse Prisma Schema
+
+**Goal:** ดึง Data Model จาก Prisma schema และสร้าง ER Diagram
+
+**Actions:**
+1. ใช้ `@prisma/internals` package เพื่อ parse `schema.prisma`
+2. Extract models, fields, types, constraints, relationships
+3. สร้าง ER Diagram ในรูปแบบ Mermaid
+4. สร้าง Data Dictionary
+
+**Output:**
+```typescript
+{
+  models: Array<{
+    name: string;
+    fields: Array<{
+      name: string;
+      type: string;
+      isRequired: boolean;
+      isUnique: boolean;
+      relationName?: string;
+    }>;
+  }>;
+  erDiagram: string; // Mermaid format
+}
+```
+
+**Example:**
+```prisma
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  credits   Credit[]
+  invoices  Invoice[]
+}
+
+model Credit {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Float
+}
+```
+
+**ER Diagram (Mermaid):**
+```mermaid
+erDiagram
+  User {
+    string id PK
+    string email UK
+  }
+  Credit {
+    string id PK
+    string userId FK
+    float amount
+  }
+  User ||--o{ Credit : \"has\"
+```
+
+**Best Practices:**
+- ใช้ `getDMMF()` จาก `@prisma/internals` เพื่อความแม่นยำ
+- ตรวจจับ relationships ทุกประเภท (1:1, 1:N, N:M)
+- ระบุ constraints ทั้งหมด (PK, FK, UK, NOT NULL)
+
+---
+
+### Task 1.3: Detect API Routes
+
+**Goal:** ตรวจจับ API endpoints จาก Express, NestJS, Fastify
+
+**Actions:**
+1. ใช้ Regex patterns เพื่อตรวจจับ route definitions
+2. Extract method, path, handler
+3. ตรวจจับ request/response types (ถ้ามี TypeScript types)
+4. ตรวจจับ middlewares ที่ใช้กับแต่ละ route
+
+**Regex Patterns:**
+```typescript
+// Express: router.get('/path', handler)
+/router\\.(get|post|put|delete|patch)\\s*\\(\\s*['\"]([^'\"]+)['\"]/g
+
+// NestJS: @Get('/path')
+/@(Get|Post|Put|Delete|Patch)\\s*\\(\\s*['\"]([^'\"]+)['\"]/g
+
+// Fastify: fastify.get('/path', handler)
+/fastify\\.(get|post|put|delete|patch)\\s*\\(\\s*['\"]([^'\"]+)['\"]/g
+
+// Express app: app.get('/path', handler)
+/app\\.(get|post|put|delete|patch)\\s*\\(\\s*['\"]([^'\"]+)['\"]/g
+```
+
+**Output:**
+```typescript
+{
+  routes: Array<{
+    method: string;
+    path: string;
+    file: string;
+    line: number;
+    handler?: string;
+  }>;
+}
+```
+
+**Example:**
+```typescript
+// Input code:
+router.post('/api/credit/purchase', authenticate, validateBody(PurchaseCreditDto), purchaseCredit);
+
+// Output:
+{
+  method: 'POST',
+  path: '/api/credit/purchase',
+  file: 'src/routes/credit.ts',
+  line: 42,
+  middlewares: ['authenticate', 'validateBody']
+}
+```
+
+**Best Practices:**
+- ครอบคลุม common patterns (80-90% ของโปรเจกต์ทั่วไป)
+- ถ้าตรวจจับไม่ได้ ให้ flag ไว้ให้ user review
+- ตรวจจับ dynamic routes (`/users/:id`) ด้วย
+
+---
+
+### Task 1.4: Detect Middlewares
+
+**Goal:** ตรวจจับ middlewares ที่ใช้ในโปรเจกต์ (authentication, rate limiting, validation)
+
+**Actions:**
+1. ตรวจจับ authentication patterns (JWT, session, OAuth)
+2. ตรวจจับ rate limiting
+3. ตรวจจับ input validation (Zod, Joi, class-validator)
+4. ตรวจจับ CORS, helmet, และ security middlewares อื่นๆ
+
+**Patterns:**
+```typescript
+// Authentication
+/jwt/i, /JwtAuthGuard/i, /verifyToken/i, /@UseGuards\\(.*Auth/i
+
+// Rate Limiting
+/rateLimit/i, /rateLimiter/i, /@Throttle/i
+
+// Validation
+/zod/i, /joi/i, /class-validator/i, /@Is/i
+```
+
+**Output:**
+```typescript
+{
+  authentication: {
+    type: 'jwt' | 'session' | 'oauth';
+    detected: boolean;
+  };
+  rateLimit: { detected: boolean };
+  validation: {
+    library: 'zod' | 'joi' | 'class-validator';
+    detected: boolean;
+  };
+}
+```
+
+**Best Practices:**
+- ตรวจจับทั้ง explicit (decorators, middlewares) และ implicit (code patterns)
+- ถ้าตรวจจับได้หลายประเภท ให้ระบุทั้งหมด
+
+---
+
+### Task 1.5: Detect External Dependencies
+
+**Goal:** ตรวจจับ external services และ integrations
+
+**Actions:**
+1. Parse `package.json` dependencies
+2. จับคู่กับ known dependencies (Stripe, SendGrid, AWS, Redis, etc.)
+3. ระบุ type (payment, email, storage, cache, queue, monitoring)
+4. ระบุ purpose
+
+**Known Dependencies:**
+```typescript
+{
+  'stripe': { type: 'payment', purpose: 'Payment processing' },
+  '@sendgrid/mail': { type: 'email', purpose: 'Email delivery' },
+  'aws-sdk': { type: 'storage', purpose: 'Cloud services' },
+  'redis': { type: 'cache', purpose: 'Caching and session storage' },
+  'bull': { type: 'queue', purpose: 'Job queue' },
+  '@sentry/node': { type: 'monitoring', purpose: 'Error tracking' },
+}
+```
+
+**Output:**
+```typescript
+{
+  dependencies: Array<{
+    name: string;
+    type: string;
+    purpose: string;
+    version: string;
+  }>;
+}
+```
+
+---
+
+## Phase 2: Document Parsing
+
+### Task 2.1: Parse Markdown Documentation
+
+**Goal:** ดึงข้อมูลจาก Markdown files ที่มีอยู่
+
+**Actions:**
+1. Parse `readme.md` → System Overview
+2. Parse `architecture.md` → Architecture Summary
+3. Parse `design.md` → Design decisions
+4. Parse `backlog.md` → Feature list
+
+**Extraction Strategy:**
+
+**For readme.md:**
+- หา `## Overview` section หรือ first paragraph
+- Extract project description, key features
+
+**For architecture.md:**
+- Extract ทั้งหมด (จะใช้ใน Section 2: Architecture Summary)
+- หา diagrams (Mermaid, PlantUML) ถ้ามี
+
+**For backlog.md:**
+- Parse list items หรือ headings
+- Extract feature name, description, priority
+- Format: `- [HIGH] Feature Name: Description`
+
+**Output:**
+```typescript
+{
+  overview?: string;
+  architecture?: string;
+  design?: string;
+  features?: Array<{
+    name: string;
+    description: string;
+    priority?: string;
+  }>;
+}
+```
+
+**Best Practices:**
+- ใช้ `marked` library สำหรับ Markdown parsing
+- ใช้ `gray-matter` สำหรับ frontmatter
+- ถ้าไม่มีไฟล์ ให้ skip ไป (ไม่ error)
+
+---
+
+### Task 2.2: Parse OpenSpec
+
+**Goal:** ดึง API specification จาก OpenSpec (OpenAPI) file
+
+**Actions:**
+1. Parse YAML/JSON OpenSpec file
+2. Extract paths, methods, request/response schemas
+3. Extract security requirements
+4. Extract error responses
+
+**Input Example:**
+```yaml
+openapi: 3.0.0
+info:
+  title: Credit API
+  version: 1.0.0
+paths:
+  /api/credit/purchase:
+    post:
+      summary: Purchase credit
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+      responses:
+        200:
+          description: Success
+        400:
+          description: Bad request
+```
+
+**Output:**
+```typescript
+{
+  openspec: {
+    apis: Array<{
+      method: string;
+      path: string;
+      summary?: string;
+      description?: string;
+      requestBody?: any;
+      responses?: any;
+      security?: any;
+    }>;
+  };
+}
+```
+
+**Best Practices:**
+- ใช้ `js-yaml` library
+- รองรับทั้ง YAML และ JSON format
+- ถ้าไม่มีไฟล์ ให้ skip ไป
+
+---
+
+### Task 2.3: Parse Speckit
+
+**Goal:** ดึง Use Cases และ Business Rules จาก Speckit file
+
+**Actions:**
+1. Parse YAML Speckit file
+2. Extract flows → Use Cases
+3. Extract rules → Business Rules
+
+**Input Example:**
+```yaml
+flows:
+  - name: Purchase Credit
+    steps:
+      - command: User initiates credit purchase
+        validation: Amount must be positive
+      - command: System charges payment method
+        validation: Payment method must be valid
+      - command: System credits user balance
+        validation: Balance must be updated
+
+rules:
+  - name: Minimum Credit Amount
+    condition: amount < 10
+    action: Reject with error \"Minimum amount is 10\"
+```
+
+**Output:**
+```typescript
+{
+  speckit: {
+    flows: Array<{
+      name: string;
+      steps: Array<{ command: string; validation?: string }>;
+    }>;
+    rules: Array<{
+      name: string;
+      condition: string;
+      action: string;
+    }>;
+  };
+}
+```
+
+**Best Practices:**
+- Convert flows → Use Cases (Section 5)
+- Convert rules → Business Rules (Section 6)
+- ถ้าไม่มีไฟล์ ให้ skip ไป
+
+---
+
+## Phase 3: LLM-Assisted Analysis
+
+### Task 3.1: Infer Business Logic
+
+**Goal:** ใช้ LLM ช่วยอนุมาน Use Cases และ Business Rules จากโค้ด
+
+**When to Use:**
+- เมื่อไม่มี Speckit file
+- เมื่อต้องการเติมข้อมูลที่ขาด
+- เมื่อต้องการ validate ข้อมูลจาก Speckit
+
+**LLM Prompt Template:**
+```
+You are a software architect analyzing a codebase.
+
+Context:
+- Framework: {{framework}}
+- Domain: {{domain}}
+- API Routes: {{routes}}
+- Database Models: {{models}}
+
+Code snippets:
+{{codeSnippets}}
+
+Task: Analyze this code and extract:
+1. Use cases (user actions and system responses)
+2. Business rules (validation, constraints, policies)
+
+Format your response as JSON:
+{
+  \"useCases\": [
+    { \"name\": \"...\", \"actor\": \"...\", \"flow\": [\"step1\", \"step2\", ...] }
+  ],
+  \"businessRules\": [
+    { \"name\": \"...\", \"condition\": \"...\", \"action\": \"...\" }
+  ]
+}
+
+Focus on the most important use cases and rules. Limit to 8 use cases and 10 business rules.
+```
+
+**Best Practices:**
+- ใช้ GPT-4 Turbo หรือ Claude 3.5 Sonnet
+- Chunk code เป็นส่วนๆ (ไม่เกิน 4K tokens/chunk)
+- Cache LLM responses เพื่อประหยัดค่าใช้จ่าย
+- Validate LLM output กับ static analysis results
+- ถ้า LLM hallucinate ให้ flag ไว้ให้ user review
+
+**Cost Optimization:**
+- ใช้ LLM เฉพาะเมื่อจำเป็น (ไม่มีเอกสาร)
+- Batch multiple requests
+- Cache results
+- Estimated cost: $0.50-$1.00 per project
+
+---
+
+### Task 3.2: Generate Section Prose
+
+**Goal:** ใช้ LLM สร้างคำอธิบายที่อ่านง่าย สำหรับแต่ละ section
+
+**Sections to Generate:**
+1. System Overview (Section 1)
+2. Architecture Summary (Section 2)
+3. Data Model description (Section 3)
+4. Security Requirements description (Section 7)
+5. Performance Requirements description (Section 8)
+
+**LLM Prompt Template:**
+```
+You are a technical writer creating clear, professional documentation.
+
+Task: Write a {{section}} section (2-3 paragraphs) based on this data:
+{{data}}
+
+Requirements:
+- Write in a formal but readable style
+- Use complete paragraphs (not bullet points)
+- Be concise and accurate
+- Avoid jargon unless necessary
+```
+
+**Example:**
+
+**Input:**
+```json
+{
+  \"section\": \"System Overview\",
+  \"data\": {
+    \"projectName\": \"Credit Management System\",
+    \"framework\": \"NestJS\",
+    \"features\": [
+      { \"name\": \"Credit Purchase\", \"description\": \"Users can purchase credits\" },
+      { \"name\": \"Credit Balance\", \"description\": \"Users can view their balance\" }
+    ]
+  }
+}
+```
+
+**Output:**
+```markdown
+The Credit Management System is a backend service built with NestJS that enables users to purchase and manage credits. The system provides a secure API for credit transactions, including purchasing credits via payment gateways and viewing current balances.
+
+The application follows a microservices architecture with clear separation of concerns. Core features include credit purchase workflows, balance management, and integration with external payment providers such as Stripe.
+```
+
+**Best Practices:**
+- ใช้ temperature 0.7 สำหรับความสมดุลระหว่างความสร้างสรรค์และความแม่นยำ
+- Validate prose กับ factual data (ไม่ให้ LLM สร้างข้อมูลเอง)
+- ถ้า prose ไม่ดี ให้ regenerate หรือใช้ template
+
+---
+
+## Phase 4: SPEC Generation
+
+### Task 4.1: Merge All Data Sources
+
+**Goal:** รวมข้อมูลจากทุก phase โดยแก้ไขความขัดแย้ง
+
+**Merge Priority:**
+1. **Code (Static Analysis)** - สูงสุด (เพราะเป็นความจริง)
+2. **Documentation (Markdown)** - กลาง (เป็น intent)
+3. **Spec Files (OpenSpec, Speckit)** - ต่ำ (อาจ outdated)
+
+**Merge Strategy:**
+
+**Section 1: System Overview**
+```
+Priority: docs.overview > specs.info.description > LLM-generated
+```
+
+**Section 2: Architecture Summary**
+```
+Priority: docs.architecture > inferred from code
+```
+
+**Section 3: Data Model**
+```
+Priority: code only (Prisma schema is source of truth)
+```
+
+**Section 4: API Specification**
+```
+Merge: code routes + OpenSpec
+- ถ้า route มีใน code แต่ไม่มีใน OpenSpec → ใช้ code, flag \"Missing in OpenSpec\"
+- ถ้า route มีใน OpenSpec แต่ไม่มีใน code → ใช้ OpenSpec, flag \"Not found in code\"
+- ถ้ามีทั้งสอง → ใช้ code, merge details จาก OpenSpec
+```
+
+**Section 5: Feature Definitions & Use Cases**
+```
+Merge: docs.features + speckit.flows + LLM.useCases
+- Remove duplicates (by name similarity)
+- Prioritize: docs > speckit > LLM
+```
+
+**Section 6: Business Rules**
+```
+Priority: speckit.rules > LLM.businessRules
+```
+
+**Section 7: Security Requirements**
+```
+Priority: code detection (middlewares)
+```
+
+**Section 8: Performance Requirements**
+```
+Priority: inferred from framework + LLM-generated
+```
+
+**Conflict Resolution Example:**
+```
+Conflict:
+- Code: 23 API endpoints detected
+- OpenSpec: 18 endpoints documented
+
+Resolution:
+- Use all 23 endpoints from code
+- Flag 5 endpoints as \"Missing in OpenSpec\"
+- Add OpenSpec details to matching 18 endpoints
+```
+
+---
+
+### Task 4.2: Generate SPEC Document
+
+**Goal:** สร้าง SPEC ตามมาตรฐาน SmartSpec (8 core sections)
+
+**SPEC Structure:**
+
+```markdown
+# SPEC - {{projectName}}
+
+**Version:** {{version}}  
+**Generated:** {{date}}  
+**Source:** Reverse Engineering (SmartSpec)  
+
+---
+
+## 1. System Overview
+
+{{overview}}
+
+**Key Features:**
+{{#each features}}
+- **{{name}}**: {{description}}
+{{/each}}
+
+---
+
+## 2. Architecture Summary
+
+{{architecture}}
+
+**Framework:** {{framework}}
+
+**External Dependencies:**
+{{#each dependencies}}
+- **{{name}}** ({{type}}): {{purpose}}
+{{/each}}
+
+---
+
+## 3. Data Model
+
+{{dataModelDescription}}
+
+### ER Diagram
+
+\\`\\`\\`mermaid
+{{erDiagram}}
+\\`\\`\\`
+
+### Tables
+
+{{#each models}}
+#### {{name}}
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+{{#each fields}}
+| {{name}} | {{type}} | {{constraints}} |
+{{/each}}
+{{/each}}
+
+---
+
+## 4. API Specification
+
+{{#each apis}}
+### {{method}} {{path}}
+
+{{#if summary}}**Summary:** {{summary}}{{/if}}
+
+{{#if description}}{{description}}{{/if}}
+
+{{#if warning}}⚠️ **Warning:** {{warning}}{{/if}}
+
+**Authentication:** {{#if security}}Required{{else}}Not required{{/if}}
+
+{{#if requestBody}}
+**Request Body:**
+\\`\\`\\`json
+{{json requestBody}}
+\\`\\`\\`
+{{/if}}
+
+{{#if responses}}
+**Responses:**
+{{#each responses}}
+- **{{@key}}**: {{description}}
+{{/each}}
+{{/if}}
+
+---
+{{/each}}
+
+## 5. Feature Definitions & Use Cases
+
+{{#each useCases}}
+### {{name}}
+
+**Actor:** {{actor}}
+
+**Flow:**
+{{#each flow}}
+{{inc @index}}. {{this}}
+{{/each}}
+
+---
+{{/each}}
+
+## 6. Business Rules
+
+{{#each businessRules}}
+### {{name}}
+
+**Condition:** {{condition}}  
+**Action:** {{action}}
+
+---
+{{/each}}
+
+## 7. Security Requirements
+
+**Authentication:** {{security.authentication.type}}
+
+**Rate Limiting:** {{#if security.rateLimit}}Enabled{{else}}Not detected{{/if}}
+
+**Input Validation:** {{#if security.validation}}{{security.validation.library}}{{else}}Not detected{{/if}}
+
+---
+
+## 8. Performance Requirements
+
+{{performanceDescription}}
+
+---
+
+**End of SPEC**
+
+*Generated by SmartSpec Reverse Engineering*
+```
+
+**Best Practices:**
+- ใช้ Handlebars template engine
+- Generate diagrams (Mermaid) inline
+- Add warnings สำหรับข้อมูลที่ไม่แน่ใจ
+- Add source attribution (code, docs, specs, LLM)
+
+---
+
+### Task 4.3: Validate Completeness
+
+**Goal:** ตรวจสอบว่า SPEC ครบถ้วนตามมาตรฐาน
+
+**Validation Checklist:**
+- ✅ มี 8 core sections ครบ
+- ✅ Section 3 (Data Model) มี ER diagram
+- ✅ Section 4 (API Specification) มีอย่างน้อย 1 endpoint
+- ✅ Section 5 (Use Cases) มีอย่างน้อย 1 use case
+- ✅ ไม่มี placeholder หรือ TODO ที่ไม่จำเป็น
+- ✅ Diagrams render ได้ (Mermaid syntax ถูกต้อง)
+
+**Warnings to Flag:**
+- ⚠️ API endpoints ใน OpenSpec ไม่ตรงกับ code
+- ⚠️ Business rules ถูก infer จาก LLM (ควร review)
+- ⚠️ ไม่มีเอกสาร architecture.md (ต้อง infer)
+- ⚠️ ไม่มี authentication detected
+
+---
+
+### Task 4.4: Generate Summary Report
+
+**Goal:** สร้างรายงานสรุปผลการ reverse engineering
+
+**Report Format:**
+```
+✨ SmartSpec Reverse Engineering Complete!
+
+📊 Summary:
+- Project: {{projectName}}
+- Framework: {{framework}}
+- Files analyzed: {{fileCount}}
+- Data Model: {{modelCount}} tables
+- API Endpoints: {{apiCount}} routes
+- Use Cases: {{useCaseCount}}
+- Business Rules: {{ruleCount}}
+- External Dependencies: {{dependencyCount}}
+
+⚠️  Warnings:
+{{#each warnings}}
+- {{this}}
+{{/each}}
+
+📁 Output:
+- SPEC: {{outputPath}}
+
+🚀 Next Steps:
+1. Review generated SPEC: {{outputPath}}
+2. Fix warnings (if any)
+3. Generate PLAN: smartspec generate plan --spec {{outputPath}}
+```
+
+---
+
+## Output Files
+
+คำสั่งนี้จะสร้างไฟล์ดังนี้:
+
+1. **spec.md** - SPEC document (8 core sections)
+2. **data-model.md** (optional) - Detailed data model with ER diagram
+3. **api-spec.md** (optional) - Detailed API specification
+
+---
+
+## Best Practices
+
+### 1. Accuracy Over Completeness
+- ถ้าไม่แน่ใจ ให้ flag ไว้แทนที่จะเดา
+- ให้ความสำคัญกับข้อมูลจาก code มากกว่าเอกสาร
+
+### 2. Readable Output
+- ใช้ LLM สร้างคำอธิบายที่อ่านง่าย
+- ไม่ใช่แค่ dump ข้อมูลแบบ raw
+
+### 3. Cost Optimization
+- ใช้ LLM เฉพาะเมื่อจำเป็น
+- Cache LLM responses
+- Batch requests
+
+### 4. Performance
+- Process files in parallel เมื่อเป็นไปได้
+- Limit LLM context size (chunk code)
+
+### 5. User Experience
+- แสดง progress indicators
+- แสดง warnings ชัดเจน
+- สร้าง summary report
+
+---
+
+## Example Usage
+
+### Command
+```bash
+smartspec reverse \\
+  --src ./my-project \\
+  --prisma ./prisma/schema.prisma \\
+  --docs ./docs \\
+  --openspec ./openapi.yaml \\
+  --speckit ./speckit.yaml \\
+  --output ./specs/spec.md
+```
+
+### Expected Output
+```
+🔍 SmartSpec Reverse Engineering
+
+📂 Scanning project: ./my-project
+✅ Found 127 TypeScript files
+✅ Framework detected: NestJS
+✅ Prisma schema found: ./prisma/schema.prisma
+
+🗄️  Parsing Prisma schema...
+✅ Extracted 8 models, 42 fields
+✅ Generated ER diagram
+
+🛣️  Detecting API routes...
+✅ Found 23 endpoints (NestJS)
+
+🔒 Detecting middlewares...
+✅ Found: JWT auth, Rate limiting, Zod validation
+
+📦 Detecting dependencies...
+✅ Found: Stripe, SendGrid, Redis
+
+📄 Parsing documentation...
+✅ Parsed: readme.md, architecture.md, backlog.md
+
+📋 Parsing spec files...
+✅ Parsed: openapi.yaml (18 endpoints), speckit.yaml (5 flows)
+
+🤖 LLM-assisted analysis...
+✅ Inferred 8 use cases, 12 business rules
+
+📝 Generating SPEC...
+✅ Generated 8 core sections
+
+✨ Done! SPEC saved to: ./specs/spec.md
+
+📊 Summary:
+- Data Model: 8 tables
+- API Endpoints: 23 routes
+- Use Cases: 8
+- Business Rules: 12
+- External Dependencies: 3
+
+⚠️  Warnings:
+- 5 API endpoints in code not found in OpenSpec
+- 2 business rules inferred by LLM (please review)
+
+🚀 Next steps:
+1. Review generated SPEC: ./specs/spec.md
+2. Fix warnings (if any)
+3. Generate PLAN: smartspec generate plan --spec ./specs/spec.md
+```
+
+---
+
+## Limitations (MVP)
+
+**Supported:**
+- ✅ TypeScript, JavaScript
+- ✅ Prisma ORM
+- ✅ Express, NestJS, Fastify
+- ✅ OpenSpec, Speckit
+- ✅ Markdown documentation
+
+**Not Supported (Future):**
+- ❌ Python, Go, Java
+- ❌ Sequelize, TypeORM, Drizzle
+- ❌ BMAD format
+- ❌ Complex Saga patterns
+- ❌ Advanced security analysis
+
+---
+
+## Error Handling
+
+### Common Errors
+
+**Error: Prisma schema not found**
+```
+Solution: Specify --prisma flag with correct path
+```
+
+**Error: No API routes detected**
+```
+Possible causes:
+- Framework not supported
+- Routes defined in non-standard way
+Solution: Check framework detection, add routes manually if needed
+```
+
+**Error: LLM API rate limit**
+```
+Solution: Wait and retry, or reduce LLM usage with --no-llm flag
+```
+
+**Error: Invalid OpenSpec format**
+```
+Solution: Validate OpenSpec file with OpenAPI validator
+```
+
+---
+
+## Success Criteria
+
+**MVP Success:**
+- ✅ สามารถ generate SPEC จาก TypeScript/Prisma project ได้
+- ✅ Accuracy > 75% (เทียบกับ manual SPEC)
+- ✅ Processing time < 5 minutes for medium project (50K LOC)
+- ✅ LLM cost < $1 per project
+- ✅ ไม่มี critical bugs
+
+---
+
+**End of Workflow**
+"""

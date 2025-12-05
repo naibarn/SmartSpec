@@ -1,0 +1,339 @@
+---
+description: Verify implementation progress by checking tasks.md against actual files, marking completed tasks, and reporting status using SmartSpec v4.0.
+---
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+Expected: `specs/feature/spec-004/tasks.md`
+
+## 0. Load Context
+
+Read `.smartspec/` files
+
+## 1. Resolve Path
+
+TASKS_PATH from $ARGUMENTS or active file
+
+## 2. Parse tasks.md
+
+Extract:
+- All phases with task ranges
+- All tasks with IDs, titles, files
+- All acceptance criteria
+- All validation commands
+- Current status markers (if any)
+
+## 3. Verify Each Task
+
+For each task T00X:
+
+### 3.1 Check Files Existence
+```python
+for file in task.files:
+    if file.operation == "CREATE":
+        exists = check_file_exists(file.path)
+        task.file_status[file.path] = exists
+    elif file.operation == "EDIT":
+        exists = check_file_exists(file.path)
+        modified = check_file_modified_since(file.path, task_created_date)
+        task.file_status[file.path] = exists and modified
+```
+
+### 3.2 Run Validation Commands
+```python
+for command in task.validation_commands:
+    result = run_command(command)
+    task.validation_results[command] = result
+```
+
+### 3.3 Check Acceptance Criteria
+```python
+# Based on file existence and validation results
+criteria_met = []
+for criterion in task.acceptance_criteria:
+    # Intelligent checking based on criterion text
+    met = check_criterion(criterion, task.file_status, task.validation_results)
+    criteria_met.append(met)
+
+task.completion_percentage = sum(criteria_met) / len(criteria_met) * 100
+```
+
+### 3.4 Determine Task Status
+```python
+if task.completion_percentage == 100:
+    task.status = "✅ COMPLETE"
+elif task.completion_percentage > 0:
+    task.status = f"🟦 IN PROGRESS ({task.completion_percentage}%)"
+elif any_files_exist:
+    task.status = "🟨 STARTED"
+else:
+    task.status = "⬜ NOT STARTED"
+```
+
+## 4. Generate Progress Report
+
+### 4.1 Overall Summary
+```markdown
+# Implementation Progress Report
+
+**Generated:** YYYY-MM-DD HH:mm
+**Author:** SmartSpec Architect v4.0
+**Source:** [tasks.md path]
+
+---
+
+## Executive Summary
+
+**Overall Progress:** XX/XX tasks complete (XX%)
+
+**Status Breakdown:**
+- ✅ Complete: XX tasks (XX%)
+- 🟦 In Progress: XX tasks (XX%)
+- 🟨 Started: XX tasks (XX%)
+- ⬜ Not Started: XX tasks (XX%)
+- ❌ Blocked: XX tasks (XX%)
+
+**Phase Progress:**
+| Phase | Tasks | Complete | In Progress | Not Started | Status |
+|-------|-------|----------|-------------|-------------|--------|
+| Phase 1 | 10 | 10 | 0 | 0 | ✅ Done |
+| Phase 2 | 10 | 5 | 3 | 2 | 🟦 In Progress |
+| Phase 3 | 10 | 0 | 0 | 10 | ⬜ Pending |
+
+---
+```
+
+### 4.2 Detailed Task Status
+```markdown
+## Detailed Status
+
+### Phase 1: [Name] - ✅ COMPLETE (100%)
+
+#### ✅ T001: [Title] - COMPLETE
+**Files:**
+- ✅ `path/file1.ts` - Created
+- ✅ `path/file2.ts` - Modified
+
+**Validation:**
+- ✅ TypeScript compilation - PASS
+- ✅ Tests - PASS (10/10)
+- ✅ Lint - PASS
+
+**Acceptance:**
+- ✅ Criterion 1
+- ✅ Criterion 2
+
+---
+
+#### 🟦 T002: [Title] - IN PROGRESS (60%)
+**Files:**
+- ✅ `path/file1.ts` - Created
+- ❌ `path/file2.ts` - Not found
+
+**Validation:**
+- ⚠️ TypeScript compilation - ERRORS (2 errors)
+- ❌ Tests - NOT RUN (missing file)
+
+**Acceptance:**
+- ✅ Criterion 1  
+- ✅ Criterion 2
+- ❌ Criterion 3
+
+**Blockers:**
+- Missing file: `path/file2.ts`
+- Compilation errors need fixing
+
+---
+
+#### ⬜ T003: [Title] - NOT STARTED
+**Dependencies:**
+- ⚠️ Waiting for T002 to complete
+
+---
+```
+
+### 4.3 Blockers & Issues
+```markdown
+## ⚠️ Blockers & Issues
+
+### Critical Issues
+1. **T002:** Missing file `path/file2.ts`
+   - Impact: Blocks T003, T004
+   - Action: Create missing file
+
+2. **T005:** Compilation errors
+   - Impact: Blocks phase completion
+   - Action: Fix TypeScript errors
+
+### Warnings
+1. **T010:** Tests incomplete (5/10 passing)
+   - Action: Review failing tests
+
+---
+```
+
+### 4.4 Recommendations
+```markdown
+## 📋 Recommendations
+
+### Immediate Actions
+1. Complete T002 - blocking 2 other tasks
+2. Fix compilation errors in T005
+3. Complete phase 2 checkpoint validation
+
+### Next Steps
+1. Review blockers list
+2. Prioritize blocked tasks
+3. Run phase checkpoint when phase 2 complete
+4. Start phase 3 after phase 2 validated
+
+---
+
+## 🔧 Suggested Workflows
+
+Based on the issues found, run these workflows to fix problems:
+
+### If compilation/type errors found:
+```bash
+/smartspec_fix_errors specs/feature/spec-004-financial-system
+```
+
+### If tests are missing or incomplete:
+```bash
+/smartspec_generate_tests specs/feature/spec-004-financial-system --target-coverage 80
+```
+
+### If code quality issues found:
+```bash
+/smartspec_refactor_code specs/feature/spec-004-financial-system
+```
+
+### If SPEC_INDEX.json is outdated:
+```bash
+/smartspec_reindex_specs --spec specs/feature/spec-004-financial-system
+```
+
+### To continue implementation:
+```bash
+/smartspec_implement_tasks specs/feature/spec-004-financial-system/tasks.md --start-from T00X
+```
+
+---
+```
+
+## 5. Update tasks.md (Auto-Update Checkboxes)
+
+**Automatically update checkboxes for completed tasks:**
+
+For each task that is verified as complete:
+- Update checkbox: `- [ ] T001:` → `- [x] T001:`
+- This helps track progress and fix cases where implementation didn't mark tasks
+
+**Update logic:**
+
+```markdown
+### Task T001: [Title] - ✅ COMPLETE
+
+**Status:** ✅ Complete
+**Completed:** YYYY-MM-DD
+
+[Rest of task details]
+
+---
+
+### Task T002: [Title] - 🟦 IN PROGRESS (60%)
+
+**Status:** 🟦 In Progress (60%)  
+**Last Updated:** YYYY-MM-DD
+**Blockers:** Missing file path/file2.ts
+
+[Rest of task details]
+
+---
+```
+
+## 6. Output
+
+### 6.1 Write Progress Report
+Path: Same directory as tasks.md
+Filename: `progress-report-YYYYMMDD.md`
+
+### 6.2 Auto-Update tasks.md Checkboxes
+
+**For each completed task:**
+```bash
+# Update checkbox from [ ] to [x]
+sed -i "s/^- \[ \] \(${TASK_ID}:\)/- [x] \1/" "${TASKS_FILE}"
+```
+
+**Log updates:**
+```
+✅ Updated checkbox for T001: Initialize Project
+✅ Updated checkbox for T002: Setup Database
+...
+```
+
+**Benefits:**
+- Fixes cases where `/smartspec_implement_tasks` didn't mark tasks
+- Provides accurate progress tracking
+- Enables `--skip-completed` to work correctly
+
+## 7. Report (Thai)
+
+```
+📊 ตรวจสอบความคืบหน้าเรียบร้อยแล้ว
+
+📁 Progress Report: progress-report-YYYYMMDD.md
+
+📈 สรุปความคืบหน้า:
+- เสร็จสมบูรณ์: XX/XX tasks (XX%)
+- กำลังทำ: XX tasks
+- ยังไม่เริ่ม: XX tasks
+- ติดขัด: XX tasks
+
+✅ Phases ที่เสร็จแล้ว:
+- Phase 1: [Name]
+...
+
+🟦 Phases ที่กำลังทำ:
+- Phase 2: [Name] (XX% complete)
+
+⚠️ ปัญหาที่ต้องแก้ด่วน:
+- [Critical issue 1]
+- [Critical issue 2]
+
+🚧 Tasks ที่ติดขัด:
+- T00X: [Reason]
+- T00Y: [Reason]
+
+💡 คำแนะนำ:
+1. แก้ blockers ก่อน (มี X tasks รอ)
+2. Complete phase 2 checkpoint
+3. เริ่ม phase 3 หลัง phase 2 validated
+
+🔧 Workflows ที่แนะนำ:
+
+[IF มี compilation/type errors]
+→ /smartspec_fix_errors specs/feature/spec-004-financial-system
+
+[IF ขาด tests หรือ coverage ต่ำ]
+→ /smartspec_generate_tests specs/feature/spec-004-financial-system --target-coverage 80
+
+[IF มีปัญหา code quality]
+→ /smartspec_refactor_code specs/feature/spec-004-financial-system
+
+[IF SPEC_INDEX.json ไม่ตรง]
+→ /smartspec_reindex_specs --spec specs/feature/spec-004-financial-system
+
+[IF ต้องการทำงานต่อ]
+→ /smartspec_implement_tasks specs/feature/spec-004-financial-system/tasks.md --start-from T00X
+
+🔄 Run อีกครั้งเพื่อ update progress:
+[Command]
+```
+
+Context: $ARGUMENTS

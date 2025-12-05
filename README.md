@@ -12,7 +12,9 @@ SmartSpec V5 supports your favorite AI coding platforms with a single-command in
 
 - **Kilo Code** - For autonomous AI agent-driven development.
 - **Claude Code** - For deep analysis with sub-agents.
-- **Cursor / VSCode / Google Antigravity** - For supercharging your manual "vibe coding" workflow.
+- **Google Antigravity** - For agentic IDE with autonomous agents.
+- **Gemini CLI** - For terminal-based AI coding assistant.
+- **Cursor / VSCode** - For supercharging your manual "vibe coding" workflow.
 - **Roo Code** - For safety-first, workflow-driven development.
 
 ---
@@ -29,7 +31,7 @@ Use the following command for your operating system.
 
 Simply run the same installation command again. The script will automatically detect your existing installation and update it to the latest version, preserving your custom workflows.
 
-**Note:** The installation script copies workflows from `.smartspec/workflows/` (master source) to platform-specific folders (`.kilocode/workflows/`, `.roo/commands/`, etc.). Always edit workflows in `.smartspec/workflows/` and run `.smartspec/sync.sh` to sync changes to all platforms.
+**Note:** The installation script copies workflows from `.smartspec/workflows/` (master source) to platform-specific folders (`.kilocode/workflows/`, `.roo/commands/`, `.claude/commands/`, `.agent/workflows/`, `.gemini/commands/`, etc.). For Gemini CLI, workflows are automatically converted from Markdown to TOML format. Always edit workflows in `.smartspec/workflows/` and run `.smartspec/sync.sh` to sync changes to all platforms.
 
 **Unix / macOS / Linux:**
 ```bash

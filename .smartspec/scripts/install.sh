@@ -279,14 +279,15 @@ for platform in "${PLATFORMS[@]}"; do
             fi
             
             # Extract content after frontmatter as prompt
+            # Note: No escaping needed for TOML triple quotes
             # Find line number of second --- (end of frontmatter)
             frontmatter_end=$(grep -n '^---$' "$md_file" | sed -n '2p' | cut -d: -f1)
             if [ -n "$frontmatter_end" ]; then
                 # Skip frontmatter and extract rest
-                prompt=$(tail -n +$((frontmatter_end + 1)) "$md_file" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+                prompt=$(tail -n +$((frontmatter_end + 1)) "$md_file")
             else
                 # No frontmatter, extract from line 2
-                prompt=$(tail -n +2 "$md_file" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+                prompt=$(tail -n +2 "$md_file")
             fi
             
             # Create TOML file using printf to avoid heredoc issues

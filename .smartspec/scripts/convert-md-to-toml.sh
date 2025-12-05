@@ -59,10 +59,8 @@ extract_prompt() {
     local prompt=""
     
     # Remove the first title line and extract the rest
+    # Note: No escaping here - printf handles it correctly
     prompt=$(tail -n +2 "$md_file")
-    
-    # Escape for TOML
-    prompt=$(escape_toml_string "$prompt")
     
     echo "$prompt"
 }

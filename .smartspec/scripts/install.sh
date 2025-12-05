@@ -218,14 +218,22 @@ for platform in "${PLATFORMS[@]}"; do
             toml_file="$TARGET_DIR/${filename}.toml"
             
             # Simple inline conversion
-            # Extract first line as description
-            description=$(head -n 1 "$md_file" | sed 's/^# //' | sed 's/"/\\"/g')
+            # Skip frontmatter (---...---) and extract first # title as description
+            description=$(grep -m 1 '^# ' "$md_file" | sed 's/^# //' | sed 's/"/\\"/g')
             if [ -z "$description" ]; then
                 description="SmartSpec workflow: ${filename//_/ }"
             fi
             
-            # Extract rest as prompt (escape special chars)
-            prompt=$(tail -n +2 "$md_file" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+            # Extract content after frontmatter as prompt
+            # Find line number of second --- (end of frontmatter)
+            frontmatter_end=$(grep -n '^---$' "$md_file" | sed -n '2p' | cut -d: -f1)
+            if [ -n "$frontmatter_end" ]; then
+                # Skip frontmatter and extract rest
+                prompt=$(tail -n +$((frontmatter_end + 1)) "$md_file" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+            else
+                # No frontmatter, extract from line 2
+                prompt=$(tail -n +2 "$md_file" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+            fi
             
             # Create TOML file
             cat > "$toml_file" <<EOF
@@ -392,9 +400,16 @@ for platform in $PLATFORMS; do
                     if [ ! -f "$md_file" ]; then continue; fi
                     filename=$(basename "$md_file" .md)
                     toml_file="$TARGET_DIR/${filename}.toml"
-                    description=$(head -n 1 "$md_file" | sed 's/^# //' | sed 's/"/\\"/g')
+                    # Skip frontmatter and extract first # title
+                    description=$(grep -m 1 '^# ' "$md_file" | sed 's/^# //' | sed 's/"/\\"/g')
                     [ -z "$description" ] && description="SmartSpec workflow: ${filename//_/ }"
-                    prompt=$(tail -n +2 "$md_file" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+                    # Extract content after frontmatter
+                    frontmatter_end=$(grep -n '^---$' "$md_file" | sed -n '2p' | cut -d: -f1)
+                    if [ -n "$frontmatter_end" ]; then
+                        prompt=$(tail -n +$((frontmatter_end + 1)) "$md_file" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+                    else
+                        prompt=$(tail -n +2 "$md_file" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+                    fi
                     cat > "$toml_file" <<EOF
 description = "$description"
 

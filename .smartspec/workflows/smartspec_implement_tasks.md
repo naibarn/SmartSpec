@@ -337,12 +337,19 @@ Use Orchestrator Mode to break this task into subtasks. {task_id}: {task_title}
 - Orchestrator is smart enough to decide
 
 **Orchestrator may create sub-tasks like:**
-1. **Architect Mode** - Design system architecture and create implementation plan
-2. **Code Mode** - Implement the code based on architecture
-3. **Debug Mode** - Fix any bugs or errors
-4. **Test Mode** - Run tests and validate
+1. **Ask Mode** - Analyze existing code and explore implementation options
+2. **Architect Mode** - Design system architecture and create implementation plan
+3. **Code Mode** - Implement the code based on architecture
+4. **Debug Mode** - Fix any bugs or errors
+5. **Test Mode** - Run tests and validate
 
-**Example 1: Complex Task with Architecture Design**
+**Typical workflows:**
+- **Simple task:** Code → Test
+- **Medium task:** Architect → Code → Debug → Test
+- **Complex task:** Ask → Architect → Code → Debug → Test
+- **Unclear task:** Ask → Architect → Code → Debug → Test
+
+**Example 1: Complex Task with Analysis and Architecture Design**
 ```
 Task definition:
 - [ ] T005: Set Up BullMQ 5.x for Background Job Processing (2h)
@@ -351,14 +358,15 @@ SmartSpec sends to Kilo Code:
 Use Orchestrator Mode to break this task into subtasks. T005: Set Up BullMQ 5.x for Background Job Processing
 
 Orchestrator decides:
-- This is complex → Use Architect Mode first, then break into sub-tasks:
-  - Sub-task 1 (Architect Mode): Design BullMQ architecture and integration plan
-  - Sub-task 2 (Code Mode): Install BullMQ dependencies
-  - Sub-task 3 (Code Mode): Create queue configuration based on architecture
-  - Sub-task 4 (Code Mode): Implement job processor
-  - Sub-task 5 (Code Mode): Add error handling and logging
-  - Sub-task 6 (Debug Mode): Fix any issues
-  - Sub-task 7 (Test Mode): Validate BullMQ integration
+- This is complex and needs analysis → Use Ask Mode first, then Architect Mode:
+  - Sub-task 1 (Ask Mode): Analyze current job processing approach and BullMQ integration options
+  - Sub-task 2 (Architect Mode): Design BullMQ architecture and integration plan based on analysis
+  - Sub-task 3 (Code Mode): Install BullMQ dependencies
+  - Sub-task 4 (Code Mode): Create queue configuration based on architecture
+  - Sub-task 5 (Code Mode): Implement job processor
+  - Sub-task 6 (Code Mode): Add error handling and logging
+  - Sub-task 7 (Debug Mode): Fix any issues
+  - Sub-task 8 (Test Mode): Validate BullMQ integration
 ```
 
 **Example 2: Simple Task**

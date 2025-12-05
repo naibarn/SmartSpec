@@ -385,4 +385,14 @@ When multiple parameters are used:
 
 ---
 
+## Related Guides
+
+- **[Kilo Code Complete Guide](KILO_CODE_COMPLETE_GUIDE.md)** - Complete guide for all Kilo Code modes
+- **[Kilo Code Sub-Task Mode Guide](KILOCODE_MODE_GUIDE.md)** - How to use Orchestrator Mode for sub-tasks
+- **[Architect Mode Guide](ARCHITECT_MODE_GUIDE.md)** - How to use Architect Mode for system design
+- **[Debug Mode Guide](DEBUG_MODE_GUIDE.md)** - How to use Debug Mode for problem-solving
+- **[Implement Tasks Guide](IMPLEMENT_TASKS_DETAILED_GUIDE.md)** - Full workflow documentation
+
+---
+
 **Use `--start-from` to easily resume implementation from any point and continue to the end!** 🚀

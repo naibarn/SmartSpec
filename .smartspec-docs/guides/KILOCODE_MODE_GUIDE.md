@@ -568,4 +568,14 @@ Kilo Code: *executes sub-task 5* → ✅
 
 ---
 
+## Related Guides
+
+- **[Kilo Code Complete Guide](KILO_CODE_COMPLETE_GUIDE.md)** - Complete guide for all Kilo Code modes
+- **[Ask Mode Guide](ASK_MODE_GUIDE.md)** - How to use Ask Mode for analysis
+- **[Architect Mode Guide](ARCHITECT_MODE_GUIDE.md)** - How to use Architect Mode for system design
+- **[Debug Mode Guide](DEBUG_MODE_GUIDE.md)** - How to use Debug Mode for problem-solving
+- **[Implement Tasks Guide](IMPLEMENT_TASKS_DETAILED_GUIDE.md)** - Full workflow documentation
+
+---
+
 **Use `--kilocode` to let Kilo Code automatically break down complex tasks (≥2h) and avoid `line_count` errors!** 🚀

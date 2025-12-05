@@ -16,6 +16,7 @@ You will receive:
    - `--severity <level>` - Fix only errors of specific severity (critical, high, medium, low)
    - `--auto-fix` - Auto-fix all errors without asking
    - `--dry-run` - Show what would be fixed without actually fixing
+   - `--kilocode` - Use Kilo Code Orchestrator Mode with Debug Mode for systematic error fixing
 
 ## Your Task
 
@@ -104,6 +105,22 @@ For each error:
    ```
 
 ### Phase 3: Apply Fixes
+
+**If `--kilocode` flag: Use Kilo Code Debug Mode**
+
+```
+Use Debug Mode to analyze and fix all errors systematically.
+```
+
+**Debug Mode will:**
+- Analyze all errors systematically
+- Identify root causes
+- Apply fixes one by one
+- Verify each fix
+- Rollback if fix creates new errors
+- Report progress
+
+**If NOT using `--kilocode`:**
 
 1. **Ask User for Confirmation** (unless `--auto-fix`)
    ```

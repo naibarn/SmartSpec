@@ -16,6 +16,7 @@ You will receive:
    - `--file <path>` - Generate tests for specific file only
    - `--type <test-type>` - Generate specific type of tests (unit, integration, e2e)
    - `--focus uncovered` - Focus only on uncovered code
+   - `--kilocode` - Use Kilo Code Orchestrator Mode to systematically generate comprehensive tests
 
 ## Your Task
 
@@ -138,6 +139,24 @@ You will receive:
    ```
 
 ### Phase 3: Generate Tests
+
+**If `--kilocode` flag: Use Kilo Code Orchestrator Mode**
+
+```
+Use Orchestrator Mode to break test generation into subtasks.
+Generate comprehensive tests for: {list of files needing tests}
+Target coverage: {target_coverage}%
+```
+
+**Orchestrator may create workflow:**
+1. **Ask Mode** - Analyze current test structure and patterns
+2. **Architect Mode** - Design test architecture and test cases
+3. **Code Mode** - Generate unit tests
+4. **Code Mode** - Generate integration tests
+5. **Code Mode** - Generate e2e tests
+6. **Test Mode** - Run all tests and verify coverage
+
+**If NOT using `--kilocode`:**
 
 For each file that needs tests:
 

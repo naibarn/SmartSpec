@@ -280,6 +280,9 @@ Error: Environment variable not found
 
 ## Related Guides
 
+- **[Kilo Code Complete Guide](KILO_CODE_COMPLETE_GUIDE.md)** - Complete guide for all Kilo Code modes
+- **[Ask Mode Guide](ASK_MODE_GUIDE.md)** - How to use Ask Mode for analysis
+- **[Architect Mode Guide](ARCHITECT_MODE_GUIDE.md)** - How to use Architect Mode for system design
 - **[Kilo Code Sub-Task Mode Guide](KILOCODE_MODE_GUIDE.md)** - How to use Orchestrator Mode for sub-tasks
 - **[Troubleshooting Guide](troubleshooting.md)** - Common issues and solutions
 - **[Implement Tasks Guide](IMPLEMENT_TASKS_DETAILED_GUIDE.md)** - Full workflow documentation

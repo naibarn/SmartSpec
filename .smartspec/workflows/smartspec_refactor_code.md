@@ -16,6 +16,7 @@ You will receive:
    - `--focus <area>` - Focus on specific area (complexity, duplication, naming, unused)
    - `--aggressive` - Include breaking changes (rename public APIs, change signatures)
    - `--dry-run` - Show what would be refactored without actually refactoring
+   - `--kilocode` - Use Kilo Code Orchestrator Mode with Ask/Architect/Code workflow for systematic refactoring
 
 ## Your Task
 
@@ -148,6 +149,22 @@ You will receive:
    ```
 
 ### Phase 3: Apply Refactorings
+
+**If `--kilocode` flag: Use Kilo Code Orchestrator Mode**
+
+```
+Use Orchestrator Mode to break this refactoring into subtasks.
+Refactor code to improve quality: {summary of refactorings needed}
+```
+
+**Orchestrator may create workflow:**
+1. **Ask Mode** - Analyze current code structure and refactoring impact
+2. **Architect Mode** - Design refactored architecture and structure
+3. **Code Mode** - Apply refactorings one by one
+4. **Debug Mode** - Fix any issues introduced
+5. **Test Mode** - Validate all tests pass
+
+**If NOT using `--kilocode`:**
 
 1. **Backup Code**
    ```bash

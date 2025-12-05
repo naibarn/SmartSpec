@@ -43,6 +43,7 @@ $ARGUMENTS
 - Parse `--force-all` flag (ignore checkboxes, re-implement all)
 - Parse `--validate-only` flag (validate only, no implementation)
 - Parse `--kilocode` flag (use Kilo Code sub-task mode)
+- Parse `--architect` flag (use Architect Mode for system design before implementation)
 
 **Detect input type:**
 - If path is directory: Look for `tasks.md` in directory
@@ -296,6 +297,28 @@ DO NOT STOP until ALL tasks are completed or error occurs
 
 **If `--validate-only` flag: SKIP implementation, go to validation**
 
+**If `--architect` flag: Use Architect Mode first**
+
+**Architect Mode (when `--architect` flag is set):**
+
+**For EVERY task, use Architect Mode first:**
+```
+Use Architect Mode to design the system architecture and create implementation plan. {task_id}: {task_title}
+```
+
+**Architect Mode will:**
+- Design system architecture and structure
+- Create technical specification
+- Define file structure, modules, and responsibilities
+- Define data flow and API endpoints
+- Identify libraries and dependencies needed
+- Create detailed implementation plan
+
+**After Architect Mode completes:**
+- Use the architecture and plan to implement the code
+- Follow the structure defined by Architect Mode
+- Reference the technical specification
+
 **If `--kilocode` flag: Use Orchestrator Mode**
 
 **Orchestrator Mode (when `--kilocode` flag is set):**
@@ -307,12 +330,19 @@ Use Orchestrator Mode to break this task into subtasks. {task_id}: {task_title}
 
 **How it works:**
 - Orchestrator Mode will analyze task complexity automatically
-- If task is complex: Orchestrator breaks it into smaller sub-tasks
+- If task is complex: Orchestrator may use **Architect Mode first** to design system architecture
+- Then breaks into smaller sub-tasks (Architect → Code → Debug → Test)
 - If task is simple: Orchestrator implements directly
 - **You don't need to check estimated hours or complexity**
 - Orchestrator is smart enough to decide
 
-**Example 1: Complex Task**
+**Orchestrator may create sub-tasks like:**
+1. **Architect Mode** - Design system architecture and create implementation plan
+2. **Code Mode** - Implement the code based on architecture
+3. **Debug Mode** - Fix any bugs or errors
+4. **Test Mode** - Run tests and validate
+
+**Example 1: Complex Task with Architecture Design**
 ```
 Task definition:
 - [ ] T005: Set Up BullMQ 5.x for Background Job Processing (2h)
@@ -321,11 +351,14 @@ SmartSpec sends to Kilo Code:
 Use Orchestrator Mode to break this task into subtasks. T005: Set Up BullMQ 5.x for Background Job Processing
 
 Orchestrator decides:
-- This is complex → Break into sub-tasks:
-  - Sub-task 1: Install BullMQ dependencies
-  - Sub-task 2: Create queue configuration
-  - Sub-task 3: Implement job processor
-  - Sub-task 4: Add error handling and logging
+- This is complex → Use Architect Mode first, then break into sub-tasks:
+  - Sub-task 1 (Architect Mode): Design BullMQ architecture and integration plan
+  - Sub-task 2 (Code Mode): Install BullMQ dependencies
+  - Sub-task 3 (Code Mode): Create queue configuration based on architecture
+  - Sub-task 4 (Code Mode): Implement job processor
+  - Sub-task 5 (Code Mode): Add error handling and logging
+  - Sub-task 6 (Debug Mode): Fix any issues
+  - Sub-task 7 (Test Mode): Validate BullMQ integration
 ```
 
 **Example 2: Simple Task**

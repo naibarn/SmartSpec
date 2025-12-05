@@ -63,7 +63,8 @@ The `smartspec_implement_tasks` workflow automatically implements tasks defined 
 
 | Option | Description | Example |
 |--------|-------------|---------|------|
-| `--kilocode` | Use Kilo Code sub-task mode for complex tasks (≥2h) | `--kilocode` |
+| `--kilocode` | Use Kilo Code Orchestrator Mode to automatically break tasks into sub-tasks | `--kilocode` |
+| `--architect` | Use Architect Mode to design system architecture before implementation | `--architect` |
 
 ### Resume Options
 
@@ -197,7 +198,9 @@ Resume from checkpoint:
 ## Additional Guides
 
 - **[START_FROM_GUIDE.md](../guides/START_FROM_GUIDE.md)** - How to use `--start-from` parameter
-- **[KILOCODE_MODE_GUIDE.md](../guides/KILOCODE_MODE_GUIDE.md)** - How to use `--kilocode` parameter
+- **[KILOCODE_MODE_GUIDE.md](../guides/KILOCODE_MODE_GUIDE.md)** - How to use `--kilocode` parameter (Orchestrator Mode)
+- **[ARCHITECT_MODE_GUIDE.md](../guides/ARCHITECT_MODE_GUIDE.md)** - How to use `--architect` parameter (Architect Mode)
+- **[DEBUG_MODE_GUIDE.md](../guides/DEBUG_MODE_GUIDE.md)** - How Debug Mode is used for problem-solving
 
 ---
 

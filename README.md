@@ -94,6 +94,7 @@ These workflows help maintain and improve code quality on a spec-scoped basis:
 - If using Kilo Code and experiencing `line_count` errors, see [KILOCODE_MODE_GUIDE.md](.smartspec-docs/guides/KILOCODE_MODE_GUIDE.md) for `--kilocode` flag usage.
 - To resume implementation from a specific task to the end, see [START_FROM_GUIDE.md](.smartspec-docs/guides/START_FROM_GUIDE.md) for `--start-from` parameter usage.
 - For debugging validation failures and errors, see [DEBUG_MODE_GUIDE.md](.smartspec-docs/guides/DEBUG_MODE_GUIDE.md) for Debug Mode usage.
+- For system design and architecture planning, see [ARCHITECT_MODE_GUIDE.md](.smartspec-docs/guides/ARCHITECT_MODE_GUIDE.md) for Architect Mode usage.
 
 
 ---

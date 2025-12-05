@@ -128,10 +128,9 @@ Options:
 ## 1. Load SmartSpec Context
 
 Read configuration in priority order:
-1. `smartspec.config.json` (if exists - project-specific)
-2. `.smartspec/config.json` (if exists - organization-wide)
-3. `SPEC_INDEX.json` (if exists - for dependency resolution)
-4. Built-in defaults
+1. `.smartspec/config.json` (if exists - organization-wide)
+2. `SPEC_INDEX.json` (if exists - for dependency resolution)
+3. Built-in defaults
 
 Parse flags from $ARGUMENTS and merge with config.
 
@@ -2414,7 +2413,7 @@ Use custom directory instead of .smartspec/
 
 ## 12. Configuration File Support (NEW)
 
-### 12.1 smartspec.config.json
+### 12.1 .smartspec/config.json
 
 ```json
 {
@@ -2474,9 +2473,8 @@ Use custom directory instead of .smartspec/
 ### 12.2 Config Priority
 
 1. Command-line flags (highest)
-2. Project config (smartspec.config.json)
-3. Organization config (.smartspec/config.json)
-4. Built-in defaults (lowest)
+2. Organization config (.smartspec/config.json)
+3. Built-in defaults (lowest)
 
 ---
 

@@ -401,14 +401,20 @@ Orchestrator decides:
 3. Apply fix
 4. Re-validate
 
-**Attempt 2: Different approach**
-1. Try alternative fix
-2. Re-validate
+**Attempt 2: Switch to Debug Mode**
+- Do NOT retry with same approach
+- Switch mode: "Use Debug Mode to analyze and fix the issue."
+- Debug Mode will:
+  - Systematically diagnose the problem
+  - Read error/stack trace
+  - Check related files and dependencies
+  - Apply targeted fix
+  - Run validation again
 
-**Attempt 3: Switch to Orchestrator Mode**
-- Do NOT retry again with same approach
+**Attempt 3: Switch to Orchestrator Mode (if Debug fails)**
+- If Debug Mode cannot fix the issue
 - Switch mode: "Use Orchestrator Mode to resolve the issue."
-- Let Orchestrator analyze and fix the problem
+- Orchestrator will try different strategy
 - If Orchestrator also fails, then STOP:
   - Report error details
   - Add to failed_tasks list
@@ -569,24 +575,30 @@ Replace: - [x] T037: Implement Credit Deduction APIs (2h)
 
 **For file edits/str_replace limit:**
 - Report error
-- Switch mode: "Use Orchestrator Mode to resolve the issue."
+- Switch mode: "Use Debug Mode to analyze and fix the issue."
+- Debug Mode will check why edits are failing
+- If Debug cannot resolve, switch to Orchestrator Mode
 - If Orchestrator cannot resolve, skip task
 
 **For retry limit (2 attempts):**
 - Do NOT retry 3rd time with same approach
-- Switch mode: "Use Orchestrator Mode to resolve the issue."
-- Orchestrator will try different strategy
+- Switch mode: "Use Debug Mode to analyze and fix the issue."
+- Debug Mode will diagnose why previous attempts failed
+- If Debug cannot resolve, switch to Orchestrator Mode
 
 **For consecutive errors (3 tasks):**
 - Create checkpoint
-- Switch mode: "Use Orchestrator Mode to review and fix issues."
+- Switch mode: "Use Debug Mode to analyze and fix issues."
+- Debug Mode will look for common patterns across failures
+- If Debug cannot resolve, switch to Orchestrator Mode
 - Report progress before stopping
 - If Orchestrator cannot resolve, request manual review
 
 **For infinite loop detection:**
 - If same command executed 3+ times with same result
-- Switch mode: "Use Orchestrator Mode to resolve the issue."
-- Orchestrator will break the loop with different approach
+- Switch mode: "Use Debug Mode to analyze and fix the issue."
+- Debug Mode will diagnose why command keeps failing
+- If Debug cannot break loop, switch to Orchestrator Mode
 
 ## 7. Phase Checkpoint
 
@@ -622,8 +634,17 @@ Replace: - [x] T037: Implement Credit Deduction APIs (2h)
 
 **First failure:**
 - Report failures with details
+- Switch mode: "Use Debug Mode to analyze and fix the issue."
+- Debug Mode will:
+  - Analyze error messages and stack traces
+  - Check related files and dependencies
+  - Identify root cause
+  - Apply targeted fixes
+  - Re-run validation
+
+**If validation fails again after Debug Mode:**
 - Switch mode: "Use Orchestrator Mode to resolve the issue."
-- Let Orchestrator analyze and fix validation errors
+- Let Orchestrator try different strategy
 - Re-run validation after Orchestrator fixes
 
 **If validation fails again after Orchestrator:**
@@ -634,8 +655,9 @@ Replace: - [x] T037: Implement Credit Deduction APIs (2h)
 - Do NOT continue to next phase
 
 **If validation command itself fails (not test failures):**
-- Switch mode: "Use Orchestrator Mode to resolve the issue."
-- Orchestrator will check environment, dependencies, configuration
+- Switch mode: "Use Debug Mode to analyze and fix the issue."
+- Debug Mode will check environment, dependencies, configuration
+- If Debug cannot fix, switch to Orchestrator Mode
 
 ## 8. Final Report
 

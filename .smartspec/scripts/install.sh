@@ -207,6 +207,60 @@ for platform in "${PLATFORMS[@]}"; do
         # Create target directory
         mkdir -p "$TARGET_DIR"
         
+        # Check for existing TOML workflows and handle backup/overwrite
+        EXISTING_TOML=()
+        if ls "$TARGET_DIR"/smartspec_*.toml >/dev/null 2>&1; then
+            while IFS= read -r file; do
+                EXISTING_TOML+=("$(basename "$file")")
+            done < <(ls "$TARGET_DIR"/smartspec_*.toml 2>/dev/null)
+        fi
+        
+        if [ ${#EXISTING_TOML[@]} -gt 0 ]; then
+            echo -e "  ${YELLOW}⚠️  Found ${#EXISTING_TOML[@]} existing SmartSpec workflow(s)${NC}"
+            echo ""
+            echo "  How do you want to proceed?"
+            echo "    1) Overwrite all (recommended for updates)"
+            echo "    2) Skip all (keep existing versions)"
+            echo "    3) Cancel installation"
+            
+            # Try to read user input
+            if [ -t 0 ]; then
+                read -p "  Enter choice [1-3] (default: 1): " overwrite_choice
+            else
+                read -p "  Enter choice [1-3] (default: 1): " overwrite_choice < /dev/tty 2>/dev/null || overwrite_choice=""
+            fi
+            
+            # Default to 1 if empty
+            if [ -z "$overwrite_choice" ]; then
+                overwrite_choice=1
+                echo "  Using default: $overwrite_choice"
+            fi
+            
+            case $overwrite_choice in
+                1)
+                    # Backup existing TOML workflows
+                    BACKUP_DIR="${TARGET_DIR}.smartspec.backup.$(date +%Y%m%d_%H%M%S)"
+                    mkdir -p "$BACKUP_DIR"
+                    for file in "${EXISTING_TOML[@]}"; do
+                        cp "$TARGET_DIR/$file" "$BACKUP_DIR/" 2>/dev/null || true
+                    done
+                    echo -e "  ${GREEN}💾 Backed up existing SmartSpec workflows to $(basename "$BACKUP_DIR")${NC}"
+                    ;;
+                2)
+                    echo -e "  ${BLUE}⏭️  Skipping Gemini CLI (keeping existing versions)${NC}"
+                    continue
+                    ;;
+                3)
+                    echo -e "  ${RED}❌ Installation cancelled${NC}"
+                    exit 0
+                    ;;
+                *)
+                    echo -e "  ${RED}Invalid choice. Skipping $PLATFORM_NAME${NC}"
+                    continue
+                    ;;
+            esac
+        fi
+        
         # Convert each workflow
         CONVERTED=0
         for md_file in "$WORKFLOWS_DIR"/smartspec_*.md; do

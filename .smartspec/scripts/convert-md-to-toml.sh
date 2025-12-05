@@ -1,9 +1,10 @@
 #!/bin/bash
 # SmartSpec Markdown to TOML Converter
 # Converts SmartSpec Markdown workflows to Gemini CLI TOML format
-# Version: 1.0
+# Version: 1.1
 
-set -e
+# Note: Removed 'set -e' to allow script to continue even if some commands return non-zero
+# (e.g., grep -q when pattern not found)
 
 # Colors
 GREEN='\033[0;32m'
@@ -29,8 +30,8 @@ extract_description() {
     
     # Try to find description in various formats
     # 1. Look for "# Description" or "## Description" section
-    if grep -q "^#\+ Description" "$md_file"; then
-        description=$(sed -n '/^#\+ Description/,/^#/p' "$md_file" | sed '1d;$d' | head -n 1 | sed 's/^[[:space:]]*//')
+    if grep -q "^#\+ Description" "$md_file" 2>/dev/null || true; then
+        description=$(sed -n '/^#\+ Description/,/^#/p' "$md_file" | sed '1d;$d' | head -n 1 | sed 's/^[[:space:]]*//' || true)
     fi
     
     # 2. If not found, look for first paragraph after title
@@ -83,14 +84,12 @@ convert_workflow() {
     # Escape description for TOML
     description=$(escape_toml_string "$description")
     
-    # Create TOML file
-    cat > "$toml_file" <<EOF
-description = "$description"
-
-prompt = """
-$prompt
-"""
-EOF
+    # Create TOML file using printf to avoid heredoc issues with special characters
+    printf '%s\n\n%s\n%s\n%s\n' \
+        "description = \"$description\"" \
+        'prompt = """' \
+        "$prompt" \
+        '"""' > "$toml_file"
     
     return 0
 }

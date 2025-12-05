@@ -18,12 +18,12 @@ SMARTSPEC_VERSION="v5.2"
 SMARTSPEC_DIR=".smartspec"
 WORKFLOWS_DIR="$SMARTSPEC_DIR/workflows"
 
-# Platform directories
-KILOCODE_DIR=".kilocode/workflows"
-ROO_DIR=".roo/commands"
-CLAUDE_DIR=".claude/commands"
-ANTIGRAVITY_DIR=".agent/workflows"
-GEMINI_CLI_DIR=".gemini/commands"
+# Platform directories (use absolute paths for home directory)
+KILOCODE_DIR="$HOME/.kilocode/workflows"
+ROO_DIR="$HOME/.roo/commands"
+CLAUDE_DIR="$HOME/.claude/commands"
+ANTIGRAVITY_DIR="$HOME/.agent/workflows"
+GEMINI_CLI_DIR="$HOME/.gemini/commands"
 
 echo -e "${BLUE}🚀 SmartSpec Multi-Platform Installer${NC}"
 echo -e "${BLUE}======================================${NC}"
@@ -61,13 +61,19 @@ if command -v git &> /dev/null; then
     git remote add origin "$SMARTSPEC_REPO"
     git config core.sparseCheckout true
     echo ".smartspec/" >> .git/info/sparse-checkout
+    echo ".kilocode/workflows/" >> .git/info/sparse-checkout
     git pull -q origin main
-    # Move all files and directories from .smartspec/ to current directory
+    # Move workflows to .smartspec/workflows/
+    mkdir -p workflows
+    if [ -d ".kilocode/workflows" ]; then
+        mv .kilocode/workflows/* workflows/ 2>/dev/null || true
+    fi
+    # Move knowledge base files from .smartspec/ to current directory
     if [ -d ".smartspec" ]; then
         # Use find to move both files and directories, including hidden files
         find .smartspec -mindepth 1 -maxdepth 1 -exec mv {} . \;
     fi
-    rm -rf .smartspec .git
+    rm -rf .smartspec .kilocode .git
     cd ..
     echo -e "${GREEN}✅ Downloaded workflows and knowledge base via git${NC}"
 else
@@ -141,8 +147,12 @@ if [ -t 0 ]; then
     # stdin is a terminal, read normally
     read -p "Enter choice [1-6] (default: 1): " choice
 else
-    # stdin is piped, try to read from /dev/tty
-    read -p "Enter choice [1-6] (default: 1): " choice < /dev/tty 2>/dev/null || choice=""
+    # stdin is piped, try to read from stdin first
+    read choice 2>/dev/null || choice=""
+    if [ -z "$choice" ]; then
+        # If stdin is empty, try /dev/tty
+        read -p "Enter choice [1-6] (default: 1): " choice < /dev/tty 2>/dev/null || choice=""
+    fi
 fi
 
 # Default to 1 if empty
@@ -272,8 +282,11 @@ for platform in "${PLATFORMS[@]}"; do
             toml_file="$TARGET_DIR/${filename}.toml"
             
             # Simple inline conversion
-            # Skip frontmatter (---...---) and extract first # title as description
-            description=$(grep -m 1 '^# ' "$md_file" | sed 's/^# //')
+            # Try to extract description from frontmatter first, then from # title
+            description=$(grep -m 1 '^description:' "$md_file" | sed 's/^description: *//')
+            if [ -z "$description" ]; then
+                description=$(grep -m 1 '^# ' "$md_file" | sed 's/^# //')
+            fi
             if [ -z "$description" ]; then
                 description="SmartSpec workflow: ${filename//_/ }"
             fi
@@ -300,7 +313,7 @@ for platform in "${PLATFORMS[@]}"; do
                 echo '"""'
             } > "$toml_file"
             
-            ((CONVERTED++))
+            CONVERTED=$((CONVERTED + 1))
         done
         
         echo -e "  ${GREEN}✅ $PLATFORM_NAME: $CONVERTED workflows converted and installed${NC}"

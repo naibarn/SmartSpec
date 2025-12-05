@@ -624,7 +624,11 @@ ELSE:
 **IMPORTANT: Only reach this section after processing ALL tasks in FILTERED_TASKS**
 **If you reach here early, you have NOT completed the loop correctly**
 
-**Generate comprehensive report:**
+**STEP 1: Generate comprehensive report and save to file**
+
+**Action:** Write full report to file `{WORK_DIR}/implementation-report-{timestamp}.md`
+
+**Full report template:**
 
 ```markdown
 # Implementation Report: {spec_id}
@@ -749,6 +753,66 @@ Next actions:
 
 ---
 
+**STEP 2: Return compact summary (NOT full report)**
+
+**IMPORTANT: Do NOT return the full report above**
+**Only return this compact summary to save context:**
+
+```markdown
+# ✅ Implementation {status}
+
+## 📊 Summary
+
+**Total tasks:** {total_tasks}
+**Completed:** {completed_count} ✅
+**Failed:** {failed_count} ❌
+**Skipped:** {skipped_count} ⏭️
+**Success rate:** {success_rate}%
+
+**Duration:** {duration}
+**Estimated effort:** {total_hours}h
+
+---
+
+## 📄 Reports
+
+**Full report:** `{WORK_DIR}/implementation-report-{timestamp}.md`
+**Checkpoint:** `{WORK_DIR}/.smartspec-checkpoint.json`
+**Tasks file:** `{TASKS_FILE}`
+
+---
+
+## 🔍 Status Details
+
+{If completed_count > 0:}
+✅ **Completed:** {completed_task_ids}
+
+{If failed_count > 0:}
+❌ **Failed:** {failed_task_ids}
+
+{If skipped_count > 0:}
+⏭️ **Skipped:** {skipped_task_ids}
+
+---
+
+## ⏭️ Next Steps
+
+{If status == COMPLETE:}
+1. Review full report: `{report_file}`
+2. Run final validation
+3. Commit changes
+
+{If status == PARTIAL:}
+1. Review failed tasks in report
+2. Fix issues manually
+3. Resume: `/smartspec_implement_tasks {path} --resume`
+
+{If status == FAILED:}
+1. Check error details in report
+2. Fix critical issues
+3. Restart: `/smartspec_implement_tasks {path}`
+```
+
 **FINAL VERIFICATION:**
 ```
 Processed tasks: {current_task_index}/{total_tasks}
@@ -760,18 +824,24 @@ ELSE:
   ⚠️ This indicates a workflow execution error
 ```
 
----
-
-**Report saved to:** {WORK_DIR}/implementation-report-{timestamp}.md
-**Checkpoint saved to:** {WORK_DIR}/.smartspec-checkpoint.json
-**Updated tasks file:** {TASKS_FILE}
-```
-
 ## 9. Save Artifacts
 
-**Save implementation report:**
+**STEP 1: Save implementation report to file (MANDATORY)**
+
+**Action:** Write the FULL report from section 8 to file
 - Path: `{WORK_DIR}/implementation-report-{timestamp}.md`
-- Content: Full report as above
+- Content: Complete markdown report with all sections:
+  - Summary
+  - Completed Tasks (full list)
+  - Failed Tasks (full list with errors)
+  - Skipped Tasks (full list with reasons)
+  - Validation Status
+  - Files Modified
+  - Checkpoints Created
+  - Next Steps
+  - Resume Command
+
+**IMPORTANT:** This file contains the FULL detailed report
 
 **Save final checkpoint:**
 - Path: `{WORK_DIR}/.smartspec-checkpoint.json`
@@ -787,20 +857,24 @@ git add .
 git commit -m "Implement tasks {task_range}: {summary}"
 ```
 
-## 10. Report to User (Thai)
+## 10. Report to User
 
-```
-✅ การ Implement Tasks เสร็จสิ้น
+**IMPORTANT: Return ONLY the compact summary from section 8 STEP 2**
+**DO NOT return the full report - it's already saved to file**
 
-📊 สรุปผลการทำงาน:
-- Tasks ทั้งหมด: {total}
-- สำเร็จ: {completed} ✅
-- ล้มเหลว: {failed} ❌
-- ข้าม: {skipped} ⏭️
-- อัตราความสำเร็จ: {success_rate}%
+**What to return:**
+- Use the compact summary template from section 8 STEP 2
+- Include: status, statistics, file paths, next steps
+- Keep it under 50 lines total
 
-⏱️ เวลาที่ใช้: {duration}
-📁 ไฟล์ที่แก้ไข: {files_count} files
+**What NOT to return:**
+- Full list of completed tasks
+- Full list of failed tasks with error details
+- Full list of skipped tasks
+- Full validation details
+- Full file modification list
+
+**Reason:** Save context space and prevent context overflow
 
 ✅ Validation Status:
 - Compilation: {compile_status}

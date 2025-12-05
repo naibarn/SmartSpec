@@ -273,7 +273,7 @@ for platform in "${PLATFORMS[@]}"; do
             
             # Simple inline conversion
             # Skip frontmatter (---...---) and extract first # title as description
-            description=$(grep -m 1 '^# ' "$md_file" | sed 's/^# //' | sed 's/"/\\"/g')
+            description=$(grep -m 1 '^# ' "$md_file" | sed 's/^# //')
             if [ -z "$description" ]; then
                 description="SmartSpec workflow: ${filename//_/ }"
             fi
@@ -457,7 +457,7 @@ for platform in $PLATFORMS; do
                     filename=$(basename "$md_file" .md)
                     toml_file="$TARGET_DIR/${filename}.toml"
                     # Skip frontmatter and extract first # title
-                    description=$(grep -m 1 '^# ' "$md_file" | sed 's/^# //' | sed 's/"/\\"/g')
+                    description=$(grep -m 1 '^# ' "$md_file" | sed 's/^# //')
                     [ -z "$description" ] && description="SmartSpec workflow: ${filename//_/ }"
                     # Extract content after frontmatter
                     frontmatter_end=$(grep -n '^---$' "$md_file" | sed -n '2p' | cut -d: -f1)

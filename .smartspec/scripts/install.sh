@@ -292,13 +292,13 @@ for platform in "${PLATFORMS[@]}"; do
             
             # Create TOML file using cat with heredoc
             # Note: heredoc is more robust than printf for complex content
-            cat > "$toml_file" <<TOMLEOF
-description = "$description"
-
-prompt = """
-$prompt
-"""
-TOMLEOF
+            {
+                echo "description = \"$description\""
+                echo ""
+                echo 'prompt = """'
+                echo "$prompt"
+                echo '"""'
+            } > "$toml_file"
             
             ((CONVERTED++))
         done

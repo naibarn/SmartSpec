@@ -130,7 +130,7 @@ Options:
 Read configuration in priority order:
 1. `smartspec.config.json` (if exists - project-specific)
 2. `.smartspec/config.json` (if exists - organization-wide)
-3. `.smartspec/SPEC_INDEX.json` (if exists - for dependency resolution)
+3. `SPEC_INDEX.json` (if exists - for dependency resolution)
 4. Built-in defaults
 
 Parse flags from $ARGUMENTS and merge with config.
@@ -139,19 +139,16 @@ Parse flags from $ARGUMENTS and merge with config.
 
 **Step 1: Check if SPEC_INDEX.json exists**
 
-Check for `.smartspec/SPEC_INDEX.json`:
+Check for `SPEC_INDEX.json`:
 ```bash
-test -f .smartspec/SPEC_INDEX.json && echo "EXISTS" || echo "NOT_EXISTS"
+test -f SPEC_INDEX.json && echo "EXISTS" || echo "NOT_EXISTS"
 ```
 
 **Step 2: If NOT exists, create it (Auto-Creation)**
 
 If NOT_EXISTS:
 ```
-1. Create .smartspec/ directory (if not exists):
-   mkdir -p .smartspec
-
-2. Create SPEC_INDEX.json with initial structure:
+1. Create SPEC_INDEX.json with initial structure (in project root):
    {
      "version": "5.0",
      "created": "<current_timestamp>",
@@ -176,13 +173,13 @@ If NOT_EXISTS:
      }
    }
 
-3. Log: "✅ Created SPEC_INDEX.json"
+2. Log: "✅ Created SPEC_INDEX.json in project root"
 ```
 
 **Step 3: Load SPEC_INDEX.json into memory**
 
 If EXISTS (or just created):
-- Read `.smartspec/SPEC_INDEX.json`
+- Read `SPEC_INDEX.json`
 - Parse JSON structure
 - Store in SPEC_REGISTRY for lookup
 - Structure: `{ "specs": [{ "id": "...", "title": "...", "path": "...", "repo": "..." }] }`
@@ -2506,7 +2503,7 @@ When generating Related Specs section, you MUST follow these steps:
 
 Use `file` tool to check:
 ```bash
-test -f .smartspec/SPEC_INDEX.json && echo "EXISTS" || echo "NOT_EXISTS"
+test -f SPEC_INDEX.json && echo "EXISTS" || echo "NOT_EXISTS"
 ```
 
 ---
@@ -2515,7 +2512,7 @@ test -f .smartspec/SPEC_INDEX.json && echo "EXISTS" || echo "NOT_EXISTS"
 
 If EXISTS:
 ```
-1. Read .smartspec/SPEC_INDEX.json using `file` tool
+1. Read SPEC_INDEX.json using `file` tool
 2. Parse JSON structure: { "specs": [{ "id": "...", "title": "...", "path": "...", "repo": "..." }] }
 3. Store in memory for lookup
 ```
@@ -3523,7 +3520,7 @@ fs.writeFileSync(reportPath, reportContent, 'utf-8');
 ### 14.1 Load Current SPEC_INDEX
 
 ```javascript
-const indexPath = '.smartspec/SPEC_INDEX.json';
+const indexPath = 'SPEC_INDEX.json';
 const specIndex = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
 ```
 

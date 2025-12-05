@@ -290,12 +290,15 @@ for platform in "${PLATFORMS[@]}"; do
                 prompt=$(tail -n +2 "$md_file")
             fi
             
-            # Create TOML file using printf to avoid heredoc issues
-            printf '%s\n\n%s\n%s\n%s\n' \
-                "description = \"$description\"" \
-                'prompt = """' \
-                "$prompt" \
-                '"""' > "$toml_file"
+            # Create TOML file using cat with heredoc
+            # Note: heredoc is more robust than printf for complex content
+            cat > "$toml_file" <<TOMLEOF
+description = "$description"
+
+prompt = """
+$prompt
+"""
+TOMLEOF
             
             ((CONVERTED++))
         done

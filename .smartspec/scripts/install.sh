@@ -504,6 +504,15 @@ SYNCEOF
 chmod +x "$SMARTSPEC_DIR/sync.sh"
 echo -e "${GREEN}✅ Sync script created${NC}"
 
+# Run sync.sh to copy workflows to platform directories
+echo ""
+echo -e "${BLUE}🔄 Syncing workflows to platform directories...${NC}"
+if [ -f "$SMARTSPEC_DIR/sync.sh" ]; then
+    "$SMARTSPEC_DIR/sync.sh"
+else
+    echo -e "${RED}❌ Error: sync.sh not found${NC}"
+fi
+
 # Create git hook
 if [ -d ".git" ]; then
         mkdir -p ".git/hooks"
@@ -533,8 +542,8 @@ echo "  - Method: Merged installation (preserves existing workflows)"
 echo "  - Platforms: ${PLATFORMS[*]}"
 echo ""
 
-echo -e "${YELLOW}📝 Note: SmartSpec workflows are merged with your existing workflows${NC}"
-echo "   Run '.smartspec/sync.sh' to update SmartSpec workflows from repository"
+echo -e "${YELLOW}📝 Note: SmartSpec workflows are synced to your platform directories${NC}"
+echo "   Run '.smartspec/sync.sh' to manually update SmartSpec workflows from repository"
 echo ""
 
 echo "🎉 You can now use SmartSpec workflows in:"

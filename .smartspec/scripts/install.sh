@@ -235,14 +235,12 @@ for platform in "${PLATFORMS[@]}"; do
                 prompt=$(tail -n +2 "$md_file" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
             fi
             
-            # Create TOML file
-            cat > "$toml_file" <<EOF
-description = "$description"
-
-prompt = """
-$prompt
-"""
-EOF
+            # Create TOML file using printf to avoid heredoc issues
+            printf '%s\n\n%s\n%s\n%s\n' \
+                "description = \"$description\"" \
+                'prompt = """' \
+                "$prompt" \
+                '"""' > "$toml_file"
             
             ((CONVERTED++))
         done
@@ -410,13 +408,11 @@ for platform in $PLATFORMS; do
                     else
                         prompt=$(tail -n +2 "$md_file" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
                     fi
-                    cat > "$toml_file" <<EOF
-description = "$description"
-
-prompt = """
-$prompt
-"""
-EOF
+                    printf '%s\n\n%s\n%s\n%s\n' \
+                        "description = \"$description\"" \
+                        'prompt = """' \
+                        "$prompt" \
+                        '"""' > "$toml_file"
                 done
                 echo -e "  ${GREEN}✅ $platform synced (converted to TOML)${NC}"
                 continue

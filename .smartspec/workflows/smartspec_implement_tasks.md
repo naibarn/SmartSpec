@@ -416,17 +416,25 @@ DO NOT STOP until ALL tasks are completed or error occurs
 1. Try alternative fix
 2. Re-validate
 
-**Attempt 3: STOP**
-- Do NOT continue
-- Report error details
-- Add to failed_tasks list
-- Request manual guidance
+**Attempt 3: Switch to Orchestrator Mode**
+- Do NOT retry again with same approach
+- Switch mode: "Use Orchestrator Mode to resolve the issue."
+- Let Orchestrator analyze and fix the problem
+- If Orchestrator also fails, then STOP:
+  - Report error details
+  - Add to failed_tasks list
+  - Request manual guidance
+
+**If same error repeats 2+ times:**
+- Switch mode: "Use Orchestrator Mode to resolve the issue."
+- Orchestrator can break the loop with different strategy
 
 **If 3 consecutive tasks fail:**
 - STOP execution immediately
 - Create checkpoint
 - Report: "Stopped due to 3 consecutive failures"
-- Request manual review
+- Switch mode: "Use Orchestrator Mode to review and fix issues."
+- Request manual review if Orchestrator cannot resolve
 
 ### 6.5 Update Progress
 
@@ -569,9 +577,27 @@ Replace: - [x] T037: Implement Credit Deduction APIs (2h)
 **The loop MUST continue until ALL tasks in FILTERED_TASKS are processed**
 
 **If limit reached:**
-- For file edits/str_replace: Report error and skip task
-- For consecutive errors: Create checkpoint and stop
+
+**For file edits/str_replace limit:**
+- Report error
+- Switch mode: "Use Orchestrator Mode to resolve the issue."
+- If Orchestrator cannot resolve, skip task
+
+**For retry limit (2 attempts):**
+- Do NOT retry 3rd time with same approach
+- Switch mode: "Use Orchestrator Mode to resolve the issue."
+- Orchestrator will try different strategy
+
+**For consecutive errors (3 tasks):**
+- Create checkpoint
+- Switch mode: "Use Orchestrator Mode to review and fix issues."
 - Report progress before stopping
+- If Orchestrator cannot resolve, request manual review
+
+**For infinite loop detection:**
+- If same command executed 3+ times with same result
+- Switch mode: "Use Orchestrator Mode to resolve the issue."
+- Orchestrator will break the loop with different approach
 
 ## 7. Phase Checkpoint
 
@@ -604,10 +630,23 @@ Replace: - [x] T037: Implement Credit Deduction APIs (2h)
 - Continue to next phase
 
 **If ANY fail:**
+
+**First failure:**
+- Report failures with details
+- Switch mode: "Use Orchestrator Mode to resolve the issue."
+- Let Orchestrator analyze and fix validation errors
+- Re-run validation after Orchestrator fixes
+
+**If validation fails again after Orchestrator:**
 - STOP execution
+- Create checkpoint
 - Report failures
 - Request manual fix
 - Do NOT continue to next phase
+
+**If validation command itself fails (not test failures):**
+- Switch mode: "Use Orchestrator Mode to resolve the issue."
+- Orchestrator will check environment, dependencies, configuration
 
 ## 8. Final Report
 

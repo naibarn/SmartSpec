@@ -57,6 +57,81 @@ This is the core loop of SmartSpec. It's simple, powerful, and keeps your projec
 
 ---
 
+## 🎯 What SmartSpec Does for Your Vibe-Coding Workflow
+
+SmartSpec acts as a **structured engine** that transforms vibe-coding from chaotic to reliable, consistent, and production-grade. Here's how it improves your AI-powered development process:
+
+### 1. 💡 Idea → SPEC Conversion
+
+You provide a high-level idea or "vibe" for your project. SmartSpec generates a **complete specification** including:
+
+- **Purpose & Goals** - What the system should achieve
+- **Requirements** - Functional and non-functional requirements
+- **Architecture Outline** - High-level system design
+- **Constraints** - Technical limitations and boundaries
+- **Domain Rules** - Business logic and validation rules
+
+**Result:** Your vague idea becomes an engineering-ready specification.
+
+### 2. 📋 SPEC → Plan / Tasks
+
+SmartSpec breaks down the specification into actionable items:
+
+- **Development Plan** - Phased implementation strategy
+- **Granular Tasks** - Step-by-step work items with time estimates
+- **Module Structure** - Clear file and component organization
+- **Security & Performance Requirements** - Production-grade considerations
+
+**Result:** No more "AI just writes random code" problem. You get a clear roadmap.
+
+### 3. 🚀 Task → Implementation Prompts
+
+SmartSpec auto-generates **high-quality prompts** that can be executed by AI coding agents:
+
+- **"Implement Feature" Prompts** - Complete with context, requirements, and coding rules
+- **"Create Component" Prompts** - With architecture guidance and best practices
+- **"Refactor / Fix / Test" Prompts** - For maintenance and quality improvement
+
+**Result:** Consistent, maintainable code across your entire project.
+
+### 4. ✅ Auto-Validation & Governance
+
+SmartSpec continuously checks your project for:
+
+- **Missing Requirements** - Ensures nothing is overlooked
+- **Security Gaps** - Identifies potential vulnerabilities
+- **Domain Rules Compliance** - Validates business logic consistency
+- **Structural Correctness** - Maintains clean architecture
+
+**Result:** Your vibe-coding stays aligned with production standards.
+
+### 5. 🔄 Supports Both Auto and Manual Workflows
+
+**Auto-Mode (Full Agent):**
+- AI implements tasks automatically
+- Suitable for: Kilo Code, Claude Code, Roo Code
+- Best for: Autonomous development with minimal human intervention
+
+**Manual Mode (Copy-Paste):**
+- SmartSpec prepares clean coding prompts
+- Suitable for: Cursor, VSCode, Google Antigravity
+- Best for: Interactive development with human oversight
+
+**Result:** Both beginners and experienced developers can use SmartSpec effectively.
+
+### 6. 🏢 Domain & Profile Support
+
+SmartSpec includes specialized profiles for different domains:
+
+- **CRUD Services** - Standard data management patterns
+- **Backend Service Architecture** - Microservices, APIs, databases
+- **Fintech / Healthcare / Enterprise** - Domain-specific rules and compliance
+- **Performance + DI + Security Modes** - Production-grade patterns
+
+**Result:** Generated specs and tasks are not generic—they adapt to your domain.
+
+---
+
 ## 📖 Core Commands
 
 Each command corresponds to a workflow that you can customize. Click on a command to see its detailed documentation.

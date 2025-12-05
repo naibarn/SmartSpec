@@ -29,14 +29,14 @@ extract_description() {
     local description=""
     
     # Try to find description in various formats
-    # 1. Look for "# Description" or "## Description" section
-    if grep -q "^#\+ Description" "$md_file" 2>/dev/null || true; then
-        description=$(sed -n '/^#\+ Description/,/^#/p' "$md_file" | sed '1d;$d' | head -n 1 | sed 's/^[[:space:]]*//' || true)
-    fi
+    # 1. Look for first # title (works even with frontmatter)
+    description=$(grep -m 1 '^# ' "$md_file" 2>/dev/null | sed 's/^# //' || true)
     
-    # 2. If not found, look for first paragraph after title
+    # 2. If not found, look for "# Description" or "## Description" section
     if [ -z "$description" ]; then
-        description=$(sed -n '/^# /,/^$/p' "$md_file" | sed '1d' | head -n 1 | sed 's/^[[:space:]]*//')
+        if grep -q "^#\+ Description" "$md_file" 2>/dev/null || true; then
+            description=$(sed -n '/^#\+ Description/,/^#/p' "$md_file" | sed '1d;$d' | head -n 1 | sed 's/^[[:space:]]*//' || true)
+        fi
     fi
     
     # 3. If still not found, use filename

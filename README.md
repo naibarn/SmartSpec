@@ -152,6 +152,4 @@ When a user asks how to use a command, first consult the corresponding file in `
 
 ## Troubleshooting
 
-**Command not found:**
-- Ensure the installation script ran correctly and that `~/.smartspec/bin` is in your shell's `PATH`.
-- Restart your terminal or source your shell profile file (e.g., `source ~/.zshrc`).
+For common issues and solutions, see the **[Troubleshooting Guide](.smartspec-docs/guides/troubleshooting.md)**.

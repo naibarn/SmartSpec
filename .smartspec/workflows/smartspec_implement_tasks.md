@@ -296,66 +296,55 @@ DO NOT STOP until ALL tasks are completed or error occurs
 
 **If `--validate-only` flag: SKIP implementation, go to validation**
 
-**If `--kilocode` flag: Use Kilo Code Sub-Task Mode**
+**If `--kilocode` flag: Use Orchestrator Mode**
 
-**Kilo Code Sub-Task Mode (when `--kilocode` flag is set):**
+**Orchestrator Mode (when `--kilocode` flag is set):**
 
-1. **Check task estimated hours:**
-   - Read estimated hours from task definition
-   - Example: `T005: Set Up BullMQ 5.x (2h)` → hours = 2
+**For EVERY task, send to Orchestrator Mode:**
+```
+Use Orchestrator Mode to break this task into subtasks. {task_id}: {task_title}
+```
 
-2. **If task is COMPLEX (estimated hours >= 2):**
-   - **Delegate to Kilo Code's automatic sub-task breakdown:**
-     ```
-     Create a new sub-task in code mode:
-     T005 Goal: Set Up BullMQ 5.x for Background Job Processing
-     ```
-   
-   - **How it works:**
-     - Kilo Code will automatically detect task complexity
-     - Kilo Code will break down the task into smaller sub-tasks
-     - Each sub-task will be <50 lines to avoid `line_count` errors
-     - Sub-tasks execute sequentially
-   
-   - **Example for T005 (Set Up BullMQ - 2h):**
-     ```
-     Task definition:
-     - [ ] T005: Set Up BullMQ 5.x for Background Job Processing (2h)
-     
-     SmartSpec detects: 2h >= 2 → COMPLEX
-     
-     SmartSpec sends to Kilo Code:
-     Create a new sub-task in code mode:
-     T005 Goal: Set Up BullMQ 5.x for Background Job Processing
-     
-     Kilo Code will automatically break this into:
-     - Sub-task 1: Install BullMQ dependencies
-     - Sub-task 2: Create queue configuration
-     - Sub-task 3: Implement job processor
-     - Sub-task 4: Add error handling and logging
-     ```
-   
-   - **Important:**
-     - DO NOT manually specify sub-tasks
-     - Let Kilo Code detect and break down automatically
-     - Just prefix with "Create a new sub-task in code mode:"
+**How it works:**
+- Orchestrator Mode will analyze task complexity automatically
+- If task is complex: Orchestrator breaks it into smaller sub-tasks
+- If task is simple: Orchestrator implements directly
+- **You don't need to check estimated hours or complexity**
+- Orchestrator is smart enough to decide
 
-3. **If task is SIMPLE (estimated hours < 2):**
-   - Implement directly without sub-task mode
-   - Use standard file size strategy (below)
-   
-   - **Example for T001 (Add field - 0.5h):**
-     ```
-     Task definition:
-     - [ ] T001: Add user ID field to User model (0.5h)
-     
-     SmartSpec detects: 0.5h < 2 → SIMPLE
-     
-     SmartSpec sends to Kilo Code:
-     T001 Goal: Add user ID field to User model
-     
-     Direct implementation (no sub-task mode)
-     ```
+**Example 1: Complex Task**
+```
+Task definition:
+- [ ] T005: Set Up BullMQ 5.x for Background Job Processing (2h)
+
+SmartSpec sends to Kilo Code:
+Use Orchestrator Mode to break this task into subtasks. T005: Set Up BullMQ 5.x for Background Job Processing
+
+Orchestrator decides:
+- This is complex → Break into sub-tasks:
+  - Sub-task 1: Install BullMQ dependencies
+  - Sub-task 2: Create queue configuration
+  - Sub-task 3: Implement job processor
+  - Sub-task 4: Add error handling and logging
+```
+
+**Example 2: Simple Task**
+```
+Task definition:
+- [ ] T001: Add user ID field to User model (0.5h)
+
+SmartSpec sends to Kilo Code:
+Use Orchestrator Mode to break this task into subtasks. T001: Add user ID field to User model
+
+Orchestrator decides:
+- This is simple → Implement directly (no sub-tasks needed)
+```
+
+**Important:**
+- DO NOT check estimated hours yourself
+- DO NOT decide complexity yourself
+- Just send ALL tasks to Orchestrator Mode with the same command
+- Let Orchestrator decide whether to break down or not
 
 **Standard Implementation Mode (when `--kilocode` flag is NOT set):**
 

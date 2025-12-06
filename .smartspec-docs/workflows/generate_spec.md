@@ -51,6 +51,131 @@ These flags allow you to fine-tune the content of specific sections.
 | `--performance` | `full`, `basic`, `none` | `auto` | Controls the detail of performance requirements. `basic` includes key metrics like P99, TPS, uptime. |
 | `--domain` | `healthcare`, `iot`, `logistics`, `ai`, `fintech`, `saas`, `internal` | (none) | Provides a hint to the AI about the project's domain to generate more relevant content. |
 
+## Parse Command-Line Flags
+
+### 0.1 Profile Selection
+
+```
+--profile=<type>
+
+Options:
+  basic           - Minimal SPEC (Overview, Architecture, API/Data)
+  backend-service - Standard backend (DI, testing, monitoring)
+  financial       - Full security + performance (STRIDE, SLA, metrics)
+  full            - All sections (default - v4.0 compatibility)
+```
+
+### 0.2 Mode Selection
+
+```
+--mode=<type>
+
+Options:
+  standard - Full SPEC with all details (default)
+  compact  - Condensed 5-section SPEC for simple projects
+```
+
+### 0.3 Security Level
+
+```
+--security=<level>
+
+Options:
+  none         - No security section
+  basic        - Basic security considerations
+  stride-basic - STRIDE table (5-10 lines, key threats only)
+  stride-full  - Complete STRIDE model (100+ lines, detailed)
+  auto         - Auto-detect based on profile (default)
+```
+
+### 0.4 DI Pattern Control
+
+```
+--di=<level>
+
+Options:
+  full    - Complete DI pattern documentation (default for backend)
+  minimal - Brief DI pattern mention
+  none    - No DI pattern section
+  auto    - Auto-detect based on project type (default)
+
+Shorthand:
+  --no-di  - Same as --di=none
+```
+
+### 0.5 Performance Requirements Control
+
+```
+--performance=<level>
+
+Options:
+  full    - Complete performance requirements
+  basic   - Key metrics only (P99, TPS, uptime)
+  none    - No performance section
+  auto    - Auto-detect based on profile/domain (default)
+```
+
+### 0.6 Force Update Critical Sections
+
+```
+--force-update=<sections>
+
+Options:
+  all                          - Allow update all critical sections
+  stride,config,di            - Allow specific sections
+  none                        - Preserve all critical sections (default)
+```
+
+### 0.7 Content Preservation Strategy (NEW v5.1)
+
+```
+--preserve-strategy=<strategy>
+
+Options:
+  conservative - Preserve all existing detailed content, only add missing sections (default)
+  balanced     - Merge existing with new, prefer existing for critical sections
+  aggressive   - Regenerate all, only preserve critical sections marked with meta tags
+  
+--preserve-sections=<sections>
+
+Specify sections to always preserve (comma-separated):
+  --preserve-sections=stride,performance,di,api-spec,data-model
+```
+
+### 0.8 Output Organization
+
+```
+--no-backup        - Don't create backup files
+--no-report        - Don't generate reports
+--no-diff          - Don't generate diff report (NEW v5.1)
+--output-dir=<dir> - Custom output directory (default: .smartspec/)
+```
+
+### 0.9 Validation
+
+```
+--validate-consistency  - Check consistency between sections
+--validate-quality      - Check content quality (NEW v5.1)
+--no-validation        - Skip validation checks
+```
+
+### 0.10 Domain Hints
+
+```
+--domain=<type>
+
+Options:
+  healthcare - Real-time + privacy critical
+  iot        - High throughput, telemetry
+  logistics  - High SLA requirements
+  ai         - Latency sensitive
+  fintech    - Security + performance critical
+  saas       - Scalability focused
+  internal   - Lower requirements
+```
+
+<br>
+
 ### **File & Operation Options**
 
 These options control how the command operates and handles files.

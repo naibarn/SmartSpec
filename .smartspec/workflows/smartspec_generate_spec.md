@@ -1,22 +1,27 @@
 ---
-description: SmartSpec v5.1.1 - Complete workflow with Output Directory Management, Per-SPEC Backup Organization, and Enhanced Reporting
-version: 5.1.1
+description: SmartSpec v5.1.2 - FIXED: Header Metadata, Clean Templates, Section Separators - Back to v4.0 Readability
+version: 5.1.2
 changes: |
-  v5.1.1 (Latest):
+  v5.1.2 (Latest - CRITICAL FIXES):
+  - ✅ FIXED: Header metadata NOW ALWAYS preserved (Status, Version, Author, Created, Last Updated)
+  - ✅ FIXED: NO visible meta tags in generated specs (clean like v4.0)
+  - ✅ FIXED: Section separators (---) restored between all major sections
+  - ✅ FIXED: Technology Stack back to simple, readable format
+  - ✅ Added Step 1.3: Header Metadata Management with validation
+  - ✅ Added Step 13.2: Clean Section Templates (NO meta tags clutter)
+  - ✅ Updated Step 13.3: Assembly with separators and clean format
+  - ✅ Meta tags moved to internal registry only (not in spec.md)
+  
+  v5.1.1:
   - Added Step 1.2: Output Directory Initialization with validation
-  - Implemented --output-dir flag with full path validation and permission checks
+  - Implemented --output-dir flag with full path validation
   - Organized backups per SPEC (e.g., .smartspec/backups/spec-004/)
-  - Organized reports per SPEC (e.g., .smartspec/reports/spec-004/)
+  - Organized reports per SPEC
   - Enhanced final report with explicit file locations
-  - Added backup location tracking (directory, total backups, timestamp)
-  - Improved report to show complete directory structure
   
   v5.1.0:
-  - Added Steps 8.5, 10.5, 13.6-13.9 for content preservation and quality verification
-  - Smart merging for STRIDE tables, Performance metrics, API endpoints, Data models
-  - Content fingerprinting and comparison
-  - Quality validation with scoring
-  - Diff report generation
+  - Added content preservation, quality verification, merge strategy
+  - Smart merging for STRIDE, Performance, API, Data models
 ---
 
 ## User Input
@@ -428,6 +433,258 @@ console.log(`  Logs: ${OUTPUT_PATHS.logs}`);
 │   └── critical-sections-registry.json
 └── logs/
     └── smartspec.log
+```
+
+---
+
+## 1.3 Header Metadata Management (CRITICAL - NEW v5.1.1)
+
+**Purpose:** Ensure SPEC header metadata is always preserved and properly formatted
+
+### 1.3.1 Header Metadata Structure
+
+**MANDATORY Header Format:**
+```markdown
+# SPEC-{ID}: {Title}
+
+**Status:** {DRAFT|ACTIVE|DEPRECATED}
+**Version:** {X.Y.Z}
+**Author:** {Author Name}
+**Created:** {YYYY-MM-DD}
+**Last Updated:** {YYYY-MM-DD}
+
+**Update Reason:** {Brief description of changes}
+
+---
+```
+
+**Example:**
+```markdown
+# SPEC-005: Promo System
+
+**Status:** DRAFT
+**Version:** 4.0.0
+**Author:** SmartSpec Architect v4.0
+**Created:** 2025-01-15
+**Last Updated:** 2025-12-03
+
+**Update Reason:** Updated to SmartSpec v4.0 format with enhanced structure and critical section preservation
+
+---
+```
+
+### 1.3.2 Extract Header Metadata from Existing SPEC (EDIT Mode)
+
+```typescript
+interface HeaderMetadata {
+  specId: string;
+  title: string;
+  status: 'DRAFT' | 'ACTIVE' | 'DEPRECATED';
+  version: string;
+  author: string;
+  created: string;
+  lastUpdated: string;
+  updateReason: string;
+}
+
+function extractHeaderMetadata(existingSpec: string): HeaderMetadata | null {
+  if (!existingSpec) return null;
+  
+  const lines = existingSpec.split('\n');
+  const metadata: Partial<HeaderMetadata> = {};
+  
+  // Extract title and ID
+  const titleMatch = existingSpec.match(/^#\s+(SPEC-[^:]+):\s+(.+)$/m);
+  if (titleMatch) {
+    metadata.specId = titleMatch[1];
+    metadata.title = titleMatch[2];
+  }
+  
+  // Extract status
+  const statusMatch = existingSpec.match(/\*\*Status:\*\*\s+(\w+)/);
+  if (statusMatch) {
+    metadata.status = statusMatch[1] as HeaderMetadata['status'];
+  }
+  
+  // Extract version
+  const versionMatch = existingSpec.match(/\*\*Version:\*\*\s+([\d.]+)/);
+  if (versionMatch) {
+    metadata.version = versionMatch[1];
+  }
+  
+  // Extract author
+  const authorMatch = existingSpec.match(/\*\*Author:\*\*\s+(.+)$/m);
+  if (authorMatch) {
+    metadata.author = authorMatch[1];
+  }
+  
+  // Extract created date
+  const createdMatch = existingSpec.match(/\*\*Created:\*\*\s+([\d-]+)/);
+  if (createdMatch) {
+    metadata.created = createdMatch[1];
+  }
+  
+  // Extract last updated date
+  const updatedMatch = existingSpec.match(/\*\*Last Updated:\*\*\s+([\d-]+)/);
+  if (updatedMatch) {
+    metadata.lastUpdated = updatedMatch[1];
+  }
+  
+  // Extract update reason
+  const reasonMatch = existingSpec.match(/\*\*Update Reason:\*\*\s+(.+?)(?:\n\n|---)/s);
+  if (reasonMatch) {
+    metadata.updateReason = reasonMatch[1].trim();
+  }
+  
+  return metadata as HeaderMetadata;
+}
+
+// Extract metadata if in EDIT mode
+let EXISTING_METADATA: HeaderMetadata | null = null;
+if (MODE === 'EDIT' && existingSpec) {
+  EXISTING_METADATA = extractHeaderMetadata(existingSpec);
+  console.log('\n📋 Extracted Header Metadata:');
+  console.log(`  SPEC ID: ${EXISTING_METADATA?.specId}`);
+  console.log(`  Title: ${EXISTING_METADATA?.title}`);
+  console.log(`  Status: ${EXISTING_METADATA?.status}`);
+  console.log(`  Version: ${EXISTING_METADATA?.version}`);
+  console.log(`  Created: ${EXISTING_METADATA?.created}`);
+}
+```
+
+### 1.3.3 Generate Header Metadata (NEW Mode or Missing)
+
+```typescript
+function generateHeaderMetadata(
+  specId: string,
+  title: string,
+  existingMetadata?: HeaderMetadata | null
+): HeaderMetadata {
+  const now = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  
+  if (existingMetadata) {
+    // EDIT mode - preserve and update
+    return {
+      specId: existingMetadata.specId,
+      title: existingMetadata.title,
+      status: existingMetadata.status,
+      version: incrementVersion(existingMetadata.version), // e.g., 4.0.0 -> 4.1.0
+      author: `SmartSpec Architect v${WORKFLOW_VERSION}`, // Update to current workflow version
+      created: existingMetadata.created, // NEVER change
+      lastUpdated: now, // Always update
+      updateReason: `Updated to SmartSpec v${WORKFLOW_VERSION} format with enhanced features`
+    };
+  } else {
+    // NEW mode - create fresh
+    return {
+      specId,
+      title,
+      status: 'DRAFT',
+      version: '1.0.0',
+      author: `SmartSpec Architect v${WORKFLOW_VERSION}`,
+      created: now,
+      lastUpdated: now,
+      updateReason: 'Initial creation'
+    };
+  }
+}
+
+function incrementVersion(version: string): string {
+  const parts = version.split('.').map(Number);
+  parts[1]++; // Increment minor version (X.Y.Z -> X.(Y+1).0)
+  parts[2] = 0; // Reset patch version
+  return parts.join('.');
+}
+
+// Generate metadata
+const HEADER_METADATA = generateHeaderMetadata(
+  SPEC_ID,
+  SPEC_TITLE,
+  EXISTING_METADATA
+);
+
+console.log('\n📋 Header Metadata:');
+console.log(`  SPEC ID: ${HEADER_METADATA.specId}`);
+console.log(`  Title: ${HEADER_METADATA.title}`);
+console.log(`  Status: ${HEADER_METADATA.status}`);
+console.log(`  Version: ${HEADER_METADATA.version}`);
+console.log(`  Author: ${HEADER_METADATA.author}`);
+console.log(`  Created: ${HEADER_METADATA.created}`);
+console.log(`  Last Updated: ${HEADER_METADATA.lastUpdated}`);
+```
+
+### 1.3.4 Format Header Section
+
+```typescript
+function formatHeader(metadata: HeaderMetadata): string {
+  return `# ${metadata.specId}: ${metadata.title}
+
+**Status:** ${metadata.status}
+**Version:** ${metadata.version}
+**Author:** ${metadata.author}
+**Created:** ${metadata.created}
+**Last Updated:** ${metadata.lastUpdated}
+
+**Update Reason:** ${metadata.updateReason}
+
+---
+`;
+}
+
+// Store formatted header for later use
+const FORMATTED_HEADER = formatHeader(HEADER_METADATA);
+```
+
+### 1.3.5 Validation
+
+```typescript
+function validateHeaderMetadata(metadata: HeaderMetadata): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  // Validate SPEC ID format
+  if (!/^SPEC-[a-zA-Z0-9-]+$/.test(metadata.specId)) {
+    errors.push(`Invalid SPEC ID format: ${metadata.specId}`);
+  }
+  
+  // Validate status
+  if (!['DRAFT', 'ACTIVE', 'DEPRECATED'].includes(metadata.status)) {
+    errors.push(`Invalid status: ${metadata.status}`);
+  }
+  
+  // Validate version format (X.Y.Z)
+  if (!/^\d+\.\d+\.\d+$/.test(metadata.version)) {
+    errors.push(`Invalid version format: ${metadata.version}`);
+  }
+  
+  // Validate dates (YYYY-MM-DD)
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(metadata.created)) {
+    errors.push(`Invalid created date: ${metadata.created}`);
+  }
+  if (!dateRegex.test(metadata.lastUpdated)) {
+    errors.push(`Invalid last updated date: ${metadata.lastUpdated}`);
+  }
+  
+  // Validate created <= lastUpdated
+  if (new Date(metadata.created) > new Date(metadata.lastUpdated)) {
+    errors.push('Created date cannot be after last updated date');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+// Validate
+const validation = validateHeaderMetadata(HEADER_METADATA);
+if (!validation.valid) {
+  console.error('❌ Header metadata validation failed:');
+  validation.errors.forEach(err => console.error(`  - ${err}`));
+  throw new Error('Invalid header metadata');
+}
+
+console.log('✅ Header metadata validated');
 ```
 
 ---
@@ -1132,14 +1389,363 @@ Based on:
 
 ---
 
-### 13.2 Apply Meta Tags
+### 13.2 Section Templates & Formatting (NEW v5.1.1)
 
-Insert meta tags for critical sections.
+**Purpose:** Define clean, readable templates for each section WITHOUT visible meta tags
 
-### 13.3 Apply Mode
+#### 13.2.1 Core Principles
 
-If compact mode: condense to 5 sections.
-If standard mode: full detail.
+1. **Clean Format:** No visible `<!-- @critical -->` tags in generated output
+2. **Clear Separators:** Use `---` between major sections
+3. **Consistent Structure:** Follow simple, readable markdown
+4. **Preserve Readability:** Avoid clutter, keep it simple
+
+#### 13.2.2 Technology Stack Template
+
+**Template:**
+```markdown
+## Technology Stack
+
+**Stack A:** {Primary Stack Description}
+
+**Core Technologies:**
+- **Runtime:** {Runtime details}
+- **Framework:** {Framework details}
+- **Database:** {Database details}
+- **Queue System:** {Queue details}
+- **Validation:** {Validation details}
+- **Language:** {Language details}
+
+---
+```
+
+**Example:**
+```markdown
+## Technology Stack
+
+**Stack A:** Node.js with TypeScript
+
+**Core Technologies:**
+- **Runtime:** Node.js 22.x with TypeScript strict mode
+- **Framework:** Fastify 5.x (^5.6.0)
+- **Database:** PostgreSQL 16+ with Prisma 6.x (^6.0.0)
+- **Queue System:** BullMQ on Redis 7+
+- **Validation:** Zod 3.x
+- **Language:** TypeScript 5.x
+
+---
+```
+
+**❌ BAD (Too Complex):**
+```markdown
+## Technology Stack
+
+<!-- @critical tech-stack -->
+**Runtime:** Node.js 22.x with TypeScript strict mode  
+**Framework:** Fastify 5.x for high-performance REST API  
+**Database:** PostgreSQL 16+ with Redis 7+ for hierarchical caching  
+...
+<!-- @end-critical -->
+```
+
+#### 13.2.3 Dependency Injection Pattern Template
+
+**Template:**
+```markdown
+## Dependency Injection Pattern (MANDATORY)
+
+**Pattern Compliance:** All services in this specification **MUST** implement the Dependency Injection (DI) Pattern as defined in [DEPENDENCY-INJECTION-PATTERN.md](../../patterns/DEPENDENCY-INJECTION-PATTERN.md).
+
+### Core Requirements
+
+All service classes MUST:
+
+1. **Constructor-Based Injection**
+   - Accept all dependencies through constructor parameters
+   - All parameters MUST be optional with sensible defaults
+   - Support both production and testing scenarios
+
+2. **Interface-Based Dependencies**
+   - Define interfaces for all dependencies (IDatabase, ILogger, ICache, etc.)
+   - Depend on abstractions, not concrete implementations
+   - Use standard platform interfaces where available
+
+3. **Backward Compatibility**
+   - Service MUST work without any constructor parameters (production mode)
+   - Service MUST accept injected dependencies (testing mode)
+   - No breaking changes to existing code
+
+### Standard Service Structure
+
+```typescript
+/**
+ * Service description
+ * 
+ * @implements DI Pattern (Mandatory)
+ */
+export class ServiceName {
+  private database: IDatabase;
+  private logger: ILogger;
+  private cache: ICache;
+  private config: ServiceConfig;
+
+  /**
+   * Constructor with Dependency Injection
+   * 
+   * @param database - Database connection (optional, defaults to production DB)
+   * @param logger - Logger instance (optional, defaults to production logger)
+   * @param cache - Cache connection (optional, defaults to production cache)
+   * @param config - Service configuration (optional, defaults to env config)
+   */
+  constructor(
+    database?: IDatabase,
+    logger?: ILogger,
+    cache?: ICache,
+    config?: ServiceConfig
+  ) {
+    this.database = database || createDatabaseConnection();
+    this.logger = logger || initializeLogger();
+    this.cache = cache || createCacheConnection();
+    this.config = config || loadConfigFromEnv();
+  }
+
+  // Business logic methods...
+}
+```
+
+---
+```
+
+#### 13.2.4 Section Separator Rules
+
+**Apply `---` after these sections:**
+1. Header (after Update Reason)
+2. Technology Stack
+3. Dependency Injection Pattern
+4. Overview
+5. When to Use This Specification
+6. Architecture
+7. All major sections before next major section
+
+**Example Flow:**
+```markdown
+# SPEC-005: Promo System
+
+**Status:** DRAFT
+...
+
+---                         👈 After header
+
+## Technology Stack
+...
+
+---                         👈 After tech stack
+
+## Dependency Injection Pattern
+...
+
+---                         👈 After DI
+
+## Overview
+...
+
+---                         👈 After overview
+```
+
+#### 13.2.5 Overview Template
+
+**Template:**
+```markdown
+## Overview
+
+**Purpose:** {One-sentence purpose}
+
+**Scope:**
+- {Scope item 1}
+- {Scope item 2}
+- {Scope item 3}
+
+**Non-Goals:**
+- {Non-goal 1}
+- {Non-goal 2}
+- {Non-goal 3}
+
+**Key Features:**
+- **{Feature 1}:** {Description}
+- **{Feature 2}:** {Description}
+- **{Feature 3}:** {Description}
+
+---
+```
+
+#### 13.2.6 When to Use Template
+
+**Template:**
+```markdown
+## When to Use This Specification
+
+**Use this spec when:**
+- {Use case 1}
+- {Use case 2}
+- {Use case 3}
+
+**Do NOT use this spec for:**
+- {Anti-pattern 1}
+- {Anti-pattern 2}
+- {Anti-pattern 3}
+
+---
+```
+
+#### 13.2.7 Architecture Template
+
+**Template:**
+```markdown
+## Architecture
+
+### High-Level Architecture
+
+{High-level description paragraph}
+
+### Components
+
+**{Component 1 Name}:**
+- Responsibility: {Responsibility}
+- Technology: {Technology}
+- Interactions: {Interactions}
+
+**{Component 2 Name}:**
+- Responsibility: {Responsibility}
+- Technology: {Technology}
+- Interactions: {Interactions}
+
+### Data Flow
+
+1. **{Flow 1 Name}:** {Steps}
+2. **{Flow 2 Name}:** {Steps}
+3. **{Flow 3 Name}:** {Steps}
+
+---
+```
+
+#### 13.2.8 Meta Tags Strategy (INTERNAL USE ONLY)
+
+**DO NOT include visible meta tags in generated spec.md**
+
+Meta tags are for **internal tracking only** and should be:
+1. Stored in separate `.smartspec/registry/critical-sections-registry.json`
+2. Used during editing to identify critical sections
+3. **NEVER** included in the actual spec.md file
+
+**Internal Registry Format:**
+```json
+{
+  "spec-005": {
+    "critical_sections": {
+      "Technology Stack": {
+        "startLine": 13,
+        "endLine": 24,
+        "hash": "a1b2c3d4",
+        "preserve": true
+      },
+      "Dependency Injection Pattern": {
+        "startLine": 26,
+        "endLine": 150,
+        "hash": "e5f6g7h8",
+        "preserve": true
+      }
+    }
+  }
+}
+```
+
+---
+
+### 13.3 Apply Templates & Format Sections
+
+**Implementation:**
+
+```typescript
+function assembleSPEC(
+  headerMetadata: HeaderMetadata,
+  profile: string,
+  sections: Map<string, string>
+): string {
+  let spec = '';
+  
+  // 1. Header (ALWAYS first, ALWAYS preserved)
+  spec += formatHeader(headerMetadata);
+  spec += '\n';
+  
+  // 2. Technology Stack (if included in profile)
+  if (sections.has('Technology Stack')) {
+    spec += formatTechnologyStack(sections.get('Technology Stack')!);
+    spec += '\n---\n\n';
+  }
+  
+  // 3. Dependency Injection Pattern (if included in profile)
+  if (sections.has('Dependency Injection Pattern')) {
+    spec += sections.get('Dependency Injection Pattern')!;
+    spec += '\n---\n\n';
+  }
+  
+  // 4. Overview (ALWAYS included)
+  if (sections.has('Overview')) {
+    spec += sections.get('Overview')!;
+    spec += '\n---\n\n';
+  }
+  
+  // 5. When to Use (if included in profile)
+  if (sections.has('When to Use This Specification')) {
+    spec += sections.get('When to Use This Specification')!;
+    spec += '\n---\n\n';
+  }
+  
+  // 6. Architecture (ALWAYS included)
+  if (sections.has('Architecture')) {
+    spec += sections.get('Architecture')!;
+    spec += '\n---\n\n';
+  }
+  
+  // 7-21. Other sections with separators...
+  // (Implementation continues for all sections)
+  
+  return spec;
+}
+
+function formatTechnologyStack(content: string): string {
+  // Ensure clean format without meta tags
+  let formatted = content;
+  
+  // Remove any meta tags if present
+  formatted = formatted.replace(/<!-- @critical[^>]*-->\n?/g, '');
+  formatted = formatted.replace(/<!-- @end-critical -->\n?/g, '');
+  
+  // Ensure proper structure
+  if (!formatted.includes('**Stack A:**')) {
+    // Convert to simple format if needed
+    formatted = `## Technology Stack\n\n**Stack A:** Node.js with TypeScript\n\n**Core Technologies:**\n${formatted}`;
+  }
+  
+  return formatted;
+}
+
+// Assemble the final SPEC
+const ASSEMBLED_SPEC = assembleSPEC(
+  HEADER_METADATA,
+  PROFILE,
+  GENERATED_SECTIONS
+);
+
+console.log('\n📝 SPEC Assembled:');
+console.log(`  Total length: ${ASSEMBLED_SPEC.length} characters`);
+console.log(`  Sections: ${GENERATED_SECTIONS.size}`);
+console.log(`  Has header metadata: ${ASSEMBLED_SPEC.includes('**Status:**') ? '✅' : '❌'}`);
+console.log(`  Has section separators: ${ASSEMBLED_SPEC.includes('\n---\n') ? '✅' : '❌'}`);
+console.log(`  Has meta tags: ${ASSEMBLED_SPEC.includes('<!-- @critical') ? '❌ WARNING' : '✅ Clean'}`);
+```
+
+---
 
 ### 13.4 Run Validation
 
@@ -2373,7 +2979,49 @@ Other:
 
 ## Appendix B: Version History
 
-### v5.1.1 (Latest - December 2025)
+### v5.1.2 (Latest - December 2025)
+
+**CRITICAL FIXES:**
+1. **Header Metadata Management (Step 1.3) - FIXED**
+   - ✅ Header metadata NOW ALWAYS preserved (Status, Version, Author, Created, Last Updated)
+   - ✅ Automatic version incrementing on updates
+   - ✅ Validation for all header fields
+   - ✅ Created date NEVER changes, Last Updated always updates
+
+2. **Clean Section Templates (Step 13.2) - FIXED**
+   - ✅ NO visible `<!-- @critical -->` tags in generated specs
+   - ✅ Meta tags moved to internal registry only
+   - ✅ Clean, readable format like v4.0
+   - ✅ Simple Technology Stack format restored
+
+3. **Section Separators (Step 13.3) - FIXED**
+   - ✅ `---` separators between all major sections
+   - ✅ Consistent spacing and formatting
+   - ✅ Professional, readable output
+
+4. **Technology Stack Template - FIXED**
+   - ✅ Returns to simple, clean format:
+     ```markdown
+     ## Technology Stack
+     
+     **Stack A:** Node.js with TypeScript
+     
+     **Core Technologies:**
+     - **Runtime:** Node.js 22.x...
+     ```
+   - ❌ NO MORE complex multi-line format
+   - ❌ NO MORE meta tags cluttering the output
+
+**Quality Improvements:**
+- Header metadata validation
+- Format consistency checks
+- Meta tag removal verification
+- Readability score tracking
+
+**Breaking Changes:**
+- None - fully backward compatible with v4.0 format
+
+### v5.1.1 (December 2025)
 
 **New Features:**
 1. **Output Directory Initialization (Step 1.2)**
@@ -2383,27 +3031,24 @@ Other:
    - Write permission verification
 
 2. **Per-SPEC Backup Organization**
-   - Backups separated by SPEC ID (e.g., `.smartspec/backups/spec-004/`)
-   - No more mixed backups - each SPEC has its own folder
+   - Backups separated by SPEC ID
+   - No more mixed backups
    - Automatic cleanup keeps last 10 backups per SPEC
 
 3. **Per-SPEC Report Organization**
-   - Reports separated by SPEC ID (e.g., `.smartspec/reports/spec-004/`)
-   - Generation reports and diff reports in same folder
-   - Easy to find all artifacts for a specific SPEC
+   - Reports separated by SPEC ID
+   - Easy to find all artifacts
 
 4. **Enhanced Final Report**
-   - Shows exact backup file location with full path
-   - Displays total backup count for this SPEC
-   - Shows directory structure clearly
-   - Includes timestamps for all files
+   - Shows exact backup locations
+   - Displays total backup count
+   - Clear directory structure
 
 **Improvements:**
-- Full implementation of `--output-dir` flag with validation
-- Better error messages for invalid paths
-- Automatic directory structure creation
-- Backup verification with multiple checks
-- Clear separation between SPEC-specific and shared files
+- Full `--output-dir` implementation
+- Better error messages
+- Automatic directory creation
+- Backup verification
 
 ### v5.1.0 (December 2025)
 
@@ -2419,12 +3064,11 @@ Other:
 - Smart merging for STRIDE tables
 - Performance metrics preservation
 - API endpoint merging
-- Data model preservation with ER diagrams
-- Detailed change tracking and reporting
+- Data model preservation
 
 ### v5.0.0
 
-- Initial release with profiles and comprehensive features
+- Initial release with profiles
 
 ---
 
@@ -2590,6 +3234,192 @@ spec-core-001 has 1 backup → Keep it
 - ✅ Should include ER diagram
 - ✅ Should define indexes
 - ✅ Should define constraints and relationships
+
+---
+
+## Appendix E: Format Guidelines (NEW v5.1.2)
+
+### SPEC Format Requirements
+
+**✅ MUST HAVE:**
+
+1. **Header Metadata** (ALWAYS first)
+   ```markdown
+   # SPEC-{ID}: {Title}
+   
+   **Status:** {DRAFT|ACTIVE|DEPRECATED}
+   **Version:** {X.Y.Z}
+   **Author:** {Author Name}
+   **Created:** {YYYY-MM-DD}
+   **Last Updated:** {YYYY-MM-DD}
+   
+   **Update Reason:** {Description}
+   
+   ---
+   ```
+
+2. **Section Separators** (between major sections)
+   ```markdown
+   ## Section Name
+   
+   Content...
+   
+   ---
+   
+   ## Next Section
+   ```
+
+3. **Clean Technology Stack**
+   ```markdown
+   ## Technology Stack
+   
+   **Stack A:** {Stack Description}
+   
+   **Core Technologies:**
+   - **Runtime:** {Runtime}
+   - **Framework:** {Framework}
+   - **Database:** {Database}
+   
+   ---
+   ```
+
+**❌ MUST NOT HAVE:**
+
+1. **Visible Meta Tags**
+   ```markdown
+   ❌ <!-- @critical tech-stack -->
+   ❌ **Runtime:** Node.js...
+   ❌ <!-- @end-critical -->
+   ```
+
+2. **Complex Multi-line Format**
+   ```markdown
+   ❌ **Runtime:** Node.js 22.x with TypeScript strict mode  
+   ❌ **Framework:** Fastify 5.x for high-performance REST API  
+   ```
+
+3. **Missing Header Metadata**
+   ```markdown
+   ❌ # SPEC-005: Promo System
+   
+   ## Technology Stack    👈 Missing header metadata!
+   ```
+
+### Good vs Bad Examples
+
+**✅ GOOD (v5.1.2 - Clean & Readable):**
+```markdown
+# SPEC-005: Promo System
+
+**Status:** DRAFT
+**Version:** 4.0.0
+**Author:** SmartSpec Architect v4.0
+**Created:** 2025-01-15
+**Last Updated:** 2025-12-03
+
+**Update Reason:** Updated to SmartSpec v4.0 format
+
+---
+
+## Technology Stack
+
+**Stack A:** Node.js with TypeScript
+
+**Core Technologies:**
+- **Runtime:** Node.js 22.x with TypeScript strict mode
+- **Framework:** Fastify 5.x (^5.6.0)
+- **Database:** PostgreSQL 16+ with Prisma 6.x (^6.0.0)
+- **Queue System:** BullMQ on Redis 7+
+- **Validation:** Zod 3.x
+- **Language:** TypeScript 5.x
+
+---
+
+## Overview
+
+**Purpose:** A service responsible for creating, managing, and redeeming promotional codes.
+
+**Scope:**
+- Promo code creation and management
+- Secure redemption process
+- Audit logging and fraud detection
+
+---
+```
+
+**❌ BAD (v5.1.0 - Cluttered with Meta Tags):**
+```markdown
+# SPEC-005: Promo System
+
+## Technology Stack
+
+<!-- @critical tech-stack -->
+**Runtime:** Node.js 22.x with TypeScript strict mode  
+**Framework:** Fastify 5.x for high-performance REST API  
+**Database:** PostgreSQL 16+ with Redis 7+ for hierarchical caching  
+**ORM:** Prisma 6.x with type-safe database operations  
+<!-- @end-critical -->
+
+## Dependency Injection Pattern
+
+<!-- @critical di -->
+### Requirements
+...
+<!-- @end-critical -->
+```
+
+**Problems with BAD format:**
+1. ❌ No header metadata (Status, Version, Author, etc.)
+2. ❌ Visible meta tags clutter the output
+3. ❌ No section separators (`---`)
+4. ❌ Complex multi-line format hard to read
+5. ❌ Not consistent with v4.0 format
+
+### Format Validation Checklist
+
+Before saving spec.md, verify:
+
+- [ ] ✅ Header metadata present (Status, Version, Author, Created, Last Updated)
+- [ ] ✅ Section separators (`---`) between major sections
+- [ ] ✅ Technology Stack in simple format with `**Stack A:**`
+- [ ] ✅ NO visible `<!-- @critical -->` tags
+- [ ] ✅ NO complex multi-line format with `  ` (double space) line breaks
+- [ ] ✅ Clean, readable markdown like v4.0
+
+### Internal Registry (Meta Tags Storage)
+
+Meta tags are stored separately in `.smartspec/registry/critical-sections-registry.json`:
+
+```json
+{
+  "spec-005": {
+    "version": "5.1.2",
+    "last_updated": "2025-12-06T15:30:00Z",
+    "critical_sections": {
+      "Technology Stack": {
+        "start_line": 13,
+        "end_line": 24,
+        "hash": "a1b2c3d4e5f6",
+        "preserve": true,
+        "last_modified": "2025-12-03"
+      },
+      "Dependency Injection Pattern": {
+        "start_line": 26,
+        "end_line": 150,
+        "hash": "g7h8i9j0k1l2",
+        "preserve": true,
+        "last_modified": "2025-12-03"
+      }
+    }
+  }
+}
+```
+
+**Benefits:**
+- ✅ Tracking critical sections without cluttering spec.md
+- ✅ Change detection via content hash
+- ✅ Preservation rules stored separately
+- ✅ Clean spec.md for human reading
 
 ---
 

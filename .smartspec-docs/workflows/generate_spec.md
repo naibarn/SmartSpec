@@ -176,6 +176,119 @@ Options:
 
 <br>
 
+# Domain Option Summary
+
+This document explains the meaning and purpose of each `--domain=<type>` option and how they differ. Each domain indicates the **primary operational constraints** and **system expectations** for a service.
+
+* * *
+
+## `healthcare` — Real-time + Privacy Critical
+
+**Use for:** medical systems, patient data, telemedicine
+
+**Key Characteristics:**
+
+- Extremely strict privacy requirements
+- Heavy emphasis on audit trails and access tracking
+- Real-time responsiveness for clinical decisions
+- Regulatory alignment (e.g., HIPAA-like constraints)
+
+* * *
+
+## `iot` — High Throughput, Telemetry Focused
+
+**Use for:** sensors, smart devices, industrial IoT
+
+**Key Characteristics:**
+
+- Massive volume of small telemetry events
+- Needs high ingestion throughput
+- Optimized for streaming, buffering, and batching
+- Emphasis on horizontal scalability
+
+* * *
+
+## `logistics` — High SLA Requirements
+
+**Use for:** package tracking, routing systems, fleet management
+
+**Key Characteristics:**
+
+- System downtime directly impacts physical operations
+- Requires strict uptime and reliability guarantees
+- Strong consistency for tracking data
+- Failover, retries, and idempotency are essential
+
+* * *
+
+## `ai` — Latency Sensitive
+
+**Use for:** model inference, LLM services, AI-driven user interactions
+
+**Key Characteristics:**
+
+- Low latency is critical for user experience
+- Often involves GPU/accelerator workloads
+- Requires caching, batching, and fast request handling
+- Focus on optimizing inference time
+
+* * *
+
+## `fintech` — Security + Performance Critical
+
+**Use for:** payments, wallets, credit systems, finance platforms
+
+**Key Characteristics:**
+
+- Strongest security requirements (fraud prevention, tamper-proofing)
+- High performance for time-sensitive money operations
+- Must guarantee transaction correctness
+- Requires encryption, audit logging, and compliance
+
+* * *
+
+## `saas` — Scalability Focused
+
+**Use for:** multi-tenant SaaS products, productivity tools, CRM
+
+**Key Characteristics:**
+
+- Designed to scale to many customers and tenants
+- Data isolation between tenants is essential
+- Supports configuration-driven features and expansion
+- Emphasis on maintainability and horizontal growth
+
+* * *
+
+## `internal` — Lower Requirements
+
+**Use for:** internal tools, admin dashboards, non-critical systems
+
+**Key Characteristics:**
+
+- Relaxed performance and security needs
+- Prioritizes development speed and simplicity
+- Lightweight documentation and overhead
+- Adequate but not strict validations
+
+* * *
+
+## Summary Table
+
+| Domain | Primary Focus |
+| --- | --- |
+| **healthcare** | Privacy, real-time safety |
+| **iot** | Throughput, event ingestion |
+| **logistics** | High reliability, uptime |
+| **ai** | Low-latency inference |
+| **fintech** | Security + correctness |
+| **saas** | Scalability & multi-tenancy |
+| **internal** | Simplicity & speed |
+
+* * *
+
+<br>
+
 ### **File & Operation Options**
 
 These options control how the command operates and handles files.

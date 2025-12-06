@@ -57,6 +57,8 @@ This is the core loop of SmartSpec. It's simple, powerful, and keeps your projec
 
 ![AI-Driven Specification & Development Methodologies](.smartspec-assets/images/Spec-DrivenDevelopment.png)
 
+## Vibe coding tools comparison 
+[**[Vibe coding comparison]**](.smartspec-docs/guides/vibe_coding_comparison.md)
 ---
 
 ## 🎯 What SmartSpec Does for Your Vibe-Coding Workflow

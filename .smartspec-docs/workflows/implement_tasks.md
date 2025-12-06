@@ -322,3 +322,4 @@ Expected behavior:
 Use `/smartspec_implement_tasks` to implement a well-defined subset of tasks with safe re-runs, evidence-driven integration decisions, and a detailed per-run final summary.
 
 `--kilocode` enables Orchestrator attempts, and the system must gracefully fall back when Orchestrator is unavailable.
+

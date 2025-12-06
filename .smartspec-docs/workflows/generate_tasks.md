@@ -1,125 +1,169 @@
-# `/smartspec_generate_tasks.md`
+# SmartSpec Manual: /smartspec_generate_tasks
 
-**Breaks down a SPEC document into a detailed, developer-ready `tasks.md` checklist, automatically creating supporting documents.**
-
----
-
-## 1. Summary
-
-This command is the engine of execution. It transforms a high-level `spec.md` into a granular, developer-ready checklist of tasks (`tasks.md`). It doesn't just list tasks; it intelligently scans for supporting files (like OpenAPI specs, data models), and if they're missing, it generates them.
-
-- **What it solves:** It bridges the gap between specification and coding, creating a clear, actionable to-do list. It eliminates manual setup by auto-generating essential developer documents.
-- **When to use it:** After the `spec.md` is ready and you want to generate a concrete, step-by-step implementation checklist for developers or AI agents.
+This guide explains how to generate a high-quality `tasks.md` from a feature specification using SmartSpec.
 
 ---
 
-## 2. Usage
+## What this command does
+
+`/smartspec_generate_tasks` converts a feature spec into a structured task plan that is ready for implementation and verification.
+
+It typically produces:
+
+- A `tasks.md` file with:
+  - Phases
+  - Task IDs (T001, T002, …)
+  - Dependencies
+  - Expected files to create/edit
+  - Acceptance criteria
+  - Suggested validation commands
+
+Depending on your project conventions, it may also propose or generate supporting artifacts referenced by tasks (e.g., OpenAPI, data-model notes).
+
+---
+
+## Required input
+
+You must provide a path to a SPEC document (usually `spec.md`).
 
 ```bash
-/smartspec_generate_tasks.md <spec_path> [options...]
+/smartspec_generate_tasks specs/feature/spec-005-promo-system/spec.md
 ```
 
 ---
 
-## 3. Parameters & Options
+## Output location
 
-### **Primary Argument**
+By default, SmartSpec should create:
 
-| Name | Type | Required? | Description | Example |
-| :--- | :--- | :--- | :--- | :--- |
-| `spec_path` | `string` | ✅ Yes | The full path to the source `spec.md` file. | `specs/features/new-login/spec.md` |
-
-### **Options**
-
-| Option | Value | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `--specindex` | `<path>` | `.smartspec/SPEC_INDEX.json` | Points to a custom `SPEC_INDEX.json` file for resolving dependencies. | `--specindex=config/spec_index_v2.json` |
-| `--nogenerate` | (flag) | (unset) | Performs a "dry run". Analyzes the SPEC and shows what *would* be generated without writing any files. |
-
----
-
-## 4. Key Features & Logic
-
-This workflow is more than a simple task generator. It includes several intelligent features:
-
-1.  **Supporting File Detection:** It scans the SPEC's directory for existing documents like `openapi.yaml`, `data-model.md`, `test-plan.md`, etc. If found, it uses them as context for generating more accurate tasks.
-2.  **Automatic Document Generation:** If the SPEC implies a need for a document that doesn't exist (e.g., the SPEC defines API endpoints but no `openapi.yaml` is found), the AI will **automatically generate it** based on the SPEC's content. This includes:
-    - `openapi.yaml` from API specifications.
-    - `data-model.md` from schema definitions.
-    - A project-specific `README.md` for complex SPECs.
-3.  **Dependency Resolution:** Using the `--specindex`, it can understand relationships between different SPECs, which helps in generating tasks related to integration.
-4.  **Task Granularity:** It breaks down work into small, verifiable tasks, each with a unique ID (e.g., `T001`), making them perfect for tracking and for use in AI development environments like Cursor or Kilo Code.
-
----
-
-## 5. Detailed Examples
-
-### **Example 1: Basic Task Generation**
-
-**Goal:** Create a standard `tasks.md` from a simple SPEC.
-
-```bash
-/smartspec_generate_tasks.md specs/services/user-profile/spec.md
+```text
+specs/feature/<spec-name>/tasks.md
 ```
 
-**Result:**
-- A new file, `specs/services/user-profile/tasks.md`, is created.
-- It contains a checklist of tasks broken down by epics (e.g., "Database Setup", "API Endpoint").
+in the same folder as the input spec.
 
-### **Example 2: Auto-Generating Supporting Documents**
+---
 
-**Goal:** Generate tasks for a new API service where no supporting documents exist yet.
+## SPEC_INDEX.json resolution (updated)
 
-**Prerequisite:** `specs/services/new-api/spec.md` exists and contains sections for `## API Specification` and `## Data Models`.
+SmartSpec uses a SPEC index (when available) to resolve cross-spec dependencies and references.
+
+When you do **not** provide a custom index path, the expected lookup order is:
+
+1. `SPEC_INDEX.json` at the repository root (preferred)
+2. `.smartspec/SPEC_INDEX.json` (fallback)
+
+If no index is found:
+
+- The command should warn clearly.
+- It should still be able to generate `tasks.md` without failing.
+
+---
+
+## Common options (recommended)
+
+> Your implementation may support a subset of these. This manual documents the expected behavior aligned with the updated workflows.
+
+### 1) Dry-run / planning-only mode
 
 ```bash
-/smartspec_generate_tasks.md specs/services/new-api/spec.md
+/smartspec_generate_tasks specs/feature/spec-005-promo-system/spec.md --nogenerate
 ```
 
-**Result:** This is where the magic happens. In addition to `tasks.md`, the command also creates:
-- `specs/services/new-api/openapi.yaml`: An OpenAPI 3.0 specification generated from the `## API Specification` section of the SPEC.
-- `specs/services/new-api/data-model.md`: A document detailing the database schema, generated from the `## Data Models` section.
+Expected behavior:
 
-The `tasks.md` will then include tasks like "*Implement the API according to `openapi.yaml`*" and "*Create database migrations based on `data-model.md`*."
+- Analyze the spec.
+- Show what tasks and files would be generated.
+- Do not write files.
 
-### **Example 3: Dry Run to Preview Tasks and Generated Files**
-
-**Goal:** See what tasks and files would be generated for a complex SPEC without actually creating them.
+### 2) Use a specific spec index
 
 ```bash
-/smartspec_generate_tasks.md specs/critical/payment-gateway/spec.md --nogenerate
+/smartspec_generate_tasks specs/feature/spec-005-promo-system/spec.md --specindex SPEC_INDEX.json
 ```
 
-**Result:** The AI outputs a report to the console, detailing:
-- The full `tasks.md` that would be created.
-- A list of supporting files it would auto-generate (e.g., `openapi.yaml`, `test-plan.md`).
-- An estimated task count and complexity assessment.
-This allows for a final review before any files are written to disk.
+---
+
+## Best practices
+
+### Keep specs explicit for integrations
+
+If the spec includes external dependencies (auth, payments, messaging), include:
+
+- The expected service name
+- API prefix/path
+- Token/auth patterns (if applicable)
+- Link to an existing authoritative spec
+
+This reduces assumption prompts later.
+
+### Use consistent task structure
+
+A strong `tasks.md` should include for each task:
+
+- Files to create/edit
+- Clear acceptance criteria
+- A validation command (if the task is testable)
 
 ---
 
-## 6. How to Verify the Result
+## Example: Typical generate flow
 
-1.  **Check for `tasks.md`:** Ensure the `tasks.md` file has been created.
-2.  **Check for Supporting Files:** Look for any auto-generated files like `openapi.yaml` or `data-model.md` in the same directory.
-3.  **Review Task Quality:** Are the tasks granular and specific? Do they logically follow from the SPEC and any supporting documents?
+```bash
+# 1) Write or update your spec
+#    specs/feature/spec-005-promo-system/spec.md
 
----
+# 2) Generate tasks
+/smartspec_generate_tasks specs/feature/spec-005-promo-system/spec.md
 
-## 7. Troubleshooting
-
-| Problem | Cause | Solution |
-| :--- | :--- | :--- |
-| **File not created** | The `spec.md` path is wrong, or you used `--nogenerate`. | Double-check the path. If using `--nogenerate`, this is expected. |
-| **Tasks are too high-level** | The `spec.md` lacks detail. | The quality of the tasks is directly proportional to the quality of the SPEC. Add more specific details to the `Data Model`, `API Specification`, and `Business Rules` sections of your `spec.md` and re-run. |
-| **Supporting files not generated** | The SPEC might not contain enough information to trigger the auto-generation logic. | Ensure your SPEC has clear, well-structured sections for APIs, data models, etc. For example, a section titled `## API Specification` with defined endpoints is needed to trigger `openapi.yaml` generation. |
+# 3) Review the task plan
+#    specs/feature/spec-005-promo-system/tasks.md
+```
 
 ---
 
-## 8. For the LLM
+## How this command fits the system
 
-- **Primary Goal:** To convert a `spec.md` into a checklist of small, actionable tasks in `tasks.md`, and to auto-generate missing supporting documents.
-- **Key Entities:** `spec_path`, `--specindex`, `--nogenerate`.
-- **Workflow Position:** This is the **third step** in the core workflow, after `generate_plan`.
-- **Input Artifacts:** `spec.md`, and any existing supporting files in the same directory.
-- **Output Artifacts:** `tasks.md`, and any newly generated supporting files (`openapi.yaml`, `data-model.md`, etc.).
+- Use this first to produce `tasks.md`.
+- Then implement with:
+
+  ```bash
+  /smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md
+  ```
+
+- Finally verify with:
+
+  ```bash
+  /smartspec_verify_tasks_progress specs/feature/spec-005-promo-system/tasks.md
+  ```
+
+---
+
+## Troubleshooting
+
+### “SPEC_INDEX.json not found”
+
+This should not block generation.
+
+Recommended fix:
+
+- Create or move the index to repository root:
+
+  ```text
+  SPEC_INDEX.json
+  ```
+
+### Generated tasks feel too vague
+
+Improve spec clarity:
+
+- Add a short architecture section.
+- Add explicit file/module expectations.
+- Add acceptance criteria per major capabilities.
+
+---
+
+## Summary
+
+Use `/smartspec_generate_tasks` to turn a well-defined spec into an actionable plan.  
+A clear spec and a root-level `SPEC_INDEX.json` will significantly improve task quality and reduce assumption prompts downstream.

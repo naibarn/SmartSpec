@@ -1,210 +1,324 @@
-# Implement Tasks Workflow
+# SmartSpec Manual: /smartspec_implement_tasks
 
-Auto-implement tasks from `tasks.md` with safety constraints, progress tracking, checkpoint/resume functionality, and validation.
-
----
-
-## Summary
-
-The `smartspec_implement_tasks` workflow automatically implements tasks defined in `tasks.md` or `implement-prompt.md`. It respects checkbox status, validates after each task, and supports incremental development.
-
-**Key Features:**
-- ✅ Automatic task implementation
-- ✅ Checkbox-aware (skip completed tasks by default)
-- ✅ Checkpoint/resume functionality
-- ✅ Validation after each task (compile, test, lint)
-- ✅ Automatic rollback on validation failure
-- ✅ Progress tracking and reporting
+This guide explains how to implement tasks from `tasks.md` safely and predictably, aligned with the latest SmartSpec implementation workflow rules.
 
 ---
 
-## Usage
+## What this command does
 
-### Basic Usage
+`/smartspec_implement_tasks` reads a `tasks.md` and performs implementation for a selected scope of tasks.
+
+It may:
+
+- Create or edit files listed in tasks
+- Run validation commands
+- Use Debug Mode when compile/tests fail
+- Attempt Orchestrator Mode when `--kilocode` is provided
+- Update task checkboxes to reflect **successfully completed tasks in this run**
+- Produce a detailed **per-run final summary**
+
+This command is the **implementation/fix** counterpart to `/smartspec_verify_tasks_progress`.
+
+---
+
+## Allowed file changes
+
+This workflow is allowed to:
+
+- Create/edit source files
+- Add or update configuration files when required by tasks
+- Update `tasks.md` checkboxes **only** for tasks completed in the current run
+
+---
+
+## Required input
+
+Provide a path to `tasks.md`:
 
 ```bash
-/smartspec_implement_tasks <path-to-tasks.md> [options]
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md
 ```
 
-### Path Formats
+### Tasks file can be inside a folder
+
+You can reference a nested tasks file path directly:
 
 ```bash
-# Direct path to tasks.md
 /smartspec_implement_tasks specs/feature/spec-004-financial-system/tasks.md
-
-# Directory (will look for tasks.md inside)
-/smartspec_implement_tasks specs/feature/spec-004-financial-system
-
-# Implement prompt file
-/smartspec_implement_tasks specs/feature/spec-004-financial-system/implement-prompt-spec-004.md
 ```
 
 ---
 
-## Options
+## Task scope selection (updated)
 
-### Mode Options
+You can limit the run to a subset of tasks using any combination of the filters below.
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--skip-completed` | Skip tasks with checkbox `[x]` | ✅ Yes (default) |
-| `--force-all` | Re-implement all tasks, ignore checkboxes | No |
-| `--validate-only` | Validate only, no implementation | No |
+### 1) Single task
 
-### Scope Options
+```bash
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --tasks T021
+```
 
-| Option | Description | Example |
-|--------|-------------|---------|------|
-| `--phase <n>` | Implement specific phase(s) | `--phase 1` or `--phase 1,2,3` or `--phase 1-3` |
-| `--tasks <id>` | Implement specific task(s) | `--tasks T001` or `--tasks T001,T002` or `--tasks T001-T010` |
-| `--start-from <id>` | Start from specific task to end | `--start-from T033` (implements T033 to end) |
+### 2) Multiple tasks
 
-### Execution Options
+```bash
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --tasks T021,T022,T023
+```
 
-| Option | Description | Example |
-|--------|-------------|---------|------|
-| `--kilocode` | Use Kilo Code Orchestrator Mode to automatically break tasks into sub-tasks | `--kilocode` |
-| `--architect` | Use Architect Mode to design system architecture before implementation | `--architect` |
+### 3) Task ranges
 
-### Resume Options
+```bash
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --tasks T001-T010
+```
 
-| Option | Description |
-|--------|-------------|
-| `--resume` | Resume from last checkpoint |
+> `--task` is accepted as an alias for `--tasks` if supported by your runtime.
+
+### 4) Start from a task
+
+```bash
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --start-from T031
+```
+
+### 5) Skip completed tasks (recommended)
+
+```bash
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --skip-completed
+```
+
+Expected behavior:
+
+- Tasks already marked `[x]` should be skipped in this run.
+- This reduces duplicate or overlapping implementations.
+
+### 6) Resume
+
+```bash
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --resume
+```
+
+Expected behavior:
+
+- Continue from the last known checkpoint if your implementation supports checkpoints.
+
+---
+
+## Phase filtering (added)
+
+If your `tasks.md` is structured by phases, you can implement tasks by phase.
+
+### 1) A single phase
+
+```bash
+/smartspec_implement_tasks <tasks.md> --phase 1
+```
+
+### 2) Multiple phases
+
+```bash
+/smartspec_implement_tasks <tasks.md> --phase 1,2,3
+```
+
+### 3) A phase range
+
+```bash
+/smartspec_implement_tasks <tasks.md> --phase 1-3
+```
+
+Recommended pairing:
+
+```bash
+/smartspec_implement_tasks <tasks.md> --phase 2 --skip-completed
+```
+
+---
+
+## Architect Mode
+
+Use Architect Mode to force an implementation plan before coding.
+
+```bash
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --tasks T021 --architect
+```
+
+Expected behavior:
+
+- Produce an architecture/implementation plan for the task.
+- Then proceed to code changes.
+
+---
+
+## KiloCode / Orchestrator Mode (updated)
+
+### Key rule
+
+**Orchestrator Mode is allowed only when `--kilocode` is explicitly set.**
+
+```bash
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --tasks T001-T010 --kilocode
+```
+
+### What `--kilocode` now means
+
+With the updated workflow rules:
+
+- The system MUST **attempt** to activate Orchestrator Mode for tasks in scope.
+- Actual activation may be blocked by platform/tool limits.
+
+### Mandatory fallback behavior (Policy A)
+
+If Orchestrator cannot be activated:
+
+- The workflow must log a clear warning.
+- The workflow must fall back to **Standard Implementation Mode** for that task.
+- The run must continue.
+
+This prevents a stalled run while keeping behavior transparent.
+
+---
+
+## Evidence-first integration rule (Auth/JWT/OAuth/OIDC)
+
+For tasks that involve external integration assumptions — especially authentication/authorization tasks — the implement workflow must:
+
+1. Read any explicitly referenced supporting specs.
+2. Resolve spec IDs using:
+   - `SPEC_INDEX.json` at repository root (preferred)
+   - `.smartspec/SPEC_INDEX.json` (fallback)
+3. Search the codebase for real evidence:
+   - middleware/guards
+   - API clients/gateway config
+   - environment variables (`AUTH_*`, `JWT_*`, `OIDC_*`)
+   - OpenAPI references
+
+Only if no reliable evidence is found may it ask the user.
+
+**The workflow must not auto-select a default assumption.**
+
+---
+
+## SPEC_INDEX.json resolution (updated)
+
+When the workflow needs to map cross-spec dependencies:
+
+1. Prefer `SPEC_INDEX.json` at repository root.
+2. Fall back to `.smartspec/SPEC_INDEX.json`.
+
+If neither exists:
+
+- Log a warning.
+- Continue with best-effort dependency handling.
+
+---
+
+## Validation options
+
+### Validate-only
+
+```bash
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --tasks T011-T020 --validate-only
+```
+
+Expected behavior:
+
+- Do not modify code.
+- Run relevant validations.
+- Report pass/fail for the selected tasks.
+
+---
+
+## Checkbox update rules
+
+A task should be marked `[x] only when:
+
+- Implementation is complete for that task.
+- The task-level validations/acceptance criteria pass per workflow rules.
+- Success occurred **in this run**.
+
+Tasks that fail must remain `[ ]`.
+
+---
+
+## Required final summary (per run)
+
+At the end of an implement run, you should see a summary that is as informative as verification output but scoped to tasks in this run.
+
+It should include:
+
+- Tasks file path
+- Filters used (`--tasks`, `--phase`, `--start-from`, etc.)
+- Counts:
+  - Completed
+  - Failed
+  - Skipped (dependencies/filters)
+  - Not attempted (if the run stops early)
+- Clear reasons for failures and skipped tasks
+- Suggested next commands
+
+This eliminates ambiguity about why later phases were not implemented.
 
 ---
 
 ## Examples
 
-See [IMPLEMENT_TASKS_DETAILED_GUIDE.md](../guides/IMPLEMENT_TASKS_DETAILED_GUIDE.md) for comprehensive examples and use cases.
+### Example 1: Phase-based implementation
 
-### Quick Examples
-
-**Implement all pending tasks (default):**
 ```bash
-/smartspec_implement_tasks specs/feature/spec-004/tasks.md
+# Implement Phase 1 only
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --phase 1 --skip-completed
+
+# Continue to Phase 2 only
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --phase 2 --skip-completed
 ```
 
-**Force re-implement all:**
+### Example 2: Safe iterative loop
+
 ```bash
-/smartspec_implement_tasks specs/feature/spec-004/tasks.md --force-all
+# 1) Implement a chunk (prefer Orchestrator if available)
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --tasks T021-T030 --kilocode --skip-completed
+
+# 2) Verify current status (read-only)
+/smartspec_verify_tasks_progress specs/feature/spec-005-promo-system/tasks.md
+
+# 3) Fix specific errors (if needed)
+/smartspec_fix_errors specs/feature/spec-005-promo-system
+
+# 4) Continue implementation
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --start-from T031 --skip-completed
 ```
 
-**Implement specific phase:**
-```bash
-/smartspec_implement_tasks specs/feature/spec-004/tasks.md --phase 2
-```
+### Example 3: Validate only for a phase
 
-**Resume from checkpoint:**
 ```bash
-/smartspec_implement_tasks specs/feature/spec-004/tasks.md --resume
-```
-
-**Start from specific task to end:**
-```bash
-/smartspec_implement_tasks specs/feature/spec-004/tasks.md --start-from T033
-```
-
-**Use Kilo Code sub-task mode:**
-```bash
-/smartspec_implement_tasks specs/feature/spec-004/tasks.md --start-from T033 --kilocode
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --phase 3 --validate-only
 ```
 
 ---
 
-## How `--skip-completed` Works
+## Troubleshooting
 
-### Default Behavior
+### Orchestrator does not appear even with `--kilocode`
 
-By default, the workflow uses `--skip-completed` mode:
+Possible cause:
 
-**tasks.md:**
-```markdown
-- [x] T001: Setup project (4h)     ← Completed - SKIP
-- [x] T002: Configure TypeScript (2h) ← Completed - SKIP
-- [ ] T003: Setup database (3h)    ← Pending - IMPLEMENT
-- [ ] T004: Create models (4h)     ← Pending - IMPLEMENT
-```
+- Platform/tool limits.
 
-**Result:**
-- Skip: T001, T002 (already completed)
-- Implement: T003, T004 (pending)
+Expected behavior after the update:
 
-### Benefits
+- You should see a warning indicating Orchestrator could not be activated.
+- The workflow should fall back to Standard Mode and continue.
 
-1. ✅ **Save time** - Don't re-implement completed tasks
-2. ✅ **Continue work** - Stop and resume anytime
-3. ✅ **Incremental development** - Add new tasks without affecting old ones
-4. ✅ **Parallel work** - Multiple developers can work together
-5. ✅ **Safe to re-run** - Run workflow multiple times safely
+### “SPEC_INDEX.json not found”
+
+Expected behavior:
+
+- Prefer root `SPEC_INDEX.json`.
+- Fall back to `.smartspec/SPEC_INDEX.json`.
+- Continue with a warning if both are missing.
 
 ---
 
-## Validation
+## Summary
 
-After implementing each task, the workflow runs validation commands:
+Use `/smartspec_implement_tasks` to implement a well-defined subset of tasks with safe re-runs, evidence-driven integration decisions, and a detailed per-run final summary.
 
-1. **TypeScript compiler:** `tsc --noEmit`
-2. **Tests:** `npm test -- {test_file}`
-3. **Linter:** `npm run lint`
-
-If validation fails:
-- ❌ Rollback changes
-- ❌ Mark task as failed
-- ❌ Stop or continue based on settings
-
----
-
-## Checkpoint & Resume
-
-The workflow saves progress to `.smartspec-checkpoint.json`:
-
-```json
-{
-  "timestamp": "2025-01-04T14:30:22Z",
-  "last_completed_task": "T015",
-  "next_task": "T016",
-  "completed_tasks": ["T001", ..., "T015"],
-  "failed_tasks": ["T010"]
-}
-```
-
-Resume from checkpoint:
-```bash
-/smartspec_implement_tasks specs/feature/spec-004/tasks.md --resume
-```
-
----
-
-## Best Practices
-
-1. ✅ Use `--skip-completed` as default
-2. ✅ Check tasks immediately after implementation
-3. ✅ Use `--resume` when workflow stops
-4. ✅ Use `--phase` for incremental development
-5. ✅ Use `--force-all` only when necessary
-6. ✅ Validate before commit
-
----
-
-## Related Workflows
-
-- **[Generate Tasks](./generate_tasks.md)** - Create tasks.md from spec.md
-- **[Verify Tasks Progress](./verify_tasks_progress.md)** - Check implementation progress
-- **[Fix Errors](./fix_errors.md)** - Auto-fix compilation/type errors
-- **[Generate Tests](./generate_tests.md)** - Generate test files
-- **[Refactor Code](./refactor_code.md)** - Improve code quality
-
-## Additional Guides
-
-- **[START_FROM_GUIDE.md](../guides/START_FROM_GUIDE.md)** - How to use `--start-from` parameter
-- **[KILOCODE_MODE_GUIDE.md](../guides/KILOCODE_MODE_GUIDE.md)** - How to use `--kilocode` parameter (Orchestrator Mode)
-- **[ARCHITECT_MODE_GUIDE.md](../guides/ARCHITECT_MODE_GUIDE.md)** - How to use `--architect` parameter (Architect Mode)
-- **[DEBUG_MODE_GUIDE.md](../guides/DEBUG_MODE_GUIDE.md)** - How Debug Mode is used for problem-solving
-
----
-
-## Full Documentation
-
-For detailed explanation, examples, and use cases, see:
-📚 **[IMPLEMENT_TASKS_DETAILED_GUIDE.md](../guides/IMPLEMENT_TASKS_DETAILED_GUIDE.md)**
+`--kilocode` enables Orchestrator attempts, and the system must gracefully fall back when Orchestrator is unavailable.

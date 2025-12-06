@@ -1,100 +1,187 @@
-# `/smartspec_verify_tasks_progress.md`
+# SmartSpec Manual: /smartspec_verify_tasks_progress
 
-**Verifies and tracks the progress of implementation tasks by analyzing the source code.**
-
----
-
-## 1. Summary
-
-This command acts as an automated project manager. It reads a `tasks.md` file and analyzes the codebase to determine which tasks have been completed, even if they haven't been manually checked off.
-
-- **What it solves:** It provides an objective, up-to-date status of the project. It helps identify completed work and keeps the `tasks.md` file accurate.
-- **When to use it:** Periodically during development, or after a long coding session, to get an accurate progress report.
+This guide explains how to verify implementation progress against `tasks.md` without modifying code.
 
 ---
 
-## 2. Usage
+## What this command does
+
+`/smartspec_verify_tasks_progress` provides a read-only assessment of implementation status by comparing:
+
+- Expected tasks in `tasks.md`
+- Actual files in the codebase
+- Validation results
+- Acceptance criteria
+
+It is designed to answer:
+
+- What is truly complete?
+- What is partially implemented?
+- What is missing?
+- Which tasks are marked complete but fail verification?
+
+---
+
+## Strict boundaries (updated)
+
+This workflow is **verification-only**.
+
+It must not:
+
+- Implement missing code
+- Fix compilation/test errors
+- Invoke Orchestrator Mode
+- Read unrelated Kilo prompt templates
+
+If `--kilocode` is present:
+
+- It should be ignored or produce a warning.
+
+---
+
+## Required input
+
+Provide a path to `tasks.md`:
 
 ```bash
-/smartspec_verify_tasks_progress.md <tasks_path> [--update]
+/smartspec_verify_tasks_progress specs/feature/spec-005-promo-system/tasks.md
 ```
 
-### Parameters
+---
 
-| Name | Type | Required? | Description | Example |
-| :--- | :--- | :--- | :--- | :--- |
-| `tasks_path` | `string` | ✅ Yes | The full path to the `tasks.md` file to verify. | `specs/features/new-login/tasks.md` |
+## Task scope selection
 
-### Options
+### 1) Single task
 
-| Name | Type | Required? | Description |
-| :--- | :--- | :--- | :--- |
-| `--update` | `boolean` | ❌ No | If present, the command will automatically update the `tasks.md` file by checking off the verified tasks. If omitted, it will only display a report. |
+```bash
+/smartspec_verify_tasks_progress specs/feature/spec-005-promo-system/tasks.md --tasks T021
+```
+
+### 2) Multiple tasks
+
+```bash
+/smartspec_verify_tasks_progress specs/feature/spec-005-promo-system/tasks.md --tasks T021,T022,T023
+```
+
+### 3) Task ranges
+
+```bash
+/smartspec_verify_tasks_progress specs/feature/spec-005-promo-system/tasks.md --tasks T001-T020
+```
+
+### 4) Start from a task
+
+```bash
+/smartspec_verify_tasks_progress specs/feature/spec-005-promo-system/tasks.md --start-from T031
+```
 
 ---
 
-## 3. Input
+## SPEC_INDEX.json resolution (updated)
 
-- A `tasks.md` file.
-- The associated `spec.md` file.
-- The project's source code.
+When verifying cross-spec dependencies:
 
----
+1. Prefer `SPEC_INDEX.json` at repository root.
+2. Fall back to `.smartspec/SPEC_INDEX.json`.
 
-## 4. Output
+If neither exists:
 
-- **If `--update` is NOT used:** A progress report is displayed in the chat, showing which tasks are completed, in progress, or not started.
-- **If `--update` IS used:** The `tasks.md` file is modified in place, with checkboxes for completed tasks being marked as `[x]`.
-
----
-
-## 5. Detailed Examples
-
-### Example 1: Getting a progress report
-
-1.  **Run the command:**
-    ```bash
-    /smartspec_verify_tasks_progress.md specs/features/new-login/tasks.md
-    ```
-
-**Result:** A report is displayed:
-> **Progress Report:**
-> - **T001:** ✅ Completed
-> - **T002:** ✅ Completed
-> - **T003:** 🟡 In Progress
-> - **T004:** ❌ Not Started
-
-### Example 2: Automatically updating the tasks file
-
-1.  **Run the command:**
-    ```bash
-    /smartspec_verify_tasks_progress.md specs/features/new-login/tasks.md --update
-    ```
-
-**Result:** The `tasks.md` file is updated. The checkboxes for T001 and T002 are now marked `[x]`.
+- Log a warning.
+- Continue verification with best effort.
 
 ---
 
-## 6. How to Verify the Result
+## How completion should be determined
 
-1.  **Review the report:** Check if the progress report accurately reflects the state of your codebase.
-2.  **Check the diff (if using --update):** Use `git diff` on `tasks.md` to see which tasks were automatically checked off.
+A task should be considered complete only when the workflow can verify:
 
----
-
-## 7. Troubleshooting
-
-| Problem | Cause | Solution |
-| :--- | :--- | :--- |
-| **A completed task is not marked as complete** | The implementation in the code may be significantly different from what was described in the task, or the analysis failed. | This is a limitation of the analysis. Manually check off the task in `tasks.md`. |
-| **An incomplete task is marked as complete** | The code may contain boilerplate or function stubs that trick the analysis. | Manually uncheck the task and add more specific details to the task description in `tasks.md`. |
+- Expected files exist
+- For EDIT tasks, changes appear relevant to this SPEC (where such detection is supported)
+- Acceptance criteria are satisfied
+- In strict mode (if supported), validation commands pass
 
 ---
 
-## 8. For the LLM
+## Checkbox update behavior
 
-- **Primary Goal:** To analyze source code and determine the completion status of tasks in a `tasks.md` file.
-- **Key Entities:** `tasks_path`, `update` flag.
-- **Workflow Position:** This is a utility command used for monitoring and maintenance throughout the development process.
-- **Input Artifacts:** `tasks.md`, `spec.md`, source code.
-- **Output Artifact:** A text report or a modified `tasks.md` file.
+Your implementation may support one of these patterns:
+
+### Pattern A: explicit update flag
+
+```bash
+/smartspec_verify_tasks_progress specs/feature/spec-005-promo-system/tasks.md --update
+```
+
+### Pattern B: explicit no-update flag
+
+```bash
+/smartspec_verify_tasks_progress specs/feature/spec-005-promo-system/tasks.md --no-update
+```
+
+Expected safety rules:
+
+- Verify may update `[ ] → [x]` only for fully verified tasks.
+- Verify must **never** automatically uncheck tasks.
+- If a task is marked `[x]` but fails verification, the report must warn clearly.
+
+---
+
+## Report expectations (updated)
+
+The progress report should include:
+
+- Overall completion estimate
+- Phase-by-phase breakdown
+- Task-by-task status with reasons
+- A dedicated section for:
+
+  **“Incomplete or Error Tasks (Verification Only)”**
+
+This section is the authoritative list for what still requires work.
+
+---
+
+## Example: Verification loop
+
+```bash
+# Verify current state
+/smartspec_verify_tasks_progress specs/feature/spec-005-promo-system/tasks.md
+
+# Implement a targeted chunk
+/smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --tasks T021-T030 --skip-completed
+
+# Verify again
+/smartspec_verify_tasks_progress specs/feature/spec-005-promo-system/tasks.md
+```
+
+---
+
+## Troubleshooting
+
+### Verification says tasks are incomplete but implement already ran
+
+This usually means:
+
+- Tasks were not fully validated
+- Checkboxes were not updated (or were intentionally skipped)
+- The implement run stopped early
+
+Recommended action:
+
+- Check the implement per-run summary.
+- Re-run implement for specific tasks:
+
+  ```bash
+  /smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --tasks T0XX --skip-completed
+  ```
+
+### “SPEC_INDEX.json not found”
+
+This should not block verification.
+
+---
+
+## Summary
+
+Use `/smartspec_verify_tasks_progress` to get a truthful, read-only view of progress.  
+It complements `/smartspec_implement_tasks`, which is responsible for actual fixes and code changes.

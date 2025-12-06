@@ -1,1005 +1,714 @@
 ---
-description: Auto-implement tasks from tasks.md or implement-prompt.md with safety constraints, progress tracking, checkpoint/resume functionality, and validation.
+description: Implement tasks from tasks.md using SmartSpec, with optional Architect Mode and KiloCode Orchestrator Mode, update tasks.md checkboxes, and produce a detailed per-run summary. This workflow is the implementation/fix counterpart to smartspec_verify_tasks_progress (which is verification-only).
 ---
 
 ## User Input
+
 ```text
 $ARGUMENTS
 ```
 
-**Patterns:**
-- `specs/feature/spec-004/tasks.md`
-- `specs/feature/spec-004/implement-prompt-spec-004.md`
-- `specs/feature/spec-004`
-- `specs/feature/spec-004/tasks.md --phase 1`
-- `specs/feature/spec-004/tasks.md --phase 1-3`
-- `specs/feature/spec-004/tasks.md --tasks T001-T010`
-- `specs/feature/spec-004/tasks.md --start-from T033`
-- `specs/feature/spec-004/tasks.md --resume`
-- `specs/feature/spec-004/tasks.md --skip-completed`
-- `specs/feature/spec-004/tasks.md --force-all`
-- `specs/feature/spec-004/tasks.md --validate-only`
-- `specs/feature/spec-004/tasks.md --phase 1-2 --skip-completed`
-- `specs/feature/spec-004/tasks.md --start-from T033 --kilocode`
-- `specs/feature/spec-004/tasks.md --tasks T033 --kilocode`
+Expected example:
 
-**Default Behavior:**
-- Mode: `--skip-completed` (skip checked tasks)
-- Phase: all phases (if not specified)
-- Tasks: all tasks (if not specified)
-- Resume: false (start from beginning)
-- Validate-only: false (implement + validate)
-- Kilocode: false (direct implementation)
-
-## 0. Parse Arguments & Detect Input
-
-**Parse arguments:**
-- Extract path from first argument
-- Parse `--phase` parameter (single, comma-separated, or range)
-- Parse `--tasks` parameter (single, comma-separated, or range)
-- Parse `--start-from` parameter (start from specified task to end)
-- Parse `--resume` flag (continue from last checkpoint)
-- Parse `--skip-completed` flag (default, skip checked tasks)
-- Parse `--force-all` flag (ignore checkboxes, re-implement all)
-- Parse `--validate-only` flag (validate only, no implementation)
-- Parse `--kilocode` flag (use Kilo Code sub-task mode)
-- Parse `--architect` flag (use Architect Mode for system design before implementation)
-
-**Detect input type:**
-- If path is directory: Look for `tasks.md` in directory
-- If path ends with `tasks.md`: Use as tasks file
-- If path ends with `implement-prompt-*.md`: Use as implement prompt
-- If not found: Error and stop
-
-**Set working directory:**
-- WORK_DIR = directory containing the input file
-- TASKS_FILE = path to tasks.md
-- PROMPT_FILE = path to implement-prompt.md (if exists)
-
-## 1. Load Context
-
-**Read `.smartspec/` files:**
-- Auto-detect `.smartspec/SPEC_INDEX.json` in project root
-- If found: Parse and load into SPEC_REGISTRY
-- If not found: Continue without dependency resolution
-
-**Determine source:**
-- If implement-prompt.md provided: Use as primary source
-- Else: Use tasks.md as source
-
-**Parse YAML frontmatter from tasks.md:**
-```yaml
----
-spec_id: spec-004-financial-system
-version: 1.0.0
-technology_stack: TypeScript, Node.js, PostgreSQL
-validation_commands:
-  compile: "tsc --noEmit"
-  test: "npm test -- {test_file}"
-  lint: "npm run lint"
-  integration: "npm run test:integration"
----
-```
-
-**If frontmatter missing:**
-- Use default TypeScript validation commands
-- Log warning: "No validation_commands in frontmatter, using TypeScript defaults"
-
-**Extract validation commands:**
-- COMPILE_CMD = validation_commands.compile
-- TEST_CMD = validation_commands.test
-- LINT_CMD = validation_commands.lint
-- INTEGRATION_CMD = validation_commands.integration (optional)
-
-## 2. Parse Tasks & Status
-
-**Parse tasks.md structure:**
-- Project metadata
-- Phase overview table
-- All phases with tasks
-- Checkpoints
-- Supporting files references
-
-**Extract task list:**
-- For each task: Extract ID, title, hours, checkbox status, description, files, dependencies
-
-**Task structure:**
-```typescript
-interface Task {
-  id: string;              // "T001"
-  title: string;           // "Setup project structure"
-  hours: number;           // 4
-  completed: boolean;      // true if checkbox is [x], false if [ ]
-  phase: number;           // 1
-  description: string;     // Full task description
-  files: File[];           // List of files to create/edit
-  dependencies: string[];  // ["T000", "spec-003"]
-  supporting_files: string[]; // ["openapi.yaml", "data-model.md"]
-}
-```
-
-**Parse checkbox status:**
-- `- [x]` or `- [X]` → completed = true
-- `- [ ]` → completed = false
-
-**Build task registry:**
-- TASKS = array of all tasks
-- COMPLETED_TASKS = array of completed task IDs
-- PENDING_TASKS = array of pending task IDs
-
-## 3. Load Checkpoint (If Resume)
-
-**If `--resume` flag:**
-- Look for checkpoint file: `WORK_DIR/.smartspec-checkpoint.json`
-- If found: Load checkpoint data
-- Extract: last_completed_task, failed_tasks, skipped_tasks, timestamp
-
-**Checkpoint structure:**
-```json
-{
-  "timestamp": "2025-01-04T14:30:22Z",
-  "spec_id": "spec-004-financial-system",
-  "last_completed_task": "T015",
-  "completed_tasks": ["T001", "T002", ..., "T015"],
-  "failed_tasks": ["T010"],
-  "skipped_tasks": ["T008"],
-  "validation_status": {
-    "compile": "PASS",
-    "test": "PASS",
-    "lint": "PASS"
-  },
-  "files_modified": ["src/index.ts", "src/models/User.ts"],
-  "next_task": "T016"
-}
-```
-
-**If checkpoint found:**
-- Resume from next_task
-- Skip all tasks before next_task
-- Log: "Resuming from checkpoint: T016"
-
-**If checkpoint not found:**
-- Start from beginning
-- Log: "No checkpoint found, starting from T001"
-
-## 4. Filter Scope
-
-**Apply mode filter:**
-- If `--skip-completed`: Filter out tasks where completed = true
-- If `--force-all`: Include all tasks regardless of checkbox status
-- Default: `--skip-completed`
-
-**Apply phase filter:**
-- If `--phase 1`: Include only Phase 1 tasks
-- If `--phase 1,2,3`: Include Phases 1, 2, 3 tasks
-- If `--phase 1-3`: Include Phases 1 through 3 tasks
-- If no `--phase`: Include all phases
-
-**Apply task filter:**
-- If `--tasks T001`: Include only T001
-- If `--tasks T001,T002,T003`: Include T001, T002, T003
-- If `--tasks T001-T010`: Include T001 through T010
-- If no `--tasks`: Include all tasks (within selected phases)
-
-**Apply start-from filter:**
-- If `--start-from T033`: Include T033 and all tasks after T033 until end of file
-- Example: `--start-from T033` with tasks T001-T050 → Include T033-T050
-- Can combine with `--phase`: `--start-from T033 --phase 4` → Start from T033 within Phase 4 only
-- **Note:** `--start-from` takes precedence over `--tasks` parameter
-
-**Apply resume filter:**
-- If `--resume` and checkpoint exists: Start from checkpoint.next_task
-
-**Validate ranges:**
-- Check phase numbers exist
-- Check task IDs exist
-- If invalid: Stop and report error
-
-**Result:**
-- FILTERED_TASKS = array of tasks to implement
-- TOTAL_HOURS = sum of hours for filtered tasks
-
-**Report scope:**
-```
-📊 Implementation Scope:
-- Total tasks in file: 45
-- Completed tasks: 15
-- Pending tasks: 30
-- Filtered tasks: 18 (T033-T050)
-- Estimated effort: 72 hours
-- Mode: Skip completed
-- Start from: T033 (continue to end)
-```
-
-## 5. Validate Environment
-
-**Check project setup:**
-- Verify WORK_DIR exists
-- Verify package.json exists (for Node.js projects)
-- Verify required dependencies installed
-
-**Check validation commands:**
-- Test if COMPILE_CMD is available
-- Test if TEST_CMD is available
-- Test if LINT_CMD is available
-
-**If validation commands fail:**
-- Log warning: "Validation command not available: {command}"
-- Continue with available commands only
-
-**Check supporting files:**
-- Verify referenced supporting files exist
-- Log warnings for missing files
-
-**Pre-flight validation:**
 ```bash
-# Run initial validation to ensure project is in good state
-{COMPILE_CMD}
-{TEST_CMD}
-{LINT_CMD}
+/smartspec_implement_tasks specs/feature/spec-004-financial-system/tasks.md --tasks T001-T090 --kilocode --skip-completed
 ```
 
-**If pre-flight fails:**
-- Stop and report errors
-- Request user to fix before continuing
-- Do NOT proceed with implementation
+This workflow describes how `/smartspec_implement_tasks` should behave.
 
-## 6. Execute Tasks (Main Loop)
+- **This workflow is allowed to change code** (implement/fix tasks).
+- It operates only on the tasks in the current run (scope).
+- It **does not** attempt to verify the entire SPEC; that is the job of `/smartspec_verify_tasks_progress`.
 
-**IMPORTANT: This is a LOOP - You MUST iterate through ALL tasks in FILTERED_TASKS**
+---
 
-**Loop structure:**
+## 0. Load Context
+
+Load only the context required to implement tasks for a single SPEC:
+
+1. From project root:
+   - `SPEC_INDEX.json` (preferred, if present at the repository root)
+   - If not found, optionally try `.smartspec/SPEC_INDEX.json`.
+     - If the fallback file is also missing, log a warning but **do not fail** the workflow. Continue without SPEC index data.
+
+2. From the target SPEC:
+   - The `tasks.md` file from `$ARGUMENTS`
+   - Any referenced spec files (e.g., `spec.md`, `architecture.md`, `openapi.yaml`, `data-model.md`)
+
+3. Do **NOT** load KILO prompt templates as plain text (they are invoked via tools, not read as content):
+   - Skip `.smartspec/KILO-PROMPT*`
+   - Skip `.smartspec/KILO-ASK*`
+   - Skip `.smartspec/KILO-ARCHITECT*`
+   - Skip `.smartspec/KILO-CODE*`
+   - Skip `.smartspec/KILO-DEBUG*`
+   - Skip `.smartspec/KILO-TEST*`
+
+Goal: keep context focused on the SPEC and its tasks, not on implementation prompt templates.
+
+---
+
+## 1. Resolve Path and Parse Arguments
+
+### 1.1 Resolve TASKS_PATH
+
+1. If `$ARGUMENTS` contains an explicit path ending with `tasks.md`, use it as `TASKS_PATH`.
+2. Otherwise, if the currently active file is a `tasks.md`, use that.
+3. Normalize to a project-relative path, e.g.:
+
+```text
+specs/feature/spec-004-financial-system/tasks.md
 ```
-FOR each task in FILTERED_TASKS:
-  1. Check dependencies
-  2. Read task details
-  3. Implement task
-  4. Validate task
-  5. Update progress
-  6. Report completion
-  7. Continue to NEXT task
-  
-DO NOT STOP until ALL tasks are completed or error occurs
+
+If `TASKS_PATH` cannot be resolved → stop with a clear error.
+
+### 1.2 Supported CLI Flags
+
+Parse the following flags:
+
+- `--tasks <RANGE>` (optional)
+  - Filter which tasks to run.
+  - Supports:
+    - Single ID: `T005`
+    - Comma-separated list: `T001,T003,T010`
+    - Ranges: `T001-T010`
+    - Mixed: `T001-T005,T010,T020-T022`
+
+- `--task <RANGE>` (alias for `--tasks`)
+
+- `--start-from <TASK_ID>` (optional)
+  - Start processing from this task ID (inclusive), based on order in `tasks.md`.
+
+- `--resume` (optional)
+  - Continue from a previous checkpoint, if available.
+
+- `--skip-completed` (optional)
+  - Skip tasks whose checkbox is already `[x]` in `tasks.md`.
+  - This is recommended when running again after earlier passes or after verification.
+
+- `--validate-only` (optional)
+  - Do not change code; only run validation commands per task.
+  - Useful to quickly check the impact of code that was already written.
+
+- `--architect` (optional)
+  - For each task, run Architect Mode first to design an implementation plan before coding.
+
+- `--kilocode` (optional, **KiloCode-only feature**)
+  - Enable Orchestrator Mode for implementation and error-handling.
+  - **Important:** The workflow must **attempt** to use Orchestrator Mode when this flag is set, but actual activation depends on system/tool limits.
+
+Store parsed options into a configuration object:
+
+```python
+options = {
+  "task_selector_raw": "...",       # from --tasks/--task
+  "start_from": "T010" or None,
+  "resume": bool,
+  "skip_completed": bool,
+  "validate_only": bool,
+  "architect": bool,
+  "kilocode": bool,
+}
 ```
 
-**Progress tracking:**
-- Track: current_task_index, total_tasks, completed_count, failed_count
-- Report after each task: "Completed {current}/{total} tasks"
-- At end: "All {total} tasks completed" or "Stopped at {current}/{total}"
+### 1.3 Parse Task Selector
 
-**For each task in FILTERED_TASKS:**
+If `task_selector_raw` is provided:
+
+1. Split by comma.
+2. For each token:
+   - If it matches `T\d+` → single task ID.
+   - If it matches `T\d+-T\d+` → expand numeric range (e.g., `T001-T003` → `T001,T002,T003`).
+3. Collect unique task IDs in order.
+
+Result:
+
+```python
+selected_task_ids = ["T001", "T002", "T003", ...]
+```
+
+---
+
+## 2. Parse tasks.md
+
+Parse `tasks.md` into a structured list of phases and tasks.
+
+For each task `T00X`, extract:
+
+- `phase` (e.g., `"Phase 1: Foundation"`)
+- `id` (e.g., `"T001"`)
+- `title`
+- `description` (optional)
+- `estimate` (optional, e.g., `"2h"`)
+- `dependencies` (task IDs or spec IDs)
+- `files` (list of file operations)
+  - `operation`: `CREATE` | `EDIT`
+  - `path`: file path (e.g., `src/services/promo-code.service.ts`)
+  - `size_category`: `SMALL` / `MEDIUM` / `LARGE` (if specified or inferred)
+- `acceptance_criteria` (list of textual criteria)
+- `validation_commands` (e.g. `npm test`, `npm run lint`, `npm run test promo`)
+- `checkbox_state`:
+  - `"checked"`   if line starts with `- [x] T001:`
+  - `"unchecked"` if line starts with `- [ ] T001:`
+
+Example task header pattern:
+
+```text
+- [ ] T001: Initialize Promo System (2h)
+- [x] T002: Setup Promo Database (1h)
+```
+
+Regex (conceptual):
+
+```text
+^- \[( |x)\] (T[0-9]{3}): (.*)$
+```
+
+Return:
+
+```python
+tasks = [
+  {
+    "phase": "Phase 1: Foundation",
+    "id": "T001",
+    "title": "Initialize Promo System",
+    "description": "...",
+    "dependencies": [],
+    "files": [...],
+    "acceptance_criteria": [...],
+    "validation_commands": [...],
+    "checkbox_state": "unchecked",
+  },
+  ...
+]
+```
+
+---
+
+## 3. Filter Scope
+
+Determine which tasks to process in this run.
+
+### 3.1 Apply Task Selector
+
+If `selected_task_ids` is not empty:
+
+- Keep only tasks where `task.id` is in `selected_task_ids`.
+- Preserve original order from `tasks.md`.
+
+### 3.2 Apply `--start-from`
+
+If `options["start_from"]` is set:
+
+- Find the first index `i` where `tasks[i].id == start_from`.
+- Keep tasks from `i` onward.
+
+### 3.3 Apply `--skip-completed`
+
+If `options["skip_completed"]` is true:
+
+- Remove tasks where `task.checkbox_state == "checked"`.
+
+### 3.4 Apply Resume Logic
+
+If `options["resume"]` is true and a checkpoint exists:
+
+- Load checkpoint data.
+- Skip tasks already recorded as completed in checkpoint.
+- Optionally resume from last processed index.
+
+The final ordered list is `FILTERED_TASKS`.
+
+If `FILTERED_TASKS` is empty → report and stop.
+
+---
+
+## 4. Initialize Tracking (Per-Run Status)
+
+Create tracking structures for **this run only**:
+
+```python
+current_task_index = 0
+total_tasks = len(FILTERED_TASKS)
+
+completed_tasks = []      # tasks successfully implemented + validated in THIS run
+failed_tasks = []         # tasks attempted but failed
+skipped_tasks = []        # tasks skipped due to dependency / filter / explicit logic
+not_attempted_tasks = []  # tasks in FILTERED_TASKS that were never reached because the run stopped early
+
+completed_count = 0
+failed_count = 0
+skipped_count = 0
+not_attempted_count = 0
+```
+
+Also initialize:
+
+```python
+failed_in_a_row = 0
+max_consecutive_failures = 3   # safety limit to stop the run early
+run_stopped_early = False
+stop_reason = None  # e.g. "3 consecutive failures", "manual abort"
+```
+
+> `not_attempted_tasks` is crucial to explain why a later phase may not have been implemented even if the user specified a full range like `T001-T090`. Any task in `FILTERED_TASKS` that is never processed because the loop terminated early must be recorded here.
+
+---
+
+## 5. Main Loop
+
+Iterate over each task in `FILTERED_TASKS` **until**:
+
+- All tasks processed, or
+- Global stop condition is triggered (e.g., too many consecutive failures).
+
+```python
+for task in FILTERED_TASKS:
+    if run_stopped_early:
+        # This and all subsequent tasks in FILTERED_TASKS were not attempted
+        not_attempted_tasks.append({
+            "task": task,
+            "reason": stop_reason or "Run stopped early before this task was reached."
+        })
+        not_attempted_count += 1
+        continue
+
+    current_task_index += 1
+    implement_single_task(task, options, tracking_state)
+```
+
+`tracking_state` includes references to:
+
+- `completed_tasks`, `failed_tasks`, `skipped_tasks`, `not_attempted_tasks`
+- counts
+- `failed_in_a_row`, `run_stopped_early`, `stop_reason`
+
+---
+
+## 6. Per-Task Workflow
 
 ### 6.1 Check Dependencies
 
-**For each dependency:**
-- If dependency is task ID: Check if completed
-- If dependency is spec ID: Check if spec exists/implemented
-- If dependency not satisfied: **SKIP task**
-  - Log: "Skipped {task_id}: depends on incomplete {dependency}"
-  - Add to skipped_tasks list
-  - Continue to next task
+For each dependency in `task.dependencies`:
+
+- If dependency is a task ID:
+  - Check if that task is in `completed_tasks` or already `[x]` in `tasks.md`.
+- If dependency is a spec ID:
+  - If SPEC index data was loaded:
+    - Check `SPEC_INDEX.json` (root) or `.smartspec/SPEC_INDEX.json` (fallback) for that spec and its "implemented" status.
+  - If SPEC index is unavailable:
+    - Treat dependencies conservatively or log a warning.
+
+If any dependency is not satisfied:
+
+- Mark task as **skipped** for this run:
+  - Checkbox remains unchanged.
+  - Add to `skipped_tasks` with a reason, e.g. `"Depends on incomplete T00X"`.
+  - Increment `skipped_count`.
+  - Log:
+
+    ```text
+    ⏭️ Skipped {task.id}: depends on incomplete {dependency_id}
+    ```
+
+- Continue to next task.
 
 ### 6.2 Read Task Details
 
-**Load full task information:**
-- Description
-- Files to create/edit
-- File size categories (SMALL/MEDIUM/LARGE)
-- Supporting files references
-- Expected outcome
+For each task, confirm:
 
-**Read supporting files:**
-- If task references openapi.yaml: Read relevant sections
-- If task references data-model.md: Read relevant sections
-- If task references other files: Read as needed
+- Files to create/edit.
+- File size categories (SMALL / MEDIUM / LARGE).
+- Supporting references (OpenAPI, data model, other docs) as needed.
 
 ### 6.3 Implement Task (If Not Validate-Only)
 
-**If `--validate-only` flag: SKIP implementation, go to validation**
+If `options["validate_only"]` is true:
 
-**If `--architect` flag: Use Architect Mode first**
+- **Skip code changes**, jump to validation (6.4).
+- This run will only report whether the existing implementation passes validation.
 
-**Architect Mode (when `--architect` flag is set):**
+Otherwise, choose the implementation mode:
 
-**For EVERY task, use Architect Mode first:**
-```
-Use Architect Mode to design the system architecture and create implementation plan. {task_id}: {task_title}
-```
+#### 6.3.1 Architect Mode (optional)
 
-**Architect Mode will:**
-- Design system architecture and structure
-- Create technical specification
-- Define file structure, modules, and responsibilities
-- Define data flow and API endpoints
-- Identify libraries and dependencies needed
-- Create detailed implementation plan
+If `options["architect"]` is true:
 
-**After Architect Mode completes:**
-- Use the architecture and plan to implement the code
-- Follow the structure defined by Architect Mode
-- Reference the technical specification
+- Invoke Architect Mode for this task:
 
-**If `--kilocode` flag: Use Orchestrator Mode**
+  ```text
+  Use Architect Mode to design the system architecture and create implementation plan.
+  {task_id}: {task_title}
+  ```
 
-**Orchestrator Mode (when `--kilocode` flag is set):**
+- Architect Mode should:
+  - Design structure.
+  - Define modules/files/responsibilities.
+  - Define data flows/interfaces.
+  - Produce a concrete plan for coding.
 
-**For EVERY task, send to Orchestrator Mode:**
-```
-Use Orchestrator Mode to break this task into subtasks. {task_id}: {task_title}
-```
+#### 6.3.2 Orchestrator Mode (KiloCode-only, with fallback)
 
-**How it works:**
-- Orchestrator Mode will analyze task complexity automatically
-- If task is complex: Orchestrator may use **Architect Mode first** to design system architecture
-- Then breaks into smaller sub-tasks (Architect → Code → Debug → Test)
-- If task is simple: Orchestrator implements directly
-- **You don't need to check estimated hours or complexity**
-- Orchestrator is smart enough to decide
+If `options["kilocode"]` is **true**:
 
-**Orchestrator may create sub-tasks like:**
-1. **Ask Mode** - Analyze existing code and explore implementation options
-2. **Architect Mode** - Design system architecture and create implementation plan
-3. **Code Mode** - Implement the code based on architecture
-4. **Debug Mode** - Fix any bugs or errors
-5. **Test Mode** - Run tests and validate
+- The workflow MUST **attempt** to enable Orchestrator Mode for this task:
 
-**Typical workflows:**
-- **Simple task:** Code → Test
-- **Medium task:** Architect → Code → Debug → Test
-- **Complex task:** Ask → Architect → Code → Debug → Test
-- **Unclear task:** Ask → Architect → Code → Debug → Test
+  ```text
+  Attempt to use Orchestrator Mode to break this task into subtasks. {task_id}: {task_title}.
+  ```
 
-**Example 1: Complex Task with Analysis and Architecture Design**
-```
-Task definition:
-- [ ] T005: Set Up BullMQ 5.x for Background Job Processing (2h)
+- If Orchestrator Mode is successfully activated:
+  - Use it to:
+    - Analyze task complexity.
+    - Optionally use Architect Mode.
+    - Break into Ask → Architect → Code → Debug → Test.
+    - Coordinate all sub-steps until the task is ready for validation.
 
-SmartSpec sends to Kilo Code:
-Use Orchestrator Mode to break this task into subtasks. T005: Set Up BullMQ 5.x for Background Job Processing
+- If Orchestrator activation **fails** (e.g. due to tool limit, system restriction, or other non-task error):
 
-Orchestrator decides:
-- This is complex and needs analysis → Use Ask Mode first, then Architect Mode:
-  - Sub-task 1 (Ask Mode): Analyze current job processing approach and BullMQ integration options
-  - Sub-task 2 (Architect Mode): Design BullMQ architecture and integration plan based on analysis
-  - Sub-task 3 (Code Mode): Install BullMQ dependencies
-  - Sub-task 4 (Code Mode): Create queue configuration based on architecture
-  - Sub-task 5 (Code Mode): Implement job processor
-  - Sub-task 6 (Code Mode): Add error handling and logging
-  - Sub-task 7 (Debug Mode): Fix any issues
-  - Sub-task 8 (Test Mode): Validate BullMQ integration
-```
+  1. Log a clear warning, for example:
 
-**Example 2: Simple Task**
-```
-Task definition:
-- [ ] T001: Add user ID field to User model (0.5h)
+     ```text
+     ⚠️ Orchestrator Mode could not be activated for {task.id} (system/tool limit). Falling back to Standard Implementation Mode for this task.
+     ```
 
-SmartSpec sends to Kilo Code:
-Use Orchestrator Mode to break this task into subtasks. T001: Add user ID field to User model
+  2. Continue implementing this task using **Standard Implementation Mode** (Section 6.3.3) instead of Orchestrator.
 
-Orchestrator decides:
-- This is simple → Implement directly (no sub-tasks needed)
-```
+- The workflow must **never silently pretend** that Orchestrator Mode is active when it is not. Any fallback must be explicitly logged.
 
-**Important:**
-- DO NOT check estimated hours yourself
-- DO NOT decide complexity yourself
-- Just send ALL tasks to Orchestrator Mode with the same command
-- Let Orchestrator decide whether to break down or not
+> Note: `--kilocode` means “prefer Orchestrator when available”. It does **not** guarantee Orchestrator will be active if the underlying platform blocks it. In those cases, this workflow will continue in Standard Mode to avoid wasting the run.
 
-**Standard Implementation Mode (when `--kilocode` flag is NOT set):**
+#### 6.3.3 Standard Implementation Mode (no Orchestrator)
 
-**Apply file size strategy:**
+Standard Implementation Mode is used when:
 
-**For SMALL files (<200 lines):**
-- CREATE: Generate full file content
-- EDIT: Can use full rewrite or str_replace
+- `options["kilocode"]` is **false**, or
+- Orchestrator activation failed and the workflow fell back as described above.
 
-**For MEDIUM files (200-500 lines):**
-- CREATE: Staged creation (outline first, then fill)
-- EDIT: **str_replace ONLY**, max 50 lines per operation
+Use a standard implementation strategy based on file size:
 
-**For LARGE files (>500 lines):**
-- CREATE: Incremental build (section by section)
-- EDIT: **Surgical str_replace ONLY**, max 50 lines per operation
+- **SMALL files (< 200 lines):**
+  - CREATE: generate full file content in one pass.
+  - EDIT: full rewrite or small targeted `str_replace`.
 
-**Implementation process:**
-1. Read task description carefully
-2. Review supporting files
-3. For each file in task:
-   - If CREATE: Generate file with appropriate strategy
-   - If EDIT: Apply changes with appropriate strategy
-4. Verify changes applied correctly
+- **MEDIUM files (200–500 lines):**
+  - CREATE: staged creation (outline → fill).
+  - EDIT: `str_replace` with strict line limits.
 
-**Error handling during implementation:**
-- If str_replace fails: Retry with expanded context (max 2 attempts)
-- If still fails: STOP and report error
-- Do NOT continue to next task
+- **LARGE files (> 500 lines):**
+  - CREATE: incremental build in sections.
+  - EDIT: surgical `str_replace` only.
+
+Implementation attempts should always aim to:
+
+- Satisfy acceptance criteria.
+- Keep code consistent with existing architecture.
+- Avoid duplicating logic when re-run; prefer idempotent patterns (e.g. replace blocks instead of continually appending).
+
+### 6.3.4 Implementation Error Handling
+
+If implementation fails for a particular operation (e.g., unable to locate snippet for `str_replace`):
+
+1. Attempt a small number of retries with slightly extended context.
+2. If still failing:
+   - Mark this operation as failed for this task.
+   - Do **not** attempt any hidden Orchestrator switch unless `options["kilocode"]` is true **and** Orchestrator is actually available.
+   - Continue with remaining operations if appropriate, or mark the task as a hard failure.
+
+If a task ends in a hard failure (before or after validation):
+
+- Add it to `failed_tasks` with an error summary.
+- Increment `failed_count` and `failed_in_a_row`.
+- If `failed_in_a_row >= max_consecutive_failures`:
+  - Set:
+
+    ```python
+    run_stopped_early = True
+    stop_reason = "Reached max_consecutive_failures limit"
+    ```
+
+  - Do **not** process further tasks in this run (they will be recorded as `not_attempted_tasks`).
 
 ### 6.4 Validate Task
 
-**Run validation commands:**
-```bash
-# Compilation check
-{COMPILE_CMD}
+After implementation (or in `--validate-only` mode), run validation:
 
-# Run relevant tests
-{TEST_CMD}
+- Use `task.validation_commands` if present, otherwise fall back to project-level defaults (e.g. compile/test/lint).
 
-# Linting
-{LINT_CMD}
+Evaluate success:
+
+- If all relevant validations pass:
+  - Consider validation successful.
+- If any validation fails:
+  - Optionally attempt Debug Mode.
+
+#### 6.4.1 Debug Mode
+
+If validation fails:
+
+- Use Debug Mode:
+
+  ```text
+  Use Debug Mode to analyze and fix the issue for {task_id}: {task_title}.
+  ```
+
+- Debug Mode may:
+  - Read error messages, stack traces, logs.
+  - Inspect relevant source files.
+  - Apply focused fixes.
+  - Re-run only affected validations.
+
+If Debug Mode fixes the issue → treat as success.
+
+If Debug Mode still fails:
+
+- If `options["kilocode"]` is **true** and Orchestrator is available:
+  - Orchestrator fallback is allowed for this task:
+
+    ```text
+    Use Orchestrator Mode to resolve the issue for {task_id}: {task_title}.
+    ```
+
+- If Orchestrator is not available or `options["kilocode"]` is **false**:
+  - Do **not** attempt Orchestrator.
+  - Mark the task as failed; keep checkbox as `[ ]`.
+  - Update tracking (failed_tasks, failed_count, failed_in_a_row).
+  - Possibly trigger global stop if `failed_in_a_row` hits the configured limit.
+
+### 6.5 Mark Task as Successful
+
+If implementation + validation complete successfully:
+
+- Add `task.id` (and other metadata) to `completed_tasks`.
+- Increase `completed_count`.
+- Reset `failed_in_a_row = 0`.
+- Prepare to update checkbox in `tasks.md` (see Section 7).
+
+---
+
+## 7. Update tasks.md Checkboxes
+
+For tasks that were **successfully completed in this run**:
+
+- If their current `checkbox_state == "unchecked"`:
+  - Update the line in `tasks.md`:
+
+    ```text
+    - [ ] T001: Title
+    ```
+
+    to:
+
+    ```text
+    - [x] T001: Title
+    ```
+
+Implementation sketch:
+
+```python
+with open(TASKS_FILE, "r", encoding="utf-8") as f:
+    content = f.read()
+
+for t in completed_tasks:
+    task_id = t["id"]
+    pattern = f"- [ ] {task_id}:"
+    replacement = f"- [x] {task_id}:"
+    content = content.replace(pattern, replacement)
+
+with open(TASKS_FILE, "w", encoding="utf-8") as f:
+    f.write(content)
 ```
 
-**Check validation results:**
-- If ALL pass: Task successful
-- If ANY fail: Task failed
+> This only changes checkboxes for tasks that are **actually completed in this run** (implementation + validation).  
+> Tasks that fail remain `[ ]`. Tasks already `[x]` stay `[x]`.
 
-**If validation fails:**
+You may optionally re-read `tasks.md` and verify that checkbox updates were applied as expected.
 
-**Attempt 1: Analyze and fix**
-1. Read error messages
-2. Identify root cause
-3. Apply fix
-4. Re-validate
+---
 
-**Attempt 2: Switch to Debug Mode**
-- Do NOT retry with same approach
-- Switch mode: "Use Debug Mode to analyze and fix the issue."
-- Debug Mode will:
-  - Systematically diagnose the problem
-  - Read error/stack trace
-  - Check related files and dependencies
-  - Apply targeted fix
-  - Run validation again
+## 8. Final Per-Run Summary (Detailed, Task-Focused)
 
-**Attempt 3: Switch to Orchestrator Mode (if Debug fails)**
-- If Debug Mode cannot fix the issue
-- Switch mode: "Use Orchestrator Mode to resolve the issue."
-- Orchestrator will try different strategy
-- If Orchestrator also fails, then STOP:
-  - Report error details
-  - Add to failed_tasks list
-  - Request manual guidance
+To avoid situations where the user finishes `/smartspec_implement_tasks` but does not know which tasks are incomplete, the workflow MUST produce a **clear, detailed summary** for this run only.
 
-**If same error repeats 2+ times:**
-- Switch mode: "Use Orchestrator Mode to resolve the issue."
-- Orchestrator can break the loop with different strategy
+This summary should answer:
 
-**If 3 consecutive tasks fail:**
-- STOP execution immediately
-- Create checkpoint
-- Report: "Stopped due to 3 consecutive failures"
-- Switch mode: "Use Orchestrator Mode to review and fix issues."
-- Request manual review if Orchestrator cannot resolve
+- Which tasks were **completed** in this run?
+- Which tasks **failed**, and why?
+- Which tasks were **skipped** due to dependencies or filters?
+- Which tasks in the requested range were **not even attempted** because the run stopped early?
 
-### 6.5 Update Progress
+### 8.1 Build Per-Task Status Table
 
-**If task successful:**
+For each task in `FILTERED_TASKS`, assign one of:
 
-**STEP 1: Update checkbox in tasks.md (MANDATORY)**
+- `COMPLETED`
+- `FAILED`
+- `SKIPPED`
+- `NOT_ATTEMPTED`
 
-**Action:** Use file editing tool to update the checkbox
-```
-Find in {TASKS_FILE}:
-  - [ ] {task_id}: {task_title}
+With a short reason.
 
-Replace with:
-  - [x] {task_id}: {task_title}
-```
+Pseudo:
 
-**Example:**
-```
-Find:    - [ ] T037: Implement Credit Deduction APIs (2h)
-Replace: - [x] T037: Implement Credit Deduction APIs (2h)
-```
+```python
+per_task_status = []
 
-**IMPORTANT:** 
-- You MUST update the checkbox in the actual tasks.md file
-- Use str_replace or edit_file tool
-- Do NOT skip this step
-- Do NOT just log completion without updating file
+for task in FILTERED_TASKS:
+    record = {
+        "id": task.id,
+        "title": task.title,
+        "phase": task.phase,
+        "status": None,
+        "reason": None,
+    }
 
-**STEP 2: Update tracking variables**
-- Add to completed_tasks list
-- Increment completed_count
-- Log: "✅ Completed {task_id}: {title}"
+    if any(t["id"] == task.id for t in completed_tasks):
+        record["status"] = "COMPLETED"
+        record["reason"] = "Implemented and validated in this run."
+    elif any(t["id"] == task.id for t in failed_tasks):
+        record["status"] = "FAILED"
+        record["reason"] = get_fail_reason_for(task.id)
+    elif any(t["task"].id == task.id for t in skipped_tasks):
+        record["status"] = "SKIPPED"
+        record["reason"] = get_skip_reason_for(task.id)
+    elif any(t["task"].id == task.id for t in not_attempted_tasks):
+        record["status"] = "NOT_ATTEMPTED"
+        record["reason"] = get_not_attempted_reason_for(task.id)  # e.g. global stop
+    else:
+        record["status"] = "UNKNOWN"
+        record["reason"] = "No record for this task in this run."
 
-**STEP 3: Verify update**
-- Read the line from tasks.md to confirm it shows `[x]`
-- If still shows `[ ]`, retry update
-- If retry fails, log warning but continue
-
-**If task failed:**
-
-**STEP 1: Keep checkbox unchecked (DO NOT update)**
-- The checkbox should remain as `- [ ]` in tasks.md
-- Do NOT change it to `[x]`
-
-**STEP 2: Update tracking variables**
-- Add to failed_tasks list
-- Increment failed_count
-- Log: "❌ Failed {task_id}: {title} - {error}"
-
-**If task skipped:**
-
-**STEP 1: Keep checkbox unchecked (DO NOT update)**
-- The checkbox should remain as `- [ ]` in tasks.md
-- Do NOT change it to `[x]`
-
-**STEP 2: Update tracking variables**
-- Add to skipped_tasks list
-- Increment skipped_count
-- Log: "⏭️ Skipped {task_id}: {title} - {reason}"
-
-**Report progress after EACH task:**
-```
-📊 Progress: {current_task_index}/{total_tasks} tasks processed
-   ✅ Completed: {completed_count}
-   ❌ Failed: {failed_count}
-   ⏭️ Skipped: {skipped_count}
-   ⏳ Remaining: {total_tasks - current_task_index}
+    per_task_status.append(record)
 ```
 
-**IMPORTANT: After reporting progress, CONTINUE to next task in loop**
-**DO NOT STOP until all tasks are processed**
+### 8.2 Console Summary (Human-Friendly)
 
-### 6.6 Create Mini-Checkpoint
+Print a compact but clear summary:
 
-**Every 5 tasks:**
+```text
+📊 Implementation run finished.
 
-**STEP 1: Verify checkboxes were updated**
-- Read tasks.md
-- Count `[x]` checkboxes for completed tasks
-- If count doesn't match completed_count:
-  - Log warning: "Checkbox mismatch detected"
-  - List tasks that should be checked but aren't
-  - Attempt to fix by updating missing checkboxes
+Scope in this run:
+- Tasks file: specs/feature/spec-005-promo-system/tasks.md
+- Tasks in scope: T001-T090 (based on filters)
 
-**STEP 2: Create checkpoint file**
-- Save progress to .smartspec-checkpoint.json
-- Include completed_tasks list
-- Include failed_tasks list
-- Include skipped_tasks list
+In this run:
+- ✅ Completed:   {completed_count} tasks
+- ❌ Failed:      {failed_count} tasks
+- ⏭️ Skipped:     {skipped_count} tasks (dependencies / filters)
+- 🚫 Not run:     {not_attempted_count} tasks (not attempted because the run stopped early)
 
-**STEP 3: Run comprehensive validation**
-- Compile check
-- Test check
-- Lint check
-
-**STEP 4: Report progress**
-- Show checkpoint summary
-- Show validation results
-
-**Checkpoint creation:**
-```json
-{
-  "timestamp": "2025-01-04T15:45:30Z",
-  "spec_id": "spec-004-financial-system",
-  "last_completed_task": "T020",
-  "completed_tasks": ["T016", "T017", "T018", "T019", "T020"],
-  "failed_tasks": [],
-  "skipped_tasks": ["T018"],
-  "validation_status": {
-    "compile": "PASS",
-    "test": "PASS",
-    "lint": "PASS"
-  },
-  "files_modified": ["src/api/balance.ts", "src/models/Transaction.ts"],
-  "next_task": "T021"
-}
+Run stop reason: {stop_reason or "None (all tasks processed)"}
 ```
 
-### 6.7 Monitor Context
+Then show grouped lists, for example:
 
-**Check token usage:**
-- If approaching 80%: Create checkpoint and pause
-- Report: "Context limit approaching, checkpoint created"
-- Instructions: "Resume with --resume flag"
+```text
+✅ Completed in this run:
+- T011: Setup promo schema (Phase 2)
+- T012: Add Campaign model (Phase 2)
+...
 
-**On context overflow:**
-- Immediate checkpoint
-- Save state
-- Report current position
+❌ Failed in this run:
+- T021: Implement promo auth middleware (Phase 3) – TypeScript errors remain after Debug Mode
+- T022: Add promo tests (Phase 3) – Jest tests still failing (3 tests red)
 
-### 6.8 Safety Constraints
+⏭️ Skipped in this run:
+- T015: Generate API docs (Phase 1) – depends on incomplete T010
 
-**Enforce hard limits:**
-- ❌ Maximum 5 file edits per task
-- ❌ Maximum 50 lines per str_replace
-- ❌ Maximum 2 retry attempts per operation
-- ❌ STOP at 3 consecutive errors
-
-**Note:** There is NO limit on number of tasks per execution
-**The loop MUST continue until ALL tasks in FILTERED_TASKS are processed**
-
-**If limit reached:**
-
-**For file edits/str_replace limit:**
-- Report error
-- Switch mode: "Use Debug Mode to analyze and fix the issue."
-- Debug Mode will check why edits are failing
-- If Debug cannot resolve, switch to Orchestrator Mode
-- If Orchestrator cannot resolve, skip task
-
-**For retry limit (2 attempts):**
-- Do NOT retry 3rd time with same approach
-- Switch mode: "Use Debug Mode to analyze and fix the issue."
-- Debug Mode will diagnose why previous attempts failed
-- If Debug cannot resolve, switch to Orchestrator Mode
-
-**For consecutive errors (3 tasks):**
-- Create checkpoint
-- Switch mode: "Use Debug Mode to analyze and fix issues."
-- Debug Mode will look for common patterns across failures
-- If Debug cannot resolve, switch to Orchestrator Mode
-- Report progress before stopping
-- If Orchestrator cannot resolve, request manual review
-
-**For infinite loop detection:**
-- If same command executed 3+ times with same result
-- Switch mode: "Use Debug Mode to analyze and fix the issue."
-- Debug Mode will diagnose why command keeps failing
-- If Debug cannot break loop, switch to Orchestrator Mode
-
-## 7. Phase Checkpoint
-
-**At end of each phase:**
-
-**Run comprehensive validation:**
-```bash
-# Full compilation
-{COMPILE_CMD}
-
-# All tests
-{TEST_CMD}
-
-# Linting
-{LINT_CMD}
-
-# Integration tests (if defined)
-{INTEGRATION_CMD}
+🚫 Not attempted in this run:
+- T081-T090: Phase 9 tasks – Run stopped early before these were reached
 ```
 
-**Validation checklist:**
-- [ ] Compilation passes
-- [ ] All tests passing
-- [ ] No critical lint errors
-- [ ] Integration verified
+This makes it immediately clear why a later phase may not have been implemented even if the user specified a wide range like `--tasks T001-T090`.
 
-**If ALL pass:**
-- Create phase checkpoint
-- Report: "✅ Phase {X} complete"
-- Continue to next phase
+### 8.3 Optional: Per-Phase Summary (This Run Only)
 
-**If ANY fail:**
-
-**First failure:**
-- Report failures with details
-- Switch mode: "Use Debug Mode to analyze and fix the issue."
-- Debug Mode will:
-  - Analyze error messages and stack traces
-  - Check related files and dependencies
-  - Identify root cause
-  - Apply targeted fixes
-  - Re-run validation
-
-**If validation fails again after Debug Mode:**
-- Switch mode: "Use Orchestrator Mode to resolve the issue."
-- Let Orchestrator try different strategy
-- Re-run validation after Orchestrator fixes
-
-**If validation fails again after Orchestrator:**
-- STOP execution
-- Create checkpoint
-- Report failures
-- Request manual fix
-- Do NOT continue to next phase
-
-**If validation command itself fails (not test failures):**
-- Switch mode: "Use Debug Mode to analyze and fix the issue."
-- Debug Mode will check environment, dependencies, configuration
-- If Debug cannot fix, switch to Orchestrator Mode
-
-## 8. Final Report
-
-**COMPLETION CHECK:**
-```
-IF current_task_index == total_tasks:
-  status = "COMPLETE - All tasks processed"
-ELSE IF failed_count >= 3:
-  status = "STOPPED - Too many failures"
-ELSE:
-  status = "PARTIAL - Stopped at task {current_task_index}/{total_tasks}"
-```
-
-**IMPORTANT: Only reach this section after processing ALL tasks in FILTERED_TASKS**
-**If you reach here early, you have NOT completed the loop correctly**
-
-**STEP 1: Generate comprehensive report and save to file**
-
-**Action:** Write full report to file `{WORK_DIR}/implementation-report-{timestamp}.md`
-
-**Full report template:**
+You may also build a per-phase summary **restricted to this run**:
 
 ```markdown
-# Implementation Report: {spec_id}
+## Per-Phase Summary (This Run Only)
 
-**Generated:** {timestamp}
-**Duration:** {duration}
-**Status:** {COMPLETE / PARTIAL / FAILED}
-
----
-
-## Summary
-
-**Total Tasks:** {total}
-**Completed:** {completed} ✅
-**Failed:** {failed} ❌
-**Skipped:** {skipped} ⏭️
-**Success Rate:** {completed/total * 100}%
-
-**Estimated Effort:** {total_hours}h
-**Actual Duration:** {actual_duration}
-
----
-
-## Completed Tasks
-
-{For each completed task:}
-- ✅ **{task_id}**: {title} ({hours}h)
-
----
-
-## Failed Tasks
-
-{For each failed task:}
-- ❌ **{task_id}**: {title} ({hours}h)
-  - **Error:** {error_message}
-  - **Attempts:** {attempts}
-  - **Action Required:** {action}
-
----
-
-## Skipped Tasks
-
-{For each skipped task:}
-- ⏭️ **{task_id}**: {title} ({hours}h)
-  - **Reason:** {reason}
-  - **Dependency:** {dependency}
-  - **Action Required:** Complete {dependency} first
-
----
-
-## Validation Status
-
-**Final Validation:**
-- Compilation: {PASS/FAIL}
-- Tests: {PASS/FAIL} ({coverage}% coverage)
-- Linting: {PASS/FAIL}
-- Integration: {PASS/FAIL}
-
-**Issues Found:** {count}
-{List of issues if any}
-
----
-
-## Files Modified
-
-**Total Files:** {count}
-
-{For each file:}
-- `{file_path}` ({lines_added}+ / {lines_removed}-)
-
----
-
-## Checkpoints Created
-
-**Total Checkpoints:** {count}
-
-{For each checkpoint:}
-- **{timestamp}**: After {task_id} ({completed_count} tasks completed)
-
----
-
-## Next Steps
-
-{If status == COMPLETE:}
-✅ **All tasks completed successfully!**
-
-Next actions:
-1. Review implementation
-2. Run final integration tests
-3. Update documentation
-4. Prepare for deployment
-
-{If status == PARTIAL:}
-⚠️ **Partial completion**
-
-Next actions:
-1. Review failed tasks: {failed_task_ids}
-2. Fix issues manually
-3. Resume with: `/smartspec_implement_tasks.md {path} --resume`
-
-{If status == FAILED:}
-❌ **Implementation failed**
-
-Next actions:
-1. Review error logs
-2. Fix critical issues
-3. Restart with: `/smartspec_implement_tasks.md {path}`
-
----
-
-## Resume Command
-
-{If incomplete:}
-```bash
-/smartspec_implement_tasks.md {path} --resume
+- Phase 1: 3 completed, 2 failed, 1 skipped, 0 not attempted
+- Phase 2: 8 completed, 0 failed, 0 skipped, 0 not attempted
+- Phase 3: 1 completed, 3 failed, 0 skipped, 6 not attempted
+- Phase 4: 0 completed, 0 failed, 0 skipped, 10 not attempted
 ```
 
-{If need to re-implement specific tasks:}
-```bash
-/smartspec_implement_tasks.md {path} --tasks {failed_task_ids} --force-all
-```
+### 8.4 Implementation Report (Optional File)
+
+Optionally, write a markdown report for this run:
+
+- `implementation-report-YYYYMMDD-HHmm.md` in the same directory as `tasks.md`.
+- Contents:
+  - Scope (tasks file, filters).
+  - Per-run statistics (counts).
+  - Detailed per-task table (status + reason).
+  - Error summaries for failed tasks.
+  - List of not-attempted tasks with explanation.
+  - Suggested next commands, e.g.:
+
+    ```bash
+    # To continue from first failed or not-attempted task:
+    /smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md --start-from T031 --skip-completed
+    ```
 
 ---
 
-**STEP 2: Return compact summary (NOT full report)**
+## 9. Relationship with smartspec_verify_tasks_progress
 
-**IMPORTANT: Do NOT return the full report above**
-**Only return this compact summary to save context:**
+To keep behavior consistent and predictable:
 
-```markdown
-# ✅ Implementation {status}
+- `/smartspec_implement_tasks`:
+  - **Can change code** (implement/fix tasks).
+  - Works on a selected subset of tasks in a given run.
+  - Updates checkboxes for tasks completed in that run.
+  - Produces a **per-run summary** of which tasks were completed/failed/skipped/not-attempted.
 
-## 📊 Summary
+- `/smartspec_verify_tasks_progress`:
+  - Is **verification-only** (no code changes).
+  - Reads the **current state** of the entire SPEC (or filtered set of tasks).
+  - Runs validation, checks acceptance criteria, and reports incomplete/error tasks.
+  - Optionally updates checkboxes only for tasks that pass full verification.
 
-**Total tasks:** {total_tasks}
-**Completed:** {completed_count} ✅
-**Failed:** {failed_count} ❌
-**Skipped:** {skipped_count} ⏭️
-**Success rate:** {success_rate}%
+Recommended usage pattern:
 
-**Duration:** {duration}
-**Estimated effort:** {total_hours}h
-
----
-
-## 📄 Reports
-
-**Full report:** `{WORK_DIR}/implementation-report-{timestamp}.md`
-**Checkpoint:** `{WORK_DIR}/.smartspec-checkpoint.json`
-**Tasks file:** `{TASKS_FILE}`
+1. Use `/smartspec_implement_tasks` to implement or fix a group of tasks (e.g. a phase or range).
+2. Then use `/smartspec_verify_tasks_progress` to verify the broader state of the SPEC.
+3. Based on the verify report:
+   - Re-run `/smartspec_implement_tasks` for specific tasks or ranges.
+   - Or use `/smartspec_fix_errors` / `/smartspec_generate_tests` as suggested.
 
 ---
 
-## 🔍 Status Details
+## 10. Rules About Orchestrator Mode (KiloCode)
 
-{If completed_count > 0:}
-✅ **Completed:** {completed_task_ids}
+To avoid accidental or misleading mode switching:
 
-{If failed_count > 0:}
-❌ **Failed:** {failed_task_ids}
+1. `--kilocode` means: **“attempt to use Orchestrator Mode when available”**, not “guarantee Orchestrator Mode”.
 
-{If skipped_count > 0:}
-⏭️ **Skipped:** {skipped_task_ids}
+2. Orchestrator Mode is **only allowed** when the `--kilocode` flag is set.  
+   - If `--kilocode` is not set:
+     - The workflow may use **Standard Implementation Mode**, **Architect Mode**, and **Debug Mode** only.
+     - It must **not** route to Orchestrator as a hidden fallback.
 
+3. When `--kilocode` **is** set:
+   - The workflow MUST attempt to activate Orchestrator Mode for each task.
+   - If the underlying platform/tool **allows** Orchestrator:
+     - Use Orchestrator for task implementation and complex error-handling.
+   - If the platform/tool **blocks** Orchestrator (tool limit, quota, or similar):
+     - Log a clear warning for the user.
+     - Fall back to Standard Implementation Mode for that task (and continue the run).
+     - Do **not** silently claim Orchestrator is active when it is not.
+
+4. In irrecoverable failure cases (e.g., many consecutive task failures, but not platform/tool limits):
+   - The workflow should:
+     - Mark the relevant tasks as failed.
+     - Optionally stop the run after too many consecutive failures.
+     - Clearly report which tasks were not attempted and why in the final summary.
+
+This guarantees that:
+
+- Only KiloCode-aware usage (`--kilocode`) can trigger Orchestrator behavior.
+- The user is never misled about whether Orchestrator is actually in use.
+- If Orchestrator cannot be activated due to external limits, the run can still make progress via Standard Mode, and the fallback is clearly reported to the user.
 ---
-
-## ⏭️ Next Steps
-
-{If status == COMPLETE:}
-1. Review full report: `{report_file}`
-2. Run final validation
-3. Commit changes
-
-{If status == PARTIAL:}
-1. Review failed tasks in report
-2. Fix issues manually
-3. Resume: `/smartspec_implement_tasks {path} --resume`
-
-{If status == FAILED:}
-1. Check error details in report
-2. Fix critical issues
-3. Restart: `/smartspec_implement_tasks {path}`
-```
-
-**FINAL VERIFICATION:**
-```
-Processed tasks: {current_task_index}/{total_tasks}
-
-IF current_task_index == total_tasks:
-  ✅ SUCCESS - All tasks in FILTERED_TASKS were processed
-ELSE:
-  ❌ ERROR - Loop terminated early, not all tasks processed
-  ⚠️ This indicates a workflow execution error
-```
-
-## 9. Save Artifacts
-
-**STEP 1: Save implementation report to file (MANDATORY)**
-
-**Action:** Write the FULL report from section 8 to file
-- Path: `{WORK_DIR}/implementation-report-{timestamp}.md`
-- Content: Complete markdown report with all sections:
-  - Summary
-  - Completed Tasks (full list)
-  - Failed Tasks (full list with errors)
-  - Skipped Tasks (full list with reasons)
-  - Validation Status
-  - Files Modified
-  - Checkpoints Created
-  - Next Steps
-  - Resume Command
-
-**IMPORTANT:** This file contains the FULL detailed report
-
-**Save final checkpoint:**
-- Path: `{WORK_DIR}/.smartspec-checkpoint.json`
-- Content: Final checkpoint data
-
-**Update tasks.md:**
-- Update all checkboxes for completed tasks
-- Preserve all other content
-
-**Commit changes (optional):**
-```bash
-git add .
-git commit -m "Implement tasks {task_range}: {summary}"
-```
-
-## 10. Report to User
-
-**IMPORTANT: Return ONLY the compact summary from section 8 STEP 2**
-**DO NOT return the full report - it's already saved to file**
-
-**What to return:**
-- Use the compact summary template from section 8 STEP 2
-- Include: status, statistics, file paths, next steps
-- Keep it under 50 lines total
-
-**What NOT to return:**
-- Full list of completed tasks
-- Full list of failed tasks with error details
-- Full list of skipped tasks
-- Full validation details
-- Full file modification list
-
-**Reason:** Save context space and prevent context overflow
-
-✅ Validation Status:
-- Compilation: {compile_status}
-- Tests: {test_status}
-- Linting: {lint_status}
-
-📄 รายงานฉบับเต็ม: {report_path}
-💾 Checkpoint: {checkpoint_path}
-📋 Tasks อัปเดต: {tasks_path}
-
-{If incomplete:}
-🔄 ต่อไป:
-1. ตรวจสอบ tasks ที่ล้มเหลว: {failed_tasks}
-2. แก้ไขปัญหาด้วยตนเอง
-3. Resume ด้วย: `/smartspec_implement_tasks.md {path} --resume`
-
-{If complete:}
-🎉 ทุก tasks เสร็จสมบูรณ์!
-
-ขั้นตอนต่อไป:
-1. Review implementation
-2. Run integration tests
-3. Update documentation
-4. Deploy
-
----
-
-💡 Tips:
-- ใช้ `--validate-only` เพื่อตรวจสอบโดยไม่ implement
-- ใช้ `--phase X` เพื่อ implement เฉพาะ phase
-- ใช้ `--tasks T001-T010` เพื่อ implement เฉพาะ tasks
-- ใช้ `--resume` เพื่อ continue จาก checkpoint
-```
-
----
-
-Context: $ARGUMENTS

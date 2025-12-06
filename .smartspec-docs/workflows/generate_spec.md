@@ -173,7 +173,6 @@ Options:
   saas       - Scalability focused
   internal   - Lower requirements
 ```
-
 <br>
 
 # Domain Option Summary

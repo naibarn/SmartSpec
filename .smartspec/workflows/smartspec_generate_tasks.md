@@ -1,5 +1,5 @@
 ---
-description: Generate a SmartSpec v4.0 compliant tasks.md from a SPEC file with auto-detection of supporting files, auto-generation of supplementary documents, and full integration with the SmartSpec ecosystem. Supports custom SPEC_INDEX and dry-run mode.
+description: Generate a SmartSpec v5.0 compliant tasks.md from a SPEC file with auto-detection of supporting files (including Prisma schema), auto-generation of supplementary documents, Prisma ↔ OpenAPI consistency validation, and full integration with the SmartSpec ecosystem. Supports custom SPEC_INDEX and dry-run mode.
 handoffs:
   - label: Validate Tasks
     agent: smartspec.analyze
@@ -9,6 +9,34 @@ handoffs:
     agent: smartspec.kilo
     prompt: Generate the Kilo Code implementation prompt for this tasks.md
     send: true
+version: 5.0.1
+changelog: |
+  v5.0.1 (2024-12-06) - Hotfix: SPEC_INDEX Path Detection
+  - 🐛 Fixed: SPEC_INDEX detection now checks project root first
+  - ✅ Added: Multi-path auto-detection (5 locations)
+  - ✅ Fixed: Smart directory creation (only if needed)
+  - ✅ Added: User choice for SPEC_INDEX location
+  - ✅ Improved: Better logging and error messages
+  - Priority order: root → .smartspec/ → specs/ → alternatives
+  - No breaking changes - fully backward compatible
+  
+  v5.0 (2024-12-06) - Prisma Schema Consistency
+  - ✅ Added Prisma schema auto-detection (highest priority)
+  - ✅ Added Prisma parser (Section 3.1.5) to extract models and fields
+  - ✅ Enhanced openapi.yaml generation to use Prisma field names
+  - ✅ Added Prisma → OpenAPI type mapping
+  - ✅ Added schema consistency validation (Section 8.2.5)
+  - ✅ Added schema validation task template (Section 7.2.6)
+  - ✅ Added field name registry for canonical references
+  - ✅ Prevented field name transformations (creditAmount → credits)
+  - ✅ Added x-prisma-model metadata to OpenAPI schemas
+  - ✅ Added automated validation scripts
+  
+  v4.0 (Previous)
+  - Auto-detection of supporting files
+  - Auto-generation of missing documentation
+  - SPEC_INDEX integration
+  - Dry-run mode support
 ---
 
 ## User Input
@@ -64,28 +92,79 @@ Parse `$ARGUMENTS` to find `--specindex` parameter:
 - If found:
   - `SPEC_INDEX_PATH` = extracted path
   - Remove `--specindex="..."` from `$ARGUMENTS` for further processing
-- If not found:
-  - Check `.smartspec/Knowledge-Base.md` or `.smartspec/system_prompt.md` for default SPEC_INDEX path
-  - If specified in knowledge base, use that path
-  - Otherwise, use default: `SPEC_INDEX_PATH = ".smartspec/SPEC_INDEX.json"`
+- If not found, proceed to auto-detection (Step 1.1)
 
-**Step 2: Check and optionally create SPEC_INDEX (Enhanced with Auto-Creation)**
+**Step 1.1: Auto-detect SPEC_INDEX.json (if --specindex not provided)**
 
-Check if `SPEC_INDEX_PATH` exists:
+Try to find SPEC_INDEX.json in these locations (in order):
+
 ```bash
-test -f ${SPEC_INDEX_PATH} && echo "EXISTS" || echo "NOT_EXISTS"
+# Priority order for SPEC_INDEX detection:
+POSSIBLE_PATHS=(
+  "SPEC_INDEX.json"                    # 1. Project root (HIGHEST PRIORITY)
+  ".smartspec/SPEC_INDEX.json"         # 2. .smartspec directory
+  "specs/SPEC_INDEX.json"              # 3. specs directory
+  ".smartspec/spec-index.json"         # 4. Alternative name
+  "spec-index.json"                    # 5. Alternative name in root
+)
+
+SPEC_INDEX_PATH=""
+for path in "${POSSIBLE_PATHS[@]}"; do
+  if [ -f "$path" ]; then
+    SPEC_INDEX_PATH="$path"
+    echo "✅ Found SPEC_INDEX at: $path"
+    break
+  fi
+done
 ```
 
-If NOT_EXISTS:
-```
-1. ⚠️ WARNING: "SPEC_INDEX.json not found at: {SPEC_INDEX_PATH}"
-2. ❓ Ask user: "Create new SPEC_INDEX.json? [Y/n]"
+**If found:**
+- Use detected path
+- Log: `"📄 Using SPEC_INDEX: ${SPEC_INDEX_PATH}"`
+- Continue to Step 3
 
-3. If user confirms (Y):
-   a. Create .smartspec/ directory (if not exists):
-      mkdir -p .smartspec
+**If not found:**
+- Check `.smartspec/Knowledge-Base.md` or `.smartspec/system_prompt.md` for default path
+- If specified in knowledge base, use that path
+- Otherwise, use default: `SPEC_INDEX_PATH = "SPEC_INDEX.json"` (project root)
+- Continue to Step 2
+
+**Step 2: Handle missing SPEC_INDEX (Enhanced with Smart Creation)**
+
+If `SPEC_INDEX_PATH` doesn't exist:
+
+```
+1. ⚠️ WARNING: "SPEC_INDEX.json not found"
    
-   b. Create SPEC_INDEX.json with initial structure:
+2. 📍 Searched in:
+   - SPEC_INDEX.json (project root)
+   - .smartspec/SPEC_INDEX.json
+   - specs/SPEC_INDEX.json
+   - Other alternative paths
+   
+3. ❓ Ask user: "Where should I create SPEC_INDEX.json?"
+   Options:
+   [1] SPEC_INDEX.json (project root) - RECOMMENDED
+   [2] .smartspec/SPEC_INDEX.json
+   [3] Custom path
+   [n] Skip (continue without SPEC_INDEX)
+
+4. Based on user choice:
+
+   Option 1 or 2:
+   a. Set SPEC_INDEX_PATH to chosen location
+   
+   b. Create parent directory ONLY if needed:
+      # Check if directory exists
+      PARENT_DIR=$(dirname ${SPEC_INDEX_PATH})
+      if [ "$PARENT_DIR" != "." ] && [ ! -d "$PARENT_DIR" ]; then
+        echo "📁 Creating directory: $PARENT_DIR"
+        mkdir -p "$PARENT_DIR"
+      else
+        echo "✅ Directory already exists: $PARENT_DIR (no need to create)"
+      fi
+   
+   c. Create SPEC_INDEX.json with initial structure:
       {
         "version": "5.0",
         "created": "<current_timestamp>",
@@ -110,18 +189,24 @@ If NOT_EXISTS:
         }
       }
    
-   c. Add current spec to INDEX:
+   d. Add current spec to INDEX:
       - Extract spec ID, title, path from SPEC file
       - Add as first entry
       - Update metadata
    
-   d. Save SPEC_INDEX.json
+   e. Save SPEC_INDEX.json
    
-   e. Log: "✅ Created SPEC_INDEX.json with current spec"
+   f. Log: "✅ Created SPEC_INDEX at: ${SPEC_INDEX_PATH}"
    
-   f. Continue with tasks generation
-
-4. If user declines (n):
+   g. Continue with tasks generation
+   
+   Option 3 (Custom path):
+   a. Prompt: "Enter custom path (e.g., custom/spec-index.json):"
+   b. Validate path is not empty
+   c. Set SPEC_INDEX_PATH = custom path
+   d. Follow steps b-g from Option 1
+   
+   Option n (Skip):
    a. ⚠️ WARNING: "Continuing without SPEC_INDEX"
    b. ⚠️ "Dependency resolution will be skipped"
    c. Set SPEC_INDEX_AVAILABLE = false
@@ -237,30 +322,44 @@ Let `SPEC_DIR` = directory of `SPEC_PATH`.
 
 **Scan for these file patterns in `SPEC_DIR`:**
 
-1. **API Specifications:**
+1. **Prisma Schema (CRITICAL - HIGHEST PRIORITY):**
+   - `schema.prisma`
+   - `prisma/schema.prisma`
+   - `prisma/*.prisma`
+   - `database/schema.prisma`
+   - `models/schema.prisma`
+   
+   **Priority Note:**
+   - Prisma schema is the SOURCE OF TRUTH for data models
+   - If found, it takes precedence over data-model.md
+   - All API specs must use field names from Prisma
+
+2. **API Specifications:**
    - `api-spec.yaml` / `api-spec.json`
    - `openapi.yaml` / `openapi.json`
    - `swagger.yaml` / `swagger.json`
    - `contracts/*.yaml` / `contracts/*.json`
 
-2. **Data Models:**
+3. **Data Models:**
    - `data-model.md` / `data-models.md`
    - `schema.md` / `schemas.md`
    - `models/*.ts` / `models/*.json`
    - `types/*.ts`
+   
+   **Note:** If Prisma schema exists, data-model.md is secondary
 
-3. **Research & Documentation:**
+4. **Research & Documentation:**
    - `research.md` / `research/*.md`
    - `analysis.md`
    - `requirements.md`
    - `design.md`
 
-4. **Implementation Guides:**
+5. **Implementation Guides:**
    - `README.md` (implementation-specific)
    - `IMPLEMENTATION.md`
    - `SETUP.md`
 
-5. **Test Specifications:**
+6. **Test Specifications:**
    - `test-plan.md`
    - `test-cases.md`
    - `acceptance-criteria.md`
@@ -274,6 +373,7 @@ Let `SPEC_DIR` = directory of `SPEC_PATH`.
 **Step 1: List all detected files**
 ```
 SUPPORTING_FILES = {
+  prisma_schema: null,      // NEW: Highest priority
   api_specs: [],
   data_models: [],
   research: [],
@@ -286,6 +386,155 @@ SUPPORTING_FILES = {
 - Read content of each detected file
 - Extract key information for task generation
 - Store in memory for reference
+
+---
+
+## 3.1.5 Parse Prisma Schema (NEW - CRITICAL)
+
+**This section is MANDATORY if Prisma schema is detected.**
+
+**If Prisma schema detected in Step 1:**
+
+### Step 1: Read Prisma Schema
+
+```bash
+# Find and read Prisma schema
+PRISMA_PATH=$(find . -name "schema.prisma" -type f | head -1)
+cat "$PRISMA_PATH"
+```
+
+### Step 2: Parse Models and Fields
+
+Extract all models with their fields, types, and modifiers:
+
+```javascript
+// Example structure to build in memory
+PRISMA_MODELS = {
+  "User": {
+    fields: [
+      { 
+        name: "id", 
+        type: "String", 
+        modifiers: ["@id", "@default(cuid())"],
+        isOptional: false,
+        isArray: false
+      },
+      { 
+        name: "email", 
+        type: "String", 
+        modifiers: ["@unique"],
+        isOptional: false,
+        isArray: false
+      },
+      { 
+        name: "creditBalance", 
+        type: "Float", 
+        modifiers: ["@default(0)"],
+        isOptional: false,
+        isArray: false
+      }
+    ],
+    relations: [
+      { field: "transactions", model: "Transaction", type: "one-to-many" }
+    ]
+  },
+  "Transaction": {
+    fields: [
+      { name: "id", type: "String", modifiers: ["@id", "@default(cuid())"] },
+      { name: "userId", type: "String", modifiers: [] },
+      { name: "amount", type: "Float", modifiers: [] },
+      { name: "type", type: "String", modifiers: [] },
+      { name: "status", type: "String", modifiers: [] },
+      { name: "idempotencyKey", type: "String", modifiers: ["@unique"] },
+      { name: "metadata", type: "Json", modifiers: [], isOptional: true }
+    ],
+    relations: [
+      { field: "user", model: "User", type: "many-to-one" }
+    ]
+  },
+  "PromoCode": {
+    fields: [
+      { name: "id", type: "String", modifiers: ["@id", "@default(cuid())"] },
+      { name: "code", type: "String", modifiers: ["@unique"] },
+      { name: "creditAmount", type: "Float", modifiers: [] },
+      { name: "usageLimit", type: "Int", modifiers: [] },
+      { name: "usedCount", type: "Int", modifiers: ["@default(0)"] }
+    ],
+    relations: []
+  }
+}
+```
+
+### Step 3: Create Field Name Registry
+
+Build canonical field name mapping:
+
+```javascript
+FIELD_NAME_REGISTRY = {
+  "User": {
+    canonical_fields: ["id", "email", "creditBalance", "createdAt"],
+    type_mapping: {
+      "id": { prisma: "String", openapi: "string", format: "uuid" },
+      "email": { prisma: "String", openapi: "string", format: "email" },
+      "creditBalance": { prisma: "Float", openapi: "number", format: "float" }
+    }
+  },
+  "PromoCode": {
+    canonical_fields: ["id", "code", "creditAmount", "usageLimit", "usedCount"],
+    type_mapping: {
+      "creditAmount": { prisma: "Float", openapi: "number", format: "float" },
+      "usageLimit": { prisma: "Int", openapi: "integer", format: "int32" },
+      "usedCount": { prisma: "Int", openapi: "integer", format: "int32" }
+    }
+  }
+}
+```
+
+### Step 4: Prisma Type → OpenAPI Type Mapping
+
+**Standard Type Mappings:**
+
+| Prisma Type | OpenAPI Type | Format | Notes |
+|-------------|--------------|--------|-------|
+| String      | string       | -      | Default string |
+| Int         | integer      | int32  | 32-bit integer |
+| BigInt      | integer      | int64  | 64-bit integer |
+| Float       | number       | float  | Single precision |
+| Decimal     | number       | double | Double precision |
+| Boolean     | boolean      | -      | True/false |
+| DateTime    | string       | date-time | ISO 8601 |
+| Json        | object       | -      | JSON object |
+| Bytes       | string       | binary | Binary data |
+
+### Step 5: Validate Against SPEC
+
+Check for inconsistencies:
+
+```bash
+# Check if SPEC mentions different field names
+if SPEC contains "credits" but Prisma has "creditAmount":
+  ⚠️ WARNING: "SPEC uses 'credits' but Prisma schema uses 'creditAmount'"
+  ⚠️ "Generated tasks will use Prisma field name: 'creditAmount'"
+  ⚠️ "Consider updating SPEC for consistency"
+```
+
+### Step 6: Store Prisma Context
+
+```javascript
+PRISMA_CONTEXT = {
+  schema_path: "[path to schema.prisma]",
+  models: PRISMA_MODELS,
+  field_registry: FIELD_NAME_REGISTRY,
+  is_source_of_truth: true,
+  use_for_api_generation: true
+}
+```
+
+**Critical Rules:**
+- ✅ Prisma field names are CANONICAL - must be used exactly in API specs
+- ✅ No field name transformations allowed (creditAmount → credits) ❌
+- ✅ All generated schemas must reference Prisma as source
+- ✅ Any conflicts → Prisma wins
 
 ---
 
@@ -334,7 +583,7 @@ For each file in `MISSING_SUPPORT_FILES` with `auto_generate: true`:
 
 **Generated:** YYYY-MM-DD
 **Source:** [SPEC-ID]
-**Author:** SmartSpec Architect v4.0
+**Author:** SmartSpec Architect v5.0
 
 ## Overview
 
@@ -388,7 +637,7 @@ For each file in `MISSING_SUPPORT_FILES` with `auto_generate: true`:
 
 **Generated:** YYYY-MM-DD
 **Source:** [SPEC-ID]
-**Author:** SmartSpec Architect v4.0
+**Author:** SmartSpec Architect v5.0
 
 ## Overview
 
@@ -438,50 +687,384 @@ CREATE TABLE [entity] (
 **Note:** This is an auto-generated model. Validate and refine during implementation.
 ```
 
-### 3.3.3 Generate openapi.yaml
+### 3.3.3 Generate openapi.yaml (ENHANCED WITH PRISMA SYNC)
+
+**CRITICAL RULE: Field Name Consistency**
+
+**🚨 MANDATORY: Source Priority for Field Names**
+1. **If Prisma schema exists** → Use Prisma field names (SOURCE OF TRUTH)
+2. **If data-model.md exists** → Use data-model field names
+3. **If only SPEC exists** → Derive from SPEC descriptions
+
+**Prisma Type → OpenAPI Type Mapping:**
+```yaml
+# Use mappings from Section 3.1.5
+String → { type: "string" }
+Int → { type: "integer", format: "int32" }
+BigInt → { type: "integer", format: "int64" }
+Float → { type: "number", format: "float" }
+Decimal → { type: "number", format: "double" }
+Boolean → { type: "boolean" }
+DateTime → { type: "string", format: "date-time" }
+Json → { type: "object" }
+Bytes → { type: "string", format: "binary" }
+```
 
 **If SPEC defines REST API:**
 
 ```yaml
 # Auto-generated OpenAPI Specification
 # Source: [SPEC-ID]
+# Prisma Schema: [path to schema.prisma] (if exists)
 # Generated: YYYY-MM-DD
-# Author: SmartSpec Architect v4.0
+# Author: SmartSpec Architect v5.0
 
 openapi: 3.0.0
 info:
   title: [API Title from SPEC]
   version: [Version from SPEC]
-  description: [Description from SPEC]
+  description: |
+    [Description from SPEC]
+    
+    ⚠️ IMPORTANT: Field Name Consistency
+    This API uses field names directly from the Prisma schema.
+    Database fields = API request/response fields (no transformation).
+    
+    Source: [path to schema.prisma]
 
 servers:
   - url: http://localhost:3000
     description: Development server
+  - url: https://staging.example.com
+    description: Staging server
+  - url: https://api.example.com
+    description: Production server
 
 paths:
-  [Generate paths based on SPEC API descriptions]:
-    [method]:
-      summary: [From SPEC]
-      description: [From SPEC]
-      parameters:
-        - [Extract from SPEC]
+  # Generate paths based on SPEC API descriptions
+  
+  /api/v1/promo-codes:
+    post:
+      summary: Create promo code
+      description: Create a new promotional code for credit distribution
+      tags:
+        - Promo Codes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromoCodeCreate'
       responses:
-        '200':
-          description: Success
+        '201':
+          description: Promo code created successfully
           content:
             application/json:
               schema:
-                [From SPEC or data-model]
+                $ref: '#/components/schemas/PromoCode'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Promo code already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    get:
+      summary: List promo codes
+      description: Retrieve list of all promo codes
+      tags:
+        - Promo Codes
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of promo codes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PromoCode'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+  
+  /api/v1/promo-codes/{code}/redeem:
+    post:
+      summary: Redeem promo code
+      description: Apply promo code to user account
+      tags:
+        - Promo Codes
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+      responses:
+        '200':
+          description: Promo code redeemed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  creditAmount:
+                    type: number
+                  newBalance:
+                    type: number
+        '404':
+          description: Promo code not found
+        '410':
+          description: Promo code expired or usage limit reached
 
 components:
   schemas:
-    [Generate from SPEC and data-model]
+    # 🚨 CRITICAL: Use exact field names from Prisma schema
+    # NO transformations allowed (e.g., creditAmount → credits)
+    
+    PromoCode:
+      type: object
+      required:
+        - code
+        - creditAmount      # ✅ From Prisma (NOT "credits")
+        - usageLimit        # ✅ From Prisma (NOT "maxUses")
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier (from Prisma @id @default(cuid()))
+          readOnly: true
+        code:
+          type: string
+          description: Unique promo code
+          example: "SAVE20"
+        creditAmount:       # ✅ EXACT match from Prisma
+          type: number
+          format: float
+          minimum: 0
+          description: Credit amount to grant (from Prisma Float)
+          example: 100.50
+        usageLimit:         # ✅ EXACT match from Prisma
+          type: integer
+          format: int32
+          minimum: 1
+          description: Maximum number of redemptions (from Prisma Int)
+          example: 100
+        usedCount:
+          type: integer
+          format: int32
+          minimum: 0
+          default: 0
+          description: Current redemption count (from Prisma Int @default(0))
+          readOnly: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Expiration timestamp (from Prisma DateTime?)
+          example: "2024-12-31T23:59:59Z"
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          readOnly: true
+      
+      # Metadata for traceability
+      x-prisma-model: PromoCode
+      x-prisma-source: prisma/schema.prisma
+      x-field-mapping: canonical (no transformation)
+    
+    PromoCodeCreate:
+      type: object
+      required:
+        - code
+        - creditAmount
+        - usageLimit
+      properties:
+        code:
+          type: string
+          minLength: 3
+          maxLength: 50
+        creditAmount:       # ✅ Same as Prisma
+          type: number
+          format: float
+          minimum: 0
+        usageLimit:         # ✅ Same as Prisma
+          type: integer
+          format: int32
+          minimum: 1
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+      x-prisma-model: PromoCode
+      x-operation: create
+    
+    User:
+      type: object
+      required:
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+        creditBalance:      # ✅ From Prisma (NOT "balance" or "credits")
+          type: number
+          format: float
+          default: 0
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+      x-prisma-model: User
+      x-prisma-source: prisma/schema.prisma
+    
+    Transaction:
+      type: object
+      required:
+        - userId
+        - amount
+        - type
+        - status
+        - idempotencyKey
+      properties:
+        id:
+          type: string
+          readOnly: true
+        userId:
+          type: string
+        amount:
+          type: number
+          format: float
+        type:
+          type: string
+          enum: [credit, debit]
+        status:
+          type: string
+          enum: [pending, completed, failed, cancelled]
+        idempotencyKey:     # ✅ From Prisma (NOT "idempotency_key")
+          type: string
+        metadata:
+          type: object
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+      x-prisma-model: Transaction
+      x-prisma-source: prisma/schema.prisma
+    
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+          nullable: true
   
   securitySchemes:
-    [From SPEC Security section]
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from authentication endpoint
 
-# Note: Auto-generated. Review and complete during implementation.
+security:
+  - bearerAuth: []
+
+# VALIDATION NOTES:
+# 1. All field names match Prisma schema exactly
+# 2. All types mapped according to Prisma → OpenAPI rules
+# 3. No camelCase ↔ snake_case transformations
+# 4. Review and validate during implementation
+# 5. Use validation script: npm run validate:schemas
 ```
+
+**Post-Generation Validation:**
+```bash
+# Check field name consistency
+echo "Validating field names against Prisma schema..."
+
+# Extract field names from Prisma
+grep -A 20 "model PromoCode" prisma/schema.prisma | \
+  grep "^\s\+\w\+" | \
+  awk '{print $1}' | sort > /tmp/prisma-fields.txt
+
+# Extract field names from OpenAPI
+grep -A 30 "PromoCode:" openapi.yaml | \
+  grep "^\s\+[a-z]" | \
+  awk '{print $1}' | sed 's/://g' | sort > /tmp/openapi-fields.txt
+
+# Compare
+diff /tmp/prisma-fields.txt /tmp/openapi-fields.txt && \
+  echo "✅ Field names match exactly" || \
+  echo "❌ CRITICAL: Field name mismatch detected - FIX IMMEDIATELY"
+```
+
+**Critical Reminders:**
+- ✅ **Always use Prisma field names** - they are canonical
+- ✅ **No transformations** - creditAmount stays creditAmount
+- ✅ **Add x-prisma-model metadata** - for traceability
+- ✅ **Validate after generation** - use diff checks above
+- ✅ **Document source** - reference schema.prisma in spec
 
 ### 3.3.4 Generate test-plan.md
 
@@ -492,7 +1075,7 @@ components:
 
 **Generated:** YYYY-MM-DD
 **Source:** [SPEC-ID]
-**Author:** SmartSpec Architect v4.0
+**Author:** SmartSpec Architect v5.0
 
 ## Test Strategy
 
@@ -738,7 +1321,7 @@ For auto-generated supporting files:
 # Implementation Tasks - [Project Name]
 
 **Generated:** YYYY-MM-DD HH:mm
-**Author:** SmartSpec Architect v4.0
+**Author:** SmartSpec Architect v5.0
 **Source SPEC:** [SPEC-ID] v[Version]
 **SPEC Path:** [Relative path to spec.md]
 **SPEC_INDEX:** [Path used]
@@ -953,6 +1536,132 @@ If ANY checkbox fails: **SPLIT THE TASK**
 - Total subtasks per task: 2-6
 - If >6 subtasks needed: Split parent task
 
+### 7.2.6 Schema Synchronization Tasks (NEW - CRITICAL)
+
+**For projects with Prisma + API (openapi.yaml):**
+
+**MANDATORY: Add schema validation task to ensure Prisma ↔ OpenAPI consistency**
+
+**Task Template:**
+
+```markdown
+- [ ] **T0XX: Validate Schema Consistency** (2h)
+
+  **Description:**
+  Ensure Prisma schema and OpenAPI spec use identical field names.
+  Prevent runtime errors from field name mismatches between database and API.
+  This validation must pass before any API implementation begins.
+  
+  **Subtasks:**
+  - [ ] T0XX.1: Create schema validation script (1.5h)
+    - Description: Build TypeScript/Node.js script to parse and compare schemas
+    - Files: `scripts/validate-schemas.ts`
+  - [ ] T0XX.2: Integrate into CI/CD pipeline (0.5h)
+    - Description: Add validation step to GitHub Actions / CI workflow
+    - Files: `.github/workflows/ci.yml` or equivalent
+  
+  **Files:**
+  
+  **CREATE: `scripts/validate-schemas.ts`** (~300 lines - MEDIUM)
+  - Parse Prisma schema file (prisma/schema.prisma)
+  - Extract all models with fields, types, modifiers
+  - Parse OpenAPI spec (openapi.yaml or openapi.json)
+  - Extract all component schemas with properties
+  - Compare field names for exact matches
+  - Compare type mappings (Prisma type → OpenAPI type)
+  - Generate detailed error report for mismatches
+  - Exit with error code if inconsistencies found
+  - Strategy: Iterative build (parser → comparator → reporter)
+  
+  **EDIT: `package.json`** (add 1-2 lines - SMALL)
+  - Location: "scripts" section
+  - Changes: Add "validate:schemas": "ts-node scripts/validate-schemas.ts"
+  - Strategy: Simple addition
+  
+  **EDIT: `.github/workflows/ci.yml`** (add 3-5 lines - SMALL)
+  - Location: After test step
+  - Changes: Add schema validation job
+  ```yaml
+  - name: Validate Schema Consistency
+    run: npm run validate:schemas
+  ```
+  - Strategy: Insert new step
+  
+  **CREATE: `scripts/README.md`** (~50 lines - SMALL)
+  - Document validation script usage
+  - Explain Prisma → OpenAPI type mappings
+  - Provide troubleshooting guide
+  - Strategy: Full creation
+  
+  **Dependencies:**
+  - Prisma schema must exist
+  - OpenAPI spec must be generated
+  - ts-node and yaml packages installed
+  
+  **Acceptance Criteria:**
+  - [ ] Script successfully parses Prisma schema
+  - [ ] Script successfully parses OpenAPI spec (YAML/JSON)
+  - [ ] All model names match between Prisma and OpenAPI
+  - [ ] All field names match exactly (no transformations)
+  - [ ] All type mappings validated correctly
+  - [ ] Clear error messages for any mismatches
+  - [ ] Script exits with code 0 if consistent, 1 if errors
+  - [ ] Script integrated in CI/CD pipeline
+  - [ ] CI fails if schemas inconsistent
+  - [ ] Documentation complete
+  
+  **Validation:**
+  ```bash
+  # Install dependencies
+  npm install --save-dev ts-node yaml @types/node
+  
+  # Run validation
+  npm run validate:schemas
+  
+  # Expected output if consistent:
+  # 🔍 Validating schema consistency...
+  # 📋 Checking User...
+  # 📋 Checking PromoCode...
+  # 📋 Checking Transaction...
+  # ✅ All schemas are consistent!
+  
+  # Test CI integration
+  git add .
+  git commit -m "test: add schema validation"
+  git push  # CI should run validation
+  ```
+  
+  **Expected Outcome:**
+  - Automated validation prevents field name mismatches
+  - CI catches schema inconsistencies before deployment
+  - Developers get clear feedback on schema changes
+  - Database and API always use same field names
+
+---
+```
+
+**Placement Guidelines:**
+- Place this task in **Phase 2** (Database & Models) or **Phase 3** (after both Prisma and OpenAPI are created)
+- Must complete BEFORE any API controller/service implementation begins
+- Should be one of first tasks after schema/API spec creation
+
+**Example Placement in tasks.md:**
+```markdown
+## Phase 2: Database Schema & Core Models (T011-T020)
+
+- [ ] T015: Create Prisma Schema (4h)
+  [... task details ...]
+
+- [ ] T016: Generate OpenAPI Spec (3h)
+  [... task details ...]
+
+- [ ] T017: Validate Schema Consistency (2h)  ← ADD HERE
+  [... use template above ...]
+
+- [ ] T018: Create Database Migrations (2h)
+  [... task details ...]
+```
+
 ### 7.3 Task Details Best Practices
 
 **File Size Awareness:**
@@ -1070,6 +1779,221 @@ Structure:
 - ✅ All checkpoints present
 - ✅ All spec references resolved with paths
 - ✅ Supporting files referenced where needed
+
+### 8.2.5 Schema Consistency Check (NEW - CRITICAL)
+
+**🚨 MANDATORY if Prisma schema exists:**
+
+This validation ensures that database schema (Prisma) and API schema (OpenAPI) use identical field names to prevent runtime errors.
+
+**Pre-Generation Validation:**
+
+Before finalizing tasks.md, verify:
+
+```bash
+# Step 1: Verify Prisma schema exists
+if [ -f "prisma/schema.prisma" ]; then
+  echo "✅ Prisma schema found"
+else
+  echo "⏭️ No Prisma schema - skipping validation"
+  exit 0
+fi
+
+# Step 2: Verify OpenAPI spec exists or will be generated
+if [ -f "openapi.yaml" ] || [ -f "openapi.json" ] || grep -q "openapi.yaml" tasks.md; then
+  echo "✅ OpenAPI spec exists or will be generated"
+else
+  echo "⚠️ WARNING: No OpenAPI spec - consider adding if API exists"
+fi
+
+# Step 3: Extract models from Prisma
+echo "📊 Prisma Models:"
+grep "^model " prisma/schema.prisma | awk '{print "  -", $2}'
+
+# Step 4: Quick field name check (for generated openapi.yaml)
+if [ -f "openapi.yaml" ]; then
+  echo "📊 OpenAPI Schemas:"
+  grep "^\s\+[A-Z].*:" openapi.yaml | sed 's/://g' | awk '{print "  -", $1}'
+  
+  # Check for common mismatches
+  echo ""
+  echo "🔍 Checking for common field name issues..."
+  
+  # Example: creditAmount vs credits
+  if grep -q "creditAmount" prisma/schema.prisma && grep -q '"credits"' openapi.yaml; then
+    echo "❌ CRITICAL: Found 'creditAmount' in Prisma but 'credits' in OpenAPI"
+    echo "   FIX: Use 'creditAmount' in OpenAPI (exact match from Prisma)"
+    exit 1
+  fi
+  
+  # Example: usageLimit vs maxUses
+  if grep -q "usageLimit" prisma/schema.prisma && grep -q '"maxUses"' openapi.yaml; then
+    echo "❌ CRITICAL: Found 'usageLimit' in Prisma but 'maxUses' in OpenAPI"
+    echo "   FIX: Use 'usageLimit' in OpenAPI (exact match from Prisma)"
+    exit 1
+  fi
+  
+  # Example: idempotencyKey vs idempotency_key
+  if grep -q "idempotencyKey" prisma/schema.prisma && grep -q '"idempotency_key"' openapi.yaml; then
+    echo "❌ CRITICAL: Found 'idempotencyKey' in Prisma but 'idempotency_key' in OpenAPI"
+    echo "   FIX: Use 'idempotencyKey' in OpenAPI (exact match from Prisma)"
+    exit 1
+  fi
+  
+  echo "✅ No obvious field name mismatches found"
+fi
+```
+
+**Comprehensive Validation Checklist:**
+
+When both Prisma schema and OpenAPI spec exist:
+
+- [ ] ✅ All models in Prisma have corresponding schemas in OpenAPI
+- [ ] ✅ All field names in OpenAPI match Prisma exactly (case-sensitive)
+- [ ] ✅ All Prisma types correctly mapped to OpenAPI types:
+  - String → string
+  - Int → integer (format: int32)
+  - Float → number (format: float)
+  - Decimal → number (format: double)
+  - Boolean → boolean
+  - DateTime → string (format: date-time)
+  - Json → object
+- [ ] ✅ Required fields match (Prisma fields without ? → OpenAPI required array)
+- [ ] ✅ Optional fields match (Prisma fields with ? → OpenAPI nullable or not in required)
+- [ ] ✅ Default values documented in OpenAPI descriptions
+- [ ] ✅ No field transformations (camelCase → snake_case) ❌
+- [ ] ✅ x-prisma-model metadata added to all schemas
+- [ ] ✅ x-prisma-source documented in OpenAPI
+
+**Validation Script Check:**
+
+Verify that tasks.md includes schema validation task:
+
+```bash
+# Check if validation task exists in tasks.md
+if grep -q "Validate Schema Consistency" tasks.md; then
+  echo "✅ Schema validation task found in tasks.md"
+  
+  # Verify it's placed appropriately (after schema creation, before API implementation)
+  if grep -B 5 "Validate Schema Consistency" tasks.md | grep -q "Phase [2-3]"; then
+    echo "✅ Validation task in correct phase (2 or 3)"
+  else
+    echo "⚠️ WARNING: Validation task may be in wrong phase"
+    echo "   Recommend: Place in Phase 2 or 3, after schema creation"
+  fi
+else
+  echo "❌ CRITICAL: Schema validation task missing from tasks.md"
+  echo "   FIX: Add validation task from Section 7.2.6 template"
+  echo "   Placement: Phase 2 or 3, after Prisma + OpenAPI creation"
+  exit 1
+fi
+```
+
+**Field Name Validation Table:**
+
+Document all model fields to ensure consistency:
+
+```markdown
+## Schema Field Mapping (Auto-Generated)
+
+### PromoCode Model
+
+| Prisma Field    | Type    | OpenAPI Property | Type            | Status |
+|-----------------|---------|------------------|-----------------|--------|
+| id              | String  | id               | string (uuid)   | ✅     |
+| code            | String  | code             | string          | ✅     |
+| creditAmount    | Float   | creditAmount     | number (float)  | ✅     |
+| usageLimit      | Int     | usageLimit       | integer (int32) | ✅     |
+| usedCount       | Int     | usedCount        | integer (int32) | ✅     |
+| expiresAt       | DateTime? | expiresAt      | string (date-time) | ✅  |
+
+### User Model
+
+| Prisma Field    | Type    | OpenAPI Property | Type            | Status |
+|-----------------|---------|------------------|-----------------|--------|
+| id              | String  | id               | string (uuid)   | ✅     |
+| email           | String  | email            | string (email)  | ✅     |
+| creditBalance   | Float   | creditBalance    | number (float)  | ✅     |
+| createdAt       | DateTime | createdAt       | string (date-time) | ✅  |
+
+### Transaction Model
+
+| Prisma Field    | Type    | OpenAPI Property | Type            | Status |
+|-----------------|---------|------------------|-----------------|--------|
+| id              | String  | id               | string          | ✅     |
+| userId          | String  | userId           | string          | ✅     |
+| amount          | Float   | amount           | number (float)  | ✅     |
+| type            | String  | type             | string (enum)   | ✅     |
+| status          | String  | status           | string (enum)   | ✅     |
+| idempotencyKey  | String  | idempotencyKey   | string          | ✅     |
+| metadata        | Json?   | metadata         | object          | ✅     |
+
+**Legend:**
+- ✅ = Field names match exactly
+- ❌ = Mismatch detected (MUST FIX)
+- ⚠️ = Partial match (review needed)
+```
+
+**Automated Validation Commands:**
+
+Add these to tasks.md validation sections:
+
+```bash
+# Full schema consistency check
+npm run validate:schemas
+
+# Quick field name check (manual)
+for model in User PromoCode Transaction; do
+  echo "Checking $model..."
+  
+  # Prisma fields
+  awk "/^model $model/,/^}/" prisma/schema.prisma | \
+    grep "^\s\+[a-z]" | \
+    awk '{print $1}' | sort > /tmp/prisma-$model.txt
+  
+  # OpenAPI properties
+  awk "/$model:/,/x-prisma/" openapi.yaml | \
+    grep "^\s\+[a-z]" | \
+    awk '{print $1}' | sed 's/://g' | sort > /tmp/openapi-$model.txt
+  
+  # Compare
+  if diff /tmp/prisma-$model.txt /tmp/openapi-$model.txt > /dev/null; then
+    echo "  ✅ $model: All fields match"
+  else
+    echo "  ❌ $model: Field mismatch detected"
+    echo "     Differences:"
+    diff /tmp/prisma-$model.txt /tmp/openapi-$model.txt
+    exit 1
+  fi
+done
+
+echo ""
+echo "✅ All schemas consistent!"
+```
+
+**Post-Validation Actions:**
+
+If validation fails:
+
+1. ⚠️ **STOP** - Do not proceed with generation
+2. 📋 **Report** inconsistencies to user with clear examples
+3. 🔧 **Suggest** corrections:
+   ```
+   Found: "credits" in OpenAPI
+   Should be: "creditAmount" (from Prisma)
+   
+   Found: "maxUses" in OpenAPI
+   Should be: "usageLimit" (from Prisma)
+   ```
+4. 🔄 **Regenerate** OpenAPI spec with corrected field names
+5. ✅ **Re-validate** until all checks pass
+
+**Critical Rules:**
+- ✅ Prisma schema is SOURCE OF TRUTH for field names
+- ✅ Zero tolerance for field name mismatches
+- ✅ Validation MUST pass before tasks.md finalization
+- ✅ Include validation in CI/CD pipeline
+- ✅ Document all mappings in tasks.md
 
 ---
 

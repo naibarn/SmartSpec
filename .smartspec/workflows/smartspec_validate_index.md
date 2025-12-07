@@ -40,7 +40,7 @@ This workflow is compatible with SmartSpec centralization:
 
 ## Flags
 
-- `--index` Path to SPEC_INDEX.json  
+- `--index` Path to SPEC_INDEX.json   
   default: `.spec/SPEC_INDEX.json`
 
 - `--output` Output report path (optional)  

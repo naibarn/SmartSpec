@@ -13,28 +13,9 @@ Typical usage:
 ```bash
 /smartspec_verify_tasks_progress specs/feature/spec-004-financial-system/tasks.md
 /smartspec_verify_tasks_progress specs/feature/spec-004-financial-system/tasks.md --tasks T001-T020
-/smartspec_verify_tasks_progress specs/feature/spec-004-financial-system/tasks.md --phase 3
-/smartspec_verify_tasks_progress specs/feature/spec-004-financial-system/tasks.md --start-from T031
-/smartspec_verify_tasks_progress specs/feature/spec-004-financial-system/tasks.md --no-update
 ```
 
-> This workflow is **verification-only**. It must **never attempt to fix code** or auto-implement missing work. There are separate workflows (e.g. `/smartspec_implement_tasks`, `/smartspec_fix_errors`, `/smartspec_generate_tests`) responsible for making code changes.
-
-### Non-Goals (Critical Guardrails)
-
-This workflow must **never**:
-
-- Switch into Orchestrator Mode.
-- Use or require `--kilocode`.
-- Read or execute any KiloCode prompt templates.
-- Generate, refactor, or fix source code.
-- Change project status lines, phase headers, estimates, or acceptance criteria in `tasks.md`.
-- Add new tasks, subtasks, checkpoints, or renumber existing tasks.
-  - Example prohibited behavior: inserting a new item like `T031-A`.
-- Auto-uncheck tasks that fail verification.
-- Modify any file outside:
-  - The generated progress report, and
-  - (Optionally) the **checkbox markers** on existing `- [ ] / - [x]` task lines in `tasks.md`.
+> This workflow is **verification-only**. It must **never attempt to fix code** or auto-implement missing work. There are separate workflows (e.g. `/smartspec_implement_tasks`, `/smartspec_fix_errors`) responsible for making code changes.
 
 ---
 
@@ -98,14 +79,9 @@ Parse the following flags:
 
 - `--start-from <TASK_ID>` (optional)
   - Verify tasks starting from this ID (inclusive), based on order in `tasks.md`.
-  - Unlike implement workflows, **verification does not stop after one task**. It continues through the end of the filtered scope.
 
 - `--phase <PHASE_NAME_OR_ID>` (optional)
   - Only verify tasks in the specified phase (if phases are defined in `tasks.md`).
-  - Supports:
-    - Single phase number: `--phase 3`
-    - Comma-separated: `--phase 1,2,3`
-    - Ranges: `--phase 1-3`
 
 - `--output <PATH>` (optional)
   - Custom output path for the progress report.
@@ -117,12 +93,7 @@ Parse the following flags:
 - `--strict` (optional)
   - Use stricter rules to determine completion (e.g., require all validation commands and all acceptance criteria to pass).
 
-> This workflow does **not** support `--kilocode`.  
-> If such a flag is present, it must be ignored and produce a clear warning:
->
-> ```text
-> ⚠️ Ignoring --kilocode: smartspec_verify_tasks_progress is verification-only.
-> ```
+> This workflow does **not** support `--kilocode`. If such a flag is present, it must be ignored or produce a clear warning.
 
 Store parsed options:
 
@@ -130,7 +101,7 @@ Store parsed options:
 options = {
   "task_selector_raw": "...",   # from --tasks/--task
   "start_from": "T010" or None,
-  "phase": "3" or None,         # raw phase selector
+  "phase": "Phase 2" or None,
   "output": "custom-path.md" or None,
   "no_update": bool,
   "strict": bool,
@@ -153,23 +124,6 @@ Result:
 selected_task_ids = ["T001", "T002", "T003", ...]
 ```
 
-### 1.4 Parse Phase Selector
-
-If `options["phase"]` is provided:
-
-1. Normalize whitespace.
-2. Accept formats:
-   - `3`
-   - `1,2,3`
-   - `1-3`
-3. Expand to a list of phase IDs as strings:
-
-```python
-selected_phase_ids = ["1", "2", "3"]
-```
-
-Match these against phase headers in `tasks.md` that begin with `Phase <N>`.
-
 ---
 
 ## 2. Parse tasks.md
@@ -179,7 +133,6 @@ Parse `tasks.md` into a structured list of phases and tasks.
 For each task `T00X`, extract:
 
 - `phase` (e.g., `"Phase 1: Foundation"`)
-- `phase_id` (e.g., `"1"`, if detectable)
 - `id` (e.g., `"T001"`)
 - `title`
 - `description` (optional)
@@ -212,7 +165,6 @@ Return structure:
 tasks = [
   {
     "phase": "Phase 1: Foundation",
-    "phase_id": "1",
     "id": "T001",
     "title": "Initialize Promo System",
     "description": "...",
@@ -244,13 +196,13 @@ If `selected_task_ids` is not empty:
 If `options["start_from"]` is set:
 
 - Find the first index `i` where `tasks[i].id == start_from`.
-- Keep tasks from `i` onward **within the current selector constraints**.
+- Keep tasks from `i` onward.
 
 ### 3.3 Apply `--phase`
 
-If `selected_phase_ids` is not empty:
+If `options["phase"]` is set:
 
-- Keep only tasks whose `phase_id` is in the list OR whose `phase` header matches the selected IDs.
+- Keep only tasks whose `phase` matches the given phase name or ID (case-insensitive comparison or pattern matching).
 
 The final ordered list is `FILTERED_TASKS`.
 
@@ -311,9 +263,6 @@ Rules:
 
 - For `CREATE`: file must exist to count as satisfied.
 - For `EDIT`: file must exist **and** have been modified since the task was created (to avoid counting pre-existing files from other specs).
-- If task metadata does not include a reliable creation date, fall back to:
-  - Git history if available, or
-  - A conservative heuristic (e.g., require explicit file references in the task description).
 
 ### 4.2 Run Validation Commands
 
@@ -390,7 +339,7 @@ Completion rules:
   - `is_complete = all_files_ok and all_validation_passed and all_criteria_met`
 - In default mode:
   - `is_complete = all_files_ok and all_criteria_met`
-  - Validation failures should be highlighted and may be treated as incomplete when they block usable delivery.
+  - Validation failures may mark the task as incomplete (recommended).
 
 Set status:
 
@@ -488,12 +437,13 @@ Otherwise:
 
 **Summary:**  
 - If `task.is_complete`: `Task is fully implemented and passes all checks under current rules.`  
-- If not: include `task.error_summary`.
+- If not: include `task.error_summary`, e.g.  
+  `Task is incomplete: TypeScript compile errors remain in src/middleware/auth.ts and tests are failing.`
 ```
 
 ### 5.4 Explicit Incomplete/Error Tasks Section
 
-This section is critical: it clearly lists tasks that are **not complete or have errors**, without attempting to fix anything.
+This section is critical for your request: it clearly lists tasks that are **not complete or have errors**, without attempting to fix anything.
 
 ```markdown
 ## 🚧 Incomplete or Error Tasks (Verification Only)
@@ -516,8 +466,8 @@ No code has been changed; this section is for visibility and planning.
   - Reason: {task.error_summary}
 ```
 
-> This section is **pure reporting**.  
-> It must not trigger any edits to tasks.md beyond checkbox marking for newly verified completions.
+> This section is **pure reporting**. It does not change any files.  
+> To actually fix these tasks, the user should run the appropriate implementation/fix workflows.
 
 ### 5.5 Blockers & Recommendations Section
 
@@ -582,34 +532,21 @@ For each verified task `task`:
     ⚠️ T001 is marked complete in tasks.md but verification failed. Please review manually.
     ```
 
-#### Hard Safety Constraint
-
-The workflow must ensure it does **not** alter any other text.
-
-Implementation must:
-
-- Locate only exact checkbox markers for existing task IDs.
-- Preserve all other content byte-for-byte (including front-matter, headings, estimates, notes, and phase summaries).
-
-A safer implementation sketch:
+Implementation sketch:
 
 ```python
 if not options["no_update"]:
-    lines = read_lines(TASKS_FILE)
+    with open(TASKS_FILE, "r", encoding="utf-8") as f:
+        content = f.read()
 
-    for i, line in enumerate(lines):
-        m = re.match(r"^- \[( |x)\] (T\d{3}):", line)
-        if not m:
-            continue
+    for task in tasks:
+        if task.is_complete and task.checkbox_state == "unchecked":
+            pattern = f"- [ ] {task.id}:"
+            replacement = f"- [x] {task.id}:"
+            content = content.replace(pattern, replacement)
 
-        task_id = m.group(2)
-        task = task_map.get(task_id)
-
-        if task and task.is_complete and m.group(1) == " ":
-            # Replace only the bracket character position
-            lines[i] = line.replace("- [ ] " + task_id + ":", "- [x] " + task_id + ":", 1)
-
-    write_lines(TASKS_FILE, lines)
+    with open(TASKS_FILE, "w", encoding="utf-8") as f:
+        f.write(content)
 ```
 
 ---
@@ -623,7 +560,7 @@ At the end of the workflow, print a concise summary, for example:
 ```text
 📊 Verification completed (no code changes were made).
 
-📁 Progress Report: specs/feature/spec-005-promo-system/progress-report-YYYYMMDD.md
+📁 Progress Report: specs/feature/spec-005-promo-system/progress-report-20251206.md
 📄 Tasks File:       specs/feature/spec-005-promo-system/tasks.md
    (checkboxes updated only for tasks fully verified as complete)
 
@@ -665,4 +602,187 @@ By following this workflow, `smartspec_verify_tasks_progress`:
 - Gives a **clear, explicit summary** of all incomplete/error tasks.
 - **Does not attempt to fix** those tasks—only reports them.
 - Keeps `tasks.md` in sync (when allowed) by marking only truly complete tasks as `[x]`.
-- Prevents accidental drift in task structure by forbidding any edits beyond checkbox flips.
+- Leaves actual fixing to other dedicated workflows (implement, fix_errors, generate_tests, etc.).
+
+---
+
+# UI Centralization Addendum (Penpot-first)
+
+เอกสารนี้เป็นส่วนเสริมของ **SmartSpec Centralization Contract**  
+เพื่อรองรับ **SPEC ประเภท UI** ที่มีข้อกำหนดพิเศษ:
+
+- **UI design source of truth เป็น JSON** (เพื่อใช้กับ Penpot)
+- ทีม UI ต้องสามารถแก้ UI ได้ตรงจากไฟล์นี้
+- งานของทีม dev ต้องผูกกับ component/logic โดยไม่ทำให้ไฟล์ UI JSON ปน logic
+
+ใช้ addendum นี้วางต่อท้าย contract ในทุก workflow ที่แตะ UI:
+- generate-spec
+- generate-plan
+- generate-tasks
+- implement-tasks
+- verify-tasks-progress
+- generate-tests
+- refactor-code
+- reverse-to-spec
+- reindex-specs
+- validate-index
+- sync-spec-tasks
+- fix-errors
+- generate-implement-prompt / generate-cursor-prompt (ในส่วน canonical constraints)
+
+---
+
+## 1) UI File Model
+
+สำหรับ UI spec ให้ถือว่าในโฟลเดอร์ spec มีไฟล์หลัก 2 ชั้น:
+
+1) `spec.md`  
+   - narrative, scope, non-goals, UX rules, accessibility, performance targets  
+   - อ้างอิงไฟล์ UI JSON เป็น design artifact
+
+2) `ui.json` (หรือชื่อที่ทีมกำหนดใน config)  
+   - **Penpot-editable**  
+   - เก็บ layout, components mapping, design tokens references  
+   - **ห้าม** ใส่ business logic หรือ API behaviour ในไฟล์นี้
+
+> ถ้าทีมต้องการชื่อไฟล์เฉพาะ ให้กำหนดใน config:
+```json
+{
+  "ui_spec": {
+    "ui_json_name": "ui.json",
+    "component_registry": "ui-component-registry.json"
+  }
+}
+```
+
+---
+
+## 2) Registry เพิ่มเติมสำหรับ UI (แนะนำ)
+
+เพิ่มไฟล์ registry ใหม่แบบ optional:
+
+- `.spec/registry/ui-component-registry.json`
+
+โครงสร้างขั้นต่ำแนะนำ:
+```json
+{
+  "version": "1.0.0",
+  "last_updated": "ISO-8601",
+  "components": [
+    {
+      "canonical_name": "UserAvatar",
+      "penpot_component_id": "penpot:component:xxx",
+      "code_component_path": "src/components/user/UserAvatar.tsx",
+      "owned_by_spec": "spec-XXX",
+      "aliases": []
+    }
+  ]
+}
+```
+
+**กติกา:**
+- ชื่อ component ใน tasks/implementation ต้องอ้าง `canonical_name` เป็นค่า default
+- ถ้าพบชื่อใหม่:
+  - generate-spec / generate-tasks สามารถเพิ่ม entry ใหม่ได้
+  - implement / verify ต้องอ่านอย่างเดียว
+
+---
+
+## 3) UI Naming & Separation Rules (MUST)
+
+### 3.1 Separation of Concerns
+
+- `ui.json` = design + structure + bindings
+- business logic / data fetching / permissions  
+  ต้องอยู่ใน:
+  - code components
+  - service layer
+  - hooks/store
+  - หรือ spec.md ในส่วน logic description
+
+### 3.2 Canonical-first
+
+เมื่อ workflow ต้องเสนอชื่อ component:
+1) เช็ค `ui-component-registry.json` (ถ้ามี)
+2) เช็ค glossary (คำเรียกหน้าจอ/ฟีเจอร์)
+3) ถ้ายังไม่มี:
+   - เสนอชื่อใหม่แบบ `Proposed`
+   - สร้าง task ให้ลงทะเบียน
+
+---
+
+## 4) Workflow-specific Enforcement
+
+### 4.1 generate-spec (UI category)
+
+ต้อง:
+- ตรวจ/สร้าง `ui.json` template ขั้นต่ำ (ถ้ายังไม่มี)
+- เพิ่ม `ui.json` ลงใน SPEC_INDEX `files` (ถ้าสคีมารองรับ)
+- ระบุใน spec.md ว่า:
+  - design source-of-truth = ui.json
+  - logic อยู่ที่ code layer
+
+### 4.2 generate-tasks
+
+สำหรับ UI spec:
+- สร้าง 3 กลุ่มงานแยกกันชัดเจน:
+
+1) **Design tasks (UI team)**
+   - ปรับ layout/flow ใน `ui.json` ผ่าน Penpot
+
+2) **Component binding tasks**
+   - map Penpot component → code component
+   - อัปเดต `ui-component-registry.json` (ถ้าจำเป็น)
+
+3) **Logic tasks (Dev team)**
+   - สร้าง/แก้ hooks/services/state
+   - ห้ามใส่ logic ใหม่ใน `ui.json`
+
+### 4.3 implement-tasks / refactor-code
+
+- Treat `ui.json` เป็น **design-owned**
+- แก้ไขได้เฉพาะเมื่อ tasks ระบุชัดเจน
+- ถ้าพบว่า logic ถูกฝังใน ui.json:
+  - สร้าง refactor task เพื่อย้าย logic ออก
+
+### 4.4 generate-tests
+
+- อ้าง component canonical names
+- สนับสนุนแนวทาง:
+  - component tests
+  - accessibility checks
+  - visual regression (ถ้าทีมใช้)
+
+---
+
+## 5) Index & Validation Rules
+
+### 5.1 SPEC_INDEX
+
+สำหรับ UI spec:
+- แนะนำให้มี field เสริมใน entry (ถ้าทีมอนุญาตแบบ additive):
+```json
+{
+  "ui_artifacts": {
+    "ui_json_path": "specs/ui/spec-123/ui.json",
+    "penpot_project": "optional-string"
+  }
+}
+```
+
+ถ้าไม่เพิ่ม schema:
+- ให้ใช้ `files` list แทน
+
+### 5.2 validate-index / global-registry-audit
+
+ต้องตรวจอย่างน้อย:
+- UI spec ที่ category=ui ต้องมี `ui.json`
+- ชื่อ component ที่ spec/tasks อ้าง ต้องสอดคล้องกับ registry
+
+---
+
+## 6) ผลลัพธ์ที่ต้องการ
+
+- ทีม UI แก้ UI ได้โดยไม่ชนกับ dev logic
+- ลดการแตกชื่อ component ซ้ำซ้อน
+- UI specs กลายเป็นส่วนหนึ่งของ centralization ไม่ใช่โลกคู่ขนาน

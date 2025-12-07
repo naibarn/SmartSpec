@@ -182,6 +182,20 @@ These workflows help maintain and improve code quality on a spec-scoped basis:
 
 ---
 
+
+---
+
+## 🧭 Governance & Portfolio Commands
+
+These workflows help you manage **large, multi-SPEC systems** and enforce cross-SPEC consistency under the centralization model.
+
+| Command | Description | Full Docs |
+| :--- | :--- | :--- |
+| `/smartspec_portfolio_planner.md` | Generate a portfolio-level view of priorities, dependencies, tags, and repo policies. | [**[Details]**](.smartspec-docs/workflows/portfolio_planner.md) |
+| `/smartspec_spec_lifecycle_manager.md` | Manage SPEC lifecycle states (draft/active/deprecated/archived) with impact analysis. | [**[Details]**](.smartspec-docs/workflows/spec_lifecycle_manager.md) |
+| `/smartspec_global_registry_audit.md` | Audit global registries to detect naming drift and propose alignment tasks. | [**[Details]**](.smartspec-docs/workflows/global_registry_audit.md) |
+
+**Note:** These commands operate at a system level and are typically run less frequently than spec-scoped workflows.
 ### Choosing the Right Prompt Generation Workflow
 
 SmartSpec offers two distinct commands for generating prompts, each tailored for a different execution model. Understanding the difference is key to a smooth workflow.

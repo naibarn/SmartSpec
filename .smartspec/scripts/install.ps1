@@ -1,5 +1,5 @@
 # SmartSpec Multi-Platform Installer (PowerShell)
-# Version: 5.2
+# Version: 5.2 (centralization-compatible)
 # Supports: Kilo Code, Roo Code, Claude Code, Google Antigravity, Gemini CLI
 #
 # Master source of workflows: .smartspec/workflows/
@@ -91,7 +91,49 @@ switch ($choice) {
     default { throw "Invalid choice: $choice" }
 }
 
-# Helpers
+# Step 3: Save configuration
+Write-Host ""
+Write-Host "💾 Saving configuration..."
+
+$config = @{
+    version = $SmartSpecVersion
+    installed_at = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    platforms = $platforms
+    use_symlinks = $false
+    repo = "https://github.com/naibarn/SmartSpec.git"
+}
+
+$config | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $SmartSpecDir "config.json") -Encoding UTF8
+$SmartSpecVersion | Set-Content -Path (Join-Path $SmartSpecDir "version.txt") -Encoding UTF8
+
+Write-Host "  ✅ Configuration saved" -ForegroundColor Green
+
+# Step 4: Create project helper sync.ps1 (wrapper)
+$syncHelperPath = Join-Path $SmartSpecDir "sync.ps1"
+
+$syncHelper = @'
+# SmartSpec Sync Script (Project Helper) - PowerShell
+$ErrorActionPreference = "Stop"
+
+$root = Resolve-Path (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "..")
+$standalone = Join-Path $root "sync.ps1"
+
+if (Test-Path $standalone) {
+    & $standalone @args
+    exit $LASTEXITCODE
+}
+
+throw "Root-level sync.ps1 not found. Please run the standalone sync.ps1 from your SmartSpec distribution."
+'@
+
+Set-Content -Path $syncHelperPath -Value $syncHelper -Encoding UTF8
+
+Write-Host "  ✅ Sync helper created at .smartspec/sync.ps1" -ForegroundColor Green
+
+# Step 5: Initial sync (inline)
+Write-Host ""
+Write-Host "📦 Installing SmartSpec workflows..."
+
 function Get-FrontmatterEndIndex([string[]]$lines) {
     $indexes = @()
     for ($i=0; $i -lt $lines.Length; $i++) {
@@ -105,7 +147,6 @@ function Get-FrontmatterEndIndex([string[]]$lines) {
 function Convert-MdToToml([string]$mdPath, [string]$tomlPath) {
     $lines = Get-Content $mdPath
 
-    # description from frontmatter (if any) or from first "# " title
     $descLine = $lines | Where-Object { $_ -match "^\s*description\s*:" } | Select-Object -First 1
     $description = ""
     if ($descLine) {
@@ -126,141 +167,6 @@ function Convert-MdToToml([string]$mdPath, [string]$tomlPath) {
     if ($frontEnd -ne $null) {
         $promptLines = $lines[($frontEnd+1)..($lines.Length-1)]
     } else {
-        # Skip first line as a best-effort title skip
-        if ($lines.Length -gt 1) { $promptLines = $lines[1..($lines.Length-1)] } else { $promptLines = @() }
-    }
-
-    $prompt = ($promptLines -join "`n")
-
-    $toml = @()
-    $toml += "description = `"$description`""
-    $toml += ""
-    $toml += "prompt = `"`"`"`""
-    $toml += $prompt
-    $toml += "`"`"`"`""
-
-    Set-Content -Path $tomlPath -Value $toml -Encoding UTF8
-}
-
-# Step 3: Install workflows
-Write-Host ""
-Write-Host "📦 Installing SmartSpec workflows..."
-
-$mdFiles = Get-ChildItem -Path $WorkflowsDir -Filter "smartspec_*.md" -File
-
-foreach ($p in $platforms) {
-    switch ($p) {
-        "kilocode" {
-            $target = $KiloDir
-            $name = "Kilo Code"
-        }
-        "roo" {
-            $target = $RooDir
-            $name = "Roo Code"
-        }
-        "claude" {
-            $target = $ClaudeDir
-            $name = "Claude Code"
-        }
-        "antigravity" {
-            $target = $AgentDir
-            $name = "Google Antigravity"
-        }
-        "gemini-cli" {
-            $target = $GeminiDir
-            $name = "Gemini CLI"
-        }
-    }
-
-    New-Item -ItemType Directory -Path $target -Force | Out-Null
-
-    if ($p -eq "gemini-cli") {
-        Write-Host "  🔄 $name: Converting Markdown workflows to TOML..." -ForegroundColor Cyan
-        $converted = 0
-        foreach ($md in $mdFiles) {
-            $base = [IO.Path]::GetFileNameWithoutExtension($md.Name)
-            $tomlPath = Join-Path $target ($base + ".toml")
-            Convert-MdToToml $md.FullName $tomlPath
-            $converted++
-        }
-        Write-Host "  ✅ $name: $converted workflows converted and installed" -ForegroundColor Green
-        continue
-    }
-
-    foreach ($md in $mdFiles) {
-        Copy-Item $md.FullName $target -Force
-    }
-    Write-Host "  ✅ $name: Workflows installed/updated" -ForegroundColor Green
-}
-
-# Step 4: Save configuration
-Write-Host ""
-Write-Host "💾 Saving configuration..."
-
-$config = @{
-    version = $SmartSpecVersion
-    installed_at = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    platforms = $platforms
-    use_symlinks = $false
-    repo = "https://github.com/naibarn/SmartSpec.git"
-}
-
-$config | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $SmartSpecDir "config.json") -Encoding UTF8
-$SmartSpecVersion | Set-Content -Path (Join-Path $SmartSpecDir "version.txt") -Encoding UTF8
-
-Write-Host "  ✅ Configuration saved" -ForegroundColor Green
-
-# Step 5: Create sync.ps1 helper
-$syncHelperPath = Join-Path $SmartSpecDir "sync.ps1"
-
-$syncHelper = @'
-# SmartSpec Sync Script (Project Helper) - PowerShell
-$ErrorActionPreference = "Stop"
-
-$SmartSpecDir = ".smartspec"
-$WorkflowsDir = Join-Path $SmartSpecDir "workflows"
-
-if (-not (Test-Path (Join-Path $SmartSpecDir "config.json"))) {
-    throw "SmartSpec config not found. Run install.ps1 first."
-}
-
-$config = Get-Content (Join-Path $SmartSpecDir "config.json") -Raw | ConvertFrom-Json
-$platforms = $config.platforms
-
-$KiloDir = Join-Path $HOME ".kilocode\workflows"
-$RooDir = Join-Path $HOME ".roo\commands"
-$ClaudeDir = Join-Path $HOME ".claude\commands"
-$AgentDir = Join-Path $HOME ".agent\workflows"
-$GeminiDir = Join-Path $HOME ".gemini\commands"
-
-function Get-FrontmatterEndIndex([string[]]$lines) {
-    $indexes = @()
-    for ($i=0; $i -lt $lines.Length; $i++) {
-        if ($lines[$i].Trim() -eq "---") { $indexes += $i }
-        if ($indexes.Count -ge 2) { break }
-    }
-    if ($indexes.Count -ge 2) { return $indexes[1] }
-    return $null
-}
-
-function Convert-MdToToml([string]$mdPath, [string]$tomlPath) {
-    $lines = Get-Content $mdPath
-    $descLine = $lines | Where-Object { $_ -match "^\s*description\s*:" } | Select-Object -First 1
-    $description = ""
-    if ($descLine) { $description = ($descLine -replace "^\s*description\s*:\s*", "").Trim() }
-    if ([string]::IsNullOrWhiteSpace($description)) {
-        $titleLine = $lines | Where-Object { $_ -match "^\s*#\s+" } | Select-Object -First 1
-        if ($titleLine) { $description = ($titleLine -replace "^\s*#\s+", "").Trim() }
-    }
-    if ([string]::IsNullOrWhiteSpace($description)) {
-        $base = [IO.Path]::GetFileNameWithoutExtension($mdPath)
-        $description = "SmartSpec workflow: " + ($base -replace "_", " ")
-    }
-
-    $frontEnd = Get-FrontmatterEndIndex $lines
-    if ($frontEnd -ne $null) {
-        $promptLines = $lines[($frontEnd+1)..($lines.Length-1)]
-    } else {
         if ($lines.Length -gt 1) { $promptLines = $lines[1..($lines.Length-1)] } else { $promptLines = @() }
     }
 
@@ -280,11 +186,11 @@ $mdFiles = Get-ChildItem -Path $WorkflowsDir -Filter "smartspec_*.md" -File
 
 foreach ($p in $platforms) {
     switch ($p) {
-        "kilocode" { $target = $KiloDir }
-        "roo" { $target = $RooDir }
-        "claude" { $target = $ClaudeDir }
-        "antigravity" { $target = $AgentDir }
-        "gemini-cli" { $target = $GeminiDir }
+        "kilocode" { $target = $KiloDir; $name = "Kilo Code" }
+        "roo" { $target = $RooDir; $name = "Roo Code" }
+        "claude" { $target = $ClaudeDir; $name = "Claude Code" }
+        "antigravity" { $target = $AgentDir; $name = "Google Antigravity" }
+        "gemini-cli" { $target = $GeminiDir; $name = "Gemini CLI" }
         default { continue }
     }
 
@@ -296,20 +202,16 @@ foreach ($p in $platforms) {
             $tomlPath = Join-Path $target ($base + ".toml")
             Convert-MdToToml $md.FullName $tomlPath
         }
-        Write-Host "✅ gemini-cli synced" -ForegroundColor Green
+        Write-Host "  ✅ $name installed (TOML)" -ForegroundColor Green
         continue
     }
 
-    # Replace only SmartSpec files
     Get-ChildItem -Path $target -Filter "smartspec_*.md" -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     foreach ($md in $mdFiles) { Copy-Item $md.FullName $target -Force }
-    Write-Host "✅ $p synced" -ForegroundColor Green
+
+    Write-Host "  ✅ $name installed" -ForegroundColor Green
 }
-'@
 
-Set-Content -Path $syncHelperPath -Value $syncHelper -Encoding UTF8
-
-Write-Host "  ✅ Sync helper created at .smartspec/sync.ps1" -ForegroundColor Green
 Write-Host ""
 Write-Host "✅ SmartSpec installed successfully!" -ForegroundColor Green
-Write-Host "Run .smartspec\\sync.ps1 to re-sync workflows when you update them."
+Write-Host "Edit workflows in .smartspec/workflows/ and run .smartspec\sync.ps1 to re-sync."

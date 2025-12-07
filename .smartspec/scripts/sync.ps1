@@ -1,31 +1,47 @@
 # SmartSpec Sync Script (Standalone) - PowerShell
-# Use this to manually sync workflows to all platforms.
+# Version: 5.2 (centralization-compatible)
+# Master source of workflows: .smartspec/workflows/
 
 $ErrorActionPreference = "Stop"
 
 $SmartSpecDir = ".smartspec"
 $WorkflowsDir = Join-Path $SmartSpecDir "workflows"
+$configPath = Join-Path $SmartSpecDir "config.json"
+
+Write-Host "🔄 SmartSpec Sync Tool" -ForegroundColor Cyan
+Write-Host "=====================" -ForegroundColor Cyan
+Write-Host ""
 
 if (-not (Test-Path $SmartSpecDir)) {
-    throw "SmartSpec is not installed. Run install.ps1 first."
+    throw "SmartSpec is not installed in this project. Run install.ps1 first."
 }
 
-if (-not (Test-Path (Join-Path $SmartSpecDir "config.json"))) {
-    throw "SmartSpec configuration not found."
+if (-not (Test-Path $WorkflowsDir)) {
+    throw "Master workflows directory not found: $WorkflowsDir"
 }
 
-$config = Get-Content (Join-Path $SmartSpecDir "config.json") -Raw | ConvertFrom-Json
-$platforms = $config.platforms
-$useSymlinks = $false
-if ($config.PSObject.Properties.Name -contains "use_symlinks") {
-    $useSymlinks = [bool]$config.use_symlinks
+if (-not (Test-Path $configPath)) {
+    throw "SmartSpec configuration not found: $configPath"
 }
 
-if ($useSymlinks) {
-    Write-Host "⚠️  You're using symlinks - sync is automatic" -ForegroundColor Yellow
+$config = Get-Content $configPath -Raw | ConvertFrom-Json
+
+if ($config.PSObject.Properties.Name -contains "use_symlinks" -and [bool]$config.use_symlinks) {
+    Write-Host "You're using symlinks - manual sync is not required." -ForegroundColor Yellow
     return
 }
 
+$platforms = @()
+if ($config.PSObject.Properties.Name -contains "platforms") {
+    $platforms = $config.platforms
+}
+
+if (-not $platforms -or $platforms.Count -eq 0) {
+    Write-Host "⚠️  No platforms configured in config.json." -ForegroundColor Yellow
+    return
+}
+
+# Platform directories (home-based defaults)
 $KiloDir = Join-Path $HOME ".kilocode\workflows"
 $RooDir = Join-Path $HOME ".roo\commands"
 $ClaudeDir = Join-Path $HOME ".claude\commands"
@@ -44,12 +60,17 @@ function Get-FrontmatterEndIndex([string[]]$lines) {
 
 function Convert-MdToToml([string]$mdPath, [string]$tomlPath) {
     $lines = Get-Content $mdPath
+
     $descLine = $lines | Where-Object { $_ -match "^\s*description\s*:" } | Select-Object -First 1
     $description = ""
-    if ($descLine) { $description = ($descLine -replace "^\s*description\s*:\s*", "").Trim() }
+    if ($descLine) {
+        $description = ($descLine -replace "^\s*description\s*:\s*", "").Trim()
+    }
     if ([string]::IsNullOrWhiteSpace($description)) {
         $titleLine = $lines | Where-Object { $_ -match "^\s*#\s+" } | Select-Object -First 1
-        if ($titleLine) { $description = ($titleLine -replace "^\s*#\s+", "").Trim() }
+        if ($titleLine) {
+            $description = ($titleLine -replace "^\s*#\s+", "").Trim()
+        }
     }
     if ([string]::IsNullOrWhiteSpace($description)) {
         $base = [IO.Path]::GetFileNameWithoutExtension($mdPath)
@@ -77,23 +98,22 @@ function Convert-MdToToml([string]$mdPath, [string]$tomlPath) {
 
 $mdFiles = Get-ChildItem -Path $WorkflowsDir -Filter "smartspec_*.md" -File
 
-Write-Host "🔄 Syncing SmartSpec workflows..." -ForegroundColor Cyan
+Write-Host "Syncing workflows to platforms..." -ForegroundColor Cyan
+Write-Host ""
 
 $syncCount = 0
 
 foreach ($p in $platforms) {
     switch ($p) {
-        "kilocode" { $parent = Join-Path $HOME ".kilocode"; $target = $KiloDir; $name = "Kilo Code" }
-        "roo" { $parent = Join-Path $HOME ".roo"; $target = $RooDir; $name = "Roo Code" }
-        "claude" { $parent = Join-Path $HOME ".claude"; $target = $ClaudeDir; $name = "Claude Code" }
-        "antigravity" { $parent = Join-Path $HOME ".agent"; $target = $AgentDir; $name = "Google Antigravity" }
-        "gemini-cli" { $parent = Join-Path $HOME ".gemini"; $target = $GeminiDir; $name = "Gemini CLI" }
-        default { continue }
-    }
-
-    if (-not (Test-Path $parent)) {
-        Write-Host "  ⚠️  $name not detected at $parent - skipping" -ForegroundColor Yellow
-        continue
+        "kilocode" { $target = $KiloDir; $name = "Kilo Code" }
+        "roo" { $target = $RooDir; $name = "Roo Code" }
+        "claude" { $target = $ClaudeDir; $name = "Claude Code" }
+        "antigravity" { $target = $AgentDir; $name = "Google Antigravity" }
+        "gemini-cli" { $target = $GeminiDir; $name = "Gemini CLI" }
+        default { 
+            Write-Host "⚠️  Unknown platform: $p - skipping" -ForegroundColor Yellow
+            continue 
+        }
     }
 
     New-Item -ItemType Directory -Path $target -Force | Out-Null
@@ -109,8 +129,10 @@ foreach ($p in $platforms) {
         continue
     }
 
+    # Replace only SmartSpec files
     Get-ChildItem -Path $target -Filter "smartspec_*.md" -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     foreach ($md in $mdFiles) { Copy-Item $md.FullName $target -Force }
+
     Write-Host "  ✅ $name synced" -ForegroundColor Green
     $syncCount++
 }

@@ -101,11 +101,12 @@ Try to find SPEC_INDEX.json in these locations (in order):
 ```bash
 # Priority order for SPEC_INDEX detection:
 POSSIBLE_PATHS=(
-  "SPEC_INDEX.json"                    # 1. Project root (HIGHEST PRIORITY)
-  ".smartspec/SPEC_INDEX.json"         # 2. .smartspec directory
-  "specs/SPEC_INDEX.json"              # 3. specs directory
-  ".smartspec/spec-index.json"         # 4. Alternative name
-  "spec-index.json"                    # 5. Alternative name in root
+  ".spec/SPEC_INDEX.json"              # 1. Canonical location (HIGHEST PRIORITY)
+  "SPEC_INDEX.json"                    # 2. Legacy root mirror
+  ".smartspec/SPEC_INDEX.json"         # 3. Deprecated legacy location
+  "specs/SPEC_INDEX.json"              # 4. Older specs directory layout
+  ".smartspec/spec-index.json"         # 5. Alternative legacy name (deprecated)
+  "spec-index.json"                    # 6. Alternative name in root (deprecated)
 )
 
 SPEC_INDEX_PATH=""
@@ -137,15 +138,15 @@ If `SPEC_INDEX_PATH` doesn't exist:
 1. ⚠️ WARNING: "SPEC_INDEX.json not found"
    
 2. 📍 Searched in:
-   - SPEC_INDEX.json (project root)
-   - .smartspec/SPEC_INDEX.json
-   - specs/SPEC_INDEX.json
-   - Other alternative paths
+   - `.spec/SPEC_INDEX.json` (canonical)
+   - `SPEC_INDEX.json` (legacy root mirror)
+   - `.smartspec/SPEC_INDEX.json` (deprecated)
+   - `specs/SPEC_INDEX.json` and other legacy alternatives
    
 3. ❓ Ask user: "Where should I create SPEC_INDEX.json?"
    Options:
-   [1] SPEC_INDEX.json (project root) - RECOMMENDED
-   [2] .smartspec/SPEC_INDEX.json
+   [1] `.spec/SPEC_INDEX.json` (canonical) - RECOMMENDED
+   [2] `SPEC_INDEX.json` (legacy root mirror)
    [3] Custom path
    [n] Skip (continue without SPEC_INDEX)
 
@@ -2285,186 +2286,3 @@ interface FileSizeStrategy {
 
 Context for task generation:
 $ARGUMENTS
-
----
-
-# UI Centralization Addendum (Penpot-first)
-
-เอกสารนี้เป็นส่วนเสริมของ **SmartSpec Centralization Contract**  
-เพื่อรองรับ **SPEC ประเภท UI** ที่มีข้อกำหนดพิเศษ:
-
-- **UI design source of truth เป็น JSON** (เพื่อใช้กับ Penpot)
-- ทีม UI ต้องสามารถแก้ UI ได้ตรงจากไฟล์นี้
-- งานของทีม dev ต้องผูกกับ component/logic โดยไม่ทำให้ไฟล์ UI JSON ปน logic
-
-ใช้ addendum นี้วางต่อท้าย contract ในทุก workflow ที่แตะ UI:
-- generate-spec
-- generate-plan
-- generate-tasks
-- implement-tasks
-- verify-tasks-progress
-- generate-tests
-- refactor-code
-- reverse-to-spec
-- reindex-specs
-- validate-index
-- sync-spec-tasks
-- fix-errors
-- generate-implement-prompt / generate-cursor-prompt (ในส่วน canonical constraints)
-
----
-
-## 1) UI File Model
-
-สำหรับ UI spec ให้ถือว่าในโฟลเดอร์ spec มีไฟล์หลัก 2 ชั้น:
-
-1) `spec.md`  
-   - narrative, scope, non-goals, UX rules, accessibility, performance targets  
-   - อ้างอิงไฟล์ UI JSON เป็น design artifact
-
-2) `ui.json` (หรือชื่อที่ทีมกำหนดใน config)  
-   - **Penpot-editable**  
-   - เก็บ layout, components mapping, design tokens references  
-   - **ห้าม** ใส่ business logic หรือ API behaviour ในไฟล์นี้
-
-> ถ้าทีมต้องการชื่อไฟล์เฉพาะ ให้กำหนดใน config:
-```json
-{
-  "ui_spec": {
-    "ui_json_name": "ui.json",
-    "component_registry": "ui-component-registry.json"
-  }
-}
-```
-
----
-
-## 2) Registry เพิ่มเติมสำหรับ UI (แนะนำ)
-
-เพิ่มไฟล์ registry ใหม่แบบ optional:
-
-- `.spec/registry/ui-component-registry.json`
-
-โครงสร้างขั้นต่ำแนะนำ:
-```json
-{
-  "version": "1.0.0",
-  "last_updated": "ISO-8601",
-  "components": [
-    {
-      "canonical_name": "UserAvatar",
-      "penpot_component_id": "penpot:component:xxx",
-      "code_component_path": "src/components/user/UserAvatar.tsx",
-      "owned_by_spec": "spec-XXX",
-      "aliases": []
-    }
-  ]
-}
-```
-
-**กติกา:**
-- ชื่อ component ใน tasks/implementation ต้องอ้าง `canonical_name` เป็นค่า default
-- ถ้าพบชื่อใหม่:
-  - generate-spec / generate-tasks สามารถเพิ่ม entry ใหม่ได้
-  - implement / verify ต้องอ่านอย่างเดียว
-
----
-
-## 3) UI Naming & Separation Rules (MUST)
-
-### 3.1 Separation of Concerns
-
-- `ui.json` = design + structure + bindings
-- business logic / data fetching / permissions  
-  ต้องอยู่ใน:
-  - code components
-  - service layer
-  - hooks/store
-  - หรือ spec.md ในส่วน logic description
-
-### 3.2 Canonical-first
-
-เมื่อ workflow ต้องเสนอชื่อ component:
-1) เช็ค `ui-component-registry.json` (ถ้ามี)
-2) เช็ค glossary (คำเรียกหน้าจอ/ฟีเจอร์)
-3) ถ้ายังไม่มี:
-   - เสนอชื่อใหม่แบบ `Proposed`
-   - สร้าง task ให้ลงทะเบียน
-
----
-
-## 4) Workflow-specific Enforcement
-
-### 4.1 generate-spec (UI category)
-
-ต้อง:
-- ตรวจ/สร้าง `ui.json` template ขั้นต่ำ (ถ้ายังไม่มี)
-- เพิ่ม `ui.json` ลงใน SPEC_INDEX `files` (ถ้าสคีมารองรับ)
-- ระบุใน spec.md ว่า:
-  - design source-of-truth = ui.json
-  - logic อยู่ที่ code layer
-
-### 4.2 generate-tasks
-
-สำหรับ UI spec:
-- สร้าง 3 กลุ่มงานแยกกันชัดเจน:
-
-1) **Design tasks (UI team)**
-   - ปรับ layout/flow ใน `ui.json` ผ่าน Penpot
-
-2) **Component binding tasks**
-   - map Penpot component → code component
-   - อัปเดต `ui-component-registry.json` (ถ้าจำเป็น)
-
-3) **Logic tasks (Dev team)**
-   - สร้าง/แก้ hooks/services/state
-   - ห้ามใส่ logic ใหม่ใน `ui.json`
-
-### 4.3 implement-tasks / refactor-code
-
-- Treat `ui.json` เป็น **design-owned**
-- แก้ไขได้เฉพาะเมื่อ tasks ระบุชัดเจน
-- ถ้าพบว่า logic ถูกฝังใน ui.json:
-  - สร้าง refactor task เพื่อย้าย logic ออก
-
-### 4.4 generate-tests
-
-- อ้าง component canonical names
-- สนับสนุนแนวทาง:
-  - component tests
-  - accessibility checks
-  - visual regression (ถ้าทีมใช้)
-
----
-
-## 5) Index & Validation Rules
-
-### 5.1 SPEC_INDEX
-
-สำหรับ UI spec:
-- แนะนำให้มี field เสริมใน entry (ถ้าทีมอนุญาตแบบ additive):
-```json
-{
-  "ui_artifacts": {
-    "ui_json_path": "specs/ui/spec-123/ui.json",
-    "penpot_project": "optional-string"
-  }
-}
-```
-
-ถ้าไม่เพิ่ม schema:
-- ให้ใช้ `files` list แทน
-
-### 5.2 validate-index / global-registry-audit
-
-ต้องตรวจอย่างน้อย:
-- UI spec ที่ category=ui ต้องมี `ui.json`
-- ชื่อ component ที่ spec/tasks อ้าง ต้องสอดคล้องกับ registry
-
----
-
-## 6) ผลลัพธ์ที่ต้องการ
-
-- ทีม UI แก้ UI ได้โดยไม่ชนกับ dev logic
-- ลดการแตกชื่อ component ซ้ำซ้อน
-- UI specs กลายเป็นส่วนหนึ่งของ centralization ไม่ใช่โลกคู่ขนาน

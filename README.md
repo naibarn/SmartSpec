@@ -164,7 +164,6 @@ These workflows help maintain and improve code quality on a spec-scoped basis:
 | `/smartspec_reindex_specs.md` | Re-index SPEC_INDEX.json to keep it accurate. | [**[Details]**](.smartspec-docs/workflows/reindex_specs.md) |
 | `/smartspec_validate_index.md` | Validate SPEC_INDEX.json integrity and health. | [**[Details]**](.smartspec-docs/workflows/validate_index.md) |
 | `/smartspec_portfolio_planner.md` | Portfolio Planner. | [**[Details]**](.smartspec-docs/workflows/portfolio_planner.md) |
-| `/smartspec_reindex_specs.md` | Reindex Specs. | [**[Details]**](.smartspec-docs/workflows/reindex_specs.md) |
 | `/smartspec_spec_lifecycle_manager.md` | Spec Lifecycle Manager. | [**[Details]**](.smartspec-docs/workflows/spec_lifecycle_manager.md) |
 | `/smartspec_global_registry_audit.md` | Global registry audit. | [**[Details]**](.smartspec-docs/workflows/global_registry_audit.md) |
 

@@ -182,20 +182,6 @@ These workflows help maintain and improve code quality on a spec-scoped basis:
 
 ---
 
-
----
-
-## 🧭 Governance & Portfolio Commands
-
-These workflows help you manage **large, multi-SPEC systems** and enforce cross-SPEC consistency under the centralization model.
-
-| Command | Description | Full Docs |
-| :--- | :--- | :--- |
-| `/smartspec_portfolio_planner.md` | Generate a portfolio-level view of priorities, dependencies, tags, and repo policies. | [**[Details]**](.smartspec-docs/workflows/portfolio_planner.md) |
-| `/smartspec_spec_lifecycle_manager.md` | Manage SPEC lifecycle states (draft/active/deprecated/archived) with impact analysis. | [**[Details]**](.smartspec-docs/workflows/spec_lifecycle_manager.md) |
-| `/smartspec_global_registry_audit.md` | Audit global registries to detect naming drift and propose alignment tasks. | [**[Details]**](.smartspec-docs/workflows/global_registry_audit.md) |
-
-**Note:** These commands operate at a system level and are typically run less frequently than spec-scoped workflows.
 ### Choosing the Right Prompt Generation Workflow
 
 SmartSpec offers two distinct commands for generating prompts, each tailored for a different execution model. Understanding the difference is key to a smooth workflow.
@@ -213,6 +199,35 @@ SmartSpec offers two distinct commands for generating prompts, each tailored for
 **In short:** Use `generate_implement_prompt` for automated platforms and `generate_cursor_prompt` for interactive, manual coding.
 
 ---
+
+
+## 🎨 UI Design (Penpot JSON-First)
+
+SmartSpec supports a dedicated UI track designed for teams who manage UI/UX in design tools
+and want a reliable bridge to implementation in code.
+
+Key principles:
+- **`ui.json` is the design source of truth** for UI-category specs (Penpot-editable).
+- **No business logic in `ui.json`.** Logic lives in code and is described in `spec.md` where needed.
+- UI tasks should be split into three explicit tracks:
+  1) Design (UI team / Penpot)
+  2) Component binding (Penpot → code)
+  3) Logic (dev team)
+- Optional shared registry for stable cross-SPEC naming:
+  - `.spec/registry/ui-component-registry.json`
+
+If your project does not use UI JSON yet, the recommended approach is **legacy-friendly migration**:
+tools should warn and emit optional migration tasks rather than fail hard.
+
+- **[SmartSpec UI Guide](.smartspec-docs/guides/SMARTSPEC_UI_GUIDE.md)**
+
+## 📝 Release Notes
+
+Detailed changes for each version are tracked in:
+
+- **[v5.2 Release Notes](.smartspec-docs/release-notes/RELEASE_NOTES_v5.2.md)**
+
+Future releases should add new files under `.smartspec-docs/release-notes/` and link them here.
 
 ## 🏛️ Architecture Overview
 

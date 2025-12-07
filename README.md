@@ -166,7 +166,7 @@ These workflows help maintain and improve code quality on a spec-scoped basis:
 | `/smartspec_portfolio_planner.md` | Portfolio Planner. | [**[Details]**](.smartspec-docs/workflows/portfolio_planner.md) |
 | `/smartspec_reindex_specs.md` | Reindex Specs. | [**[Details]**](.smartspec-docs/workflows/reindex_specs.md) |
 | `/smartspec_spec_lifecycle_manager.md` | Spec Lifecycle Manager. | [**[Details]**](.smartspec-docs/workflows/spec_lifecycle_manager.md) |
-
+| `/smartspec_global_registry_audit.md` | Global registry audit. | [**[Details]**](.smartspec-docs/workflows/global_registry_audit.md) |
 
 **Note:** All quality workflows operate on a **spec-scoped basis** for optimal performance in large projects. See [SPEC_SCOPED_WORKFLOWS.md](.smartspec-docs/guides/SPEC_SCOPED_WORKFLOWS.md) for details.
 

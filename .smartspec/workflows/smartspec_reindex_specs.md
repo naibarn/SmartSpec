@@ -1,5 +1,5 @@
 ---
-description: Rebuild SPEC_INDEX from all specs with SmartSpec centralization (.spec) and UI JSON addendum awareness
+description: Rebuild SPEC_INDEX from all specs with SmartSpec v5.2 centralization, multi-repo scanning, and UI JSON addendum awareness
 version: 5.2
 ---
 
@@ -7,19 +7,26 @@ version: 5.2
 
 Rebuild (or regenerate) the project `SPEC_INDEX.json` by scanning all spec folders and consolidating metadata, while enforcing SmartSpec v5.2 centralization rules.
 
-This workflow assumes:
-- **`.spec/` is the canonical project-owned space** for shared truth.
-- **`.spec/SPEC_INDEX.json` is the canonical index**.
-- `SPEC_INDEX.json` at repo root is a **legacy mirror**.
-- `.smartspec/SPEC_INDEX.json` is **deprecated** and must not be created for new projects.
-- **`.spec/registry/`** may exist and is used for cross-SPEC naming reference.
-- UI specs may have **`ui.json`** as the design source of truth.
+This version is **multi-repo-aware** to support ecosystems where specs are distributed across sibling repositories (e.g., public + private).
+
+---
+
+## Core Principles (v5.2)
+
+- **Project-owned canonical space:** `.spec/`
+- **Canonical index:** `.spec/SPEC_INDEX.json`
+- **Legacy mirror (optional):** `SPEC_INDEX.json` at repo root
+- **Deprecated tooling index:** `.smartspec/SPEC_INDEX.json` (read-only if present)
+- **Shared registries (optional):** `.spec/registry/`
+- **UI design source of truth (when applicable):** `ui.json` (Penpot-aligned)
+
+This workflow **does not rewrite any `spec.md`**.
 
 ---
 
 ## What It Does
 
-- Scans all specs under `specs/**/spec.md`.
+- Scans all specs under `specs/**/spec.md` across configured repo roots.
 - Rebuilds a consistent `specs[]` list using your existing schema.
 - Validates:
   - ID uniqueness
@@ -29,22 +36,22 @@ This workflow assumes:
 - Detects UI specs via `ui.json` and category hints.
 - Writes canonical index to `.spec/SPEC_INDEX.json`.
 - Optionally updates legacy root mirror.
-- Produces a reindex report under `.spec/reports/`.
+- Produces a reindex report under `.spec/reports/reindex-specs/`.
 
 ---
 
 ## When to Use
 
-- After adding/removing multiple specs.
+- After adding/removing multiple specs across repos.
 - After reorganizing spec folders.
-- When counts or dependencies look inconsistent.
+- When index counts or dependencies look inconsistent.
 - Before major releases.
 
 ---
 
 ## Inputs
 
-- Existing specs under `specs/**/`.
+- Existing specs under `specs/**/` in one or multiple repos.
 - Optional existing index for bootstrapping legacy fields.
 
 ---
@@ -53,25 +60,55 @@ This workflow assumes:
 
 - **Canonical:** `.spec/SPEC_INDEX.json`
 - **Optional legacy mirror:** `SPEC_INDEX.json` (root)
-- Report: `.spec/reports/reindex-specs/`
+- **Report:** `.spec/reports/reindex-specs/`
 
 ---
 
 ## Flags
 
-- `--index` Existing SPEC_INDEX path (optional)  
-  default: auto-detect
+### Index I/O
 
-- `--output-index` Path to write the rebuilt canonical index (optional)  
-  default: `.spec/SPEC_INDEX.json`
+- `--index` Existing SPEC_INDEX path (optional)
+  - default: auto-detect
 
-- `--mirror-root` Also write/update `SPEC_INDEX.json` at repo root (optional)  
-  default: `true` if a root mirror already exists, else `false`
+- `--output-index` Path to write the rebuilt canonical index (optional)
+  - default: `.spec/SPEC_INDEX.json`
 
-- `--report-dir` Output report directory (optional)  
-  default: `.spec/reports/reindex-specs/`
+- `--mirror-root` Also write/update `SPEC_INDEX.json` at repo root (optional)
+  - default: `true` if a root mirror already exists, else `false`
+
+### Multi-Repo Support
+
+- `--workspace-roots`
+  - Comma-separated list of additional repo roots to scan.
+  - Example:
+    - `--workspace-roots="../Smart-AI-Hub,../smart-ai-hub-enterprise-security"`
+
+- `--repos-config`
+  - Path to a JSON config describing known repos and aliases.
+  - Recommended location:
+    - `.spec/smartspec.repos.json`
+
+  Example structure:
+
+  ```json
+  {
+    "version": "1.0",
+    "repos": [
+      { "id": "public", "root": "../Smart-AI-Hub" },
+      { "id": "private", "root": "../smart-ai-hub-enterprise-security" }
+    ]
+  }
+  ```
+
+### Reporting / Safety
+
+- `--report-dir` Output report directory (optional)
+  - default: `.spec/reports/reindex-specs/`
 
 - `--strict` Fail on warnings (optional)
+
+- `--dry-run` Print rebuilt index summary only (do not write files)
 
 ---
 
@@ -114,113 +151,153 @@ else
 fi
 
 STRICT="${FLAGS_strict:-false}"
+DRY_RUN="${FLAGS_dry_run:-false}"
 ```
 
 ---
 
-## 1) Scan Specs
+## 1) Resolve Multi-Repo Scan Roots
 
-- Find all `spec.md` files under `specs/**/spec.md`.
-- For each spec folder:
-  - infer or read spec ID
-  - read title/name
-  - read category/status if present
-  - read declared dependencies if present
-  - detect UI marker if `ui.json` exists
+This workflow may need to scan specs across multiple sibling repos.
 
-Rules:
-- The spec folder path becomes the authoritative `path` field.
-- This workflow must **not rewrite any `spec.md`**.
+Priority rules:
+
+1) If `--repos-config` is provided and valid → use it.
+2) Else if `--workspace-roots` is provided → use it.
+3) Else → fallback to current repo root only.
+
+Implementation intent:
+
+- The scan roots are used **only for reading**.
+- Index outputs are still written to the current repo’s `.spec/` unless you explicitly change `--output-index`.
 
 ---
 
-## 2) Normalize and Validate
+## 2) Scan Specs Across Roots
 
-### 2.1 ID Uniqueness
+### 2.1 Spec discovery
 
-- Fail if duplicated IDs are found.
+For each repo root in scan roots:
 
-### 2.2 Path Integrity
+- Find all `specs/**/spec.md`.
+- Record:
+  - absolute file path (internal)
+  - repo-relative folder path
+  - inferred spec ID
 
-- Each index entry must point to an existing folder containing `spec.md`.
+### 2.2 Resolve canonical index `path` values
 
-### 2.3 Category Sanity
+Compatibility-first rule:
+
+- Your existing schema expects `path` to be repository-relative.
+- In a multi-repo system, this workflow must **not break** the schema.
+
+Therefore:
+
+- Preserve the `path` exactly as found under each repo root’s internal structure:
+  - e.g., `specs/core/spec-core-001-authentication/`
+
+- Do **not** attempt to embed absolute paths into `path`.
+
+- If you need explicit repo ownership later, handle it via optional metadata fields that do not break existing workflows (e.g., `repo_scope`) — but do not require them here.
+
+---
+
+## 3) Normalize and Validate
+
+### 3.1 ID Uniqueness (Global)
+
+- IDs must be unique across **all scanned roots**.
+- If duplicates exist:
+  - report them as errors
+  - recommend explicit differentiation policy (e.g., public vs private aliasing)
+
+### 3.2 Path Integrity
+
+- Each index entry must point to a folder containing `spec.md` in at least one scanned root.
+
+### 3.3 Category Sanity
 
 - Categories should be consistent with your existing taxonomy.
 - If a UI spec has `ui.json`, but category is not `ui`:
   - warn (or error in `--strict`).
 
-### 2.4 Dependency Integrity
+### 3.4 Dependency Integrity
 
 - Each dependency must reference a discovered spec ID.
-- Warn on circular dependency chains.
+- Warn on circular dependencies.
 
 ---
 
-## 3) Preserve Schema Compatibility
+## 4) Preserve Schema Compatibility
 
 When `INDEX_IN` exists:
-- Use it only to preserve fields that your production workflows already rely on.
-- Do not change the overall top-level schema shape.
+
+- Use it to preserve fields required by production workflows.
+- Do not change top-level schema shape.
 
 Rules:
+
 - Prefer newly scanned truth for:
   - `path`
-  - `dependencies`
+  - `dependencies` (when clearly declared)
   - `category` when confidently inferred
 
 ---
 
-## 4) Build Canonical Index
+## 5) Build Canonical Index
 
 - Compose a new `SPEC_INDEX.json` compatible with your existing structure.
 - Recompute counts.
 - Ensure stable ordering where helpful (e.g., by category then ID).
 
 Write to:
+
 - `CANONICAL_OUT` (default `.spec/SPEC_INDEX.json`).
 
 ---
 
-## 5) Optional Root Mirror Update
+## 6) Optional Root Mirror Update
 
 If `MIRROR_ROOT=true`:
+
 - Write a mirror copy to `SPEC_INDEX.json`.
 
 Rules:
-- The root mirror must be treated as **legacy**.
-- Warn if root mirror diverged from canonical in previous versions.
 
-Do NOT write `.smartspec/SPEC_INDEX.json`.
+- Root mirror is legacy.
+- Write it **after** canonical output.
+
+Never write `.smartspec/SPEC_INDEX.json`.
 
 ---
 
-## 6) UI JSON Addendum (Index-Level Awareness)
+## 7) UI JSON Addendum (Index-Level Awareness)
 
 This workflow does not validate UI JSON deeply, but must:
 
 - Detect UI specs by:
   - category = `ui`, OR
-  - `ui.json` presence.
+  - `ui.json` presence in any scan root.
 
 - Emit warnings when:
   - `ui.json` is missing for a declared UI spec.
   - category mismatches UI JSON presence.
 
-- Ensure the index entry remains compatible with the UI team workflow.
-
 If the project does not use UI JSON:
+
 - Do not fail.
 - Only warn when a spec explicitly declares itself as UI.
 
 ---
 
-## 7) Report
+## 8) Report
 
 Write a structured report to `REPORT_DIR` containing:
 
 - Index input path used (if any)
 - Canonical output path
+- Scan roots used
 - Spec counts by category/status
 - Duplicate ID findings
 - Missing path findings
@@ -229,9 +306,9 @@ Write a structured report to `REPORT_DIR` containing:
 
 ---
 
-## 8) Recommended Follow-ups
+## 9) Recommended Follow-ups
 
-- `/smartspec_validate_index`
+- `/smartspec_validate_index --workspace-roots=...`
 - `/smartspec_generate_plan`
 - `/smartspec_generate_tasks`
 - `/smartspec_sync_spec_tasks --mode=additive` (after review)
@@ -240,7 +317,7 @@ Write a structured report to `REPORT_DIR` containing:
 
 ## Notes
 
-- `.spec/SPEC_INDEX.json` is the canonical single source of truth.
-- Root `SPEC_INDEX.json` is a legacy mirror for backward compatibility.
-- This workflow is safe for large projects and prevents index drift.
+- `.spec/SPEC_INDEX.json` is the canonical single source of truth for the current repo.
+- This workflow can *read* specs across repos to rebuild a more accurate index without breaking your established schema.
+- For public/private split strategies, use the portfolio/lifecycle workflows to add governance layers without schema breakage.
 

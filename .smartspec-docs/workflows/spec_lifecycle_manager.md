@@ -1,174 +1,296 @@
-# /smartspec_spec_lifecycle_manager.md
+---
+description: SmartSpec Spec Lifecycle Manager Guide (v5.2)
+version: 5.2
+last_updated: 2025-12-07
+---
 
-## Overview
+# SmartSpec Spec Lifecycle Manager Guide
 
-**Spec Lifecycle Manager** governs the **life stages** of SPECS across a large system.
-It addresses a common large-project failure mode:
-SPECS remain effectively “active forever,” while deprecated content still influences new work.
+This guide explains how to use `/smartspec_spec_lifecycle_manager` in SmartSpec v5.2.
 
-This workflow enables:
+The lifecycle manager helps teams govern how specs move from idea → planned → active → stable → deprecated → archived, while preventing large-scale dependency breakage in multi-team environments.
 
-- Clear lifecycle states (recommended: `draft`, `active`, `deprecated`, `archived`)
-- Impact analysis for dependent SPECS
-- Safer transitions in multi-repo projects
-- Cleaner task generation rules
+SmartSpec v5.2 introduces a clearer separation between tooling and project-owned truth, and this guide reflects the updated behavior of the lifecycle workflow.
 
-By default, it updates **only the canonical** index:
+---
 
-- `.spec/SPEC_INDEX.json`
+## Key Concepts
+
+### SmartSpec Centralization (v5.2)
+
+SmartSpec v5.2 separates **tooling files** from **project-owned truth**.
+
+- **Project-owned canonical space:** `.spec/`
+- **Canonical index:** `.spec/SPEC_INDEX.json`
+- **Shared registries (optional):** `.spec/registry/`
+- **Legacy root mirror:** `SPEC_INDEX.json`
+- **Deprecated tooling index:** `.smartspec/SPEC_INDEX.json`
+
+The lifecycle manager updates lifecycle-related metadata in the **canonical index** while preserving the existing `SPEC_INDEX.json` schema already used in production.
+
+### Status Buckets
+
+For compatibility and readability, lifecycle status values are interpreted in three buckets:
+
+- **Planned:** `planned`, `backlog`, `idea`, `draft`
+- **Active:** `active`, `in-progress`, `stable`, `core`
+- **End-of-life:** `deprecated`, `archived`
+
+If a spec has no explicit status, SmartSpec assumes `active`.
+
+### Portfolio vs Runtime Interpretation
+
+The lifecycle manager uses the same interpretation model as validation and planning workflows:
+
+- `--mode=portfolio` (default)
+  - Optimized for roadmap governance.
+  - Allows planned/backlog specs to be incomplete without treating them as hard blockers.
+
+- `--mode=runtime`
+  - Optimized for delivery readiness.
+  - Applies stricter checks when changing the status of active/core/stable specs.
+
+### UI Design Addendum
+
+When UI specs exist:
+
+- **UI design source of truth** is `ui.json` inside the UI spec folder.
+- `spec.md` documents constraints, mapping, and logic boundaries.
+- UI JSON must not contain business logic.
+
+Lifecycle changes must not force UI design artifacts into `.smartspec/`.
+
+Projects that do not use UI JSON are not affected.
+
+---
+
+## What the Lifecycle Manager Produces
+
+The workflow may output:
+
+- **Updated canonical index:** `.spec/SPEC_INDEX.json`
+- **Optional legacy mirror:** `SPEC_INDEX.json` (root)
+- **Lifecycle report:** `.spec/reports/spec-lifecycle/`
+
+The report is project-owned and can be version-controlled.
 
 ---
 
 ## When to Use
 
-### ✅ Use it when you:
-
-- Want to deprecate or archive a spec safely
-- Need to understand the impact of removing a contract
-- Are preparing for a large refactor or platform migration
-- Maintain both public and private repos
-
-### ❌ Skip it when you:
-
-- Only need to check index integrity (use `/smartspec_validate_index.md`)
+- During roadmap grooming
+- When promoting a spec from planned to active
+- When stabilizing a core contract
+- Before deprecating shared APIs or models
+- Before release gates (use runtime mode)
 
 ---
 
-## Inputs & Resolution Rules
+## Inputs
 
-### SPEC_INDEX resolution order
+The lifecycle manager relies on:
 
-1. `--specindex="<path>"`
-2. `.spec/SPEC_INDEX.json`
-3. `SPEC_INDEX.json` (legacy)
-4. `.smartspec/SPEC_INDEX.json` (legacy)
-5. `specs/SPEC_INDEX.json` (legacy)
-
-### Default directories
-
-- `SPEC_HUB_DIR = ".spec"`
-- `REGISTRY_DIR = ".spec/registry"`
-- `OUTPUT_DIR = ".smartspec"`
+- `.spec/SPEC_INDEX.json` (preferred)
+- `SPEC_INDEX.json` at repo root (legacy mirror)
+- `.spec/registry/*` (optional for impact analysis)
+- `specs/**/spec.md` (read-only)
+- `ui.json` for UI specs (read-only, conditional)
 
 ---
 
-## Command Usage
+## Command Reference
 
-### Deprecate a specific spec
+### Audit-Only (No Changes)
+
+If you do not specify an operation flag, the workflow generates an analysis report only.
 
 ```bash
-/smartspec_spec_lifecycle_manager --spec-id=spec-120 --set-status=deprecated
+/smartspec_spec_lifecycle_manager
 ```
 
-### Archive a specific spec
+### Set Status for a Single Spec
 
 ```bash
-/smartspec_spec_lifecycle_manager --spec-id=spec-045 --set-status=archived
+/smartspec_spec_lifecycle_manager --spec-id=spec-core-004-rate-limiting --set-status=stable
 ```
 
-### Report-only mode
+### Promote / Demote Maturity
 
 ```bash
-/smartspec_spec_lifecycle_manager --category=deprecated --report-only
+/smartspec_spec_lifecycle_manager --spec-id=spec-core-003-audit-logging --promote
+/smartspec_spec_lifecycle_manager --spec-id=spec-core-003-audit-logging --demote
 ```
 
-### Auto-propagation analysis
+### Deprecate or Archive
 
 ```bash
-/smartspec_spec_lifecycle_manager --spec-id=spec-120 --set-status=deprecated --auto-propagate
+/smartspec_spec_lifecycle_manager --spec-id=spec-some-feature --deprecate
+/smartspec_spec_lifecycle_manager --spec-id=spec-some-feature --archive
+```
+
+### Batch Operations by Category
+
+```bash
+/smartspec_spec_lifecycle_manager --category=ui --set-status=planned
+```
+
+### Runtime Gate Lens
+
+```bash
+/smartspec_spec_lifecycle_manager --mode=runtime --report-dir=.spec/reports/spec-lifecycle
+```
+
+### Control Root Mirror
+
+```bash
+/smartspec_spec_lifecycle_manager --mirror-root=true
+/smartspec_spec_lifecycle_manager --mirror-root=false
+```
+
+### Dry Run
+
+```bash
+/smartspec_spec_lifecycle_manager --spec-id=spec-123 --set-status=deprecated --dry-run
 ```
 
 ---
 
-## What It Updates (Schema-Preserving)
+## Flags
 
-To remain compatible with existing workflows:
+### Index / Registry
 
-- If `status` exists in the index, this workflow updates it.
-- If `status` does not exist, the workflow can:
-  - update `category` in an additive, standardized way,
-  - and recommend adding `status` in future revisions.
+- `--index`
+  - Override SPEC_INDEX path.
+  - If omitted, auto-detect order:
+    1) `.spec/SPEC_INDEX.json`
+    2) `SPEC_INDEX.json`
+    3) `.smartspec/SPEC_INDEX.json` (deprecated)
+    4) `specs/SPEC_INDEX.json`
 
-It should not rewrite unrelated fields.
+- `--registry-dir`
+  - Default: `.spec/registry`
 
----
+### Target Selection
 
-## Impact Analysis Rules
+- `--spec-id`
+- `--spec-ids`
+- `--category`
+- `--status`
 
-When setting a spec to `deprecated`:
+If no target is provided, the workflow defaults to analysis-only.
 
-- List all **active dependents**
-- Mark them as:
-  - **at-risk** (report annotation)
-  - not auto-changed unless a policy explicitly allows it
+### Lifecycle Operations
 
-When setting a spec to `archived`:
+- `--set-status`
+  - Common values: `planned`, `backlog`, `draft`, `active`, `in-progress`, `stable`, `deprecated`, `archived`
 
-- Raise a stronger warning if any dependents remain active.
+- `--promote`
+- `--demote`
+- `--deprecate`
+- `--archive`
 
----
+### Interpretation
 
-## Public ↔ Private Policy
+- `--mode`
+  - Values: `portfolio`, `runtime`
+  - Default: `portfolio`
 
-Recommended enforcement:
+### Mirroring / Safety
 
-- Public specs that depend on private/core:
-  - should treat private specs as **external contracts**
-  - should not generate tasks that directly modify private code/specs
-- If a public spec requires a private contract change:
-  - create/update the private spec first
+- `--mirror-root`
+  - Default behavior:
+    - `true` if `SPEC_INDEX.json` already exists at root
+    - otherwise `false`
 
-Lifecycle Manager should highlight violations in its report.
+- `--strict`
+  - Fail on high-risk dependency violations or unsafe deprecation in runtime mode.
 
----
-
-## UI-Specific Rules
-
-If a spec is `category=ui`:
-
-- Ensure a Penpot-editable design artifact is present:
-  - `ui.json` (or configured filename)
-- If missing:
-  - report as **warning** (legacy UI mode)
-  - recommend migration tasks
-
-When deprecating a UI spec:
-
-- Recommend archiving:
-  - the design artifact
-  - component bindings
-  - and related tasks
+- `--dry-run`
+  - Show planned changes without writing files.
 
 ---
 
-## Outputs
+## How to Interpret Common Findings
 
-Reports are written to:
+### Deprecating a Spec With Active Dependents
 
-```
-.smartspec/reports/lifecycle/
-```
+This is the highest-risk transition in large systems.
 
-Typical files:
+Expected lifecycle report guidance:
 
-- `lifecycle-summary-<timestamp>.md`
-- `lifecycle-impact-<timestamp>.md`
+- list dependents
+- recommend a replacement or migration wave
+- identify registry items impacted
+
+In `--mode=runtime --strict`, this transition should be blocked.
+
+### Planned Spec Required by Active Specs
+
+This usually indicates either:
+
+- a missing foundational spec, or
+- an incorrectly assigned status on the dependency.
+
+Use:
+
+- `/smartspec_validate_index --mode=portfolio`
+- `/smartspec_portfolio_planner --view=dependency`
+
+---
+
+## UI-Specific Lifecycle Guidance
+
+The lifecycle workflow will:
+
+- warn when an active UI spec lacks `ui.json`
+- highlight potential UI component registry impacts when deprecating UI specs
+
+It does not modify UI files.
+
+---
+
+## Recommended Follow-Up Workflows
+
+- `/smartspec_validate_index`
+- `/smartspec_portfolio_planner`
+- `/smartspec_global_registry_audit`
+- `/smartspec_reindex_specs`
+- `/smartspec_generate_plan`
+- `/smartspec_generate_tasks`
 
 ---
 
 ## Best Practices
 
-- Run in `--report-only` mode first when making large changes
-- Deprecate before archive
-- Use this workflow together with:
-  - `/smartspec_portfolio_planner.md`
-  - `/smartspec_global_registry_audit.md`
-  - `/smartspec_validate_index.md`
+- Treat `.spec/SPEC_INDEX.json` as canonical.
+- Keep root `SPEC_INDEX.json` only as a legacy mirror.
+- Use `portfolio` mode for governance and roadmap transitions.
+- Use `runtime` mode before releases or when deprecating shared contracts.
+- Add explicit status values to planned specs to reduce false alarms in strict validation.
+
+---
+
+## Troubleshooting
+
+### The lifecycle tool changed the root index unexpectedly
+
+Explicitly set:
+
+```bash
+/smartspec_spec_lifecycle_manager --mirror-root=false
+```
+
+### The tool seems too strict for early roadmap work
+
+Use:
+
+```bash
+/smartspec_spec_lifecycle_manager --mode=portfolio
+```
 
 ---
 
 ## Summary
 
-Spec Lifecycle Manager provides a safe, centralized way to evolve a large SmartSpec system.
-It reduces hidden dependencies, prevents “zombie specs,”
-and supports clean long-term platform maintenance.
+`/smartspec_spec_lifecycle_manager` in SmartSpec v5.2 provides a safe, schema-compatible approach to lifecycle governance. It keeps large portfolios coherent by enforcing dependency-aware transitions, aligning with canonical centralization rules, and supporting the optional UI JSON design workflow.
+

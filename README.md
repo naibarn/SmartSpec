@@ -58,7 +58,7 @@ This is the core loop of SmartSpec. It's simple, powerful, and keeps your projec
 ![AI-Driven Specification & Development Methodologies](.smartspec-assets/images/Spec-DrivenDevelopment.png)
 
 ## Vibe coding tools comparison 
-[**[Vibe coding comparison]**](.smartspec-docs/guides/vibe_coding_comparison.md)
+[**[detail]**](.smartspec-docs/guides/vibe_coding_comparison.md)
 ---
 
 ## 🎯 What SmartSpec Does for Your Vibe-Coding Workflow
@@ -111,12 +111,10 @@ SmartSpec continuously checks your project for:
 
 ### 5. 🔄 Supports Both Auto and Manual Workflows
 
-**Auto-Mode (Full Agent):**
+**Auto Workflow:**
 - AI implements tasks automatically
 - Suitable for: Kilo Code, Claude Code, Roo Code
 - Best for: Autonomous development with minimal human intervention
-
-**Manual Mode (Copy-Paste):**
 - SmartSpec prepares clean coding prompts
 - Suitable for: Cursor, VSCode, Google Antigravity
 - Best for: Interactive development with human oversight
@@ -165,6 +163,10 @@ These workflows help maintain and improve code quality on a spec-scoped basis:
 | `/smartspec_refactor_code.md` | Refactor code to improve quality and reduce complexity. | [**[Details]**](.smartspec-docs/workflows/refactor_code.md) |
 | `/smartspec_reindex_specs.md` | Re-index SPEC_INDEX.json to keep it accurate. | [**[Details]**](.smartspec-docs/workflows/reindex_specs.md) |
 | `/smartspec_validate_index.md` | Validate SPEC_INDEX.json integrity and health. | [**[Details]**](.smartspec-docs/workflows/validate_index.md) |
+| `/smartspec_portfolio_planner.md` | Portfolio Planner. | [**[Details]**](.smartspec-docs/workflows/portfolio_planner.md) |
+| `/smartspec_reindex_specs.md` | Reindex Specs. | [**[Details]**](.smartspec-docs/workflows/reindex_specs.md) |
+| `/smartspec_spec_lifecycle_manager.md` | Spec Lifecycle Manager. | [**[Details]**](.smartspec-docs/workflows/spec_lifecycle_manager.md) |
+
 
 **Note:** All quality workflows operate on a **spec-scoped basis** for optimal performance in large projects. See [SPEC_SCOPED_WORKFLOWS.md](.smartspec-docs/guides/SPEC_SCOPED_WORKFLOWS.md) for details.
 
@@ -221,13 +223,6 @@ tools should warn and emit optional migration tasks rather than fail hard.
 
 - **[SmartSpec UI Guide](.smartspec-docs/guides/SMARTSPEC_UI_GUIDE.md)**
 
-## 📝 Release Notes
-
-Detailed changes for each version are tracked in:
-
-- **[v5.2 Release Notes](.smartspec-docs/release-notes/RELEASE_NOTES_v5.2.md)**
-
-Future releases should add new files under `.smartspec-docs/release-notes/` and link them here.
 
 ## 🏛️ Architecture Overview
 
@@ -267,3 +262,11 @@ When a user asks how to use a command, first consult the corresponding file in `
 ## Troubleshooting
 
 For common issues and solutions, see the **[Troubleshooting Guide](.smartspec-docs/guides/troubleshooting.md)**.
+
+## 📝 Release Notes
+
+Detailed changes for each version are tracked in:
+
+- **[v5.2 Release Notes](.smartspec-docs/release-notes/RELEASE_NOTES_v5.2.md)**
+
+Future releases should add new files under `.smartspec-docs/release-notes/` and link them here.

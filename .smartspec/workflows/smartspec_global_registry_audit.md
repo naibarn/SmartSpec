@@ -1,142 +1,318 @@
 ---
-description: SmartSpec - Global Registry Audit (Centralization v1)
+description: Audit global registries across all specs with v5.2 centralization, multi-repo awareness, and UI JSON addendum
 ---
 
-# SmartSpec Global Registry Audit
+# /smartspec_global_registry_audit
 
-Workflow นี้แก้ช่องโหว่ “semantic drift ข้ามทั้งระบบ”  
-โดยสแกน registry + SPEC + tasks เพื่อหา:
+Audit shared registries across the SmartSpec ecosystem to prevent cross-SPEC drift, naming collisions, and inconsistent cross-cutting rules.
 
-- ชื่อโมเดล/ฟิลด์ซ้ำความหมาย
-- endpoint ซ้ำ pattern
-- glossary synonyms ที่ควร consolidate
-- UI component naming drift (ถ้ามี ui-component-registry)
+This workflow is **SmartSpec v5.2 centralization compatible** and **multi-repo-aware**.
 
-ผลลัพธ์คือรายงานและข้อเสนอ alignment tasks แบบเป็นระบบ
+## Core Principles (v5.2)
 
----
+- **Project-owned canonical space:** `.spec/`
+- **Canonical index:** `.spec/SPEC_INDEX.json`
+- **Legacy mirror (optional):** `SPEC_INDEX.json` at repo root
+- **Deprecated tooling index:** `.smartspec/SPEC_INDEX.json` (read-only if present)
+- **Shared registries:** `.spec/registry/`
+- **UI design source of truth (when applicable):** `ui.json` (Penpot-aligned)
 
-## User Input
-
-```text
-$ARGUMENTS
-```
-
-ตัวอย่าง:
-- `/smartspec_global_registry_audit`
-- `/smartspec_global_registry_audit --scope=security`
-- `/smartspec_global_registry_audit --report=detailed`
-- `/smartspec_global_registry_audit --emit-alignment-tasks`
+This workflow is read-only for specs by default, and should not introduce breaking schema changes.
 
 ---
 
-## 0) Centralization Resolver (MANDATORY)
+## What This Audits
+
+If present, the workflow audits these registries:
+
+1) `api-registry.json`
+2) `data-model-registry.json`
+3) `glossary.json`
+4) `critical-sections-registry.json`
+5) `patterns-registry.json` (optional)
+6) `ui-component-registry.json` (optional)
+
+It also audits cross-SPEC usage signals from:
+
+- the canonical SPEC_INDEX
+- spec metadata in `spec.md`
+- tasks signals (when adjacent `tasks.md` exists)
+- UI JSON references (when `ui.json` exists)
+
+---
+
+## When to Use
+
+- After adding several new specs
+- After large naming refactors
+- Before major releases
+- When you suspect registry drift between public/private repos
+- After onboarding/handovers
+
+---
+
+## Outputs
+
+- A structured audit report under:
+  - `.spec/reports/registry-audit/`
+
+This report is **project-owned** and should be version-controlled.
+
+---
+
+## Flags
+
+### Index / Registry
+
+- `--index` Path to SPEC_INDEX (optional)
+  - default: auto-detect
+
+- `--registry-dir` Registry directory (optional)
+  - default: `.spec/registry`
+
+### Multi-Repo Support
+
+- `--workspace-roots`
+  - Comma-separated list of additional repo roots to search for spec files.
+  - Example:
+    - `--workspace-roots="../Smart-AI-Hub,../smart-ai-hub-enterprise-security"`
+
+- `--repos-config`
+  - Path to a JSON config describing known repos and aliases.
+  - Recommended location:
+    - `.spec/smartspec.repos.json`
+
+### Audit Interpretation
+
+- `--mode` `portfolio | runtime`
+  - `portfolio`:
+    - tolerates planned/backlog gaps
+    - focuses on roadmap-level normalization
+  - `runtime`:
+    - stricter alignment for active/core specs
+  - default: `portfolio`
+
+### Reporting
+
+- `--report-dir` Output report directory (optional)
+  - default: `.spec/reports/registry-audit/`
+
+- `--strict`
+  - Fail on high-risk drift patterns
+
+- `--dry-run`
+  - Print findings without writing files
+
+---
+
+## 0) Resolve Canonical Index & Registry
 
 ### 0.1 Resolve SPEC_INDEX
 
-ลำดับ:
-1) `--specindex`
-2) `.spec/SPEC_INDEX.json`
-3) `SPEC_INDEX.json`
-4) `.smartspec/SPEC_INDEX.json`
-5) `specs/SPEC_INDEX.json`
+Detection order:
 
-### 0.2 Resolve Config / Directories
+1) `.spec/SPEC_INDEX.json` (canonical)
+2) `SPEC_INDEX.json` (legacy root mirror)
+3) `.smartspec/SPEC_INDEX.json` (deprecated)
+4) `specs/SPEC_INDEX.json` (older layout)
 
-Defaults:
-- `SPEC_HUB_DIR = ".spec"`
-- `REGISTRY_DIR = ".spec/registry"`
-- `OUTPUT_DIR = ".smartspec"`
+```bash
+INDEX_PATH="${FLAGS_index:-}"
 
----
+if [ -z "$INDEX_PATH" ]; then
+  if [ -f ".spec/SPEC_INDEX.json" ]; then
+    INDEX_PATH=".spec/SPEC_INDEX.json"
+  elif [ -f "SPEC_INDEX.json" ]; then
+    INDEX_PATH="SPEC_INDEX.json"
+  elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
+    INDEX_PATH=".smartspec/SPEC_INDEX.json" # deprecated
+  elif [ -f "specs/SPEC_INDEX.json" ]; then
+    INDEX_PATH="specs/SPEC_INDEX.json"
+  fi
+fi
 
-## 1) Load Canonical Registries
+if [ ! -f "$INDEX_PATH" ]; then
+  echo "❌ SPEC_INDEX not found. Run /smartspec_reindex_specs first."
+  exit 1
+fi
 
-โหลดอย่างน้อย:
-- `glossary.json`
-- `data-model-registry.json`
-- `api-registry.json`
-- `critical-sections-registry.json`
+echo "✅ Using SPEC_INDEX: $INDEX_PATH"
+```
 
-Optional:
-- `ui-component-registry.json`
+### 0.2 Resolve Registry Dir
 
----
+```bash
+REGISTRY_DIR="${FLAGS_registry_dir:-.spec/registry}"
 
-## 2) Load System Specs
+if [ ! -d "$REGISTRY_DIR" ]; then
+  echo "⚠️ Registry directory not found at $REGISTRY_DIR"
+  echo "Audit will run in index-only mode."
+fi
+```
 
-1) Read SPEC_INDEX.
-2) For each spec entry:
-   - เก็บ:
-     - id, category, repo, status, dependencies, path
-   - หา `spec.md` และ `tasks.md` (best-effort)
+### 0.3 Resolve Report Dir
 
----
-
-## 3) Audit Dimensions
-
-### 3.1 Glossary Audit
-
-- หา:
-  - คำที่สะกดต่างแต่ใช้แทนกัน
-  - คำที่ใช้ข้ามหลาย spec แต่ยังไม่มี canonical entry
-- สร้างข้อเสนอ:
-  - add canonical term
-  - add aliases
-
-### 3.2 Data Model Audit
-
-- เปรียบเทียบ:
-  - registries vs ระบุใน spec/tasks
-- flag:
-  - field names ที่มีความหมายเดียวแต่ canonical ต่าง
-  - entity ที่ถูกประกาศซ้ำ
-
-### 3.3 API Audit
-
-- ตรวจ route patterns
-- ตรวจ naming ของ resource/service
-
-### 3.4 Critical Sections Coverage
-
-- ตรวจว่า spec สำคัญในโดเมนเสี่ยงสูง  
-  มี critical sections ตามมาตรฐานทีมครบหรือไม่
-
-### 3.5 UI Audit (Special)
-
-ถ้า category=ui:
-- ตรวจว่ามี `ui.json`
-- ตรวจว่า component ที่อ้างใน spec/tasks
-  สอดคล้องกับ ui-component-registry (ถ้ามี)
+```bash
+REPORT_DIR="${FLAGS_report_dir:-.spec/reports/registry-audit}"
+mkdir -p "$REPORT_DIR"
+```
 
 ---
 
-## 4) Output Types
+## 1) Resolve Multi-Repo Roots
 
-### 4.1 Audit Report (default)
+This audit must be able to see specs distributed across sibling repos.
 
-เขียนไปที่:
-- `${OUTPUT_DIR}/reports/registry-audit/`
+Priority rules:
 
-สรุป:
-- Drift hotspots
-- Candidate merges
-- Spec owners ที่เกี่ยวข้อง
+1) If `--repos-config` is provided and valid → use it.
+2) Else if `--workspace-roots` is provided → use it.
+3) Else → fall back to current repo root only.
 
-### 4.2 Emit Alignment Tasks (optional)
+Suggested config file: `.spec/smartspec.repos.json`
 
-ถ้า `--emit-alignment-tasks`:
-- สร้างไฟล์ข้อเสนอในรูปแบบ md/json ต่อ spec:
-  - `alignment-tasks.<spec-id>.md`
-- **ไม่แก้ tasks.md เดิมอัตโนมัติ**  
-  ให้ทีม review ก่อน
+Example:
+
+```json
+{
+  "version": "1.0",
+  "repos": [
+    { "id": "public", "root": "../Smart-AI-Hub" },
+    { "id": "private", "root": "../smart-ai-hub-enterprise-security" }
+  ]
+}
+```
 
 ---
 
-## 5) Guardrails
+## 2) Load Canonical Knowledge
 
-- Read-only ต่อ registries โดย default
-- ห้ามเปลี่ยน canonical definitions อัตโนมัติในระบบใหญ่
-- ต้องแสดงเหตุผลและ spec owners ที่เกี่ยวข้องเสมอ
+- Load SPEC_INDEX.
+- Build a list of all indexed specs and dependency relationships.
 
-Context: $ARGUMENTS
+If registries exist:
+- Load all registry files.
+
+---
+
+## 3) Extract Cross-SPEC Usage Signals
+
+For each indexed spec:
+
+- Resolve `spec.md` across repo roots.
+- If adjacent `tasks.md` exists, parse shared-name signals.
+- Detect UI presence by:
+  - category = `ui`, OR
+  - `ui.json` existence.
+
+This workflow must not rewrite any spec artifact.
+
+---
+
+## 4) Audit Rules
+
+### 4.1 API Registry
+
+Detect:
+- duplicate logical endpoint names
+- inconsistent versioning rules
+- conflicting ownership across specs
+
+### 4.2 Data Model Registry
+
+Detect:
+- model name collisions
+- incompatible model evolution notes
+- ambiguous shared vs local models
+
+### 4.3 Glossary
+
+Detect:
+- duplicate terms with divergent definitions
+- inconsistent capitalization/namespace rules
+
+### 4.4 Critical Sections
+
+Detect:
+- cross-cutting requirements that differ between core specs
+  - auth
+  - authorization
+  - audit
+  - rate limiting
+  - observability
+
+### 4.5 Patterns Registry (optional)
+
+Detect:
+- repeated patterns that should be extracted into shared docs
+
+### 4.6 UI Component Registry (optional)
+
+When UI specs exist:
+
+- Validate that component names referenced in UI specs/tasks align with registry.
+- Flag components that appear in multiple UI specs but are not registered.
+
+---
+
+## 5) Status-Aware Severity (Portfolio vs Runtime)
+
+To avoid forcing low-quality placeholder specs, severity is interpreted based on mode:
+
+### Portfolio Mode (default)
+
+- Missing shared-name declarations in planned specs → warning
+- Inconsistent definitions across core active specs → error
+
+### Runtime Mode
+
+- Any drift impacting active/core specs → error
+- Conflicts that could break contracts → error
+
+If a spec has no explicit status, assume `active`.
+
+---
+
+## 6) Cross-Repo Drift Lens
+
+If multi-repo roots are configured:
+
+- Identify shared names that exist only in one repo’s specs.
+- Identify registry entries referenced heavily in private specs but not in public ones.
+
+Report these as:
+
+- "Cross-Repo Consistency Risks"
+
+This helps your public/private split remain intentional.
+
+---
+
+## 7) Report Structure
+
+Write a structured report including:
+
+- Index path used
+- Registry dir used
+- Repo roots resolved
+- Counts per registry type
+- Top collisions/drift risks
+- Cross-repo risk summary
+- UI component alignment summary
+- Recommended remediation workflows
+
+Suggested follow-ups:
+
+- `/smartspec_validate_index`
+- `/smartspec_sync_spec_tasks --mode=additive`
+- `/smartspec_reindex_specs`
+- `/smartspec_generate_spec --repair-legacy --repair-additive-meta`
+
+---
+
+## Notes
+
+- This workflow is **analysis-first**; it should not mutate registries by default.
+- If your team later wants an auto-append mode, add it explicitly and keep it append-only.
+- `.spec/` remains the canonical shared truth for SmartSpec v5.2 projects.
+

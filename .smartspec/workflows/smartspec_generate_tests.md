@@ -1,679 +1,315 @@
 ---
-description: Generate unit tests, integration tests, and e2e tests to increase test coverage
-globs: ["specs/**/*.md", "src/**/*.ts", "src/**/*.tsx", "test/**/*.spec.ts"]
+description: Generate tests from spec(s) and tasks with SmartSpec centralization (.spec) and UI JSON addendum
+version: 5.2
 ---
 
-# Generate Tests to Increase Coverage
+# /smartspec_generate_tests
 
-You are an expert test engineer. Your task is to automatically generate comprehensive unit tests, integration tests, and e2e tests to increase test coverage to the target level.
+Generate a comprehensive test plan and, where applicable, test scaffolding suggestions based on `spec.md`, `tasks.md`, `SPEC_INDEX`, and shared registries.
 
-## Input
+This workflow enforces SmartSpec centralization:
+- **`.spec/` is the canonical project space** for index + registries.
+- `.smartspec/` is tooling-only.
+- Shared definitions must be aligned via **`.spec/registry/`**.
+- **UI specs use `ui.json` as the design source of truth** for Penpot integration.
 
-You will receive:
-1. **Spec Directory Path** - Path to the spec directory (e.g., `specs/feature/spec-004-financial-system`)
-2. **Options** (optional):
-   - `--target-coverage <percentage>` - Target coverage percentage (default: 80)
-   - `--file <path>` - Generate tests for specific file only
-   - `--type <test-type>` - Generate specific type of tests (unit, integration, e2e)
-   - `--focus uncovered` - Focus only on uncovered code
-   - `--kilocode` - Use Kilo Code Orchestrator Mode to systematically generate comprehensive tests
+---
 
-## Your Task
+## What It Does
 
-### Phase 1: Analyze Current Coverage
+- Resolves canonical `SPEC_INDEX.json`.
+- Loads shared registries.
+- Reads target `spec.md` and `tasks.md`.
+- Builds a test matrix covering:
+  - unit tests
+  - integration tests
+  - contract/API tests
+  - security tests
+  - performance/SLA tests
+  - UI/component tests (when applicable)
+- Prevents re-invented naming by verifying registry alignment.
+- Applies UI JSON addendum rules conditionally.
 
-1. **Load SPEC_INDEX.json**
-   ```bash
-   cat .spec/SPEC_INDEX.json
-   ```
-   - Parse JSON to get spec metadata
-   - Extract `spec.files[]` array for the given spec_id
-   - If `--file` option provided, use only that file
-   - Otherwise, use all files from `spec.files[]`
-   - **SCOPE**: Only analyze files listed in spec.files[] (not entire project!)
+---
 
-2. **Run Coverage Report (scoped)**
-   ```bash
-   # Only run tests related to scoped files
-   npm test -- --coverage --json --outputFile=coverage.json --testPathPattern=<scoped-test-files>
-   ```
-   - Parse coverage data from coverage.json
-   - Extract coverage percentages for lines, statements, functions, branches
-   - **Filter coverage data to only scoped files**
+## When to Use
 
-3. **Identify Uncovered Code (scoped)**
-   - List scoped files with no tests
-   - List functions with no coverage (in scoped files only)
-   - List branches with no coverage (in scoped files only)
-   - List specific line numbers that are uncovered (in scoped files only)
+- After `tasks.md` generation.
+- Before implementation starts.
+- When expanding test coverage for large, multi-SPEC systems.
+- During refactors to ensure parity with original requirements.
 
-4. **Calculate Test Gap**
-   ```
-   Current Coverage: XX.XX%
-   Target Coverage: XX%
-   Gap: XX.XX%
-   
-   Need to cover: ~XXX more lines
-   Estimated tests needed: ~XX-XX test cases
-   ```
+---
 
-5. **Display Coverage Summary**
-   ```
-   📊 Current Test Coverage:
-     Lines: XX.XX%
-     Statements: XX.XX%
-     Functions: XX.XX%
-     Branches: XX.XX%
-   
-   🎯 Target: XX%
-   📈 Gap: XX.XX%
-   
-   📋 Uncovered Code:
-     Files without tests: XX files
-     Functions without coverage: XX functions
-     Branches without coverage: XX branches
-   ```
+## Inputs
 
-### Phase 2: Prioritize Test Generation
+- Target spec path (recommended)
+  - Example: `specs/core/spec-core-004-rate-limiting/spec.md`
 
-1. **Categorize by Priority**
-   
-   **Priority 1 (Critical):**
-   - Core business logic (services, models)
-   - Public APIs
-   - Error handling paths
-   
-   **Priority 2 (High):**
-   - Utility functions
-   - Middleware
-   - Validators
-   
-   **Priority 3 (Medium):**
-   - Helper functions
-   - Formatters
-   - Data transformers
-   
-   **Priority 4 (Low):**
-   - Type definitions
-   - Constants
-   - Config files
+- Expected adjacent files:
+  - `tasks.md`
+  - (UI specs) `ui.json`
 
-2. **Create Test Plan**
-   ```markdown
-   # Test Generation Plan
-   
-   Target: XX% coverage (from XX.XX%)
-   
-   ## Phase 1: Core Services (Priority 1)
-   - [ ] service-a.ts (XX% → XX%)
-     - Test method1()
-     - Test method2()
-     - Test error scenarios
-   
-   - [ ] service-b.ts (XX% → XX%)
-     - Test method1()
-     - Test edge cases
-   
-   ## Phase 2: Utilities (Priority 2)
-   - [ ] util-a.ts (0% → 90%)
-     - Test all exported functions
-   
-   ## Estimated Coverage Gain
-   - Phase 1: +XX% (XX% total)
-   - Phase 2: +XX% (XX% total)
-   ```
+---
 
-3. **Display Test Plan**
-   ```
-   📋 Test Generation Plan:
-   
-   Phase 1: Core Services (+XX% coverage)
-     - service-a.ts
-     - service-b.ts
-   
-   Phase 2: Utilities (+XX% coverage)
-     - util-a.ts
-     - util-b.ts
-   
-   Estimated total coverage after generation: XX%
-   ```
+## Outputs
 
-### Phase 3: Generate Tests
+- A test plan (recommended location: next to the spec)
+  - `tests.md` or `test-plan.md`
+- Optional test scaffolding recommendations
+- Cross-SPEC consistency notes
 
-**If `--kilocode` flag: Use Kilo Code Orchestrator Mode**
+---
 
-```
-Use Orchestrator Mode to break test generation into subtasks.
-Generate comprehensive tests for: {list of files needing tests}
-Target coverage: {target_coverage}%
-```
+## Flags
 
-**Orchestrator may create workflow:**
-1. **Ask Mode** - Analyze current test structure and patterns
-2. **Architect Mode** - Design test architecture and test cases
-3. **Code Mode** - Generate unit tests
-4. **Code Mode** - Generate integration tests
-5. **Code Mode** - Generate e2e tests
-6. **Test Mode** - Run all tests and verify coverage
+- `--index` Path to SPEC_INDEX (optional)  
+  default: auto-detect
 
-**If NOT using `--kilocode`:**
+- `--registry-dir` Registry directory (optional)  
+  default: `.spec/registry`
 
-For each file that needs tests:
+- `--spec` Explicit spec path (optional)
 
-1. **Check for Existing Test Files**
-   ```bash
-   # Common test file patterns
-   # For src/services/credit.service.ts, check:
-   # - src/services/credit.service.spec.ts
-   # - src/services/__tests__/credit.service.test.ts
-   # - test/unit/services/credit.service.spec.ts
-   # - tests/services/credit.service.test.ts
-   ```
-   
-   **If test file exists:**
-   - Read existing test file
-   - Analyze current test coverage for this file
-   - Identify missing test cases (uncovered functions/branches)
-   - **Only generate tests for uncovered parts**
-   - Append new tests to existing file (don't overwrite!)
-   
-   **If test file doesn't exist:**
-   - Create new test file
-   - Generate complete test suite
-   
-   **Display:**
-   ```
-   📝 Test File Analysis:
-     ✅ credit.service.spec.ts - EXISTS
-        Current: 12 test cases, 65% coverage
-        Missing: errorHandler(), calculateInterest()
-        Action: Append 5 new test cases
-     
-     ❌ payment.service.spec.ts - NOT FOUND
-        Action: Create new file with 15 test cases
-   ```
+- `--tasks` Explicit tasks path (optional)
 
-2. **Analyze Source Code**
-   - Read the source file
-   - Identify all exported functions/methods/classes
-   - Analyze parameters, return types, and dependencies
-   - Identify edge cases and error scenarios
-   - **Cross-check with existing tests to avoid duplication**
+- `--output` Output test plan path (optional)
 
-3. **Generate Unit Tests**
+- `--strict` Fail on warnings (optional)
 
+- `--dry-run` Print plan only (do not write file)
 
-   **Test File Structure:**
-   ```typescript
-   import { ClassName } from './source-file';
-   import { Dependency1 } from './dependency1';
-   import { Dependency2 } from './dependency2';
-   
-   describe('ClassName', () => {
-     let instance: ClassName;
-     let mockDep1: jest.Mocked<Dependency1>;
-     let mockDep2: jest.Mocked<Dependency2>;
-   
-     beforeEach(() => {
-       // Setup mocks
-       mockDep1 = {
-         method: jest.fn(),
-       } as any;
-       
-       mockDep2 = {
-         method: jest.fn(),
-       } as any;
-       
-       // Create instance
-       instance = new ClassName(mockDep1, mockDep2);
-     });
-   
-     describe('methodName', () => {
-       it('should handle happy path correctly', async () => {
-         // Arrange
-         const input = { ... };
-         const expectedOutput = { ... };
-         mockDep1.method.mockResolvedValue({ ... });
-         
-         // Act
-         const result = await instance.methodName(input);
-         
-         // Assert
-         expect(result).toEqual(expectedOutput);
-         expect(mockDep1.method).toHaveBeenCalledWith(...);
-       });
-   
-       it('should throw error when input is invalid', async () => {
-         // Arrange
-         const invalidInput = null;
-         
-         // Act & Assert
-         await expect(instance.methodName(invalidInput))
-           .rejects
-           .toThrow('Expected error message');
-       });
-   
-       it('should handle edge case X', async () => {
-         // Test edge case
-       });
-     });
-   });
-   ```
+---
 
-3. **Generate Integration Tests**
-   
-   ```typescript
-   import { Test } from '@nestjs/testing';
-   import { ServiceName } from './service-name';
-   import { DatabaseModule } from '../database/database.module';
-   
-   describe('ServiceName (Integration)', () => {
-     let service: ServiceName;
-     let app;
-   
-     beforeAll(async () => {
-       const moduleRef = await Test.createTestingModule({
-         imports: [DatabaseModule],
-         providers: [ServiceName],
-       }).compile();
-   
-       app = moduleRef.createNestApplication();
-       await app.init();
-       service = moduleRef.get(ServiceName);
-     });
-   
-     afterAll(async () => {
-       await app.close();
-     });
-   
-     it('should work with real dependencies', async () => {
-       // Test with real database, real services, etc.
-       const result = await service.method();
-       expect(result).toBeDefined();
-     });
-   });
-   ```
+## 0) Resolve Canonical Index & Registry
 
-4. **Generate E2E Tests**
-   
-   ```typescript
-   import * as request from 'supertest';
-   import { Test } from '@nestjs/testing';
-   import { AppModule } from '../app.module';
-   
-   describe('API Endpoint (E2E)', () => {
-     let app;
-   
-     beforeAll(async () => {
-       const moduleRef = await Test.createTestingModule({
-         imports: [AppModule],
-       }).compile();
-   
-       app = moduleRef.createNestApplication();
-       await app.init();
-     });
-   
-     afterAll(async () => {
-       await app.close();
-     });
-   
-     it('/api/resource (GET)', () => {
-       return request(app.getHttpServer())
-         .get('/api/resource')
-         .expect(200)
-         .expect((res) => {
-           expect(res.body).toHaveProperty('data');
-         });
-     });
-   
-     it('/api/resource (POST)', () => {
-       return request(app.getHttpServer())
-         .post('/api/resource')
-         .send({ name: 'test' })
-         .expect(201);
-     });
-   });
-   ```
+### 0.1 Resolve SPEC_INDEX (Single Source of Truth)
 
-5. **Cover All Scenarios**
-   
-   For each function/method, generate tests for:
-   - ✅ **Happy path** - Normal successful execution
-   - ✅ **Error cases** - Invalid input, missing data, null/undefined
-   - ✅ **Edge cases** - Boundary values, empty arrays, zero, negative numbers
-   - ✅ **Async scenarios** - Promise resolution, rejection, timeout
-   - ✅ **State changes** - Before/after comparisons
-   - ✅ **Side effects** - Database calls, API calls, file operations
+Detection order:
 
-6. **Display Progress**
-   ```
-   🔧 Generating tests...
-     ✓ Generated service-a.spec.ts (12 test cases)
-     ✓ Generated service-b.spec.ts (15 test cases)
-     ✓ Generated util-a.spec.ts (8 test cases)
-     ✓ Generated integration/service-a.integration.spec.ts (5 test cases)
-     ✓ Generated e2e/api.e2e.spec.ts (10 test cases)
-   
-   Total: XX test files, XXX test cases
-   ```
-
-### Phase 4: Run and Verify Tests
-
-1. **Run Generated Tests (scoped)**
-   ```bash
-   npm test -- --testPathPattern=<scoped-test-files>
-   ```
-   - Check if generated tests pass
-   - If tests fail → fix test code and retry
-
-2. **Run Coverage Report (scoped)**
-   ```bash
-   npm test -- --testPathPattern=<scoped-test-files> -- --coverage
-   ```
-   - Get new coverage percentages for scoped files
-   - Compare with target
-
-3. **Analyze Coverage Gap**
-   ```
-   Before: XX.XX%
-   After: XX.XX%
-   Target: XX%
-   Gain: +XX.XX%
-   Remaining gap: XX.XX%
-   ```
-
-4. **Generate More Tests if Needed**
-   - If coverage < target → identify remaining uncovered code
-   - Generate additional tests for uncovered code
-   - Repeat until target is reached or no more auto-testable code
-
-5. **Display Verification Results**
-   ```
-   ✅ Test Execution:
-     Total Tests: XXX
-     Passed: XXX
-     Failed: 0
-     Duration: XX.Xs
-   
-   📊 Coverage Results:
-     Lines: XX.XX% → XX.XX% (+XX.XX%)
-     Statements: XX.XX% → XX.XX% (+XX.XX%)
-     Functions: XX.XX% → XX.XX% (+XX.XX%)
-     Branches: XX.XX% → XX.XX% (+XX.XX%)
-   ```
-
-### Phase 5: Generate Report
-
-Create a test generation report: `<spec-dir>/test-generation-report-YYYYMMDD-HHMMSS.md`
-
-```markdown
-# Test Generation Report
-
-Generated: YYYY-MM-DD HH:MM:SS
-
-## Summary
-
-- **Initial Coverage**: XX.XX%
-- **Target Coverage**: XX%
-- **Final Coverage**: XX.XX%
-- **Coverage Gain**: +XX.XX%
-
-## Tests Generated
-
-### Unit Tests (XX test files)
-- ✅ service-a.spec.ts (12 test cases)
-  - Happy path scenarios: 5
-  - Error scenarios: 4
-  - Edge cases: 3
-  
-- ✅ service-b.spec.ts (15 test cases)
-  - Happy path scenarios: 7
-  - Error scenarios: 5
-  - Edge cases: 3
-
-[List all generated unit test files]
-
-### Integration Tests (XX test files)
-- ✅ service-a.integration.spec.ts (5 test cases)
-- ✅ service-b.integration.spec.ts (7 test cases)
-
-[List all generated integration test files]
-
-### E2E Tests (XX test files)
-- ✅ api-endpoint-a.e2e.spec.ts (10 test cases)
-- ✅ api-endpoint-b.e2e.spec.ts (12 test cases)
-
-[List all generated e2e test files]
-
-## Coverage Breakdown
-
-| Category | Before | After | Gain |
-|----------|--------|-------|------|
-| Lines | XX.XX% | XX.XX% | +XX.XX% |
-| Statements | XX.XX% | XX.XX% | +XX.XX% |
-| Functions | XX.XX% | XX.XX% | +XX.XX% |
-| Branches | XX.XX% | XX.XX% | +XX.XX% |
-
-## Remaining Gaps
-
-### Uncovered Code (XX.XX%)
-
-1. **file-a.ts:functionX()** - Complex business logic
-   - Reason: Requires extensive mocking of external services
-   - Recommendation: Add manual tests
-
-2. **file-b.ts:errorHandler()** - Rare error scenarios
-   - Reason: Difficult to reproduce error conditions
-   - Recommendation: Add manual integration tests
-
-[List remaining uncovered code]
-
-## Test Execution Results
-
-- **Total Tests**: XXX
-- **Passed**: XXX
-- **Failed**: 0
-- **Skipped**: 0
-- **Duration**: XX.Xs
-
-## Files Created
-
-### Unit Tests
-- src/services/service-a.spec.ts
-- src/services/service-b.spec.ts
-[List all files]
-
-### Integration Tests
-- test/integration/service-a.integration.spec.ts
-[List all files]
-
-### E2E Tests
-- test/e2e/api-endpoint-a.e2e.spec.ts
-[List all files]
-
-## Recommendations
-
-1. Review generated tests for accuracy
-2. Add manual tests for complex scenarios
-3. Update tests when implementation changes
-4. Maintain test coverage above XX%
-
-## Next Steps
-
-1. Review generated test files
-2. Run full test suite: `npm test`
-3. Add manual tests for remaining gaps
-4. Continue with implementation: /smartspec_implement_tasks
-```
-
-### Phase 6: Summary and Next Steps
-
-Display final summary:
-
-```
-✅ Test Generation Complete!
-
-📊 Results:
-  Initial Coverage: XX.XX%
-  Final Coverage: XX.XX%
-  Target: XX%
-  Gain: +XX.XX%
-
-📝 Generated:
-  Unit Tests: XX files (XXX test cases)
-  Integration Tests: XX files (XX test cases)
-  E2E Tests: XX files (XX test cases)
-  Total: XXX test cases
-
-🧪 Test Execution:
-  Passed: XXX/XXX
-  Duration: XX.Xs
-
-📁 Reports:
-  - Test report: <spec-dir>/test-generation-report-YYYYMMDD.md
-  - Coverage report: coverage/index.html
-
-  💡 Next Steps:
-  1. Review generated tests
-  2. Run tests: npm test
-  3. Add manual tests for complex scenarios (if needed)
-  4. Commit: git add . && git commit -m "test: Add tests for spec-XXX"
-  
-  🔧 Suggested Workflows:
-  
-  ✅ Tests generated! Consider these next actions:
-  
-  1. Fix any test failures:
-     npm test
-     # If failures found:
-     /smartspec_fix_errors <spec-dir>
-  
-  2. Improve code quality:
-     /smartspec_refactor_code <spec-dir>
-  
-  3. Verify overall progress:
-     /smartspec_verify_tasks_progress <spec-dir>/tasks.md
-  
-  4. Continue implementation:
-     /smartspec_implement_tasks <spec-dir>/tasks.md --skip-completed
-```
-
-## Test Patterns and Best Practices
-
-### AAA Pattern (Arrange-Act-Assert)
-
-```typescript
-it('should calculate total correctly', () => {
-  // Arrange - Setup test data and mocks
-  const input = [1, 2, 3];
-  const expected = 6;
-  
-  // Act - Execute the function
-  const result = calculateTotal(input);
-  
-  // Assert - Verify the result
-  expect(result).toBe(expected);
-});
-```
-
-### Mocking Dependencies
-
-```typescript
-// Mock external dependencies
-const mockRepository = {
-  find: jest.fn(),
-  save: jest.fn(),
-};
-
-// Inject mocks
-const service = new Service(mockRepository);
-
-// Setup mock behavior
-mockRepository.find.mockResolvedValue([{ id: 1 }]);
-
-// Verify mock calls
-expect(mockRepository.find).toHaveBeenCalledWith({ userId: 123 });
-```
-
-### Testing Async Code
-
-```typescript
-it('should handle async operations', async () => {
-  // Use async/await
-  const result = await asyncFunction();
-  expect(result).toBeDefined();
-});
-
-it('should handle promise rejection', async () => {
-  // Test error cases
-  await expect(asyncFunction())
-    .rejects
-    .toThrow('Expected error');
-});
-```
-
-### Testing Edge Cases
-
-```typescript
-describe('edge cases', () => {
-  it('should handle empty array', () => {
-    expect(processArray([])).toEqual([]);
-  });
-  
-  it('should handle null input', () => {
-    expect(processArray(null)).toBeNull();
-  });
-  
-  it('should handle undefined input', () => {
-    expect(processArray(undefined)).toBeUndefined();
-  });
-  
-  it('should handle zero', () => {
-    expect(calculate(0)).toBe(0);
-  });
-  
-  it('should handle negative numbers', () => {
-    expect(calculate(-5)).toBe(-5);
-  });
-});
-```
-
-## Coverage Goals by Code Type
-
-- **Services/Controllers**: 90-95%
-- **Utilities/Helpers**: 85-90%
-- **Models/Entities**: 70-80%
-- **Config/Constants**: 50-60%
-
-## Important Notes
-
-- Generate tests following AAA pattern (Arrange-Act-Assert)
-- Mock all external dependencies properly
-- Test both happy paths and error scenarios
-- Include edge cases (null, undefined, empty, zero, negative)
-- Use descriptive test names that explain what is being tested
-- Group related tests using `describe` blocks
-- Use `beforeEach` for common setup
-- Ensure tests are independent and can run in any order
-- Verify mock calls with proper assertions
-- Test async code properly with async/await
-- Don't test implementation details, test behavior
-- Keep tests simple and focused on one thing
-- Generate integration tests for component interactions
-- Generate e2e tests for critical user workflows
-
-## Example Usage
+1) `.spec/SPEC_INDEX.json` (canonical)  
+2) `SPEC_INDEX.json` (legacy root mirror)  
+3) `.smartspec/SPEC_INDEX.json` (deprecated)  
+4) `specs/SPEC_INDEX.json` (older layout)
 
 ```bash
-# Generate tests to reach 80% coverage
-/smartspec_generate_tests specs/feature/spec-004-financial-system --target-coverage 80
+INDEX_PATH="${FLAGS_index:-}"
 
-# Generate tests for specific file
-/smartspec_generate_tests specs/feature/spec-004 --file src/services/credit.service.ts
+if [ -z "$INDEX_PATH" ]; then
+  if [ -f ".spec/SPEC_INDEX.json" ]; then
+    INDEX_PATH=".spec/SPEC_INDEX.json"
+  elif [ -f "SPEC_INDEX.json" ]; then
+    INDEX_PATH="SPEC_INDEX.json"
+  elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
+    INDEX_PATH=".smartspec/SPEC_INDEX.json" # deprecated
+  elif [ -f "specs/SPEC_INDEX.json" ]; then
+    INDEX_PATH="specs/SPEC_INDEX.json"
+  fi
+fi
 
-# Generate only unit tests
-/smartspec_generate_tests specs/feature/spec-004 --type unit
-
-# Focus on uncovered code only
-/smartspec_generate_tests specs/feature/spec-004 --focus uncovered
+if [ -n "$INDEX_PATH" ] && [ -f "$INDEX_PATH" ]; then
+  echo "✅ Using SPEC_INDEX: $INDEX_PATH"
+else
+  echo "⚠️ SPEC_INDEX not found. Proceeding with local-spec-only context."
+  INDEX_PATH=""
+fi
 ```
+
+### 0.2 Resolve Registry Directory
+
+```bash
+REGISTRY_DIR="${FLAGS_registry_dir:-.spec/registry}"
+
+if [ ! -d "$REGISTRY_DIR" ]; then
+  echo "⚠️ Registry directory not found at $REGISTRY_DIR"
+  echo "   Proceeding with best-effort extraction from existing specs."
+fi
+```
+
+### 0.3 Expected Registries (if present)
+
+- `api-registry.json`
+- `data-model-registry.json`
+- `glossary.json`
+- `critical-sections-registry.json`
+- `patterns-registry.json` (optional)
+- `ui-component-registry.json` (optional)
+
+Rules:
+- Use registry names as canonical references in the test plan.
+- If a test references a new shared API/model/term name:
+  - flag it
+  - recommend an additive registry sync.
+
+---
+
+## 1) Identify Target Spec/Tasks
+
+Priority:
+1) `--spec` / `--tasks` if provided.
+2) If `INDEX_PATH` exists, allow selecting by spec ID.
+3) Otherwise, require user to provide a spec path.
+
+Default tasks location:
+- `tasks.md` next to `spec.md`.
+
+---
+
+## 2) Read Inputs (Read-Only)
+
+- Read `spec.md`.
+- Read `tasks.md` if present.
+- Collect NFRs (SLAs, performance, security).
+- If UI spec:
+  - detect `ui.json`.
+
+This workflow does not rewrite these inputs.
+
+---
+
+## 3) Cross-SPEC Alignment Gate
+
+If `INDEX_PATH` exists:
+- Ensure tests do not assume features that conflict with dependencies.
+- Validate that referenced dependent specs have compatible testing assumptions.
+
+If registries exist:
+- Confirm names used in tests match:
+  - API registry
+  - Model registry
+  - Glossary
+
+In `--strict` mode:
+- Stop if cross-SPEC naming drift is detected.
+
+---
+
+## 4) Build Test Matrix
+
+Construct a matrix with traceability to:
+- Spec sections
+- Task groups
+- Registry entries
+
+### 4.1 Unit Tests
+
+- Domain logic
+- Utility and validation rules
+- Data transformations
+
+### 4.2 Integration Tests
+
+- Service layer interactions
+- Database/repository integration
+- Message/event buses (if applicable)
+
+### 4.3 Contract / API Tests
+
+- Endpoint behavior
+- Request/response schemas
+- Error codes
+- Backward-compatible behavior
+
+If `api-registry.json` exists:
+- Ensure the plan names endpoints exactly as registered.
+
+### 4.4 Security Tests
+
+- Authentication/authorization enforcement points
+- Rate limiting rules
+- Audit logging completeness (when specified)
+- Negative path validations
+
+### 4.5 Performance / SLA Tests
+
+When spec includes SLAs:
+- Define measurable test cases
+- Include target percentiles (e.g., p95) exactly as specified
+- Include baseline data sets and load profiles
+
+### 4.6 Observability Tests (Lightweight)
+
+- Logging events present for critical flows
+- Metrics emitted for key counters/latencies
+- Traces connected across boundaries
+
+### 4.7 UI / Component Tests (Conditional)
+
+Apply when:
+- Spec category is `ui`, or
+- `ui.json` exists.
+
+Focus areas:
+- Component rendering
+- State transitions
+- Accessibility basics
+- Visual regression targets (if your stack supports)
+
+Avoid validating business rules solely in UI tests when those rules belong to service/domain layers.
+
+---
+
+## 5) UI JSON Addendum (Conditional)
+
+Rules:
+- Treat `ui.json` as **design-owned**.
+- Tests should validate:
+  - component IDs/names used in UI code match `ui.json`
+  - component names align with `ui-component-registry.json` when present
+- Do not require or encourage embedding logic inside `ui.json`.
+
+If the project does not use UI JSON:
+- Skip this section without failing.
+
+---
+
+## 6) Generate Test Plan Document
+
+Recommended content:
+
+1) Scope
+2) Assumptions
+3) Dependencies
+4) Test Matrix (table)
+5) Data/fixtures requirements
+6) Tooling recommendations
+7) Risks & gaps
+8) Registry alignment notes
+9) UI JSON compliance notes (if applicable)
+
+Default output path:
+- next to the spec:
+  - `tests.md`
+
+If `--output` provided:
+- write to that path.
+
+If `--dry-run`:
+- print only.
+
+---
+
+## 7) Quality Gates
+
+Before finalizing:
+- Ensure every major spec section maps to at least one test group.
+- Ensure tasks with high risk have explicit tests.
+- Ensure shared names come from registries where available.
+- Ensure UI tests are separated from business logic verification.
+
+---
+
+## 8) Recommended Follow-ups
+
+- `/smartspec_verify_tasks_progress`
+- `/smartspec_implement_tasks`
+- `/smartspec_sync_spec_tasks --mode=additive` when new shared names are discovered
+
+---
+
+## Notes
+
+- This workflow is intentionally conservative to avoid introducing cross-SPEC naming drift.
+- `.spec/registry/` remains the canonical shared truth when present.
+- Root `SPEC_INDEX.json` is treated as legacy mirror only.
+

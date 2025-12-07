@@ -1,606 +1,337 @@
 ---
-description: Verify implementation progress by checking tasks.md against actual files, running validation, and reporting incomplete/error tasks without modifying code. Optionally update checkboxes for tasks that are fully verified as complete.
+description: Verify implementation progress against tasks/specs with SmartSpec v5.2 centralization and UI JSON addendum
+version: 5.2
 ---
 
-## User Input
+# /smartspec_verify_tasks_progress
 
-```text
-$ARGUMENTS
-```
+Verify real implementation progress against `tasks.md`, `spec.md`, and the canonical SmartSpec centralized knowledge layer.
 
-Typical usage:
+This workflow enforces SmartSpec v5.2 centralization:
+- **`.spec/` is the canonical project-owned space**.
+- **`.spec/SPEC_INDEX.json` is the canonical index**.
+- **`.spec/registry/` is the shared source of truth**.
+- `SPEC_INDEX.json` at repo root is a **legacy mirror**.
+- `.smartspec/` is tooling-only.
+- **UI specs use `ui.json` as the design source of truth** for Penpot integration.
+
+---
+
+## What It Does
+
+- Resolves canonical index and registry locations.
+- Identifies the target spec and its adjacent tasks.
+- Verifies progress using evidence from:
+  - task status markers
+  - code structure changes
+  - test coverage signals
+  - configuration and documentation updates
+- Detects cross-SPEC drift risks.
+- Validates UI separation rules when UI JSON is present.
+- Produces a progress report and next-step recommendations.
+
+---
+
+## When to Use
+
+- During daily/weekly progress reviews.
+- Before merging a large PR.
+- Before cutting a release.
+- After running `/smartspec_implement_tasks`.
+
+---
+
+## Inputs
+
+- Target spec path (recommended)
+  - Example: `specs/core/spec-core-004-rate-limiting/spec.md`
+
+- Expected adjacent files:
+  - `tasks.md`
+  - (UI specs) `ui.json`
+
+---
+
+## Outputs
+
+- A structured progress report under:
+  - `.spec/reports/verify-tasks-progress/`
+- Optional summary printed to console.
+
+---
+
+## Flags
+
+- `--index` Path to SPEC_INDEX (optional)  
+  default: auto-detect
+
+- `--registry-dir` Registry directory (optional)  
+  default: `.spec/registry`
+
+- `--report-dir` Output report directory (optional)  
+  default: `.spec/reports/verify-tasks-progress/`
+
+- `--spec` Explicit spec path (optional)
+
+- `--tasks` Explicit tasks path (optional)
+
+- `--strict` Fail on warnings or ambiguous completion signals (optional)
+
+- `--dry-run` Print report only (do not write files)
+
+---
+
+## 0) Resolve Canonical Index & Registry
+
+### 0.1 Resolve SPEC_INDEX (Single Source of Truth)
+
+Detection order:
+
+1) `.spec/SPEC_INDEX.json` (canonical)  
+2) `SPEC_INDEX.json` (legacy root mirror)  
+3) `.smartspec/SPEC_INDEX.json` (deprecated)  
+4) `specs/SPEC_INDEX.json` (older layout)
 
 ```bash
-/smartspec_verify_tasks_progress specs/feature/spec-004-financial-system/tasks.md
-/smartspec_verify_tasks_progress specs/feature/spec-004-financial-system/tasks.md --tasks T001-T020
+INDEX_PATH="${FLAGS_index:-}"
+
+if [ -z "$INDEX_PATH" ]; then
+  if [ -f ".spec/SPEC_INDEX.json" ]; then
+    INDEX_PATH=".spec/SPEC_INDEX.json"
+  elif [ -f "SPEC_INDEX.json" ]; then
+    INDEX_PATH="SPEC_INDEX.json"
+  elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
+    INDEX_PATH=".smartspec/SPEC_INDEX.json" # deprecated
+  elif [ -f "specs/SPEC_INDEX.json" ]; then
+    INDEX_PATH="specs/SPEC_INDEX.json"
+  fi
+fi
+
+if [ -n "$INDEX_PATH" ] && [ -f "$INDEX_PATH" ]; then
+  echo "✅ Using SPEC_INDEX: $INDEX_PATH"
+else
+  echo "⚠️ SPEC_INDEX not found. Verification will proceed with local evidence only."
+  INDEX_PATH=""
+fi
 ```
 
-> This workflow is **verification-only**. It must **never attempt to fix code** or auto-implement missing work. There are separate workflows (e.g. `/smartspec_implement_tasks`, `/smartspec_fix_errors`) responsible for making code changes.
+### 0.2 Resolve Registry Directory
+
+```bash
+REGISTRY_DIR="${FLAGS_registry_dir:-.spec/registry}"
+REGISTRY_AVAILABLE=false
+
+if [ -d "$REGISTRY_DIR" ]; then
+  REGISTRY_AVAILABLE=true
+fi
+
+REPORT_DIR="${FLAGS_report_dir:-.spec/reports/verify-tasks-progress}"
+mkdir -p "$REPORT_DIR"
+
+STRICT="${FLAGS_strict:-false}"
+DRY_RUN="${FLAGS_dry_run:-false}"
+```
+
+### 0.3 Expected Registries (if present)
+
+- `api-registry.json`
+- `data-model-registry.json`
+- `glossary.json`
+- `critical-sections-registry.json`
+- `patterns-registry.json` (optional)
+- `ui-component-registry.json` (optional)
+
+Rules:
+- If registries exist, they are authoritative for shared-name verification.
+- This workflow does not rewrite registries.
 
 ---
 
-## 0. Load Context
+## 1) Identify Target Spec/Tasks
 
-Load only the SmartSpec context required to verify implementation progress for a single SPEC.
+Priority:
 
-1. From project root:
-   - `.spec/SPEC_INDEX.json` (canonical)
-   - `SPEC_INDEX.json` (legacy root mirror)
-   - If not found, optionally try `.smartspec/SPEC_INDEX.json` (deprecated)
-     - If all are missing, log a warning... **do not fail** the workflow. Continue without SPEC index data.
+1) Use `--spec` / `--tasks` if provided.
+2) If `INDEX_PATH` exists, allow selecting a spec by ID.
+3) Otherwise, require a spec path.
 
-2. From the target SPEC:
-   - The `tasks.md` file from `$ARGUMENTS`
-   - Any spec metadata files referenced by `tasks.md` (e.g. `spec.md`, `architecture.md`, `openapi.yaml`, `data-model.md`)
-
-3. Explicitly **do NOT** load or call any KiloCode/Orchestrator prompt templates:
-   - Do not read `.smartspec/KILO-PROMPT*`
-   - Do not read `.smartspec/KILO-ASK*`
-   - Do not read `.smartspec/KILO-ARCHITECT*`
-   - Do not read `.smartspec/KILO-CODE*`
-   - Do not read `.smartspec/KILO-DEBUG*`
-   - Do not read `.smartspec/KILO-TEST*`
-
-> This workflow is verification-only. It must not invoke Orchestrator Mode or use any `--kilocode`-only tools.  
-> It **reads** the current implementation state and **reports** it. It does not generate code or fix errors.
+Default tasks location:
+- `tasks.md` next to `spec.md`.
 
 ---
 
-## 1. Resolve Path and Parse Arguments
+## 2) Read Inputs (Read-Only)
 
-### 1.1 Resolve TASKS_PATH
+- Read `spec.md`.
+- Read `tasks.md` if present.
+- Detect `ui.json` if present.
 
-1. If `$ARGUMENTS` contains a path ending with `tasks.md`, use it as `TASKS_PATH`.
-2. Otherwise, if the currently active file is a `tasks.md`, use that.
-3. Normalize to a project-relative path, for example:
-
-```text
-specs/feature/spec-004-financial-system/tasks.md
-```
-
-If `TASKS_PATH` cannot be resolved → stop with a clear error:
-
-```text
-❌ Could not resolve tasks.md path from arguments. Expected: specs/.../tasks.md
-```
-
-### 1.2 Supported CLI Flags
-
-Parse the following flags:
-
-- `--tasks <RANGE>` (optional)
-  - Limit verification to a subset of tasks.
-  - Supports:
-    - Single ID: `T005`
-    - Comma-separated list: `T001,T003,T010`
-    - Ranges: `T001-T010`
-    - Mixed: `T001-T005,T010,T020-T022`
-
-- `--task <RANGE>` (alias for `--tasks`)
-
-- `--start-from <TASK_ID>` (optional)
-  - Verify tasks starting from this ID (inclusive), based on order in `tasks.md`.
-
-- `--phase <PHASE_NAME_OR_ID>` (optional)
-  - Only verify tasks in the specified phase (if phases are defined in `tasks.md`).
-
-- `--output <PATH>` (optional)
-  - Custom output path for the progress report.
-  - Default: same directory as `tasks.md` with name `progress-report-YYYYMMDD.md`.
-
-- `--no-update` (optional)
-  - Do not modify `tasks.md` at all. Only generate the report.
-
-- `--strict` (optional)
-  - Use stricter rules to determine completion (e.g., require all validation commands and all acceptance criteria to pass).
-
-> This workflow does **not** support `--kilocode`. If such a flag is present, it must be ignored or produce a clear warning.
-
-Store parsed options:
-
-```python
-options = {
-  "task_selector_raw": "...",   # from --tasks/--task
-  "start_from": "T010" or None,
-  "phase": "Phase 2" or None,
-  "output": "custom-path.md" or None,
-  "no_update": bool,
-  "strict": bool,
-}
-```
-
-### 1.3 Parse Task Selector
-
-If `task_selector_raw` is provided:
-
-1. Split by comma.
-2. For each token:
-   - If it matches `T\d+` → single task ID.
-   - If it matches `T\d+-T\d+` → expand numeric range (e.g. `T001-T003` → `T001,T002,T003`).
-3. Collect unique task IDs in order.
-
-Result:
-
-```python
-selected_task_ids = ["T001", "T002", "T003", ...]
-```
+Do not rewrite these files.
 
 ---
 
-## 2. Parse tasks.md
+## 3) Build Verification Checklist
 
-Parse `tasks.md` into a structured list of phases and tasks.
+Create a spec-aligned checklist to evaluate evidence for:
 
-For each task `T00X`, extract:
-
-- `phase` (e.g., `"Phase 1: Foundation"`)
-- `id` (e.g., `"T001"`)
-- `title`
-- `description` (optional)
-- `dependencies` (task IDs or spec IDs)
-- `files` (list of file operations)
-  - `operation`: `CREATE` | `EDIT`
-  - `path`: file path (e.g. `src/services/promo-code.service.ts`)
-- `acceptance_criteria` (list of textual criteria)
-- `validation_commands` (e.g. `npm test`, `npm run lint`, `npm run test promo`)
-- `checkbox_state`:
-  - `"checked"`   if the task line starts with `- [x] T001:`
-  - `"unchecked"` if the task line starts with `- [ ] T001:`
-
-Example task header pattern:
-
-```text
-- [ ] T001: Initialize Promo System
-- [x] T002: Setup Promo Database
-```
-
-Regex (conceptual):
-
-```text
-^- \[( |x)\] (T[0-9]{3}): (.*)$
-```
-
-Return structure:
-
-```python
-tasks = [
-  {
-    "phase": "Phase 1: Foundation",
-    "id": "T001",
-    "title": "Initialize Promo System",
-    "description": "...",
-    "dependencies": [],
-    "files": [...],
-    "acceptance_criteria": [...],
-    "validation_commands": [...],
-    "checkbox_state": "unchecked",  # or "checked"
-  },
-  ...
-]
-```
+1) **Task completion**
+2) **Contract correctness**
+3) **Test coverage**
+4) **NFR fulfillment**
+5) **Cross-SPEC alignment**
+6) **UI compliance (if applicable)**
 
 ---
 
-## 3. Filter Scope
+## 4) Validate Dependency Readiness
 
-Determine which tasks to verify in this run.
+If `INDEX_PATH` exists:
 
-### 3.1 Apply Task Selector
+- Cross-check spec dependencies.
+- Warn if:
+  - a dependency spec is not implemented or is missing critical artifacts.
+  - tasks appear to implement dependent features out of order.
 
-If `selected_task_ids` is not empty:
-
-- Keep only tasks where `task.id` is in `selected_task_ids`.
-- Preserve original order from `tasks.md`.
-
-### 3.2 Apply `--start-from`
-
-If `options["start_from"]` is set:
-
-- Find the first index `i` where `tasks[i].id == start_from`.
-- Keep tasks from `i` onward.
-
-### 3.3 Apply `--phase`
-
-If `options["phase"]` is set:
-
-- Keep only tasks whose `phase` matches the given phase name or ID (case-insensitive comparison or pattern matching).
-
-The final ordered list is `FILTERED_TASKS`.
-
-If `FILTERED_TASKS` is empty → report and stop:
-
-```text
-No tasks to verify for the given filters.
-```
+In `--strict` mode:
+- Treat major dependency-order violations as errors.
 
 ---
 
-## 4. Verify Each Task (Read-Only for Code)
+## 5) Registry Alignment Checks (Conditional)
 
-For each task in `FILTERED_TASKS`, verify its completion based on:
+If `REGISTRY_AVAILABLE=true`:
 
-- File existence and modification state
-- Validation command results
-- Acceptance criteria
+- Verify that names referenced in the target spec/tasks (and observed in code, when inferable) match registries:
+  - API names/route prefixes
+  - model names
+  - domain terms
+  - critical cross-cutting sections
 
-Create per-task fields:
+If mismatch detected:
+- Prefer that implementation aligns to registry.
+- Record drift warnings.
 
-```python
-task.file_status = {}          # path -> {expected, exists, modified}
-task.validation_results = {}   # command -> {exit_code, stdout, stderr}
-task.criteria_flags = []       # list of booleans
-task.completion_percentage = 0
-task.is_complete = False
-task.status = "⬜ NOT STARTED"
-task.error_summary = None      # short text summarizing why it is not complete (if applicable)
-```
+This workflow does not rename registry entries.
 
-> **Important:** This workflow must not modify any source files. It only reads them and runs validation commands.
+---
 
-### 4.1 Check Files Existence and Modification
+## 6) Evidence-Based Progress Evaluation
 
-For each file in `task.files`:
+The verification should distinguish between:
 
-```python
-for f in task.files:
-    exists = check_file_exists(f.path)
+- **Declared progress** (task checkboxes, status labels)
+- **Observed progress** (code/tests/config changes)
 
-    if f.operation == "CREATE":
-        task.file_status[f.path] = {
-            "expected": "created",
-            "exists": exists,
-        }
+### 6.1 Task Status Signals
 
-    elif f.operation == "EDIT":
-        modified = check_file_modified_since(f.path, task_created_date)
-        task.file_status[f.path] = {
-            "expected": "edited",
-            "exists": exists,
-            "modified": modified,
-        }
-```
+- Parse `tasks.md` status markers.
+- Identify blocked or missing tasks.
+
+### 6.2 Code Structure Signals
+
+Best-effort checks:
+- Modules/services created for major task groups.
+- API/controller presence for declared endpoints.
+- Data model definitions aligned with spec.
+
+### 6.3 Test Signals
+
+- Unit tests present for domain logic.
+- Integration/contract tests present for critical flows.
+- Performance tests present when SLAs exist.
+
+### 6.4 NFR Signals
+
+When spec includes NFRs:
+- Verify evidence exists for:
+  - logging
+  - metrics
+  - tracing
+  - security enforcement
+  - rate limiting / auditing as applicable
+
+---
+
+## 7) UI JSON Addendum (Conditional)
+
+Apply when **any** of these are true:
+
+- Spec category is `ui` in SPEC_INDEX
+- `ui.json` exists in the spec folder
+- The spec explicitly mentions Penpot/UI JSON workflow
 
 Rules:
 
-- For `CREATE`: file must exist to count as satisfied.
-- For `EDIT`: file must exist **and** have been modified since the task was created (to avoid counting pre-existing files from other specs).
+1) **UI design source of truth is JSON** (`ui.json`).
+2) Treat `ui.json` as design-owned.
+3) Do not embed business logic in UI JSON.
+4) Verify that UI implementation aligns with `ui.json` component structure.
 
-### 4.2 Run Validation Commands
+Checks:
 
-For each `command` in `task.validation_commands`:
+- If `ui.json` exists:
+  - confirm `tasks.md` includes component mapping and logic separation tasks.
 
-```python
-for command in task.validation_commands:
-    result = run_command(command)  # returns {exit_code, stdout, stderr}
-    task.validation_results[command] = result
-```
+- If `ui-component-registry.json` exists:
+  - verify that component names used in tasks/implementation match registry.
 
-- Commands are run in the project root (or appropriate working directory).
-- **No attempt is made to fix any errors**. Failures are recorded and reported.
+- If a UI spec is declared but `ui.json` is missing:
+  - warn and recommend creation.
 
-### 4.3 Evaluate Acceptance Criteria
-
-Each acceptance criterion is evaluated using:
-
-- `task.file_status`
-- `task.validation_results`
-
-Conceptual:
-
-```python
-criteria_flags = []
-
-for criterion in task.acceptance_criteria:
-    met = check_criterion(
-        criterion,
-        file_status=task.file_status,
-        validation_results=task.validation_results,
-    )
-    criteria_flags.append(met)
-
-task.criteria_flags = criteria_flags
-```
-
-Compute completion percentage:
-
-```python
-if criteria_flags:
-    task.completion_percentage = (
-        sum(1 for x in criteria_flags if x) / len(criteria_flags) * 100
-    )
-else:
-    # If there are no explicit criteria, infer completion from files + validation
-    task.completion_percentage = infer_completion_from_files_and_validation(task)
-```
-
-### 4.4 Determine Task Status and Error Summary
-
-Derive high-level status:
-
-```python
-any_files_exist = any(
-    status.get("exists") for status in task.file_status.values()
-)
-
-all_files_ok = all(
-    status.get("exists") and (status.get("modified", True))
-    for status in task.file_status.values()
-)
-
-all_validation_passed = all(
-    r["exit_code"] == 0 for r in task.validation_results.values()
-)
-
-all_criteria_met = (task.completion_percentage == 100)
-```
-
-Completion rules:
-
-- In **strict mode** (`options["strict"] == True`):
-  - `is_complete = all_files_ok and all_validation_passed and all_criteria_met`
-- In default mode:
-  - `is_complete = all_files_ok and all_criteria_met`
-  - Validation failures may mark the task as incomplete (recommended).
-
-Set status:
-
-```python
-if task.is_complete:
-    task.status = "✅ COMPLETE"
-    task.error_summary = None
-elif any_files_exist or task.validation_results:
-    task.status = f"🟦 IN PROGRESS ({task.completion_percentage}%)"
-    task.error_summary = build_error_summary(task)
-else:
-    task.status = "⬜ NOT STARTED"
-    task.error_summary = "No related files or validation activity detected."
-```
-
-`build_error_summary(task)` should produce a short one-line explanation, for example:
-
-- `"Missing file: src/services/promo-code.service.ts"`
-- `"TypeScript compile error: 3 errors in src/middleware/auth.ts"`
-- `"Tests failing: 2 Jest test suites red"`
-
-> These error summaries will be shown clearly in the final report.  
-> **The verify workflow never tries to fix them.** It only describes what is wrong.
+Non-UI projects:
+- Do not fail.
+- Skip UI checks unless a spec explicitly declares itself as UI.
 
 ---
 
-## 5. Generate Progress Report (Read-Only Summary)
+## 8) Progress Scoring (Optional Heuristic)
 
-Generate a Markdown progress report summarizing:
+Provide a qualitative summary per major task group:
 
-- Overall status
-- Phase-by-phase status
-- Per-task details
-- Blockers and recommendations
-- Explicit list of tasks that are incomplete or have errors
+- Not started
+- In progress
+- Blocked
+- Functionally complete (tests missing)
+- Complete (with tests)
 
-### 5.1 Determine Output Path
-
-If `options["output"]` is set:
-
-- Use that path.
-
-Otherwise:
-
-- Use the same directory as `tasks.md`:
-  - `progress-report-YYYYMMDD.md`
-
-### 5.2 Overall Summary Section
-
-```markdown
-# Implementation Progress Report
-
-**Generated:** YYYY-MM-DD HH:mm  
-**Source:** [tasks.md path]
+Avoid overstating completion without evidence.
 
 ---
 
-## Executive Summary
+## 9) Report
 
-**Overall Progress:** {completed_tasks}/{total_tasks} tasks complete ({overall_percentage}%)
+Write a structured report to `REPORT_DIR` including:
 
-**Status Breakdown:**
-- ✅ Complete: {complete_count} tasks ({complete_pct}%)
-- 🟦 In Progress: {in_progress_count} tasks ({in_progress_pct}%)
-- ⬜ Not Started: {not_started_count} tasks ({not_started_pct}%)
+- Index path used
+- Registry availability
+- Target spec/tasks paths
+- Dependency findings
+- Task status summary
+- Evidence summary (code/tests/NFR)
+- Cross-SPEC drift warnings
+- UI JSON compliance summary (if applicable)
+- Recommended next actions
 
-> This report is verification-only. No code was modified during this process.
-```
-
-### 5.3 Detailed Task Status Section
-
-```markdown
-## Detailed Status
-
-### Phase 1: [Name]
-
-#### {task.status} {task.id}: {task.title}
-
-**Completion:** {task.completion_percentage}%  
-
-**Files:**
-- ✅ `path/file1.ts` - Created
-- ✅ `path/file2.ts` - Edited (modified)
-- ❌ `path/file3.ts` - Missing
-
-**Validation:**
-- ✅ `npm run build` - PASS
-- ⚠️ `npm test` - FAIL (3 failing tests)
-- ✅ `npm run lint` - PASS
-
-**Acceptance:**
-- ✅ Criterion 1
-- ✅ Criterion 2
-- ❌ Criterion 3 (missing negative test cases)
-
-**Summary:**  
-- If `task.is_complete`: `Task is fully implemented and passes all checks under current rules.`  
-- If not: include `task.error_summary`, e.g.  
-  `Task is incomplete: TypeScript compile errors remain in src/middleware/auth.ts and tests are failing.`
-```
-
-### 5.4 Explicit Incomplete/Error Tasks Section
-
-This section is critical for your request: it clearly lists tasks that are **not complete or have errors**, without attempting to fix anything.
-
-```markdown
-## 🚧 Incomplete or Error Tasks (Verification Only)
-
-The following tasks are **not** fully complete or have validation errors.  
-No code has been changed; this section is for visibility and planning.
-
-### In Progress / Incomplete
-- {task.id}: {task.title} – {task.completion_percentage}%  
-  - Reason: {task.error_summary}
-
-### Not Started
-- {task.id}: {task.title}  
-  - Reason: No implementation detected for this task.
-
-### Marked Complete but Failed Verification
-- {task.id}: {task.title}  
-  - tasks.md: `[x]` (marked complete)  
-  - Verification result: **FAILED**  
-  - Reason: {task.error_summary}
-```
-
-> This section is **pure reporting**. It does not change any files.  
-> To actually fix these tasks, the user should run the appropriate implementation/fix workflows.
-
-### 5.5 Blockers & Recommendations Section
-
-```markdown
-## ⚠️ Blockers & Recommendations
-
-### Critical Blockers (Must be addressed before further implementation)
-1. T0XX: Missing file `src/.../file.ts`
-   - Impact: Blocks dependent tasks (T0YY, T0ZZ)
-   - Suggested workflow: `/smartspec_implement_tasks ... --tasks T0XX`
-
-2. T0AA: TypeScript compile errors in `src/...`
-   - Impact: Prevents successful build and testing
-   - Suggested workflow: `/smartspec_fix_errors specs/...`
-
-### Suggested Next Steps
-
-- To implement missing features:
-  - `/smartspec_implement_tasks specs/.../tasks.md --tasks T0NN-T0MM`
-- To fix compilation/test errors:
-  - `/smartspec_fix_errors specs/...`
-- To generate missing tests:
-  - `/smartspec_generate_tests specs/... --target-coverage 80`
-
-> Again, **this verify workflow does not perform these fixes**.  
-> It only points out what needs attention and suggests which workflows to use.
-```
+If `--dry-run`:
+- Print the report only.
 
 ---
 
-## 6. Optional: Auto-Update tasks.md (Checkboxes Only)
+## 10) Recommended Follow-ups
 
-> This is the only part of the workflow that writes to a file, and it **only** touches `tasks.md` checkboxes.  
-> No source code or config files are modified by this workflow.
+Depending on findings:
 
-### 6.1 Rules
-
-If `options["no_update"]` is **true**:
-
-- Skip this section entirely (do not modify `tasks.md`).
-
-Otherwise:
-
-For each verified task `task`:
-
-- If `task.is_complete == True` **and** `task.checkbox_state == "unchecked"`:
-  - Update the corresponding task header line in `tasks.md`:
-    - From:
-      ```text
-      - [ ] T001:
-      ```
-    - To:
-      ```text
-      - [x] T001:
-      ```
-
-- If `task.is_complete == False` **and** `task.checkbox_state == "checked"`:
-  - **Do not automatically uncheck.**
-  - Record a warning in the report:
-
-    ```markdown
-    ⚠️ T001 is marked complete in tasks.md but verification failed. Please review manually.
-    ```
-
-Implementation sketch:
-
-```python
-if not options["no_update"]:
-    with open(TASKS_FILE, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    for task in tasks:
-        if task.is_complete and task.checkbox_state == "unchecked":
-            pattern = f"- [ ] {task.id}:"
-            replacement = f"- [x] {task.id}:"
-            content = content.replace(pattern, replacement)
-
-    with open(TASKS_FILE, "w", encoding="utf-8") as f:
-        f.write(content)
-```
+- `/smartspec_fix_errors`
+- `/smartspec_generate_tests`
+- `/smartspec_refactor_code`
+- `/smartspec_sync_spec_tasks --mode=additive` (after review)
+- `/smartspec_validate_index`
 
 ---
 
-## 7. Final Output
+## Notes
 
-### 7.1 Console Summary
+- This workflow is intentionally conservative to prevent false completion claims.
+- `.spec/SPEC_INDEX.json` is canonical; root index remains a legacy mirror.
+- `.spec/registry/` is the authoritative shared-name source when present.
 
-At the end of the workflow, print a concise summary, for example:
-
-```text
-📊 Verification completed (no code changes were made).
-
-📁 Progress Report: specs/feature/spec-005-promo-system/progress-report-20251206.md
-📄 Tasks File:       specs/feature/spec-005-promo-system/tasks.md
-   (checkboxes updated only for tasks fully verified as complete)
-
-Summary:
-- ✅ Complete:      12/30 tasks (40%)
-- 🟦 In Progress:   8 tasks
-- ⬜ Not Started:   10 tasks
-
-Incomplete/Error Tasks:
-- 5 tasks are incomplete or have validation errors.
-  See the "Incomplete or Error Tasks" section in the report for details.
-
-To fix issues and continue implementation, use:
-- /smartspec_implement_tasks ...
-- /smartspec_fix_errors ...
-- /smartspec_generate_tests ...
-```
-
-### 7.2 No Orchestrator / KiloCode Behavior
-
-This workflow must **never**:
-
-- Switch into Orchestrator Mode.
-- Call any KiloCode-specific tools or prompts.
-- Use any `--kilocode`-specific behavior.
-- Attempt to fix or generate code.
-
-If there is a need to **fix** or **implement** missing work:
-
-- The report should suggest running `/smartspec_implement_tasks`, `/smartspec_fix_errors`, or `/smartspec_generate_tests` as separate steps.
-- This verification workflow remains read-only for all code and config files, and only writes:
-  - The progress report.
-  - Optionally, checkbox updates in `tasks.md` for tasks that have been fully verified as complete.
-
----
-
-By following this workflow, `smartspec_verify_tasks_progress`:
-
-- Gives a **clear, explicit summary** of all incomplete/error tasks.
-- **Does not attempt to fix** those tasks—only reports them.
-- Keeps `tasks.md` in sync (when allowed) by marking only truly complete tasks as `[x]`.
-- Leaves actual fixing to other dedicated workflows (implement, fix_errors, generate_tests, etc.).

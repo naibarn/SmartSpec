@@ -1,499 +1,246 @@
 ---
-description: Re-index SPEC_INDEX.json by scanning all specs and their related files
-globs: ["specs/**/*.md", "src/**/*.ts", "src/**/*.tsx", ".spec/SPEC_INDEX.json", "SPEC_INDEX.json"]
+description: Rebuild SPEC_INDEX from all specs with SmartSpec centralization (.spec) and UI JSON addendum awareness
+version: 5.2
 ---
 
-# Re-Index Specs and Update SPEC_INDEX.json
+# /smartspec_reindex_specs
 
-You are an expert in analyzing project structure and maintaining metadata. Your task is to scan all specs in the project, identify their related source files, and update `SPEC_INDEX.json` to ensure it's accurate and up-to-date.
+Rebuild (or regenerate) the project `SPEC_INDEX.json` by scanning all spec folders and consolidating metadata, while enforcing SmartSpec v5.2 centralization rules.
 
-## Input
+This workflow assumes:
+- **`.spec/` is the canonical project-owned space** for shared truth.
+- **`.spec/SPEC_INDEX.json` is the canonical index**.
+- `SPEC_INDEX.json` at repo root is a **legacy mirror**.
+- `.smartspec/SPEC_INDEX.json` is **deprecated** and must not be created for new projects.
+- **`.spec/registry/`** may exist and is used for cross-SPEC naming reference.
+- UI specs may have **`ui.json`** as the design source of truth.
 
-You will receive:
-1. **Options** (optional):
-   - `--spec <spec-path>` - Re-index specific spec only (e.g., `specs/feature/spec-004-financial-system`)
-   - `--verify` - Verify SPEC_INDEX.json without making changes
-   - `--external-repo <path>` - Include files from external repository (for shared services)
-   - `--force` - Force re-index even if spec hasn't changed
+---
 
-## Your Task
+## What It Does
 
-### Phase 1: Scan Specs
+- Scans all specs under `specs/**/spec.md`.
+- Rebuilds a consistent `specs[]` list using your existing schema.
+- Validates:
+  - ID uniqueness
+  - path correctness
+  - category/status sanity
+  - dependency integrity
+- Detects UI specs via `ui.json` and category hints.
+- Writes canonical index to `.spec/SPEC_INDEX.json`.
+- Optionally updates legacy root mirror.
+- Produces a reindex report under `.spec/reports/`.
 
-1. **Load Current SPEC_INDEX.json**
-   ```bash
-   cat .spec/SPEC_INDEX.json
-   ```
-   - Parse existing index
-   - Note last update timestamps
-   - Identify specs that may be outdated
+---
 
-2. **Find All Specs**
-   ```bash
-   # Find all spec.md files
-   find specs -name "spec.md" -type f
-   ```
-   
-   **For each spec found:**
-   - Extract spec directory path (e.g., `specs/feature/spec-004-financial-system`)
-   - Extract spec ID from directory name or spec.md content
-   - Check if spec exists in current SPEC_INDEX.json
-   - Check if spec.md has been modified since last index
+## When to Use
 
-3. **Display Scan Results**
-   ```
-   🔍 Spec Scan Results:
-   
-   📊 Summary:
-     Total specs found: 45
-     New specs (not in index): 3
-     Modified specs (outdated): 7
-     Up-to-date specs: 35
-   
-   🆕 New Specs:
-     - specs/feature/spec-046-notification-system
-     - specs/feature/spec-047-analytics-dashboard
-     - specs/backend/spec-048-data-pipeline
-   
-   📝 Modified Specs:
-     - specs/feature/spec-004-financial-system (modified 2 days ago)
-     - specs/feature/spec-012-user-profile (modified 1 day ago)
-     ...
-   ```
+- After adding/removing multiple specs.
+- After reorganizing spec folders.
+- When counts or dependencies look inconsistent.
+- Before major releases.
 
-### Phase 2: Analyze Each Spec
+---
 
-For each spec that needs indexing:
+## Inputs
 
-1. **Read Spec Content**
-   ```bash
-   cat specs/feature/spec-004-financial-system/spec.md
-   ```
-   
-   **Extract metadata:**
-   - Spec ID (from filename or content)
-   - Spec title
-   - Spec description
-   - Services mentioned
-   - Models mentioned
-   - APIs mentioned
-   - Dependencies on other specs
+- Existing specs under `specs/**/`.
+- Optional existing index for bootstrapping legacy fields.
 
-2. **Identify Related Files**
-   
-   **Strategy 1: Parse spec.md for file references**
-   - Look for code blocks with file paths
-   - Look for "Files to modify/create" sections
-   - Look for import statements in code examples
-   
-   **Strategy 2: Search for spec ID in source code**
-   ```bash
-   # Search for spec ID in comments
-   grep -r "spec-004" src/ --include="*.ts" --include="*.tsx"
-   ```
-   
-   **Strategy 3: Analyze tasks.md**
-   ```bash
-   cat specs/feature/spec-004-financial-system/tasks.md
-   ```
-   - Extract file paths from task descriptions
-   - Extract file paths from implementation notes
-   
-   **Strategy 4: Infer from service/model names**
-   - If spec mentions "CreditService" → look for `src/services/credit.service.ts`
-   - If spec mentions "Transaction" model → look for `src/models/transaction.model.ts`
-   - If spec mentions "/api/credit" → look for `src/controllers/credit.controller.ts`
+---
 
-3. **Verify File Existence**
-   ```bash
-   # Check if identified files actually exist
-   for file in "${files[@]}"; do
-     if [ -f "$file" ]; then
-       echo "✅ $file"
-     else
-       echo "⚠️  $file (mentioned but not found)"
-     fi
-   done
-   ```
-   
-   **Handle missing files:**
-   - If file is mentioned in spec but doesn't exist → mark as "planned" (not yet implemented)
-   - Only include existing files in SPEC_INDEX.json
-   - Log missing files for reference
+## Outputs
 
-4. **Check External Repositories**
-   
-   If `--external-repo` option is provided:
-   ```bash
-   # Search in external repo for shared services
-   grep -r "spec-004" /path/to/external-repo/src/ --include="*.ts"
-   ```
-   
-   **Include external files:**
-   - Prefix external files with repo identifier
-   - Example: `@shared/services/common-auth.service.ts`
-   - Track external repo path in metadata
+- **Canonical:** `.spec/SPEC_INDEX.json`
+- **Optional legacy mirror:** `SPEC_INDEX.json` (root)
+- Report: `.spec/reports/reindex-specs/`
 
-5. **Extract Dependencies**
-   
-   **From spec.md:**
-   - Look for "Dependencies" or "Prerequisites" section
-   - Look for references to other spec IDs
-   
-   **From source files:**
-   - Analyze imports in related files
-   - If `credit.service.ts` imports from `auth.service.ts`
-   - And `auth.service.ts` belongs to `spec-001-auth`
-   - Then `spec-004` depends on `spec-001`
+---
 
-6. **Display Analysis Results**
-   ```
-   📋 Spec: spec-004-financial-system
-   
-   📁 Related Files (8 files):
-     ✅ src/services/credit.service.ts
-     ✅ src/services/payment.service.ts
-     ✅ src/models/transaction.model.ts
-     ✅ src/models/credit-score.model.ts
-     ✅ src/controllers/credit.controller.ts
-     ✅ src/utils/financial-calculator.ts
-     ✅ src/validators/transaction.validator.ts
-     ✅ src/types/financial.types.ts
-   
-   🔗 Dependencies (2 specs):
-     - spec-001-auth (for authentication)
-     - spec-002-database (for data models)
-   
-   🌐 External Files (1 file):
-     - @shared/services/common-payment.service.ts
-   ```
+## Flags
 
-### Phase 3: Update SPEC_INDEX.json
+- `--index` Existing SPEC_INDEX path (optional)  
+  default: auto-detect
 
-1. **Backup Current Index**
-   ```bash
-   mkdir -p .smartspec/backups
-   cp .spec/SPEC_INDEX.json .smartspec/backups/SPEC_INDEX.backup-$(date +%Y%m%d-%H%M%S).json
-   ```
+- `--output-index` Path to write the rebuilt canonical index (optional)  
+  default: `.spec/SPEC_INDEX.json`
 
-2. **Build New Index Structure**
-   ```json
-   {
-     "version": "1.0",
-     "last_updated": "2024-01-15T10:30:00Z",
-     "project_root": "/path/to/project",
-     "external_repos": {
-       "shared": "/path/to/shared-repo"
-     },
-     "specs": {
-       "spec-004-financial-system": {
-         "spec_id": "spec-004-financial-system",
-         "title": "Financial System",
-         "spec_path": "specs/feature/spec-004-financial-system/spec.md",
-         "tasks_path": "specs/feature/spec-004-financial-system/tasks.md",
-         "files": [
-           "src/services/credit.service.ts",
-           "src/services/payment.service.ts",
-           "src/models/transaction.model.ts",
-           "src/models/credit-score.model.ts",
-           "src/controllers/credit.controller.ts",
-           "src/utils/financial-calculator.ts",
-           "src/validators/transaction.validator.ts",
-           "src/types/financial.types.ts"
-         ],
-         "external_files": [
-           "@shared/services/common-payment.service.ts"
-         ],
-         "dependencies": [
-           "spec-001-auth",
-           "spec-002-database"
-         ],
-         "last_indexed": "2024-01-15T10:30:00Z",
-         "status": "implemented"
-       }
-     }
-   }
-   ```
+- `--mirror-root` Also write/update `SPEC_INDEX.json` at repo root (optional)  
+  default: `true` if a root mirror already exists, else `false`
 
-3. **Merge with Existing Index**
-   - Keep specs that are still valid
-   - Update specs that have changed
-   - Add new specs
-   - Mark removed specs as "archived" (don't delete)
+- `--report-dir` Output report directory (optional)  
+  default: `.spec/reports/reindex-specs/`
 
-4. **Validate Index**
-   ```bash
-   # Check JSON syntax
-   cat .spec/SPEC_INDEX.json | jq . > /dev/null
-   
-   # Verify all file paths exist
-   # Verify all dependency specs exist
-   # Check for circular dependencies
-   ```
+- `--strict` Fail on warnings (optional)
 
-5. **Write Updated Index**
-   ```bash
-   mkdir -p .spec
-   cat > .spec/SPEC_INDEX.json << 'EOF'
-   {
-     "version": "1.0",
-     ...
-   }
-   EOF
-   ```
+---
 
-### Phase 4: Generate Report
+## 0) Resolve Index Paths (Single Source of Truth)
 
-Create an index report: `.smartspec/reindex-report-YYYYMMDD-HHMMSS.md`
+Detection order:
 
-```markdown
-# Spec Re-Index Report
-
-Generated: YYYY-MM-DD HH:MM:SS
-
-## Summary
-
-- **Total Specs**: 45
-- **New Specs Added**: 3
-- **Specs Updated**: 7
-- **Specs Unchanged**: 35
-- **Archived Specs**: 2
-
-## New Specs
-
-### spec-046-notification-system
-- **Path**: specs/feature/spec-046-notification-system
-- **Files**: 5 files
-  - src/services/notification.service.ts
-  - src/models/notification.model.ts
-  - src/controllers/notification.controller.ts
-  - src/utils/email-sender.ts
-  - src/types/notification.types.ts
-- **Dependencies**: spec-001-auth, spec-003-user-management
-
-### spec-047-analytics-dashboard
-- **Path**: specs/feature/spec-047-analytics-dashboard
-- **Files**: 8 files
-- **Dependencies**: spec-004-financial-system, spec-012-user-profile
-
-[List all new specs]
-
-## Updated Specs
-
-### spec-004-financial-system
-- **Reason**: Modified 2 days ago
-- **Changes**:
-  - Added: src/utils/interest-calculator.ts
-  - Removed: src/utils/old-calculator.ts (file deleted)
-  - Updated dependencies: Added spec-005-reporting
-
-### spec-012-user-profile
-- **Reason**: Modified 1 day ago
-- **Changes**:
-  - Added: src/services/avatar.service.ts
-  - Added external file: @shared/services/image-processor.service.ts
-
-[List all updated specs]
-
-## Archived Specs
-
-### spec-010-legacy-payment
-- **Reason**: Spec directory removed
-- **Action**: Marked as archived in index
-
-## External Repositories
-
-### @shared
-- **Path**: /path/to/shared-repo
-- **Files Used**: 3 files
-  - @shared/services/common-payment.service.ts (used by spec-004)
-  - @shared/services/common-auth.service.ts (used by spec-001)
-  - @shared/services/image-processor.service.ts (used by spec-012)
-
-## Validation Results
-
-✅ All file paths verified
-✅ All dependencies exist
-✅ No circular dependencies detected
-✅ JSON syntax valid
-
-## Index Statistics
-
-- **Total Files Indexed**: 234 files
-- **Average Files per Spec**: 5.2 files
-- **Specs with External Dependencies**: 8 specs
-- **Specs with No Dependencies**: 12 specs
-
-## Backup
-
-Previous index backed up to:
-- .smartspec/backups/SPEC_INDEX.backup-20240115-103000.json
-
-## Next Steps
-
-1. Review the updated SPEC_INDEX.json
-2. Verify external repository paths are correct
-3. Run quality workflows on updated specs:
-   - /smartspec_fix_errors <spec-path>
-   - /smartspec_generate_tests <spec-path>
-   - /smartspec_refactor_code <spec-path>
-```
-
-### Phase 5: Display Summary
-
-```
-✅ Re-Index Complete!
-
-📊 Results:
-  Total Specs: 45
-  New: 3
-  Updated: 7
-  Unchanged: 35
-  Archived: 2
-
-📁 Files Indexed:
-  Total: 234 files
-  Average per spec: 5.2 files
-
-🌐 External Repos:
-  @shared: 3 files
-
-📝 Reports:
-  - Index: .spec/SPEC_INDEX.json
-  - Report: .smartspec/reindex-report-YYYYMMDD.md
-  - Backup: .smartspec/backups/SPEC_INDEX.backup-YYYYMMDD.json
-
-💡 Next Steps:
-  1. Review SPEC_INDEX.json
-  2. Verify external repo paths
-  3. Run quality workflows on updated specs
-  4. Commit changes: git add .spec/SPEC_INDEX.json
-```
-
-## File Detection Strategies
-
-### Strategy 1: Parse Spec Content
-
-Look for file references in spec.md:
-
-```markdown
-## Implementation
-
-Files to create/modify:
-- src/services/credit.service.ts
-- src/models/transaction.model.ts
-```
-
-### Strategy 2: Search by Spec ID
+1) `.spec/SPEC_INDEX.json` (canonical)  
+2) `SPEC_INDEX.json` (legacy root mirror)  
+3) `.smartspec/SPEC_INDEX.json` (deprecated)  
+4) `specs/SPEC_INDEX.json` (older layout)
 
 ```bash
-# Find files that reference this spec in comments
-grep -r "spec-004" src/ --include="*.ts" -l
+INDEX_IN="${FLAGS_index:-}"
+
+if [ -z "$INDEX_IN" ]; then
+  if [ -f ".spec/SPEC_INDEX.json" ]; then
+    INDEX_IN=".spec/SPEC_INDEX.json"
+  elif [ -f "SPEC_INDEX.json" ]; then
+    INDEX_IN="SPEC_INDEX.json"
+  elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
+    INDEX_IN=".smartspec/SPEC_INDEX.json" # deprecated
+  elif [ -f "specs/SPEC_INDEX.json" ]; then
+    INDEX_IN="specs/SPEC_INDEX.json"
+  fi
+fi
+
+CANONICAL_OUT="${FLAGS_output_index:-.spec/SPEC_INDEX.json}"
+
+REPORT_DIR="${FLAGS_report_dir:-.spec/reports/reindex-specs}"
+mkdir -p "$REPORT_DIR"
+mkdir -p "$(dirname "$CANONICAL_OUT")"
+
+MIRROR_ROOT_FLAG="${FLAGS_mirror_root:-}"
+MIRROR_ROOT=false
+if [ -n "$MIRROR_ROOT_FLAG" ]; then
+  [ "$MIRROR_ROOT_FLAG" = "true" ] && MIRROR_ROOT=true || MIRROR_ROOT=false
+else
+  [ -f "SPEC_INDEX.json" ] && MIRROR_ROOT=true || MIRROR_ROOT=false
+fi
+
+STRICT="${FLAGS_strict:-false}"
 ```
 
-### Strategy 3: Analyze Tasks
+---
 
-Parse tasks.md for file paths:
+## 1) Scan Specs
 
-```markdown
-- [ ] Implement CreditService in src/services/credit.service.ts
-- [ ] Create Transaction model in src/models/transaction.model.ts
-```
+- Find all `spec.md` files under `specs/**/spec.md`.
+- For each spec folder:
+  - infer or read spec ID
+  - read title/name
+  - read category/status if present
+  - read declared dependencies if present
+  - detect UI marker if `ui.json` exists
 
-### Strategy 4: Service/Model Name Inference
+Rules:
+- The spec folder path becomes the authoritative `path` field.
+- This workflow must **not rewrite any `spec.md`**.
 
-If spec mentions:
-- "CreditService" → search for `src/services/credit.service.ts`
-- "Transaction model" → search for `src/models/transaction.model.ts`
-- "POST /api/credit" → search for `src/controllers/credit.controller.ts`
+---
 
-### Strategy 5: Git History
+## 2) Normalize and Validate
 
-```bash
-# Find files modified around the same time as spec
-git log --since="2024-01-01" --name-only --pretty=format: specs/feature/spec-004-financial-system/
-```
+### 2.1 ID Uniqueness
 
-## Handling External Repositories
+- Fail if duplicated IDs are found.
 
-### Configuration
+### 2.2 Path Integrity
 
-Add external repo paths to `.smartspec/config.json`:
+- Each index entry must point to an existing folder containing `spec.md`.
 
-```json
-{
-  "external_repos": {
-    "shared": {
-      "path": "/path/to/shared-repo",
-      "description": "Shared services repository"
-    },
-    "common": {
-      "path": "/path/to/common-lib",
-      "description": "Common library"
-    }
-  }
-}
-```
+### 2.3 Category Sanity
 
-### Usage
+- Categories should be consistent with your existing taxonomy.
+- If a UI spec has `ui.json`, but category is not `ui`:
+  - warn (or error in `--strict`).
 
-```bash
-# Re-index with external repo
-/smartspec_reindex_specs --external-repo /path/to/shared-repo
+### 2.4 Dependency Integrity
 
-# Re-index specific spec with external repo
-/smartspec_reindex_specs --spec specs/feature/spec-004 --external-repo /path/to/shared-repo
-```
+- Each dependency must reference a discovered spec ID.
+- Warn on circular dependency chains.
 
-### External File Format
+---
 
-In SPEC_INDEX.json:
+## 3) Preserve Schema Compatibility
 
-```json
-{
-  "spec-004-financial-system": {
-    "files": [
-      "src/services/credit.service.ts"
-    ],
-    "external_files": [
-      "@shared/services/common-payment.service.ts",
-      "@common/utils/validator.ts"
-    ]
-  }
-}
-```
+When `INDEX_IN` exists:
+- Use it only to preserve fields that your production workflows already rely on.
+- Do not change the overall top-level schema shape.
 
-## Important Notes
+Rules:
+- Prefer newly scanned truth for:
+  - `path`
+  - `dependencies`
+  - `category` when confidently inferred
 
-- Always backup SPEC_INDEX.json before updating
-- Verify all file paths exist before adding to index
-- Handle missing files gracefully (mark as planned)
-- Support multiple external repositories
-- Detect circular dependencies and warn
-- Preserve manual edits in SPEC_INDEX.json where possible
-- Use timestamps to track when each spec was last indexed
-- Archive removed specs instead of deleting them
-- Validate JSON syntax after updates
-- Generate detailed reports for audit trail
+---
 
-## Example Usage
+## 4) Build Canonical Index
 
-```bash
-# Re-index all specs
-/smartspec_reindex_specs
+- Compose a new `SPEC_INDEX.json` compatible with your existing structure.
+- Recompute counts.
+- Ensure stable ordering where helpful (e.g., by category then ID).
 
-# Re-index specific spec
-/smartspec_reindex_specs --spec specs/feature/spec-004-financial-system
+Write to:
+- `CANONICAL_OUT` (default `.spec/SPEC_INDEX.json`).
 
-# Verify index without changes
-/smartspec_reindex_specs --verify
+---
 
-# Re-index with external repo
-/smartspec_reindex_specs --external-repo /path/to/shared-repo
+## 5) Optional Root Mirror Update
 
-# Force re-index even if unchanged
-/smartspec_reindex_specs --force
+If `MIRROR_ROOT=true`:
+- Write a mirror copy to `SPEC_INDEX.json`.
 
-# Re-index specific spec with external repo
-/smartspec_reindex_specs --spec specs/feature/spec-004 --external-repo /path/to/shared-repo
-```
+Rules:
+- The root mirror must be treated as **legacy**.
+- Warn if root mirror diverged from canonical in previous versions.
+
+Do NOT write `.smartspec/SPEC_INDEX.json`.
+
+---
+
+## 6) UI JSON Addendum (Index-Level Awareness)
+
+This workflow does not validate UI JSON deeply, but must:
+
+- Detect UI specs by:
+  - category = `ui`, OR
+  - `ui.json` presence.
+
+- Emit warnings when:
+  - `ui.json` is missing for a declared UI spec.
+  - category mismatches UI JSON presence.
+
+- Ensure the index entry remains compatible with the UI team workflow.
+
+If the project does not use UI JSON:
+- Do not fail.
+- Only warn when a spec explicitly declares itself as UI.
+
+---
+
+## 7) Report
+
+Write a structured report to `REPORT_DIR` containing:
+
+- Index input path used (if any)
+- Canonical output path
+- Spec counts by category/status
+- Duplicate ID findings
+- Missing path findings
+- Dependency graph summary
+- UI specs detected and category alignment
+
+---
+
+## 8) Recommended Follow-ups
+
+- `/smartspec_validate_index`
+- `/smartspec_generate_plan`
+- `/smartspec_generate_tasks`
+- `/smartspec_sync_spec_tasks --mode=additive` (after review)
+
+---
+
+## Notes
+
+- `.spec/SPEC_INDEX.json` is the canonical single source of truth.
+- Root `SPEC_INDEX.json` is a legacy mirror for backward compatibility.
+- This workflow is safe for large projects and prevents index drift.
+

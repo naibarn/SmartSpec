@@ -1,63 +1,85 @@
 ---
-description: Validate SPEC Index (centralization-aware)
+description: Validate SPEC_INDEX and enforce SmartSpec centralization + UI JSON addendum
+version: 5.2
 ---
 
 # /smartspec_validate_index
 
-Validate the project's SPEC_INDEX integrity and optionally auto-fix common issues.
-This workflow is compatible with SmartSpec centralization:
-- `.spec/` is the canonical project governance space.
-- `.smartspec/` is tooling space (deprecated as a canonical index location).
+Validate the project SPEC_INDEX and its linked specs/registries to ensure consistency, prevent cross-SPEC drift, and enforce SmartSpec v5.2 centralization.
 
-## What It Does
+This workflow establishes a single, consistent interpretation of where canonical project truth lives:
+- **`.spec/` is project-owned canonical space**
+- **`.spec/SPEC_INDEX.json` is the canonical index**
+- **`.spec/registry/` contains shared registries** used by all workflows
+- `.smartspec/` is tooling-only and must not become a source of project truth
 
-- Validates the structure and consistency of `SPEC_INDEX.json`
-- Checks for common index integrity issues:
-  - Missing or duplicated spec IDs
-  - Path mismatches
-  - Broken dependencies
-  - Registry reference mismatches (if registries exist)
-- Produces a health score
-- Optionally auto-fixes safe issues with `--fix`
+UI Design Addendum:
+- When UI specs exist, **UI design source of truth is `ui.json`** to support Penpot workflows.
+
+---
+
+## What It Validates
+
+1) SPEC_INDEX file integrity
+2) Spec metadata consistency
+3) Dependency graph correctness
+4) Cross-SPEC namespace safety
+5) Registry alignment (if registries exist)
+6) UI JSON compliance (conditional)
+
+---
 
 ## When to Use
 
+- After adding/removing specs
+- After running `/smartspec_reindex_specs`
+- Before generating plans/tasks/tests at scale
 - Before major releases
-- After bulk spec changes
-- Weekly/monthly health checks
-- When suspecting INDEX issues
-- After team handover
 
-## Expected Outcome
+---
 
-- Validation report (`.md`)
-- Health score (0-100)
-- List of errors and warnings
-- Recommendations for fixes
-- Auto-fixed INDEX (if `--fix` flag)
+## Inputs
+
+- Optional explicit index path
+- Existing spec folders under `specs/**/`
+- Optional registries under `.spec/registry/`
+
+---
+
+## Outputs
+
+- Validation report (default: `.spec/reports/validate-index/`)
+- Recommendations for corrective workflows
 
 ---
 
 ## Flags
 
-- `--index` Path to SPEC_INDEX.json   
-  default: `.spec/SPEC_INDEX.json`
+- `--index` Path to SPEC_INDEX (optional)  
+  default: auto-detect
 
-- `--output` Output report path (optional)  
-  default directory: `.spec/reports/`
+- `--registry-dir` Registry directory (optional)  
+  default: `.spec/registry`
 
-- `--fix` Auto-fix safe issues (optional)
+- `--report-dir` Output report directory (optional)  
+  default: `.spec/reports/validate-index/`
 
 - `--strict` Fail on warnings (optional)
 
 ---
 
-## 0. Prerequisites
+## 0) Resolve Canonical Index & Registry
 
-### 0.1 Check SPEC_INDEX Exists
+### 0.1 Resolve SPEC_INDEX (Single Source of Truth)
+
+Detection order:
+
+1) `.spec/SPEC_INDEX.json` (canonical)  
+2) `SPEC_INDEX.json` (legacy root mirror)  
+3) `.smartspec/SPEC_INDEX.json` (deprecated)  
+4) `specs/SPEC_INDEX.json` (older layout)
 
 ```bash
-# Resolve SPEC_INDEX path
 INDEX_PATH="${FLAGS_index:-}"
 
 if [ -z "$INDEX_PATH" ]; then
@@ -67,141 +89,205 @@ if [ -z "$INDEX_PATH" ]; then
     INDEX_PATH="SPEC_INDEX.json"
   elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
     INDEX_PATH=".smartspec/SPEC_INDEX.json" # deprecated
+  elif [ -f "specs/SPEC_INDEX.json" ]; then
+    INDEX_PATH="specs/SPEC_INDEX.json"
   fi
 fi
 
-if [ -z "$INDEX_PATH" ] || [ ! -f "$INDEX_PATH" ]; then
-  echo "❌ ERROR: SPEC_INDEX.json not found"
-  echo ""
-  echo "Checked (in order):"
-  echo "  1) .spec/SPEC_INDEX.json (canonical)"
-  echo "  2) SPEC_INDEX.json (legacy root mirror)"
-  echo "  3) .smartspec/SPEC_INDEX.json (deprecated)"
-  echo ""
-  echo "Please ensure SPEC_INDEX exists or specify correct path:"
-  echo "  /smartspec_validate_index --index=path/to/SPEC_INDEX.json"
+if [ -n "$INDEX_PATH" ] && [ -f "$INDEX_PATH" ]; then
+  echo "✅ Using SPEC_INDEX: $INDEX_PATH"
+else
+  echo "❌ SPEC_INDEX not found. Validation cannot proceed."
   exit 1
 fi
-
-echo "✅ Found SPEC_INDEX at: $INDEX_PATH"
 ```
 
-### 0.2 Load SPEC_INDEX
+### 0.2 Resolve Registry Directory
 
-```javascript
-const fs = require('fs');
-const path = require('path');
+```bash
+REGISTRY_DIR="${FLAGS_registry_dir:-.spec/registry}"
+REGISTRY_AVAILABLE=false
 
-const FLAGS = globalThis.FLAGS || {};
+if [ -d "$REGISTRY_DIR" ]; then
+  REGISTRY_AVAILABLE=true
+fi
 
-const resolveIndexPath = () => {
-  if (FLAGS.index && fs.existsSync(FLAGS.index)) return FLAGS.index;
+REPORT_DIR="${FLAGS_report_dir:-.spec/reports/validate-index}"
+mkdir -p "$REPORT_DIR"
 
-  if (fs.existsSync('.spec/SPEC_INDEX.json')) return '.spec/SPEC_INDEX.json';
-  if (fs.existsSync('SPEC_INDEX.json')) return 'SPEC_INDEX.json';
-  if (fs.existsSync('.smartspec/SPEC_INDEX.json')) return '.smartspec/SPEC_INDEX.json'; // deprecated
-
-  // default fallback (should not reach here due to bash precheck)
-  return '.spec/SPEC_INDEX.json';
-};
-
-const indexPath = resolveIndexPath();
-const indexContent = fs.readFileSync(indexPath, 'utf-8');
-
-let specIndex;
-try {
-  specIndex = JSON.parse(indexContent);
-} catch (error) {
-  console.error('❌ ERROR: Invalid JSON in SPEC_INDEX.json');
-  console.error(error.message);
-  process.exit(1);
-}
+STRICT="${FLAGS_strict:-false}"
 ```
 
----
+### 0.3 Expected Registries (if present)
 
-## 1. Validate Index Structure
-
-Check required top-level fields (example):
-- `version`
-- `specs[]`
-- `last_updated` (if used)
-- `public_specs_count`, `private_specs_count`, `total_specs` (if used)
+- `api-registry.json`
+- `data-model-registry.json`
+- `glossary.json`
+- `critical-sections-registry.json`
+- `patterns-registry.json` (optional)
+- `ui-component-registry.json` (optional)
 
 Rules:
-- `total_specs` should equal `specs.length`  
-  or be auto-corrected when `--fix`
-- `public + private` should equal `total_specs`  
-  when these fields are present
+- Registries are authoritative for cross-SPEC shared names.
+- If a registry exists, index + specs must not contradict it.
 
 ---
 
-## 2. Validate Spec Entries
+## 1) Load SPEC_INDEX
 
-Validate each spec item:
-- Unique `id`
-- Valid `path`
-- Type/category consistency
-- Dependency references must exist
+Validate JSON structure:
+- Ensure required top-level fields exist per your established schema.
+- Ensure `specs` list is present and an array.
 
-Recommended checks:
-- Duplicate IDs
-- Path points to existing `spec.md`
-- No circular dependency (warning-level unless `--strict`)
+Normalize for evaluation:
+- Treat `path` as repository-relative.
 
 ---
 
-## 3. Cross-Check with Registries (if present)
+## 2) Validate Spec Entries
 
-If registries exist under:
-- `.spec/registry/`
+For each spec entry:
 
-Then validate:
-- API names referenced in specs exist in `api-registry.json`
-- Domain terms match `glossary.json`
-- Data models match `data-model-registry.json`
-- Critical sections match `critical-sections-registry.json`
+- `id` must be unique.
+- `path` must exist and contain `spec.md`.
+- `category` must be a valid known category.
+- `status` must be a known status label.
 
-Do not invent new registry entries in validate mode.  
-Only recommend additions or fix when `--fix` is safe.
-
----
-
-## 4. Output Report
-
-Default output directory:
-- `.spec/reports/`
-
-Example naming:
-- `SPEC_INDEX_VALIDATION_REPORT.md`
-
-Include:
-- Health score
-- Errors & warnings
-- Suggested fixes
-- Detected canonical/legacy index path
+Cross-check with actual files:
+- Folder existence
+- `spec.md` existence
 
 ---
 
-## 5. Auto-Fix (Optional)
+## 3) Validate Dependency Graph
 
-Enabled only with:
-- `--fix`
+- Each dependency must reference a valid `id`.
+- Warn on:
+  - missing dependencies
+  - category violations (if your system has rules)
+  - circular dependencies
 
-Safe auto-fix examples:
-- Recompute `total_specs` from `specs.length`
-- Recompute `public_specs_count` + `private_specs_count` if fields exist
-- Normalize obvious path formatting issues (non-destructive)
+If `--strict`:
+- Treat circular dependencies as errors.
 
-Never:
-- Rewrite `spec.md`
-- Delete spec entries without explicit user instruction
+---
+
+## 4) Cross-SPEC Namespace Safety
+
+Detect potential conflicts across all indexed specs:
+
+- API namespace overlaps (based on spec metadata or registry)
+- Data model naming collisions
+- Domain term collisions
+
+Rules:
+- If registries exist, they are the primary baseline.
+- If registries do not exist, base conflicts on:
+  - explicit spec declarations
+  - tasks signals if available
+
+Output:
+- A conflict list with recommended remediation:
+  - `/smartspec_sync_spec_tasks --mode=additive`
+  - `/smartspec_refactor_code`
+  - targeted spec repairs
+
+---
+
+## 5) Registry Alignment Checks (Conditional)
+
+If `REGISTRY_AVAILABLE=true`:
+
+- Validate that:
+  - APIs referenced by multiple specs map to `api-registry.json`
+  - Shared models map to `data-model-registry.json`
+  - Shared terms map to `glossary.json`
+  - Cross-cutting requirements map to `critical-sections-registry.json`
+
+Rules:
+- Do not auto-write registry changes in this workflow.
+- Provide recommendations only.
+
+---
+
+## 6) UI JSON Addendum (Conditional)
+
+Apply UI validation when **any** of these are true:
+
+- A spec category is `ui` in SPEC_INDEX
+- The spec folder contains `ui.json`
+
+### 6.1 UI Source of Truth
+
+- `ui.json` is the UI design artifact (Penpot-aligned).
+- `spec.md` provides rules, constraints, and mapping notes.
+
+### 6.2 Enforced Checks
+
+For UI specs detected:
+
+- Ensure `ui.json` exists (warn if missing).
+- Ensure the index category is `ui` (warn if mismatched).
+- If `ui-component-registry.json` exists:
+  - ensure component names referenced in UI specs/tasks align.
+
+### 6.3 Non-UI Projects
+
+If the project does not use UI JSON:
+- Do not fail.
+- Skip these checks unless a UI spec is explicitly declared.
+
+---
+
+## 7) Legacy Compatibility Rules
+
+- If both `.spec/SPEC_INDEX.json` and root `SPEC_INDEX.json` exist:
+  - Treat `.spec/` as canonical.
+  - Root is a mirror.
+  - Warn if they diverge.
+
+- If only root exists:
+  - Validation proceeds.
+  - Recommend migrating to `.spec/` canonical by running:
+    - `/smartspec_reindex_specs`
+
+- If `.smartspec/SPEC_INDEX.json` exists:
+  - Mark as deprecated.
+  - Recommend removal after canonical migration.
+
+---
+
+## 8) Report
+
+Write a structured report into `REPORT_DIR` containing:
+
+- Index path used
+- Spec counts by category/status
+- Missing/invalid paths
+- Dependency findings
+- Namespace conflict summary
+- Registry alignment summary (if present)
+- UI JSON compliance summary (if applicable)
+
+---
+
+## 9) Recommended Follow-ups
+
+Depending on findings:
+
+- `/smartspec_reindex_specs`
+- `/smartspec_generate_spec --repair-legacy --repair-additive-meta`
+- `/smartspec_sync_spec_tasks --mode=additive`
+- `/smartspec_generate_plan`
+- `/smartspec_generate_tasks`
+- `/smartspec_generate_tests`
 
 ---
 
 ## Notes
 
-- Canonical index is `.spec/SPEC_INDEX.json`
-- Root `SPEC_INDEX.json` is allowed for legacy projects
-- `.smartspec/SPEC_INDEX.json` is deprecated and should not be created for new projects
+- This workflow is the primary "gatekeeper" for SmartSpec centralization.
+- It ensures all other workflows operate on a consistent canonical foundation.
+- `.spec/registry/` remains the shared canonical truth when present.
+- Root `SPEC_INDEX.json` is treated as legacy mirror.
 

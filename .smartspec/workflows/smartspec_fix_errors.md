@@ -1,386 +1,320 @@
 ---
-description: Fix compilation errors, type errors, and runtime errors automatically
-globs: ["specs/**/*.md", "src/**/*.ts", "src/**/*.tsx"]
+description: Fix implementation errors with SmartSpec centralization (.spec) and UI JSON addendum
+version: 5.2
 ---
 
-# Fix Compilation and Runtime Errors
-
-You are an expert code debugger and error fixer. Your task is to automatically detect and fix compilation errors, type errors, and runtime errors in the codebase.
-
-## Input
-
-You will receive:
-1. **Spec Directory Path** - Path to the spec directory (e.g., `specs/feature/spec-004-financial-system`)
-2. **Options** (optional):
-   - `--file <path>` - Fix errors in specific file only
-   - `--severity <level>` - Fix only errors of specific severity (critical, high, medium, low)
-   - `--auto-fix` - Auto-fix all errors without asking
-   - `--dry-run` - Show what would be fixed without actually fixing
-   - `--kilocode` - Use Kilo Code Orchestrator Mode with Debug Mode for systematic error fixing
-
-## Your Task
-
-### Phase 1: Detect Errors
-
-1. **Load SPEC_INDEX.json**
-   ```bash
-   cat .spec/SPEC_INDEX.json
-   ```
-   - Parse JSON to get spec metadata
-   - Extract `spec.files[]` array for the given spec_id
-   - If `--file` option provided, use only that file
-   - Otherwise, use all files from `spec.files[]`
-   - **SCOPE**: Only scan files listed in spec.files[] (not entire project!)
-
-2. **Read Progress Report**
-   - Look for `progress-report-*.md` in the spec directory
-   - Extract all reported errors
-   - Filter errors to only those in scoped files
-
-3. **Run TypeScript Compiler (scoped)**
-   ```bash
-   cd <project-root>
-   # Only check files in scope
-   npx tsc --noEmit --pretty false <file1> <file2> ... 2>&1
-   ```
-   - Parse compilation errors
-   - Extract file paths, line numbers, error codes, and messages
-   - **Only process errors from scoped files**
-
-4. **Run ESLint (scoped)**
-   ```bash
-   # Only lint files in scope
-   npx eslint <file1> <file2> ... --format json 2>&1
-   ```
-   - Parse linting errors
-   - Filter only errors (not warnings)
-   - **Only process errors from scoped files**
-
-5. **Categorize Errors by Severity**
-   - **CRITICAL**: Compilation errors that prevent build
-   - **HIGH**: Type errors that may cause runtime errors
-   - **MEDIUM**: Linting errors that should be fixed
-   - **LOW**: Warnings and minor issues
-
-6. **Display Error Summary**
-   ```
-   🔍 Found X errors:
-     CRITICAL: X errors
-     HIGH: X errors
-     MEDIUM: X errors
-     LOW: X errors
-   ```
-
-### Phase 2: Analyze Errors
-
-For each error:
-
-1. **Read Context**
-   - Read the file containing the error
-   - Extract 10 lines before and after the error line
-   - Analyze imports and dependencies
-
-2. **Identify Root Cause**
-   - Type mismatch → need type cast or type definition change
-   - Missing import → need to add import statement
-   - Undefined variable → need to declare variable
-   - Wrong function signature → need to fix parameters or return type
-
-3. **Create Fix Strategy**
-   - Determine the fix type (type cast, add import, rename, etc.)
-   - Calculate confidence level (0-100%)
-   - Prepare the exact code changes needed
-
-4. **Display Proposed Fixes**
-   ```
-   Found X errors to fix:
-   
-   CRITICAL (X):
-   ✗ src/services/example.service.ts:45
-     TS2345: Argument type mismatch
-     Fix: Cast userId to number using parseInt()
-     Confidence: 95%
-   
-   [Show all proposed fixes]
-   ```
-
-### Phase 3: Apply Fixes
-
-**If `--kilocode` flag: Use Kilo Code Debug Mode**
-
-```
-Use Debug Mode to analyze and fix all errors systematically.
-```
-
-**Debug Mode will:**
-- Analyze all errors systematically
-- Identify root causes
-- Apply fixes one by one
-- Verify each fix
-- Rollback if fix creates new errors
-- Report progress
-
-**If NOT using `--kilocode`:**
-
-1. **Ask User for Confirmation** (unless `--auto-fix`)
-   ```
-   Fix all errors? (y/n/s)
-   y = Yes, fix all
-   n = No, skip all  
-   s = Select which to fix
-   ```
-
-2. **Backup Original Files**
-   - Create `.backup` files before making changes
-   - Store backup timestamp
-
-3. **Apply Fixes One by One**
-   - Make the code changes
-   - Verify syntax after each fix
-   - If fix creates new errors → rollback immediately
-
-4. **Display Progress**
-   ```
-   🔧 Fixing errors...
-     ✓ Fixed src/services/example.service.ts:45 (TS2345)
-     ✗ Failed src/services/other.service.ts:120 (TS2339) - Rolled back
-     ✓ Fixed src/utils/helper.ts:23 (unused variable)
-   ```
-
-### Phase 4: Verify Fixes
-
-1. **Run TypeScript Compiler Again**
-   ```bash
-   npx tsc --noEmit
-   ```
-   - Check if errors are resolved
-   - Check for new errors introduced
-
-2. **Run Tests (if available)**
-   ```bash
-   npm test
-   ```
-   - Ensure tests still pass
-   - If tests fail → rollback and report
-
-3. **Display Verification Results**
-   ```
-   ✅ Verification:
-     ✓ TypeScript compilation: PASS
-     ✓ Tests: 25/25 passing
-     ✓ No new errors introduced
-   ```
-
-### Phase 5: Generate Report
-
-Create a fix report file: `<spec-dir>/fix-report-YYYYMMDD-HHMMSS.md`
-
-```markdown
-# Error Fix Report
-
-Generated: YYYY-MM-DD HH:MM:SS
-
-## Summary
-
-- Total errors detected: X
-- Fixed successfully: X
-- Failed to fix: X
-- Skipped: X
-
-## Fixed Errors
-
-### ✅ src/services/example.service.ts:45
-- **Error**: TS2345 - Argument type mismatch
-- **Fix Applied**: Cast userId to number using parseInt()
-- **Status**: Success
-- **Before**:
-  ```typescript
-  this.calculateBalance(userId)
-  ```
-- **After**:
-  ```typescript
-  this.calculateBalance(parseInt(userId))
-  ```
-
-### ❌ src/services/other.service.ts:120
-- **Error**: TS2339 - Property 'amount' does not exist
-- **Fix Attempted**: Add amount property to interface
-- **Status**: Failed - Created new error TS2322
-- **Action**: Rolled back
-- **Recommendation**: Manual fix required
-
-## Errors Requiring Manual Fix
-
-1. src/services/other.service.ts:120 - Complex interface issue
-2. [List other errors that couldn't be auto-fixed]
-
-## Verification Results
-
-- TypeScript Compilation: ✅ PASS
-- ESLint: ✅ PASS
-- Tests: ✅ 25/25 passing
-- New Errors: ❌ None
-
-## Backup Files
-
-- src/services/example.service.ts.backup-YYYYMMDD-HHMMSS
-- src/utils/helper.ts.backup-YYYYMMDD-HHMMSS
-
-## Recommendations
-
-- Review fixed code before committing
-- Add tests for edge cases
-- Consider refactoring complex functions
-
-## Next Steps
-
-1. Review the fixes in the modified files
-2. Run full test suite
-3. Commit changes if satisfied
-4. Continue with task implementation
-```
-
-### Phase 6: Update Progress Report
-
-1. **Update the progress report** with:
-   - Reduced error count
-   - Fix timestamp
-   - Link to fix report
-
-2. **Suggest Next Action**
-   ```
-   ✅ Fixed X/Y errors successfully!
-   
-   📊 Results:
-     Fixed: X errors (XX%)
-     Failed: X errors (requires manual fix)
-   
-   📁 Reports:
-     - Fix report: <spec-dir>/fix-report-YYYYMMDD.md
-     - Updated progress: <spec-dir>/progress-report-YYYYMMDD.md
-   
-   💡 Next Steps:
-     1. Review fixed code
-     2. Fix remaining errors manually (if any)
-     3. Run tests: npm test
-     4. Commit changes: git add . && git commit -m "fix: Auto-fix errors in spec-XXX"
-   
-   🔧 Suggested Workflows:
-   
-   ✅ Errors fixed! Consider these next actions:
-   
-   1. Generate tests for fixed code:
-      /smartspec_generate_tests <spec-dir> --target-coverage 80
-   
-   2. Check code quality:
-      /smartspec_refactor_code <spec-dir>
-   
-   3. Verify overall progress:
-      /smartspec_verify_tasks_progress <spec-dir>/tasks.md
-   
-   4. Continue implementation:
-      /smartspec_implement_tasks <spec-dir>/tasks.md --skip-completed
-   ```
-
-## Common Fix Patterns
-
-### Type Mismatch Errors
-
-**Pattern**: Argument of type 'X' is not assignable to parameter of type 'Y'
-
-**Fixes**:
-- Add type cast: `value as Type` or `<Type>value`
-- Use conversion function: `parseInt()`, `parseFloat()`, `String()`, etc.
-- Fix the type definition in interface/type
-
-### Missing Import Errors
-
-**Pattern**: Cannot find name 'X'
-
-**Fixes**:
-- Add import statement: `import { X } from './path'`
-- Check if X is exported from the module
-- Install missing package if it's from node_modules
-
-### Undefined Variable Errors
-
-**Pattern**: Variable 'X' is used before being assigned
-
-**Fixes**:
-- Add variable declaration: `let X: Type;` or `const X = value;`
-- Initialize variable with default value
-- Check if variable should be a parameter
-
-### Property Does Not Exist Errors
-
-**Pattern**: Property 'X' does not exist on type 'Y'
-
-**Fixes**:
-- Add property to interface/type definition
-- Use optional chaining: `obj?.property`
-- Add type guard to narrow type
-
-### Unused Variable/Import Errors
-
-**Pattern**: 'X' is declared but its value is never read
-
-**Fixes**:
-- Remove unused variable/import
-- Prefix with underscore if intentionally unused: `_variable`
-- Use the variable if it should be used
-
-## Error Handling
-
-### If Fix Creates New Errors
-1. Rollback the fix immediately
-2. Mark as "Failed" in report
-3. Add to "Requires Manual Fix" list
-4. Continue with other fixes
-
-### If Tests Fail After Fix
-1. Rollback all fixes in that file
-2. Mark file as "Requires Manual Fix"
-3. Continue with other files
-
-### If Confidence < 80%
-1. Skip auto-fix
-2. Add to "Requires Manual Fix" list
-3. Provide detailed analysis for manual fixing
-
-## Output Format
-
-Always provide:
-1. ✅ **Summary** of what was fixed
-2. 📊 **Statistics** (fixed/failed/skipped)
-3. 📁 **Report file path**
-4. 💡 **Next steps** recommendation
-
-## Important Notes
-
-- Always backup files before making changes
-- Verify each fix doesn't introduce new errors
-- Rollback immediately if fix fails
-- Prioritize critical errors over minor issues
-- Don't fix errors with confidence < 80% automatically
-- Always run tests after fixing to ensure no regressions
-- Create detailed reports for audit trail
-- Suggest manual fixes for complex errors
-
-## Example Usage
+# /smartspec_fix_errors
+
+Analyze implementation errors (build failures, test failures, runtime errors, integration issues) and propose or apply fixes aligned with the canonical SmartSpec knowledge layer.
+
+This workflow enforces SmartSpec centralization:
+- **`.spec/` is the canonical project space** for shared truth.
+- `.smartspec/` is tooling-only.
+- Shared definitions must be aligned via **`.spec/registry/`**.
+- **UI specs use `ui.json` as the design source of truth** for Penpot integration.
+
+---
+
+## What It Does
+
+- Resolves canonical `SPEC_INDEX.json`.
+- Loads shared registries.
+- Identifies the relevant spec(s) for the error context.
+- Cross-checks expected behavior against `spec.md` + `tasks.md`.
+- Detects root causes that may be:
+  - implementation defects
+  - cross-SPEC naming drift
+  - contract mismatches
+  - missing dependencies
+  - incorrect test assumptions
+  - UI JSON vs component misalignment
+- Produces a **safe, spec-aligned fix plan**.
+
+---
+
+## When to Use
+
+- CI failures after implementing a SPEC.
+- Local build/test failures.
+- Integration regressions across multiple specs.
+- UI mismatches between design and runtime components.
+
+---
+
+## Inputs
+
+- Error logs or failure summaries.
+- Target spec path (recommended).
+
+Expected adjacent files:
+- `spec.md`
+- `tasks.md` (if present)
+- (UI specs) `ui.json`
+
+---
+
+## Outputs
+
+- A structured fix plan.
+- Recommended code changes.
+- Recommendations for registry or index updates (non-destructive by default).
+- Suggested follow-up workflows.
+
+---
+
+## Flags
+
+- `--index` Path to SPEC_INDEX (optional)  
+  default: auto-detect
+
+- `--registry-dir` Registry directory (optional)  
+  default: `.spec/registry`
+
+- `--spec` Explicit spec path (optional)
+
+- `--tasks` Explicit tasks path (optional)
+
+- `--mode` `recommend` | `additive-meta`  
+  default: `recommend`
+
+- `--strict` Fail on ambiguity (optional)
+
+---
+
+## 0) Resolve Canonical Index & Registry
+
+### 0.1 Resolve SPEC_INDEX (Single Source of Truth)
+
+Detection order:
+
+1) `.spec/SPEC_INDEX.json` (canonical)  
+2) `SPEC_INDEX.json` (legacy root mirror)  
+3) `.smartspec/SPEC_INDEX.json` (deprecated)  
+4) `specs/SPEC_INDEX.json` (older layout)
 
 ```bash
-# Fix all errors in spec
-/smartspec_fix_errors specs/feature/spec-004-financial-system
+INDEX_PATH="${FLAGS_index:-}"
 
-# Fix errors in specific file
-/smartspec_fix_errors specs/feature/spec-004 --file src/services/credit.service.ts
+if [ -z "$INDEX_PATH" ]; then
+  if [ -f ".spec/SPEC_INDEX.json" ]; then
+    INDEX_PATH=".spec/SPEC_INDEX.json"
+  elif [ -f "SPEC_INDEX.json" ]; then
+    INDEX_PATH="SPEC_INDEX.json"
+  elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
+    INDEX_PATH=".smartspec/SPEC_INDEX.json" # deprecated
+  elif [ -f "specs/SPEC_INDEX.json" ]; then
+    INDEX_PATH="specs/SPEC_INDEX.json"
+  fi
+fi
 
-# Fix only critical errors
-/smartspec_fix_errors specs/feature/spec-004 --severity critical
-
-# Auto-fix without asking
-/smartspec_fix_errors specs/feature/spec-004 --auto-fix
-
-# Dry-run (show what would be fixed)
-/smartspec_fix_errors specs/feature/spec-004 --dry-run
+if [ -n "$INDEX_PATH" ] && [ -f "$INDEX_PATH" ]; then
+  echo "✅ Using SPEC_INDEX: $INDEX_PATH"
+else
+  echo "⚠️ SPEC_INDEX not found. Proceeding with local context only."
+  INDEX_PATH=""
+fi
 ```
+
+### 0.2 Resolve Registry Directory
+
+```bash
+REGISTRY_DIR="${FLAGS_registry_dir:-.spec/registry}"
+
+if [ ! -d "$REGISTRY_DIR" ]; then
+  echo "⚠️ Registry directory not found at $REGISTRY_DIR"
+  echo "   Proceeding with best-effort extraction from existing specs."
+fi
+
+MODE="${FLAGS_mode:-recommend}"
+```
+
+### 0.3 Expected Registries (if present)
+
+- `api-registry.json`
+- `data-model-registry.json`
+- `glossary.json`
+- `critical-sections-registry.json`
+- `patterns-registry.json` (optional)
+- `ui-component-registry.json` (optional)
+
+Rules:
+- Registry names are canonical.
+- Prefer adjusting implementation to match registry over introducing new shared names.
+
+---
+
+## 1) Identify Target Spec(s)
+
+Priority:
+1) `--spec` / `--tasks` if provided.
+2) If `INDEX_PATH` exists, select spec by ID matching the error area.
+3) If ambiguous, resolve by folder context of failing files.
+
+Default tasks location:
+- `tasks.md` next to `spec.md`.
+
+---
+
+## 2) Read Spec + Tasks (Read-Only Inputs)
+
+- Read `spec.md`.
+- Read `tasks.md` if present.
+- Extract:
+  - expected APIs
+  - model definitions
+  - NFRs
+  - security requirements
+  - UI rules if applicable
+
+Do not rewrite these files in this workflow.
+
+---
+
+## 3) Error Classification
+
+Classify errors into one or more buckets:
+
+1) **Build/Type Errors**
+2) **Unit Test Failures**
+3) **Integration/Contract Failures**
+4) **Performance Regression**
+5) **Security Enforcement Gaps**
+6) **UI/Component Mismatch**
+7) **Cross-SPEC Naming Drift**
+
+---
+
+## 4) Cross-SPEC Consistency Gate
+
+If `INDEX_PATH` exists:
+- Confirm that the failing spec's dependencies are implemented/available.
+- Check whether an upstream spec changed shared contracts.
+
+If registries exist:
+- Compare:
+  - endpoints referenced in failing tests/code
+  - model names
+  - domain terms
+
+If mismatch detected:
+- In `--strict` mode: stop and report conflict.
+- Otherwise: provide a **conflict-resolution fix plan**.
+
+---
+
+## 5) Fix Strategy by Error Type
+
+### 5.1 Build/Type Errors
+
+- Prefer aligning types/interfaces with canonical models in `data-model-registry.json`.
+- If local types diverged:
+  - update code to match registry
+  - generate a follow-up recommendation for registry additive updates only when the spec clearly requires new shared types
+
+### 5.2 Unit Test Failures
+
+- Verify the test expectation maps to a spec requirement.
+- If the test assumed an unregistered name:
+  - rename test to canonical name.
+
+### 5.3 Integration/Contract Failures
+
+- Confirm API route naming matches `api-registry.json` if present.
+- Validate request/response schema expectations.
+- If two specs disagree:
+  - create a blocking reconciliation item.
+
+### 5.4 Performance Regression
+
+- Compare measured results against spec SLAs.
+- Recommend optimizations aligned with intended architecture/patterns.
+- Do not change SLAs unilaterally.
+
+### 5.5 Security Enforcement Gaps
+
+- Ensure auth/authz hooks are applied at the correct layers.
+- Verify permission model aligns with security/core specs.
+
+### 5.6 UI/Component Mismatch
+
+- Check if `ui.json` exists.
+- If yes:
+  - verify component IDs/names used in code match UI JSON.
+  - verify names match `ui-component-registry.json` when available.
+  - prefer updating code to match design.
+- If design and runtime diverge meaningfully:
+  - create a UI-team handoff task.
+
+### 5.7 Cross-SPEC Naming Drift
+
+- Prefer consolidating to the canonical registry term.
+- If a rename/migration is required:
+  - propose a phased migration plan.
+  - recommend running `/smartspec_sync_spec_tasks --mode=additive` after agreement.
+
+---
+
+## 6) UI JSON Addendum (Conditional)
+
+Apply when:
+- Spec category is `ui`, or
+- `ui.json` exists.
+
+Rules:
+- `ui.json` is design-owned.
+- Do not move business logic into UI JSON.
+- If logic appears to be encoded at the UI boundary:
+  - refactor logic into service/controller layers
+  - keep UI testing focused on rendering and state orchestration
+
+If the project does not use UI JSON:
+- Skip UI checks without failing.
+
+---
+
+## 7) Mode Behavior
+
+### `recommend` (default)
+
+- Provide code fix suggestions.
+- Output registry/index recommendations.
+- Do not write shared files.
+
+### `additive-meta`
+
+- Allowed safe updates:
+  - add missing non-breaking metadata in central files (when your system supports it)
+- Never delete or rename registry entries automatically.
+- Never rewrite existing `spec.md` contents.
+
+---
+
+## 8) Output Fix Report
+
+Provide a structured report:
+
+- Error summary
+- Root cause hypothesis
+- Evidence from spec/tasks/index
+- Proposed fixes
+- Risk level
+- Registry alignment notes
+- UI JSON compliance notes (if applicable)
+
+---
+
+## 9) Recommended Follow-ups
+
+- `/smartspec_verify_tasks_progress`
+- `/smartspec_generate_tests`
+- `/smartspec_sync_spec_tasks --mode=additive` (after review)
+- `/smartspec_refactor_code` (if structural fixes are needed)
+
+---
+
+## Notes
+
+- This workflow is conservative and prioritizes preventing new cross-SPEC conflicts.
+- Canonical shared truth is `.spec/registry/` when present.
+- Root `SPEC_INDEX.json` is treated as a legacy mirror.
+

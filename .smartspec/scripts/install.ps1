@@ -1,326 +1,315 @@
-# SmartSpec Multi-Platform Installer (Windows)
-# Version: 5.0
-# Supports: Kilo Code, Roo Code, Claude Code
+# SmartSpec Multi-Platform Installer (PowerShell)
+# Version: 5.2
+# Supports: Kilo Code, Roo Code, Claude Code, Google Antigravity, Gemini CLI
+#
+# Master source of workflows: .smartspec/workflows/
+# This script installs/updates SmartSpec into the current project
+# and syncs workflows to platform-specific command folders in your home directory.
 
 $ErrorActionPreference = "Stop"
 
-# Configuration
-$SMARTSPEC_REPO = "https://github.com/naibarn/SmartSpec.git"
-$SMARTSPEC_VERSION = "v5.0"
-$SMARTSPEC_DIR = ".smartspec"
-$WORKFLOWS_DIR = "$SMARTSPEC_DIR\workflows"
+$SmartSpecRepoZip = "https://github.com/naibarn/SmartSpec/archive/refs/heads/main.zip"
+$SmartSpecVersion = "v5.2"
+$SmartSpecDir = ".smartspec"
+$WorkflowsDir = Join-Path $SmartSpecDir "workflows"
+
+# Platform directories (home-based defaults)
+$KiloDir = Join-Path $HOME ".kilocode\workflows"
+$RooDir = Join-Path $HOME ".roo\commands"
+$ClaudeDir = Join-Path $HOME ".claude\commands"
+$AgentDir = Join-Path $HOME ".agent\workflows"
+$GeminiDir = Join-Path $HOME ".gemini\commands"
 
 Write-Host "🚀 SmartSpec Multi-Platform Installer" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Check if already installed
-$UPDATE_MODE = $false
-if (Test-Path $SMARTSPEC_DIR) {
-    $UPDATE_MODE = $true
-    Write-Host "🔄 SmartSpec is already installed" -ForegroundColor Cyan
-    Write-Host "📦 Updating to latest version..." -ForegroundColor Cyan
-    Write-Host ""
-    
-    # Backup custom workflows (if any)
-    if (Test-Path $WORKFLOWS_DIR) {
+# Backup & remove old install if exists
+if (Test-Path $SmartSpecDir) {
+    Write-Host "🔄 SmartSpec is already installed. Updating..." -ForegroundColor Cyan
+
+    if (Test-Path $WorkflowsDir) {
         Write-Host "💾 Backing up existing workflows..."
-        Copy-Item -Recurse $WORKFLOWS_DIR "${WORKFLOWS_DIR}.backup"
+        Copy-Item $WorkflowsDir "$WorkflowsDir.backup" -Recurse -Force
         Write-Host "  ✅ Backup created" -ForegroundColor Green
     }
-    
-    # Remove old installation (but keep backup)
+
     Write-Host "🗑️  Removing old installation..."
-    Remove-Item -Recurse -Force $SMARTSPEC_DIR
+    Remove-Item $SmartSpecDir -Recurse -Force
     Write-Host "  ✅ Old installation removed" -ForegroundColor Green
     Write-Host ""
 }
 
-# Step 1: Download workflows and knowledge base
+# Step 1: Download SmartSpec zip
 Write-Host "📥 Downloading SmartSpec workflows and knowledge base..."
+$tempRoot = Join-Path $env:TEMP ("smartspec_install_" + [guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Path $tempRoot | Out-Null
 
-if (Get-Command git -ErrorAction SilentlyContinue) {
-    # Use git sparse checkout
-    New-Item -ItemType Directory -Force -Path $SMARTSPEC_DIR | Out-Null
-    Push-Location $SMARTSPEC_DIR
-    git init -q
-    git remote add origin $SMARTSPEC_REPO
-    git config core.sparseCheckout true
-    ".smartspec/" | Out-File -Encoding ASCII .git\info\sparse-checkout
-    git pull -q origin main 2>&1 | Out-Null
-    # Move all files and directories from .smartspec/ to current directory
-    if (Test-Path ".smartspec") {
-        Get-ChildItem -Path ".smartspec" -Force | Move-Item -Destination . -Force
-    }
-    Remove-Item -Recurse -Force .smartspec, .git -ErrorAction SilentlyContinue
-    Pop-Location
-    Write-Host "✅ Downloaded workflows and knowledge base via git" -ForegroundColor Green
-} else {
-    # Download as zip
-    $zipPath = "smartspec.zip"
-    try {
-        Invoke-WebRequest -Uri "$SMARTSPEC_REPO/archive/refs/heads/main.zip" -OutFile $zipPath -UseBasicParsing
-    } catch {
-        Write-Host "❌ Error downloading SmartSpec" -ForegroundColor Red
-        Write-Host $_.Exception.Message -ForegroundColor Red
-        exit 1
-    }
-    
-    Expand-Archive -Path $zipPath -DestinationPath . -Force
-    New-Item -ItemType Directory -Force -Path $WORKFLOWS_DIR | Out-Null
-    Copy-Item -Recurse "SmartSpec-main\.kilocode\workflows\*" $WORKFLOWS_DIR\
-    if (Test-Path "SmartSpec-main\.smartspec") {
-        Copy-Item -Recurse "SmartSpec-main\.smartspec\*" $SMARTSPEC_DIR\
-    }
-    Remove-Item -Recurse -Force SmartSpec-main, $zipPath
-    Write-Host "✅ Downloaded workflows and knowledge base via zip" -ForegroundColor Green
+$zipPath = Join-Path $tempRoot "smartspec.zip"
+Invoke-WebRequest -Uri $SmartSpecRepoZip -OutFile $zipPath
+
+Expand-Archive -Path $zipPath -DestinationPath $tempRoot -Force
+
+$repoExtract = Join-Path $tempRoot "SmartSpec-main"
+$sourceSpec = Join-Path $repoExtract ".smartspec"
+
+if (-not (Test-Path $sourceSpec)) {
+    throw "'.smartspec' folder not found in the downloaded archive."
 }
 
-# Step 2: Detect platforms and ask user
+New-Item -ItemType Directory -Path $SmartSpecDir | Out-Null
+Copy-Item (Join-Path $sourceSpec "*") $SmartSpecDir -Recurse -Force
+
+Remove-Item $tempRoot -Recurse -Force
+
+if (-not (Test-Path $WorkflowsDir)) {
+    throw "Master workflows directory not found: $WorkflowsDir"
+}
+
+Write-Host "  ✅ Downloaded SmartSpec" -ForegroundColor Green
 Write-Host ""
-Write-Host "🔍 Detecting platforms..."
 
-$DETECTED_PLATFORMS = @()
-if (Test-Path ".kilocode") {
-    $DETECTED_PLATFORMS += "kilocode"
-    Write-Host "  ✅ Kilo Code detected" -ForegroundColor Green
-}
-
-if (Test-Path ".roo") {
-    $DETECTED_PLATFORMS += "roo"
-    Write-Host "  ✅ Roo Code detected" -ForegroundColor Green
-}
-
-if (Test-Path ".claude") {
-    $DETECTED_PLATFORMS += "claude"
-    Write-Host "  ✅ Claude Code detected" -ForegroundColor Green
-}
-
-if ($DETECTED_PLATFORMS.Count -eq 0) {
-    Write-Host "  ⚠️  No platforms detected" -ForegroundColor Yellow
-}
-
-# Always ask user which platforms to install
-Write-Host ""
+# Step 2: Select platforms
 Write-Host "Which platforms do you want to install/update?"
 Write-Host "  1) Kilo Code"
 Write-Host "  2) Roo Code"
 Write-Host "  3) Claude Code"
-Write-Host "  4) All of the above"
-$choice = Read-Host "Enter choice [1-4] (default: 1)"
+Write-Host "  4) Google Antigravity"
+Write-Host "  5) Gemini CLI"
+Write-Host "  6) All of the above"
 
-# Default to 1 if empty
-if ([string]::IsNullOrWhiteSpace($choice)) {
-    $choice = "1"
-}
+$choice = Read-Host "Enter choice [1-6] (default: 1)"
+if ([string]::IsNullOrWhiteSpace($choice)) { $choice = "1" }
 
 switch ($choice) {
-    "1" { $PLATFORMS = @("kilocode") }
-    "2" { $PLATFORMS = @("roo") }
-    "3" { $PLATFORMS = @("claude") }
-    "4" { $PLATFORMS = @("kilocode", "roo", "claude") }
-    default { 
-        Write-Host "Invalid choice: $choice" -ForegroundColor Red
-        exit 1
+    "1" { $platforms = @("kilocode") }
+    "2" { $platforms = @("roo") }
+    "3" { $platforms = @("claude") }
+    "4" { $platforms = @("antigravity") }
+    "5" { $platforms = @("gemini-cli") }
+    "6" { $platforms = @("kilocode","roo","claude","antigravity","gemini-cli") }
+    default { throw "Invalid choice: $choice" }
+}
+
+# Helpers
+function Get-FrontmatterEndIndex([string[]]$lines) {
+    $indexes = @()
+    for ($i=0; $i -lt $lines.Length; $i++) {
+        if ($lines[$i].Trim() -eq "---") { $indexes += $i }
+        if ($indexes.Count -ge 2) { break }
     }
+    if ($indexes.Count -ge 2) { return $indexes[1] }
+    return $null
+}
+
+function Convert-MdToToml([string]$mdPath, [string]$tomlPath) {
+    $lines = Get-Content $mdPath
+
+    # description from frontmatter (if any) or from first "# " title
+    $descLine = $lines | Where-Object { $_ -match "^\s*description\s*:" } | Select-Object -First 1
+    $description = ""
+    if ($descLine) {
+        $description = ($descLine -replace "^\s*description\s*:\s*", "").Trim()
+    }
+    if ([string]::IsNullOrWhiteSpace($description)) {
+        $titleLine = $lines | Where-Object { $_ -match "^\s*#\s+" } | Select-Object -First 1
+        if ($titleLine) {
+            $description = ($titleLine -replace "^\s*#\s+", "").Trim()
+        }
+    }
+    if ([string]::IsNullOrWhiteSpace($description)) {
+        $base = [IO.Path]::GetFileNameWithoutExtension($mdPath)
+        $description = "SmartSpec workflow: " + ($base -replace "_", " ")
+    }
+
+    $frontEnd = Get-FrontmatterEndIndex $lines
+    if ($frontEnd -ne $null) {
+        $promptLines = $lines[($frontEnd+1)..($lines.Length-1)]
+    } else {
+        # Skip first line as a best-effort title skip
+        if ($lines.Length -gt 1) { $promptLines = $lines[1..($lines.Length-1)] } else { $promptLines = @() }
+    }
+
+    $prompt = ($promptLines -join "`n")
+
+    $toml = @()
+    $toml += "description = `"$description`""
+    $toml += ""
+    $toml += "prompt = `"`"`"`""
+    $toml += $prompt
+    $toml += "`"`"`"`""
+
+    Set-Content -Path $tomlPath -Value $toml -Encoding UTF8
 }
 
 # Step 3: Install workflows
 Write-Host ""
 Write-Host "📦 Installing SmartSpec workflows..."
 
-# Step 4: Install for each platform
-foreach ($platform in $PLATFORMS) {
-    switch ($platform) {
-        "kilocode" { 
-            $TARGET_DIR = ".kilocode\workflows"
-            $PLATFORM_NAME = "Kilo Code"
+$mdFiles = Get-ChildItem -Path $WorkflowsDir -Filter "smartspec_*.md" -File
+
+foreach ($p in $platforms) {
+    switch ($p) {
+        "kilocode" {
+            $target = $KiloDir
+            $name = "Kilo Code"
         }
-        "roo" { 
-            $TARGET_DIR = ".roo\commands"
-            $PLATFORM_NAME = "Roo Code"
+        "roo" {
+            $target = $RooDir
+            $name = "Roo Code"
         }
-        "claude" { 
-            $TARGET_DIR = ".claude\commands"
-            $PLATFORM_NAME = "Claude Code"
+        "claude" {
+            $target = $ClaudeDir
+            $name = "Claude Code"
+        }
+        "antigravity" {
+            $target = $AgentDir
+            $name = "Google Antigravity"
+        }
+        "gemini-cli" {
+            $target = $GeminiDir
+            $name = "Gemini CLI"
         }
     }
-    
-    # Create parent directory
-    $parentDir = Split-Path -Parent $TARGET_DIR
-    New-Item -ItemType Directory -Force -Path $parentDir | Out-Null
-    
-    # Verify source directory exists
-    if (-not (Test-Path $WORKFLOWS_DIR)) {
-        Write-Host "  ❌ Error: Workflows directory not found: $WORKFLOWS_DIR" -ForegroundColor Red
-        exit 1
-    }
-    
-    # Handle existing workflows directory
-    if (Test-Path $TARGET_DIR) {
-        $item = Get-Item $TARGET_DIR
-        if ($item.LinkType -eq "SymbolicLink") {
-            # Remove old symlink and convert to directory
-            Write-Host "  🔗 Converting symlink to directory" -ForegroundColor Cyan
-            Remove-Item $TARGET_DIR -Force
-            New-Item -ItemType Directory -Force -Path $TARGET_DIR | Out-Null
-            Copy-Item "$WORKFLOWS_DIR\smartspec_*.md" $TARGET_DIR -ErrorAction SilentlyContinue
-            Write-Host "  ✅ $PLATFORM_NAME`: Workflows installed" -ForegroundColor Green
-        } else {
-            # Directory exists - merge workflows
-            Write-Host "  🔍 Checking for existing SmartSpec workflows..." -ForegroundColor Cyan
-            
-            # Find existing SmartSpec workflows
-            $existingSmartSpec = @(Get-ChildItem -Path $TARGET_DIR -Filter "smartspec_*.md" -ErrorAction SilentlyContinue)
-            
-            if ($existingSmartSpec.Count -gt 0) {
-                Write-Host "  ⚠️  Found $($existingSmartSpec.Count) existing SmartSpec workflow(s)" -ForegroundColor Yellow
-                Write-Host ""
-                Write-Host "  How do you want to proceed?"
-                Write-Host "    1) Overwrite all (recommended for updates)"
-                Write-Host "    2) Skip all (keep existing versions)"
-                Write-Host "    3) Cancel installation"
-                $overwriteChoice = Read-Host "  Enter choice [1-3] (default: 1)"
-                
-                # Default to 1 if empty
-                if ([string]::IsNullOrWhiteSpace($overwriteChoice)) {
-                    $overwriteChoice = "1"
-                }
-                
-                switch ($overwriteChoice) {
-                    "1" {
-                        # Backup existing SmartSpec workflows
-                        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-                        $BACKUP_DIR = "${TARGET_DIR}.smartspec.backup.$timestamp"
-                        New-Item -ItemType Directory -Force -Path $BACKUP_DIR | Out-Null
-                        foreach ($file in $existingSmartSpec) {
-                            Copy-Item $file.FullName $BACKUP_DIR -ErrorAction SilentlyContinue
-                        }
-                        Write-Host "  💾 Backed up existing SmartSpec workflows to $(Split-Path -Leaf $BACKUP_DIR)" -ForegroundColor Green
-                        
-                        # Copy new workflows
-                        Copy-Item "$WORKFLOWS_DIR\smartspec_*.md" $TARGET_DIR -Force -ErrorAction SilentlyContinue
-                        Write-Host "  ✅ $PLATFORM_NAME`: Workflows merged ($($existingSmartSpec.Count) updated)" -ForegroundColor Green
-                    }
-                    "2" {
-                        # Copy only new workflows (skip existing)
-                        $copied = 0
-                        $newWorkflows = Get-ChildItem -Path $WORKFLOWS_DIR -Filter "smartspec_*.md"
-                        foreach ($file in $newWorkflows) {
-                            $targetFile = Join-Path $TARGET_DIR $file.Name
-                            if (-not (Test-Path $targetFile)) {
-                                Copy-Item $file.FullName $targetFile
-                                $copied++
-                            }
-                        }
-                        Write-Host "  ✅ $PLATFORM_NAME`: $copied new workflow(s) added" -ForegroundColor Green
-                    }
-                    "3" {
-                        Write-Host "  ❌ Installation cancelled for $PLATFORM_NAME" -ForegroundColor Yellow
-                        continue
-                    }
-                    default {
-                        Write-Host "  Invalid choice, skipping $PLATFORM_NAME" -ForegroundColor Red
-                        continue
-                    }
-                }
-            } else {
-                # No existing SmartSpec workflows, just copy
-                Copy-Item "$WORKFLOWS_DIR\smartspec_*.md" $TARGET_DIR -ErrorAction SilentlyContinue
-                Write-Host "  ✅ $PLATFORM_NAME`: Workflows installed" -ForegroundColor Green
-            }
+
+    New-Item -ItemType Directory -Path $target -Force | Out-Null
+
+    if ($p -eq "gemini-cli") {
+        Write-Host "  🔄 $name: Converting Markdown workflows to TOML..." -ForegroundColor Cyan
+        $converted = 0
+        foreach ($md in $mdFiles) {
+            $base = [IO.Path]::GetFileNameWithoutExtension($md.Name)
+            $tomlPath = Join-Path $target ($base + ".toml")
+            Convert-MdToToml $md.FullName $tomlPath
+            $converted++
         }
-    } else {
-        # Directory doesn't exist - create and copy
-        New-Item -ItemType Directory -Force -Path $TARGET_DIR | Out-Null
-        Copy-Item "$WORKFLOWS_DIR\smartspec_*.md" $TARGET_DIR -ErrorAction SilentlyContinue
-        Write-Host "  ✅ $PLATFORM_NAME`: Workflows installed" -ForegroundColor Green
+        Write-Host "  ✅ $name: $converted workflows converted and installed" -ForegroundColor Green
+        continue
     }
+
+    foreach ($md in $mdFiles) {
+        Copy-Item $md.FullName $target -Force
+    }
+    Write-Host "  ✅ $name: Workflows installed/updated" -ForegroundColor Green
 }
 
-# Step 5: Save configuration
+# Step 4: Save configuration
 Write-Host ""
 Write-Host "💾 Saving configuration..."
 
 $config = @{
-    version = $SMARTSPEC_VERSION
+    version = $SmartSpecVersion
     installed_at = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-    platforms = $PLATFORMS
+    platforms = $platforms
     use_symlinks = $false
-    repo = $SMARTSPEC_REPO
+    repo = "https://github.com/naibarn/SmartSpec.git"
 }
 
-$config | ConvertTo-Json | Out-File -Encoding UTF8 "$SMARTSPEC_DIR\config.json"
-$SMARTSPEC_VERSION | Out-File -Encoding UTF8 "$SMARTSPEC_DIR\version.txt"
+$config | ConvertTo-Json -Depth 4 | Set-Content -Path (Join-Path $SmartSpecDir "config.json") -Encoding UTF8
+$SmartSpecVersion | Set-Content -Path (Join-Path $SmartSpecDir "version.txt") -Encoding UTF8
 
-Write-Host "✅ Configuration saved" -ForegroundColor Green
+Write-Host "  ✅ Configuration saved" -ForegroundColor Green
 
-# Step 6: Create sync script
-# Always create sync script for manual updates
-    $syncScript = @'
-# SmartSpec Sync Script (Windows)
+# Step 5: Create sync.ps1 helper
+$syncHelperPath = Join-Path $SmartSpecDir "sync.ps1"
 
-$SMARTSPEC_DIR = ".smartspec"
-$WORKFLOWS_DIR = "$SMARTSPEC_DIR\workflows"
+$syncHelper = @'
+# SmartSpec Sync Script (Project Helper) - PowerShell
+$ErrorActionPreference = "Stop"
 
-# Read config
-if (-not (Test-Path "$SMARTSPEC_DIR\config.json")) {
-    Write-Host "Error: SmartSpec not installed" -ForegroundColor Red
-    exit 1
+$SmartSpecDir = ".smartspec"
+$WorkflowsDir = Join-Path $SmartSpecDir "workflows"
+
+if (-not (Test-Path (Join-Path $SmartSpecDir "config.json"))) {
+    throw "SmartSpec config not found. Run install.ps1 first."
 }
 
-$config = Get-Content "$SMARTSPEC_DIR\config.json" | ConvertFrom-Json
-$PLATFORMS = $config.platforms
+$config = Get-Content (Join-Path $SmartSpecDir "config.json") -Raw | ConvertFrom-Json
+$platforms = $config.platforms
 
-Write-Host "🔄 Syncing SmartSpec workflows..." -ForegroundColor Cyan
+$KiloDir = Join-Path $HOME ".kilocode\workflows"
+$RooDir = Join-Path $HOME ".roo\commands"
+$ClaudeDir = Join-Path $HOME ".claude\commands"
+$AgentDir = Join-Path $HOME ".agent\workflows"
+$GeminiDir = Join-Path $HOME ".gemini\commands"
 
-foreach ($platform in $PLATFORMS) {
-    switch ($platform) {
-        "kilocode" { $TARGET_DIR = ".kilocode\workflows" }
-        "roo" { $TARGET_DIR = ".roo\commands" }
-        "claude" { $TARGET_DIR = ".claude\commands" }
+function Get-FrontmatterEndIndex([string[]]$lines) {
+    $indexes = @()
+    for ($i=0; $i -lt $lines.Length; $i++) {
+        if ($lines[$i].Trim() -eq "---") { $indexes += $i }
+        if ($indexes.Count -ge 2) { break }
     }
-    
-    # Sync
-    if (Test-Path $TARGET_DIR) {
-        Remove-Item -Recurse -Force $TARGET_DIR
-    }
-    Copy-Item -Recurse $WORKFLOWS_DIR $TARGET_DIR
-    Write-Host "  ✅ $platform synced" -ForegroundColor Green
+    if ($indexes.Count -ge 2) { return $indexes[1] }
+    return $null
 }
 
-Write-Host "✅ Sync complete" -ForegroundColor Green
+function Convert-MdToToml([string]$mdPath, [string]$tomlPath) {
+    $lines = Get-Content $mdPath
+    $descLine = $lines | Where-Object { $_ -match "^\s*description\s*:" } | Select-Object -First 1
+    $description = ""
+    if ($descLine) { $description = ($descLine -replace "^\s*description\s*:\s*", "").Trim() }
+    if ([string]::IsNullOrWhiteSpace($description)) {
+        $titleLine = $lines | Where-Object { $_ -match "^\s*#\s+" } | Select-Object -First 1
+        if ($titleLine) { $description = ($titleLine -replace "^\s*#\s+", "").Trim() }
+    }
+    if ([string]::IsNullOrWhiteSpace($description)) {
+        $base = [IO.Path]::GetFileNameWithoutExtension($mdPath)
+        $description = "SmartSpec workflow: " + ($base -replace "_", " ")
+    }
+
+    $frontEnd = Get-FrontmatterEndIndex $lines
+    if ($frontEnd -ne $null) {
+        $promptLines = $lines[($frontEnd+1)..($lines.Length-1)]
+    } else {
+        if ($lines.Length -gt 1) { $promptLines = $lines[1..($lines.Length-1)] } else { $promptLines = @() }
+    }
+
+    $prompt = ($promptLines -join "`n")
+
+    $toml = @()
+    $toml += "description = `"$description`""
+    $toml += ""
+    $toml += "prompt = `"`"`"`""
+    $toml += $prompt
+    $toml += "`"`"`"`""
+
+    Set-Content -Path $tomlPath -Value $toml -Encoding UTF8
+}
+
+$mdFiles = Get-ChildItem -Path $WorkflowsDir -Filter "smartspec_*.md" -File
+
+foreach ($p in $platforms) {
+    switch ($p) {
+        "kilocode" { $target = $KiloDir }
+        "roo" { $target = $RooDir }
+        "claude" { $target = $ClaudeDir }
+        "antigravity" { $target = $AgentDir }
+        "gemini-cli" { $target = $GeminiDir }
+        default { continue }
+    }
+
+    New-Item -ItemType Directory -Path $target -Force | Out-Null
+
+    if ($p -eq "gemini-cli") {
+        foreach ($md in $mdFiles) {
+            $base = [IO.Path]::GetFileNameWithoutExtension($md.Name)
+            $tomlPath = Join-Path $target ($base + ".toml")
+            Convert-MdToToml $md.FullName $tomlPath
+        }
+        Write-Host "✅ gemini-cli synced" -ForegroundColor Green
+        continue
+    }
+
+    # Replace only SmartSpec files
+    Get-ChildItem -Path $target -Filter "smartspec_*.md" -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    foreach ($md in $mdFiles) { Copy-Item $md.FullName $target -Force }
+    Write-Host "✅ $p synced" -ForegroundColor Green
+}
 '@
-    
-$syncScript | Out-File -Encoding UTF8 "$SMARTSPEC_DIR\sync.ps1"
-Write-Host "✅ Sync script created" -ForegroundColor Green
 
-# Step 7: Success message
-Write-Host ""
-Write-Host "╔════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "║  ✅ SmartSpec installed successfully!  ║" -ForegroundColor Green
-Write-Host "╚════════════════════════════════════════╝" -ForegroundColor Green
-Write-Host ""
-Write-Host "📍 Installation details:"
-Write-Host "  - Version: $SMARTSPEC_VERSION"
-Write-Host "  - Location: $SMARTSPEC_DIR"
-Write-Host "  - Method: Merged installation (preserves existing workflows)"
-Write-Host "  - Platforms: $($PLATFORMS -join ', ')"
-Write-Host ""
+Set-Content -Path $syncHelperPath -Value $syncHelper -Encoding UTF8
 
-Write-Host "📝 Note: SmartSpec workflows are merged with your existing workflows" -ForegroundColor Yellow
-Write-Host "   Run '.smartspec\sync.ps1' to update SmartSpec workflows from repository"
+Write-Host "  ✅ Sync helper created at .smartspec/sync.ps1" -ForegroundColor Green
 Write-Host ""
-
-Write-Host "🎉 You can now use SmartSpec workflows in:"
-foreach ($platform in $PLATFORMS) {
-    switch ($platform) {
-        "kilocode" { Write-Host "  - Kilo Code: /smartspec_generate_spec, /smartspec_generate_tasks, etc." }
-        "roo" { Write-Host "  - Roo Code: /smartspec_generate_spec, /smartspec_generate_tasks, etc." }
-        "claude" { Write-Host "  - Claude Code: /smartspec_generate_spec, /smartspec_generate_tasks, etc." }
-    }
-}
-
-Write-Host ""
-Write-Host "📚 Documentation: https://github.com/naibarn/SmartSpec"
-Write-Host "💡 Quick start: /smartspec_generate_spec <your-spec-file>"
+Write-Host "✅ SmartSpec installed successfully!" -ForegroundColor Green
+Write-Host "Run .smartspec\\sync.ps1 to re-sync workflows when you update them."

@@ -2,15 +2,19 @@
 # SmartSpec Multi-Platform Installer
 # Version: 5.2
 # Supports: Kilo Code, Roo Code, Claude Code, Google Antigravity, Gemini CLI
+#
+# Master source of workflows: .smartspec/workflows/
+# This installer downloads the SmartSpec framework into .smartspec/
+# then copies workflows to each platform-specific command directory.
 
-set -e  # Exit on error
+set -e
 
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 # Configuration
 SMARTSPEC_REPO="https://github.com/naibarn/SmartSpec.git"
@@ -18,7 +22,7 @@ SMARTSPEC_VERSION="v5.2"
 SMARTSPEC_DIR=".smartspec"
 WORKFLOWS_DIR="$SMARTSPEC_DIR/workflows"
 
-# Platform directories (use absolute paths for home directory)
+# Platform directories (default to home-based tool folders)
 KILOCODE_DIR="$HOME/.kilocode/workflows"
 ROO_DIR="$HOME/.roo/commands"
 CLAUDE_DIR="$HOME/.claude/commands"
@@ -36,14 +40,14 @@ if [ -d "$SMARTSPEC_DIR" ]; then
     echo -e "${BLUE}🔄 SmartSpec is already installed${NC}"
     echo -e "${BLUE}📦 Updating to latest version...${NC}"
     echo ""
-    
+
     # Backup custom workflows (if any)
     if [ -d "$WORKFLOWS_DIR" ]; then
         echo "💾 Backing up existing workflows..."
         cp -r "$WORKFLOWS_DIR" "${WORKFLOWS_DIR}.backup"
         echo -e "  ${GREEN}✅ Backup created${NC}"
     fi
-    
+
     # Remove old installation (but keep backup)
     echo "🗑️  Removing old installation..."
     rm -rf "$SMARTSPEC_DIR"
@@ -51,31 +55,31 @@ if [ -d "$SMARTSPEC_DIR" ]; then
     echo ""
 fi
 
-# Step 1: Clone or download workflows and knowledge base
+# Step 1: Download SmartSpec framework (.smartspec/*)
 echo "📥 Downloading SmartSpec workflows and knowledge base..."
 if command -v git &> /dev/null; then
-    # Use git sparse checkout (workflows + knowledge base)
+    # Use git sparse checkout to pull only .smartspec from the SmartSpec repository.
     mkdir -p "$SMARTSPEC_DIR"
     cd "$SMARTSPEC_DIR"
+
     git init -q
     git remote add origin "$SMARTSPEC_REPO"
     git config core.sparseCheckout true
     echo ".smartspec/" >> .git/info/sparse-checkout
-    echo ".kilocode/workflows/" >> .git/info/sparse-checkout
+
     git pull -q origin main
-    # Move workflows to .smartspec/workflows/
-    mkdir -p workflows
-    if [ -d ".kilocode/workflows" ]; then
-        mv .kilocode/workflows/* workflows/ 2>/dev/null || true
-    fi
-    # Move knowledge base files from .smartspec/ to current directory
+
+    # Flatten nested .smartspec directory created by sparse checkout
     if [ -d ".smartspec" ]; then
-        # Use find to move both files and directories, including hidden files
         find .smartspec -mindepth 1 -maxdepth 1 -exec mv {} . \;
     fi
-    rm -rf .smartspec .kilocode .git
+
+    # Cleanup git metadata + nested folder
+    rm -rf .smartspec .git
+
     cd ..
-    echo -e "${GREEN}✅ Downloaded workflows and knowledge base via git${NC}"
+
+    echo -e "${GREEN}✅ Downloaded SmartSpec via git${NC}"
 else
     # Download as zip
     if command -v curl &> /dev/null; then
@@ -86,50 +90,63 @@ else
         echo -e "${RED}❌ Error: Neither git, curl, nor wget is available${NC}"
         exit 1
     fi
-    
+
     unzip -q smartspec.zip
-    mkdir -p "$WORKFLOWS_DIR"
-    mv SmartSpec-main/.kilocode/workflows/* "$WORKFLOWS_DIR/"
-    # Copy knowledge base files (examples only, not user files)
+
+    mkdir -p "$SMARTSPEC_DIR"
     if [ -d "SmartSpec-main/.smartspec" ]; then
         cp -r SmartSpec-main/.smartspec/* "$SMARTSPEC_DIR/"
+    else
+        echo -e "${RED}❌ Error: .smartspec folder not found in the downloaded archive${NC}"
+        rm -rf SmartSpec-main smartspec.zip
+        exit 1
     fi
+
     rm -rf SmartSpec-main smartspec.zip
-    echo -e "${GREEN}✅ Downloaded workflows and knowledge base via zip${NC}"
+
+    echo -e "${GREEN}✅ Downloaded SmartSpec via zip${NC}"
 fi
 
-# Step 2: Detect platforms and ask user
+# Validate that master workflows exist
+if [ ! -d "$WORKFLOWS_DIR" ]; then
+    echo -e "${RED}❌ Error: Master workflows directory not found: $WORKFLOWS_DIR${NC}"
+    echo "This version expects workflows to live under .smartspec/workflows in the SmartSpec repository."
+    exit 1
+fi
+
+# Step 2: Detect platforms
 echo ""
-echo "🔍 Detecting platforms..."
+echo "🔍 Detecting platforms (home-based)..."
 
 DETECTED_PLATFORMS=()
-if [ -d ".kilocode" ]; then
+
+if [ -d "$HOME/.kilocode" ]; then
     DETECTED_PLATFORMS+=("kilocode")
     echo -e "  ${GREEN}✅ Kilo Code detected${NC}"
 fi
 
-if [ -d ".roo" ]; then
+if [ -d "$HOME/.roo" ]; then
     DETECTED_PLATFORMS+=("roo")
     echo -e "  ${GREEN}✅ Roo Code detected${NC}"
 fi
 
-if [ -d ".claude" ]; then
+if [ -d "$HOME/.claude" ]; then
     DETECTED_PLATFORMS+=("claude")
     echo -e "  ${GREEN}✅ Claude Code detected${NC}"
 fi
 
-if [ -d ".agent" ]; then
+if [ -d "$HOME/.agent" ]; then
     DETECTED_PLATFORMS+=("antigravity")
     echo -e "  ${GREEN}✅ Google Antigravity detected${NC}"
 fi
 
-if [ -d ".gemini" ]; then
+if [ -d "$HOME/.gemini" ]; then
     DETECTED_PLATFORMS+=("gemini-cli")
     echo -e "  ${GREEN}✅ Gemini CLI detected${NC}"
 fi
 
 if [ ${#DETECTED_PLATFORMS[@]} -eq 0 ]; then
-    echo -e "  ${YELLOW}⚠️  No platforms detected${NC}"
+    echo -e "  ${YELLOW}⚠️  No supported platforms detected in your home directory${NC}"
 fi
 
 # Always ask user which platforms to install
@@ -142,20 +159,16 @@ echo "  4) Google Antigravity"
 echo "  5) Gemini CLI"
 echo "  6) All of the above"
 
-# Try to read user input
+# Read input robustly
 if [ -t 0 ]; then
-    # stdin is a terminal, read normally
     read -p "Enter choice [1-6] (default: 1): " choice
 else
-    # stdin is piped, try to read from stdin first
     read choice 2>/dev/null || choice=""
     if [ -z "$choice" ]; then
-        # If stdin is empty, try /dev/tty
         read -p "Enter choice [1-6] (default: 1): " choice < /dev/tty 2>/dev/null || choice=""
     fi
 fi
 
-# Default to 1 if empty
 if [ -z "$choice" ]; then
     choice=1
     echo "Using default: $choice"
@@ -171,12 +184,13 @@ case $choice in
     *) echo -e "${RED}Invalid choice: $choice${NC}"; exit 1 ;;
 esac
 
-# Step 3: Install workflows
+# Step 3/4: Install workflows for each platform
 echo ""
 echo "📦 Installing SmartSpec workflows..."
 
-# Step 4: Install for each platform
 for platform in "${PLATFORMS[@]}"; do
+    REQUIRES_TOML_CONVERSION=false
+
     case $platform in
         kilocode)
             TARGET_DIR="$KILOCODE_DIR"
@@ -200,68 +214,53 @@ for platform in "${PLATFORMS[@]}"; do
             REQUIRES_TOML_CONVERSION=true
             ;;
     esac
-    
-    # Create parent directory
+
+    # If the tool parent folder doesn't exist, create it only when user explicitly selected it.
     mkdir -p "$(dirname "$TARGET_DIR")"
-    
-    # Verify source directory exists
-    if [ ! -d "$WORKFLOWS_DIR" ]; then
-        echo -e "  ${RED}❌ Error: Workflows directory not found: $WORKFLOWS_DIR${NC}"
-        exit 1
-    fi
-    
-    # Handle Gemini CLI TOML conversion
-    if [ "$platform" = "gemini-cli" ]; then
-        echo -e "  ${BLUE}🔄 Converting Markdown workflows to TOML format...${NC}"
-        
-        # Create target directory
-        mkdir -p "$TARGET_DIR"
-        
-        # Check for existing TOML workflows and handle backup/overwrite
+    mkdir -p "$TARGET_DIR"
+
+    # Gemini CLI: convert Markdown workflows to TOML
+    if [ "$REQUIRES_TOML_CONVERSION" = true ]; then
+        echo -e "  ${BLUE}🔄 $PLATFORM_NAME: Converting Markdown workflows to TOML...${NC}"
+
         EXISTING_TOML=()
         if ls "$TARGET_DIR"/smartspec_*.toml >/dev/null 2>&1; then
             while IFS= read -r file; do
                 EXISTING_TOML+=("$(basename "$file")")
             done < <(ls "$TARGET_DIR"/smartspec_*.toml 2>/dev/null)
         fi
-        
+
         if [ ${#EXISTING_TOML[@]} -gt 0 ]; then
-            echo -e "  ${YELLOW}⚠️  Found ${#EXISTING_TOML[@]} existing SmartSpec workflow(s)${NC}"
+            echo -e "  ${YELLOW}⚠️  Found ${#EXISTING_TOML[@]} existing SmartSpec TOML workflow(s)${NC}"
             echo ""
             echo "  How do you want to proceed?"
             echo "    1) Overwrite all (recommended for updates)"
             echo "    2) Skip all (keep existing versions)"
             echo "    3) Cancel installation"
-            
-            # Try to read user input
+
             if [ -t 0 ]; then
                 read -p "  Enter choice [1-3] (default: 1): " overwrite_choice
             else
                 read -p "  Enter choice [1-3] (default: 1): " overwrite_choice < /dev/tty 2>/dev/null || overwrite_choice=""
             fi
-            
-            # Default to 1 if empty
-            if [ -z "$overwrite_choice" ]; then
-                overwrite_choice=1
-                echo "  Using default: $overwrite_choice"
-            fi
-            
+
+            [ -z "$overwrite_choice" ] && overwrite_choice=1
+
             case $overwrite_choice in
                 1)
-                    # Backup existing TOML workflows
                     BACKUP_DIR="${TARGET_DIR}.smartspec.backup.$(date +%Y%m%d_%H%M%S)"
                     mkdir -p "$BACKUP_DIR"
                     for file in "${EXISTING_TOML[@]}"; do
                         cp "$TARGET_DIR/$file" "$BACKUP_DIR/" 2>/dev/null || true
                     done
-                    echo -e "  ${GREEN}💾 Backed up existing SmartSpec workflows to $(basename "$BACKUP_DIR")${NC}"
+                    echo -e "  ${GREEN}💾 Backed up existing SmartSpec TOML workflows to $(basename "$BACKUP_DIR")${NC}"
                     ;;
                 2)
-                    echo -e "  ${BLUE}⏭️  Skipping Gemini CLI (keeping existing versions)${NC}"
+                    echo -e "  ${BLUE}⏭️  Skipping $PLATFORM_NAME (keeping existing versions)${NC}"
                     continue
                     ;;
                 3)
-                    echo -e "  ${RED}❌ Installation cancelled${NC}"
+                    echo -e "${RED}❌ Installation cancelled${NC}"
                     exit 0
                     ;;
                 *)
@@ -270,41 +269,29 @@ for platform in "${PLATFORMS[@]}"; do
                     ;;
             esac
         fi
-        
-        # Convert each workflow
+
         CONVERTED=0
         for md_file in "$WORKFLOWS_DIR"/smartspec_*.md; do
-            if [ ! -f "$md_file" ]; then
-                continue
-            fi
-            
+            [ -f "$md_file" ] || continue
+
             filename=$(basename "$md_file" .md)
             toml_file="$TARGET_DIR/${filename}.toml"
-            
-            # Simple inline conversion
+
             # Try to extract description from frontmatter first, then from # title
             description=$(grep -m 1 '^description:' "$md_file" | sed 's/^description: *//')
             if [ -z "$description" ]; then
                 description=$(grep -m 1 '^# ' "$md_file" | sed 's/^# //')
             fi
-            if [ -z "$description" ]; then
-                description="SmartSpec workflow: ${filename//_/ }"
-            fi
-            
+            [ -z "$description" ] && description="SmartSpec workflow: ${filename//_/ }"
+
             # Extract content after frontmatter as prompt
-            # Note: No escaping needed for TOML triple quotes
-            # Find line number of second --- (end of frontmatter)
             frontmatter_end=$(grep -n '^---$' "$md_file" | sed -n '2p' | cut -d: -f1)
             if [ -n "$frontmatter_end" ]; then
-                # Skip frontmatter and extract rest
                 prompt=$(tail -n +$((frontmatter_end + 1)) "$md_file")
             else
-                # No frontmatter, extract from line 2
                 prompt=$(tail -n +2 "$md_file")
             fi
-            
-            # Create TOML file using cat with heredoc
-            # Note: heredoc is more robust than printf for complex content
+
             {
                 echo "description = \"$description\""
                 echo ""
@@ -312,98 +299,71 @@ for platform in "${PLATFORMS[@]}"; do
                 echo "$prompt"
                 echo '"""'
             } > "$toml_file"
-            
+
             CONVERTED=$((CONVERTED + 1))
         done
-        
+
         echo -e "  ${GREEN}✅ $PLATFORM_NAME: $CONVERTED workflows converted and installed${NC}"
         continue
     fi
-    
-    # Handle existing workflows directory
-    if [ -L "$TARGET_DIR" ]; then
-        # Remove old symlink and convert to directory
-        echo -e "  ${BLUE}🔗 Converting symlink to directory${NC}"
-        rm -f "$TARGET_DIR"
-        mkdir -p "$TARGET_DIR"
-        cp "$WORKFLOWS_DIR"/smartspec_*.md "$TARGET_DIR/" 2>/dev/null || true
-        echo -e "  ${GREEN}✅ $PLATFORM_NAME: Workflows installed${NC}"
-    elif [ -d "$TARGET_DIR" ]; then
-        # Directory exists - merge workflows
-        echo -e "  ${BLUE}🔍 Checking for existing SmartSpec workflows...${NC}"
-        
-        # Find existing SmartSpec workflows
-        EXISTING_SMARTSPEC=()
-        if ls "$TARGET_DIR"/smartspec_*.md >/dev/null 2>&1; then
-            while IFS= read -r file; do
-                EXISTING_SMARTSPEC+=("$(basename "$file")")
-            done < <(ls "$TARGET_DIR"/smartspec_*.md 2>/dev/null)
-        fi
-        
-        if [ ${#EXISTING_SMARTSPEC[@]} -gt 0 ]; then
-            echo -e "  ${YELLOW}⚠️  Found ${#EXISTING_SMARTSPEC[@]} existing SmartSpec workflow(s)${NC}"
-            echo ""
-            echo "  How do you want to proceed?"
-            echo "    1) Overwrite all (recommended for updates)"
-            echo "    2) Skip all (keep existing versions)"
-            echo "    3) Cancel installation"
-            
-            # Try to read user input
-            if [ -t 0 ]; then
-                read -p "  Enter choice [1-3] (default: 1): " overwrite_choice
-            else
-                read -p "  Enter choice [1-3] (default: 1): " overwrite_choice < /dev/tty 2>/dev/null || overwrite_choice=""
-            fi
-            
-            # Default to 1 if empty
-            if [ -z "$overwrite_choice" ]; then
-                overwrite_choice=1
-                echo "  Using default: $overwrite_choice"
-            fi
-            
-            case $overwrite_choice in
-                1)
-                    # Backup existing SmartSpec workflows
-                    BACKUP_DIR="${TARGET_DIR}.smartspec.backup.$(date +%Y%m%d_%H%M%S)"
-                    mkdir -p "$BACKUP_DIR"
-                    for file in "${EXISTING_SMARTSPEC[@]}"; do
-                        cp "$TARGET_DIR/$file" "$BACKUP_DIR/" 2>/dev/null || true
-                    done
-                    echo -e "  ${GREEN}💾 Backed up existing SmartSpec workflows to $(basename "$BACKUP_DIR")${NC}"
-                    
-                    # Copy new workflows
-                    cp "$WORKFLOWS_DIR"/smartspec_*.md "$TARGET_DIR/" 2>/dev/null || true
-                    echo -e "  ${GREEN}✅ $PLATFORM_NAME: Workflows merged (${#EXISTING_SMARTSPEC[@]} updated)${NC}"
-                    ;;
-                2)
-                    # Copy only new workflows (skip existing)
-                    COPIED=0
-                    for file in "$WORKFLOWS_DIR"/smartspec_*.md; do
-                        filename=$(basename "$file")
-                        if [ ! -f "$TARGET_DIR/$filename" ]; then
-                            cp "$file" "$TARGET_DIR/"
-                            ((COPIED++))
-                        fi
-                    done
-                    echo -e "  ${GREEN}✅ $PLATFORM_NAME: $COPIED new workflow(s) added${NC}"
-                    ;;
-                3)
-                    echo -e "  ${YELLOW}❌ Installation cancelled for $PLATFORM_NAME${NC}"
-                    continue
-                    ;;
-                *)
-                    echo -e "  ${RED}Invalid choice, skipping $PLATFORM_NAME${NC}"
-                    continue
-                    ;;
-            esac
+
+    # Markdown platforms: merge logic (safe overwrite options)
+    EXISTING_SMARTSPEC=()
+    if ls "$TARGET_DIR"/smartspec_*.md >/dev/null 2>&1; then
+        while IFS= read -r file; do
+            EXISTING_SMARTSPEC+=("$(basename "$file")")
+        done < <(ls "$TARGET_DIR"/smartspec_*.md 2>/dev/null)
+    fi
+
+    if [ ${#EXISTING_SMARTSPEC[@]} -gt 0 ]; then
+        echo -e "  ${YELLOW}⚠️  Found ${#EXISTING_SMARTSPEC[@]} existing SmartSpec workflow(s) for $PLATFORM_NAME${NC}"
+        echo ""
+        echo "  How do you want to proceed?"
+        echo "    1) Overwrite all (recommended for updates)"
+        echo "    2) Skip existing, copy only new"
+        echo "    3) Cancel this platform"
+
+        if [ -t 0 ]; then
+            read -p "  Enter choice [1-3] (default: 1): " overwrite_choice
         else
-            # No existing SmartSpec workflows, just copy
-            cp "$WORKFLOWS_DIR"/smartspec_*.md "$TARGET_DIR/" 2>/dev/null || true
-            echo -e "  ${GREEN}✅ $PLATFORM_NAME: Workflows installed${NC}"
+            read -p "  Enter choice [1-3] (default: 1): " overwrite_choice < /dev/tty 2>/dev/null || overwrite_choice=""
         fi
+
+        [ -z "$overwrite_choice" ] && overwrite_choice=1
+
+        case $overwrite_choice in
+            1)
+                BACKUP_DIR="${TARGET_DIR}.smartspec.backup.$(date +%Y%m%d_%H%M%S)"
+                mkdir -p "$BACKUP_DIR"
+                for file in "${EXISTING_SMARTSPEC[@]}"; do
+                    cp "$TARGET_DIR/$file" "$BACKUP_DIR/" 2>/dev/null || true
+                done
+                echo -e "  ${GREEN}💾 Backed up existing SmartSpec workflows to $(basename "$BACKUP_DIR")${NC}"
+
+                cp "$WORKFLOWS_DIR"/smartspec_*.md "$TARGET_DIR/" 2>/dev/null || true
+                echo -e "  ${GREEN}✅ $PLATFORM_NAME: Workflows updated${NC}"
+                ;;
+            2)
+                COPIED=0
+                for file in "$WORKFLOWS_DIR"/smartspec_*.md; do
+                    filename=$(basename "$file")
+                    if [ ! -f "$TARGET_DIR/$filename" ]; then
+                        cp "$file" "$TARGET_DIR/"
+                        COPIED=$((COPIED + 1))
+                    fi
+                done
+                echo -e "  ${GREEN}✅ $PLATFORM_NAME: $COPIED new workflow(s) added${NC}"
+                ;;
+            3)
+                echo -e "  ${YELLOW}❌ Installation cancelled for $PLATFORM_NAME${NC}"
+                continue
+                ;;
+            *)
+                echo -e "  ${RED}Invalid choice, skipping $PLATFORM_NAME${NC}"
+                continue
+                ;;
+        esac
     else
-        # Directory doesn't exist - create and copy
-        mkdir -p "$TARGET_DIR"
         cp "$WORKFLOWS_DIR"/smartspec_*.md "$TARGET_DIR/" 2>/dev/null || true
         echo -e "  ${GREEN}✅ $PLATFORM_NAME: Workflows installed${NC}"
     fi
@@ -413,7 +373,6 @@ done
 echo ""
 echo "💾 Saving configuration..."
 
-# Create config.json
 cat > "$SMARTSPEC_DIR/config.json" <<EOF
 {
   "version": "$SMARTSPEC_VERSION",
@@ -425,98 +384,111 @@ cat > "$SMARTSPEC_DIR/config.json" <<EOF
 EOF
 
 echo "$SMARTSPEC_VERSION" > "$SMARTSPEC_DIR/version.txt"
-
 echo -e "${GREEN}✅ Configuration saved${NC}"
 
-# Step 6: Create sync script
-# Always create sync script for manual updates
-    cat > "$SMARTSPEC_DIR/sync.sh" <<'SYNCEOF'
+# Step 6: Create sync script (project-local helper)
+cat > "$SMARTSPEC_DIR/sync.sh" <<'SYNCEOF'
 #!/bin/bash
-# SmartSpec Sync Script
+# SmartSpec Sync Script (Project Helper)
+# Syncs .smartspec/workflows to all configured platforms.
 
 set -e
 
 SMARTSPEC_DIR=".smartspec"
 WORKFLOWS_DIR="$SMARTSPEC_DIR/workflows"
 
-# Colors
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# Read config
+KILOCODE_DIR="$HOME/.kilocode/workflows"
+ROO_DIR="$HOME/.roo/commands"
+CLAUDE_DIR="$HOME/.claude/commands"
+ANTIGRAVITY_DIR="$HOME/.agent/workflows"
+GEMINI_CLI_DIR="$HOME/.gemini/commands"
+
 if [ ! -f "$SMARTSPEC_DIR/config.json" ]; then
-    echo "Error: SmartSpec not installed"
+    echo -e "${RED}Error: SmartSpec not installed${NC}"
     exit 1
 fi
 
-# Extract platforms (simple grep since jq might not be available)
 PLATFORMS=$(grep -o '"platforms":\s*\[[^]]*\]' "$SMARTSPEC_DIR/config.json" | grep -o '"[^"]*"' | grep -v platforms | tr -d '"')
 
 echo -e "${BLUE}🔄 Syncing SmartSpec workflows...${NC}"
 
 for platform in $PLATFORMS; do
     case $platform in
-        kilocode) TARGET_DIR=".kilocode/workflows" ;;
-        roo) TARGET_DIR=".roo/commands" ;;
-        claude) TARGET_DIR=".claude/commands" ;;
-        antigravity) TARGET_DIR=".agent/workflows" ;;
-        gemini-cli) 
-            TARGET_DIR=".gemini/commands"
-            # Convert to TOML for Gemini CLI
-            if [ -d "$TARGET_DIR" ]; then
-                for md_file in "$WORKFLOWS_DIR"/smartspec_*.md; do
-                    if [ ! -f "$md_file" ]; then continue; fi
-                    filename=$(basename "$md_file" .md)
-                    toml_file="$TARGET_DIR/${filename}.toml"
-                    # Skip frontmatter and extract first # title
+        kilocode) TARGET_DIR="$KILOCODE_DIR" ;;
+        roo) TARGET_DIR="$ROO_DIR" ;;
+        claude) TARGET_DIR="$CLAUDE_DIR" ;;
+        antigravity) TARGET_DIR="$ANTIGRAVITY_DIR" ;;
+        gemini-cli)
+            TARGET_DIR="$GEMINI_CLI_DIR"
+            mkdir -p "$(dirname "$TARGET_DIR")"
+            mkdir -p "$TARGET_DIR"
+
+            CONVERTED=0
+            for md_file in "$WORKFLOWS_DIR"/smartspec_*.md; do
+                [ -f "$md_file" ] || continue
+                filename=$(basename "$md_file" .md)
+                toml_file="$TARGET_DIR/${filename}.toml"
+
+                description=$(grep -m 1 '^description:' "$md_file" | sed 's/^description: *//')
+                if [ -z "$description" ]; then
                     description=$(grep -m 1 '^# ' "$md_file" | sed 's/^# //')
-                    [ -z "$description" ] && description="SmartSpec workflow: ${filename//_/ }"
-                    # Extract content after frontmatter
-                    frontmatter_end=$(grep -n '^---$' "$md_file" | sed -n '2p' | cut -d: -f1)
-                    if [ -n "$frontmatter_end" ]; then
-                        prompt=$(tail -n +$((frontmatter_end + 1)) "$md_file" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
-                    else
-                        prompt=$(tail -n +2 "$md_file" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
-                    fi
-                    printf '%s\n\n%s\n%s\n%s\n' \
-                        "description = \"$description\"" \
-                        'prompt = """' \
-                        "$prompt" \
-                        '"""' > "$toml_file"
-                done
-                echo -e "  ${GREEN}✅ $platform synced (converted to TOML)${NC}"
-                continue
-            fi
+                fi
+                [ -z "$description" ] && description="SmartSpec workflow: ${filename//_/ }"
+
+                frontmatter_end=$(grep -n '^---$' "$md_file" | sed -n '2p' | cut -d: -f1)
+                if [ -n "$frontmatter_end" ]; then
+                    prompt=$(tail -n +$((frontmatter_end + 1)) "$md_file")
+                else
+                    prompt=$(tail -n +2 "$md_file")
+                fi
+
+                {
+                    echo "description = \"$description\""
+                    echo ""
+                    echo 'prompt = """'
+                    echo "$prompt"
+                    echo '"""'
+                } > "$toml_file"
+
+                CONVERTED=$((CONVERTED + 1))
+            done
+
+            echo -e "  ${GREEN}✅ gemini-cli synced ($CONVERTED workflows converted to TOML)${NC}"
+            continue
+            ;;
+        *)
+            echo -e "  ${YELLOW}⚠️  Unknown platform: $platform - skipping${NC}"
+            continue
             ;;
     esac
-    
-    # Sync only SmartSpec workflows (Markdown platforms)
-    if [ -d "$TARGET_DIR" ]; then
-        cp "$WORKFLOWS_DIR"/smartspec_*.md "$TARGET_DIR/" 2>/dev/null || true
-        echo -e "  ${GREEN}✅ $platform synced${NC}"
-    fi
+
+    mkdir -p "$(dirname "$TARGET_DIR")"
+    mkdir -p "$TARGET_DIR"
+    cp "$WORKFLOWS_DIR"/smartspec_*.md "$TARGET_DIR/" 2>/dev/null || true
+    echo -e "  ${GREEN}✅ $platform synced${NC}"
 done
 
 echo -e "${GREEN}✅ Sync complete${NC}"
 SYNCEOF
-    
+
 chmod +x "$SMARTSPEC_DIR/sync.sh"
 echo -e "${GREEN}✅ Sync script created${NC}"
 
-# Run sync.sh to copy workflows to platform directories
+# Step 7: Initial sync
 echo ""
 echo -e "${BLUE}🔄 Syncing workflows to platform directories...${NC}"
-if [ -f "$SMARTSPEC_DIR/sync.sh" ]; then
-    "$SMARTSPEC_DIR/sync.sh"
-else
-    echo -e "${RED}❌ Error: sync.sh not found${NC}"
-fi
+"$SMARTSPEC_DIR/sync.sh"
 
-# Create git hook
+# Step 8: Create git hook (optional)
 if [ -d ".git" ]; then
-        mkdir -p ".git/hooks"
-        cat > ".git/hooks/post-merge" <<'HOOKEOF'
+    mkdir -p ".git/hooks"
+    cat > ".git/hooks/post-merge" <<'HOOKEOF'
 #!/bin/bash
 # Auto-sync SmartSpec after git pull
 
@@ -529,7 +501,7 @@ HOOKEOF
     echo -e "${GREEN}✅ Git hook installed (auto-sync on pull)${NC}"
 fi
 
-# Step 7: Success message
+# Success message
 echo ""
 echo -e "${GREEN}╔════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║  ✅ SmartSpec installed successfully!  ║${NC}"
@@ -538,25 +510,8 @@ echo ""
 echo "📍 Installation details:"
 echo "  - Version: $SMARTSPEC_VERSION"
 echo "  - Location: $SMARTSPEC_DIR"
-echo "  - Method: Merged installation (preserves existing workflows)"
 echo "  - Platforms: ${PLATFORMS[*]}"
 echo ""
-
-echo -e "${YELLOW}📝 Note: SmartSpec workflows are synced to your platform directories${NC}"
-echo "   Run '.smartspec/sync.sh' to manually update SmartSpec workflows from repository"
+echo -e "${YELLOW}📝 Note:${NC} Always edit master workflows in ${SMARTSPEC_DIR}/workflows/"
+echo "   Run '.smartspec/sync.sh' to manually update platform copies."
 echo ""
-
-echo "🎉 You can now use SmartSpec workflows in:"
-for platform in "${PLATFORMS[@]}"; do
-    case $platform in
-        kilocode) echo "  - Kilo Code: /smartspec_generate_spec, /smartspec_generate_tasks, etc." ;;
-        roo) echo "  - Roo Code: /smartspec_generate_spec, /smartspec_generate_tasks, etc." ;;
-        claude) echo "  - Claude Code: /smartspec_generate_spec, /smartspec_generate_tasks, etc." ;;
-        antigravity) echo "  - Google Antigravity: /smartspec_generate_spec, /smartspec_generate_tasks, etc." ;;
-        gemini-cli) echo "  - Gemini CLI: /smartspec_generate_spec, /smartspec_generate_tasks, etc." ;;
-    esac
-done
-
-echo ""
-echo "📚 Documentation: https://github.com/naibarn/SmartSpec"
-echo "💡 Quick start: /smartspec_generate_spec <your-spec-file>"

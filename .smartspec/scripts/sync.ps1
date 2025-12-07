@@ -1,95 +1,123 @@
-# SmartSpec Sync Script (Standalone - Windows)
-# Use this to manually sync workflows to all platforms
+# SmartSpec Sync Script (Standalone) - PowerShell
+# Use this to manually sync workflows to all platforms.
 
-$SMARTSPEC_DIR = ".smartspec"
-$WORKFLOWS_DIR = "$SMARTSPEC_DIR\workflows"
+$ErrorActionPreference = "Stop"
 
-Write-Host "🔄 SmartSpec Sync Tool" -ForegroundColor Cyan
-Write-Host "=====================" -ForegroundColor Cyan
-Write-Host ""
+$SmartSpecDir = ".smartspec"
+$WorkflowsDir = Join-Path $SmartSpecDir "workflows"
 
-# Check if SmartSpec is installed
-if (-not (Test-Path $SMARTSPEC_DIR)) {
-    Write-Host "❌ Error: SmartSpec is not installed" -ForegroundColor Red
-    Write-Host "Run 'install.ps1' first"
-    exit 1
+if (-not (Test-Path $SmartSpecDir)) {
+    throw "SmartSpec is not installed. Run install.ps1 first."
 }
 
-# Check if config exists
-if (-not (Test-Path "$SMARTSPEC_DIR\config.json")) {
-    Write-Host "❌ Error: SmartSpec configuration not found" -ForegroundColor Red
-    exit 1
+if (-not (Test-Path (Join-Path $SmartSpecDir "config.json"))) {
+    throw "SmartSpec configuration not found."
 }
 
-# Read config
-try {
-    $config = Get-Content "$SMARTSPEC_DIR\config.json" | ConvertFrom-Json
-    $PLATFORMS = $config.platforms
-    $USE_SYMLINKS = $config.use_symlinks
-} catch {
-    Write-Host "❌ Error reading configuration" -ForegroundColor Red
-    exit 1
+$config = Get-Content (Join-Path $SmartSpecDir "config.json") -Raw | ConvertFrom-Json
+$platforms = $config.platforms
+$useSymlinks = $false
+if ($config.PSObject.Properties.Name -contains "use_symlinks") {
+    $useSymlinks = [bool]$config.use_symlinks
 }
 
-# Check if using symlinks
-if ($USE_SYMLINKS) {
+if ($useSymlinks) {
     Write-Host "⚠️  You're using symlinks - sync is automatic" -ForegroundColor Yellow
-    Write-Host "No manual sync needed!"
-    exit 0
+    return
 }
 
-# Sync to each platform
-Write-Host "Syncing workflows to platforms..."
-Write-Host ""
+$KiloDir = Join-Path $HOME ".kilocode\workflows"
+$RooDir = Join-Path $HOME ".roo\commands"
+$ClaudeDir = Join-Path $HOME ".claude\commands"
+$AgentDir = Join-Path $HOME ".agent\workflows"
+$GeminiDir = Join-Path $HOME ".gemini\commands"
 
-$SYNCED = 0
-$FAILED = 0
-
-foreach ($platform in $PLATFORMS) {
-    switch ($platform) {
-        "kilocode" { 
-            $TARGET_DIR = ".kilocode\workflows"
-            $PLATFORM_NAME = "Kilo Code"
-        }
-        "roo" { 
-            $TARGET_DIR = ".roo\commands"
-            $PLATFORM_NAME = "Roo Code"
-        }
-        "claude" { 
-            $TARGET_DIR = ".claude\commands"
-            $PLATFORM_NAME = "Claude Code"
-        }
+function Get-FrontmatterEndIndex([string[]]$lines) {
+    $indexes = @()
+    for ($i=0; $i -lt $lines.Length; $i++) {
+        if ($lines[$i].Trim() -eq "---") { $indexes += $i }
+        if ($indexes.Count -ge 2) { break }
     }
-    
-    # Check if parent directory exists
-    $parentDir = Split-Path -Parent $TARGET_DIR
-    if (-not (Test-Path $parentDir)) {
-        Write-Host "  ⚠️  $PLATFORM_NAME directory not found - skipping" -ForegroundColor Yellow
+    if ($indexes.Count -ge 2) { return $indexes[1] }
+    return $null
+}
+
+function Convert-MdToToml([string]$mdPath, [string]$tomlPath) {
+    $lines = Get-Content $mdPath
+    $descLine = $lines | Where-Object { $_ -match "^\s*description\s*:" } | Select-Object -First 1
+    $description = ""
+    if ($descLine) { $description = ($descLine -replace "^\s*description\s*:\s*", "").Trim() }
+    if ([string]::IsNullOrWhiteSpace($description)) {
+        $titleLine = $lines | Where-Object { $_ -match "^\s*#\s+" } | Select-Object -First 1
+        if ($titleLine) { $description = ($titleLine -replace "^\s*#\s+", "").Trim() }
+    }
+    if ([string]::IsNullOrWhiteSpace($description)) {
+        $base = [IO.Path]::GetFileNameWithoutExtension($mdPath)
+        $description = "SmartSpec workflow: " + ($base -replace "_", " ")
+    }
+
+    $frontEnd = Get-FrontmatterEndIndex $lines
+    if ($frontEnd -ne $null) {
+        $promptLines = $lines[($frontEnd+1)..($lines.Length-1)]
+    } else {
+        if ($lines.Length -gt 1) { $promptLines = $lines[1..($lines.Length-1)] } else { $promptLines = @() }
+    }
+
+    $prompt = ($promptLines -join "`n")
+
+    $toml = @()
+    $toml += "description = `"$description`""
+    $toml += ""
+    $toml += "prompt = `"`"`"`""
+    $toml += $prompt
+    $toml += "`"`"`"`""
+
+    Set-Content -Path $tomlPath -Value $toml -Encoding UTF8
+}
+
+$mdFiles = Get-ChildItem -Path $WorkflowsDir -Filter "smartspec_*.md" -File
+
+Write-Host "🔄 Syncing SmartSpec workflows..." -ForegroundColor Cyan
+
+$syncCount = 0
+
+foreach ($p in $platforms) {
+    switch ($p) {
+        "kilocode" { $parent = Join-Path $HOME ".kilocode"; $target = $KiloDir; $name = "Kilo Code" }
+        "roo" { $parent = Join-Path $HOME ".roo"; $target = $RooDir; $name = "Roo Code" }
+        "claude" { $parent = Join-Path $HOME ".claude"; $target = $ClaudeDir; $name = "Claude Code" }
+        "antigravity" { $parent = Join-Path $HOME ".agent"; $target = $AgentDir; $name = "Google Antigravity" }
+        "gemini-cli" { $parent = Join-Path $HOME ".gemini"; $target = $GeminiDir; $name = "Gemini CLI" }
+        default { continue }
+    }
+
+    if (-not (Test-Path $parent)) {
+        Write-Host "  ⚠️  $name not detected at $parent - skipping" -ForegroundColor Yellow
         continue
     }
-    
-    # Sync
-    try {
-        if (Test-Path $TARGET_DIR) {
-            Remove-Item -Recurse -Force $TARGET_DIR
+
+    New-Item -ItemType Directory -Path $target -Force | Out-Null
+
+    if ($p -eq "gemini-cli") {
+        foreach ($md in $mdFiles) {
+            $base = [IO.Path]::GetFileNameWithoutExtension($md.Name)
+            $tomlPath = Join-Path $target ($base + ".toml")
+            Convert-MdToToml $md.FullName $tomlPath
         }
-        Copy-Item -Recurse $WORKFLOWS_DIR $TARGET_DIR
-        Write-Host "  ✅ $PLATFORM_NAME synced" -ForegroundColor Green
-        $SYNCED++
-    } catch {
-        Write-Host "  ❌ Failed to sync $PLATFORM_NAME" -ForegroundColor Red
-        Write-Host "     $($_.Exception.Message)" -ForegroundColor Gray
-        $FAILED++
+        Write-Host "  ✅ $name synced (TOML)" -ForegroundColor Green
+        $syncCount++
+        continue
     }
+
+    Get-ChildItem -Path $target -Filter "smartspec_*.md" -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    foreach ($md in $mdFiles) { Copy-Item $md.FullName $target -Force }
+    Write-Host "  ✅ $name synced" -ForegroundColor Green
+    $syncCount++
 }
 
 Write-Host ""
-if ($SYNCED -gt 0) {
-    Write-Host "✅ Sync complete - $SYNCED platform(s) updated" -ForegroundColor Green
+if ($syncCount -gt 0) {
+    Write-Host "✅ Sync complete - $syncCount platform(s) updated" -ForegroundColor Green
 } else {
     Write-Host "⚠️  No platforms synced" -ForegroundColor Yellow
-}
-
-if ($FAILED -gt 0) {
-    Write-Host "⚠️  $FAILED platform(s) failed" -ForegroundColor Yellow
 }

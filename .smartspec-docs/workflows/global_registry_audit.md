@@ -1,28 +1,35 @@
 ---
-description: SmartSpec Global Registry Audit Guide (v5.2)
-version: 5.2
-last_updated: 2025-12-07
+description: SmartSpec Global Registry Audit Guide (v5.6)
+version: 5.6
+last_updated: 2025-12-08
 ---
 
 # SmartSpec Global Registry Audit Guide
 
-This guide explains how to use `/smartspec_global_registry_audit` in SmartSpec v5.2.
+This guide explains how to use `/smartspec_global_registry_audit` in SmartSpec v5.6.
 
 Global Registry Audit is a governance workflow that scans your SmartSpec ecosystem to detect and reduce cross-SPEC naming and definition drift. It focuses on shared registries such as glossary, data models, API contracts, critical sections, and optional patterns/UI component registries.
 
 Rather than silently rewriting your system, it produces **audit reports and alignment recommendations** for human review.
 
+This v5.6 guide preserves the original structure and intent of the v5.2 manual while adding:
+
+- **Multi-registry support** with explicit precedence
+- **Multi-repo alignment** consistent with the v5.6 chain
+- **Safety-mode** semantics separated from `--mode=portfolio|runtime`
+- **Chain readiness notes** for generate_spec and generate_tasks
+
 ---
 
 ## Key Concepts
 
-### SmartSpec Centralization (v5.2)
+### SmartSpec Centralization (v5.6)
 
-SmartSpec v5.2 separates **tooling** from **project-owned truth**.
+SmartSpec v5.6 continues the separation of **tooling** from **project-owned truth**.
 
 - **Project-owned canonical space:** `.spec/`
 - **Canonical index:** `.spec/SPEC_INDEX.json`
-- **Shared registries (optional):** `.spec/registry/`
+- **Shared registries (primary):** `.spec/registry/`
 - **Legacy root mirror:** `SPEC_INDEX.json`
 - **Deprecated tooling index:** `.smartspec/SPEC_INDEX.json`
 
@@ -32,7 +39,7 @@ The audit reads from the canonical layer when present and remains compatible wit
 
 Large systems often keep roadmap specs in the index before all files exist.
 
-To avoid forcing low-quality placeholder specs, audit severities should be interpreted consistently with other v5.2 governance flows:
+To avoid forcing low-quality placeholder specs, audit severities should be interpreted consistently with other governance flows:
 
 - `--mode=portfolio` (default)
   - Optimized for roadmap-level normalization.
@@ -40,13 +47,38 @@ To avoid forcing low-quality placeholder specs, audit severities should be inter
 
 - `--mode=runtime`
   - Optimized for delivery readiness.
-  - Drift that affects active/core/stable specs is treated with higher urgency.
+  - Drift affecting active/core/stable specs is treated with higher urgency.
+
+### Safety Mode (NEW in v5.6)
+
+v5.6 introduces `--safety-mode` to standardize strictness across the chain without changing the meaning of `--mode`.
+
+- `--safety-mode=strict` (default)
+  - Escalates cross-registry collisions and ownership ambiguity.
+
+- `--safety-mode=dev`
+  - Continues with high-visibility warnings.
+
+`--strict` remains supported as a legacy alias.
+
+### Multi-Registry Precedence (NEW in v5.6)
+
+Multi-repo programs may maintain more than one registry set.
+
+- **Primary registry:** `--registry-dir` (default `.spec/registry`)
+- **Supplemental registries:** `--registry-roots` (read-only)
+
+Precedence rules:
+
+1) The primary registry is authoritative.
+2) Supplemental registries are validation sources used to prevent cross-repo duplication.
+3) Names found only in supplemental registries should be treated as likely cross-repo owners until clarified.
 
 ### UI Design Addendum
 
 When your portfolio includes UI specs:
 
-- **UI design source of truth** is `ui.json` inside the UI spec folder (Penpot-aligned).
+- **UI design source of truth** is `ui.json` inside the UI spec folder (Penpot-aligned) when the project uses JSON-first UI.
 - `spec.md` documents constraints, mapping, and logic boundaries.
 - UI JSON should not contain business logic.
 
@@ -64,6 +96,7 @@ If present, the workflow audits these registries:
 4) `critical-sections-registry.json`
 5) `patterns-registry.json` (optional)
 6) `ui-component-registry.json` (optional)
+7) `file-ownership-registry.json` (optional)
 
 It also evaluates cross-SPEC usage signals from:
 
@@ -114,13 +147,13 @@ If you do not pass `--index`, SmartSpec resolves the index in this order:
 
 - `SPEC_HUB_DIR = ".spec"`
 - `REGISTRY_DIR = ".spec/registry"`
-- **`REPORT_DIR = ".spec/reports/registry-audit"`**
+- `REPORT_DIR = ".spec/reports/global-registry-audit"`
 
-> Note: In v5.2, reports are project-owned and should not default to `.smartspec/`.
+> Note: Reports remain project-owned and should not default to `.smartspec/`.
 
 ---
 
-## Multi-Repo Support (v5.2)
+## Multi-Repo Support (v5.6)
 
 Many large projects distribute specs across sibling repositories (e.g., public + private). The audit can search for spec artifacts across these repos.
 
@@ -130,7 +163,7 @@ You can configure multi-repo resolution in two ways:
 
 ```bash
 /smartspec_global_registry_audit \
-  --workspace-roots="../Smart-AI-Hub,../smart-ai-hub-enterprise-security"
+  --workspace-roots="../Repo-A,../Repo-B"
 ```
 
 ### Option B) Structured config
@@ -145,8 +178,8 @@ Example:
 {
   "version": "1.0",
   "repos": [
-    { "id": "public", "root": "../Smart-AI-Hub" },
-    { "id": "private", "root": "../smart-ai-hub-enterprise-security" }
+    { "id": "public",  "root": "../Repo-A" },
+    { "id": "private", "root": "../Repo-B" }
   ]
 }
 ```
@@ -163,6 +196,30 @@ If neither `--workspace-roots` nor `--repos-config` is provided, the audit check
 
 ---
 
+## Multi-Registry Support (v5.6)
+
+In multi-repo programs, shared names may exist in more than one registry set.
+
+### Primary registry
+
+```bash
+--registry-dir=.spec/registry
+```
+
+### Supplemental registries (read-only)
+
+```bash
+--registry-roots="../Repo-A/.spec/registry,../Repo-B/.spec/registry"
+```
+
+The audit uses supplemental registries to:
+
+- detect cross-repo collisions early
+- identify likely owner registries
+- reduce accidental duplication during spec/tasks generation
+
+---
+
 ## Command Usage
 
 ### Basic audit
@@ -174,7 +231,7 @@ If neither `--workspace-roots` nor `--repos-config` is provided, the audit check
 ### Detailed report
 
 ```bash
-/smartspec_global_registry_audit --report-dir=.spec/reports/registry-audit
+/smartspec_global_registry_audit --report=detailed
 ```
 
 ### Portfolio interpretation (recommended for early roadmaps)
@@ -186,15 +243,18 @@ If neither `--workspace-roots` nor `--repos-config` is provided, the audit check
 ### Runtime interpretation (recommended before releases)
 
 ```bash
-/smartspec_global_registry_audit --mode=runtime --strict
+/smartspec_global_registry_audit --mode=runtime --safety-mode=strict
 ```
 
-### Multi-repo audit
+### Multi-repo + multi-registry audit
 
 ```bash
 /smartspec_global_registry_audit \
-  --workspace-roots="../Smart-AI-Hub,../smart-ai-hub-enterprise-security" \
-  --mode=portfolio
+  --repos-config=.spec/smartspec.repos.json \
+  --registry-dir=.spec/registry \
+  --registry-roots="../Repo-A/.spec/registry,../Repo-B/.spec/registry" \
+  --mode=portfolio \
+  --report=detailed
 ```
 
 ---
@@ -206,8 +266,14 @@ If neither `--workspace-roots` nor `--repos-config` is provided, the audit check
 - `--index`
   - Override SPEC_INDEX path.
 
+- `--specindex`
+  - Legacy alias for `--index`.
+
 - `--registry-dir`
   - Default: `.spec/registry`
+
+- `--registry-roots`
+  - Supplemental registries (read-only validation).
 
 ### Multi-Repo
 
@@ -226,11 +292,16 @@ If neither `--workspace-roots` nor `--repos-config` is provided, the audit check
 
 ### Reporting / Safety
 
-- `--report-dir`
-  - Default: `.spec/reports/registry-audit/`
+- `--report`
+  - Values: `summary`, `detailed`
+  - Default: `summary`
+
+- `--safety-mode`
+  - Values: `strict`, `dev`
+  - Default: `strict`
 
 - `--strict`
-  - Fail on high-risk drift patterns that could break shared contracts.
+  - Legacy alias for strict gating.
 
 - `--dry-run`
   - Print findings without writing files.
@@ -242,13 +313,13 @@ If neither `--workspace-roots` nor `--repos-config` is provided, the audit check
 Reports are written to:
 
 ```text
-.spec/reports/registry-audit/
+.spec/reports/global-registry-audit/
 ```
 
 Typical files:
 
-- `registry-audit-summary-<timestamp>.md`
-- `registry-audit-detailed-<timestamp>.md`
+- `global-registry-audit-summary-<timestamp>.md`
+- `global-registry-audit-detailed-<timestamp>.md`
 
 This workflow is **analysis-first**. It should not mutate registries unless your team explicitly adds a future append-only mode.
 
@@ -276,6 +347,12 @@ This workflow is **analysis-first**. It should not mutate registries unless your
 - Variations across auth/authz/audit/rate-limiting specs are high-risk.
 - Treat runtime-mode warnings in this area as release blockers.
 
+### Cross-registry collisions (v5.6)
+
+- If the same name exists in primary and supplemental registries with conflicting meaning:
+  - treat the primary as authoritative
+  - add a remediation plan to reconcile or formally declare the boundary
+
 ### UI component drift (optional)
 
 - If `ui-component-registry.json` exists, align UI component names to it.
@@ -293,6 +370,8 @@ This workflow is **analysis-first**. It should not mutate registries unless your
   - `/smartspec_portfolio_planner`
   - `/smartspec_validate_index`
   - `/smartspec_spec_lifecycle_manager`
+- For multi-repo platforms:
+  - run with `--registry-roots` to prevent cross-repo duplicate naming
 
 ---
 
@@ -312,12 +391,18 @@ Provide multi-repo configuration:
 
 ```bash
 /smartspec_global_registry_audit \
-  --workspace-roots="../Smart-AI-Hub,../smart-ai-hub-enterprise-security"
+  --workspace-roots="../Repo-A,../Repo-B"
 ```
+
+### “Audit reports shared-name conflicts across registries”
+
+- Confirm primary vs supplemental registry roles.
+- Decide the canonical owner.
+- Update specs/tasks to reuse the declared owner.
 
 ---
 
 ## Summary
 
-Global Registry Audit is SmartSpec’s long-term consistency guard. In v5.2, it aligns with the new centralization model, supports optional UI JSON governance, and can operate across multi-repo ecosystems to keep shared names and cross-cutting constraints consistent without risky automatic rewrites.
+Global Registry Audit is SmartSpec’s long-term consistency guard. In v5.6, it remains aligned with the centralization model, supports optional UI JSON governance, and adds multi-registry safety so multi-repo ecosystems can keep shared names and cross-cutting constraints consistent without risky automatic rewrites.
 

@@ -1,29 +1,37 @@
 ---
-description: Implement tasks with SmartSpec centralization (.spec) and UI JSON addendum
-version: 5.2
+description: Implement tasks with SmartSpec v5.6 centralization, multi-repo + multi-registry alignment, KiloCode Orchestrator support, safety-mode, and UI JSON addendum
+version: 5.6
+last_updated: 2025-12-08
 ---
 
 # /smartspec_implement_tasks
 
 Implement code changes based on `tasks.md` and `spec.md` while enforcing SmartSpec centralization and preventing cross-SPEC drift.
 
-This workflow assumes:
-- **`.spec/` is the canonical project space** for shared truth.
+This v5.6 workflow preserves the full v5.2 intent and user-facing capabilities, including KiloCode support via `--kilocode`, and extends the command to align with the v5.6 chain for multi-repo and multi-registry programs.
+
+SmartSpec centralization remains unchanged:
+
+- **`.spec/` is the canonical project-owned space** for shared truth.
+- **`.spec/SPEC_INDEX.json` is the canonical index**.
+- **`.spec/registry/` is the shared naming source of truth**.
+- `SPEC_INDEX.json` at repo root is a **legacy mirror**.
 - `.smartspec/` is tooling-only.
-- Shared names must be aligned via **`.spec/registry/`**.
-- **UI specs use `ui.json` as design source of truth** for Penpot integration.
+- **UI specs may use `ui.json` as design source of truth** for Penpot integration.
 
 ---
 
 ## What It Does
 
 - Resolves canonical `SPEC_INDEX.json`.
-- Loads shared registries.
-- Reads target `spec.md` and `tasks.md`.
+- Loads shared registries (primary + supplemental when configured).
+- Builds multi-repo search context when configured.
+- Reads target `spec.md`, `tasks.md`, and relevant dependency specs.
 - Validates naming consistency before coding.
 - Implements tasks in a dependency-safe order.
 - Generates or updates tests aligned with spec + registries.
 - Applies UI JSON addendum rules conditionally.
+- Produces a required final summary per run.
 
 ---
 
@@ -31,18 +39,24 @@ This workflow assumes:
 
 - After `tasks.md` has been generated and reviewed.
 - During active implementation of a SPEC.
-- When working in large multi-SPEC projects to avoid conflicts.
+- When working in large multi-SPEC and/or multi-repo projects to avoid conflicts.
+- When you want KiloCode Orchestrator-driven subtask execution.
 
 ---
 
 ## Inputs
 
-- Target spec path (recommended)
-  - Example: `specs/core/spec-core-004-rate-limiting/spec.md`
+- Target tasks path (recommended)
+  - Example: `specs/core/spec-core-004-rate-limiting/tasks.md`
 
 - Expected adjacent files:
-  - `tasks.md`
+  - `spec.md`
   - (UI specs) `ui.json`
+
+- Optional governance context:
+  - `.spec/SPEC_INDEX.json`
+  - `.spec/registry/*.json`
+  - supplemental registries from sibling repos
 
 ---
 
@@ -50,26 +64,107 @@ This workflow assumes:
 
 - Code changes in the repository
 - Updated or newly created tests
-- Implementation notes (optional)
-- Registry/addendum recommendations (non-destructive)
+- Optional implementation notes
+- Non-destructive registry/addendum recommendations
 
 ---
 
 ## Flags
 
+### Index / Registry (v5.6-aligned)
+
 - `--index` Path to SPEC_INDEX (optional)  
   default: auto-detect
 
-- `--registry-dir` Registry directory (optional)  
+- `--specindex` Legacy alias for `--index`
+
+- `--registry-dir` Primary registry directory (optional)  
   default: `.spec/registry`
 
-- `--spec` Explicit spec path (optional)
+- `--registry-roots` Supplemental registry dirs, comma-separated (optional)
+  - **Read-only validation sources** used to prevent cross-repo duplicate naming.
 
+Registry precedence:
+
+1) Primary registry (`--registry-dir`) is authoritative.
+2) Supplemental registries (`--registry-roots`) are validation sources.
+
+### Multi-Repo (v5.6-aligned)
+
+- `--workspace-roots` Comma-separated repo roots to search (optional)
+
+- `--repos-config` Structured repo config path (optional)
+  - takes precedence over `--workspace-roots`
+  - recommended: `.spec/smartspec.repos.json`
+
+### Target Selection & Scope
+
+- `--spec` Explicit spec path (optional)
 - `--tasks` Explicit tasks path (optional)
 
-- `--focus` Optional focus scope (e.g., `api`, `model`, `ui`, `tests`)
+#### Task scope selection (backward compatible)
 
-- `--strict` Fail on warnings (optional)
+This workflow supports precise implementation scope.
+
+- `--task=<n>` Implement a single task by index number
+- `--tasks=<csv>` Implement multiple tasks
+- `--range=<a-b>` Implement a task range
+- `--from=<n>` Start from a task index
+- `--start-from=<Tnnn>` Legacy task-ID form
+  - Alias for `--from` when tasks are numbered by ID (e.g., `T033`)
+
+#### Completion mode flags
+
+- `--skip-completed` Skip checked tasks (**default**)
+- `--force-all` Ignore checkboxes and re-implement all tasks
+
+#### Resume / Checkpoint
+
+- `--resume` Resume using the last safe checkpoint (if supported)
+
+### Phase Filtering (if your tasks use phases) (if your tasks use phases)
+
+- `--phase=<n>`
+- `--phases=<csv>`
+- `--phase-range=<a-b>`
+
+### Focus
+
+- `--focus=<api|model|ui|tests|migration|observability|security>`
+
+### Safety / Preview
+
+- `--safety-mode=<strict|dev>` (optional)
+  default: `strict`
+
+- `--strict` Legacy alias for strict gating
+
+- `--validate-only` Validate readiness without writing code
+
+- `--architect`
+  - Use Architect Mode for system design before implementation.
+  - When used with `--kilocode`, Orchestrator may still decide to call Architect first.
+
+### KiloCode Integration (RESTORED + REQUIRED BACKWARD COMPATIBILITY) (RESTORED + REQUIRED BACKWARD COMPATIBILITY)
+
+- `--kilocode`
+  - Enable KiloCode-optimized execution.
+  - The workflow attempts to activate **KiloCode Orchestrator** when available.
+  - If Orchestrator cannot be activated, the workflow must fall back to Standard Mode with a warning.
+
+#### Orchestrator Subtasks Rule
+
+When `--kilocode` is enabled and Orchestrator is available:
+
+- The execution should follow a **per-task loop**:
+  1) Switch to **Orchestrator** for each top-level SmartSpec task.
+  2) Request subtask breakdown using the SmartSpec numbering convention.
+     - Example: `T0001 → T0001.1, T0001.2, ...`
+  3) Confirm registry + ownership boundaries.
+  4) Switch to **Code** for implementation.
+  5) Return to Orchestrator for the next top-level task.
+
+- Subtask decomposition is expected to be ON by default in KiloCode contexts.
 
 ---
 
@@ -84,65 +179,20 @@ Detection order:
 3) `.smartspec/SPEC_INDEX.json` (deprecated)  
 4) `specs/SPEC_INDEX.json` (older layout)
 
-```bash
-INDEX_PATH="${FLAGS_index:-}"
-
-if [ -z "$INDEX_PATH" ]; then
-  if [ -f ".spec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".spec/SPEC_INDEX.json"
-  elif [ -f "SPEC_INDEX.json" ]; then
-    INDEX_PATH="SPEC_INDEX.json"
-  elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".smartspec/SPEC_INDEX.json" # deprecated
-  elif [ -f "specs/SPEC_INDEX.json" ]; then
-    INDEX_PATH="specs/SPEC_INDEX.json"
-  fi
-fi
-
-if [ -n "$INDEX_PATH" ] && [ -f "$INDEX_PATH" ]; then
-  echo "✅ Using SPEC_INDEX: $INDEX_PATH"
-else
-  echo "⚠️ SPEC_INDEX not found. Proceeding with local-spec-only context."
-  INDEX_PATH=""
-fi
-```
-
 ### 0.2 Resolve Registry Directory
 
-```bash
-REGISTRY_DIR="${FLAGS_registry_dir:-.spec/registry}"
-
-if [ ! -d "$REGISTRY_DIR" ]; then
-  echo "⚠️ Registry directory not found at $REGISTRY_DIR"
-  echo "   Proceeding with best-effort extraction from existing specs."
-fi
-```
-
-### 0.3 Expected Registries (if present)
-
-- `api-registry.json`
-- `data-model-registry.json`
-- `glossary.json`
-- `critical-sections-registry.json`
-- `patterns-registry.json` (optional)
-- `ui-component-registry.json` (optional)
-
-Rules:
-- Use registry names as canonical.
-- Do not invent new shared names if a registry entry already exists.
-- If new items are unavoidable, record them as **implementation notes** for later additive sync.
+- Default primary registry: `.spec/registry`
+- Load `--registry-roots` (if provided) read-only.
 
 ---
 
 ## 1) Identify Target Spec/Tasks
 
 Priority:
-1) `--spec` / `--tasks` if provided.
-2) If `INDEX_PATH` exists, allow selecting by spec ID.
-3) Otherwise, prompt user to provide a spec path.
 
-Default tasks location:
-- `tasks.md` next to `spec.md`.
+1) Use `--tasks` / `--spec` if provided.
+2) Otherwise infer `spec.md` adjacent to `tasks.md`.
+3) If index exists, allow selecting by spec ID (implementation-dependent).
 
 ---
 
@@ -150,9 +200,9 @@ Default tasks location:
 
 - Read `spec.md`.
 - Read `tasks.md`.
-- If UI spec, check for `ui.json` in the same folder.
+- Detect `ui.json` when applicable.
 
-Do not rewrite these files during implementation.
+The workflow may update task checkboxes only under the checkbox rules below.
 
 ---
 
@@ -160,100 +210,50 @@ Do not rewrite these files during implementation.
 
 Before coding, verify:
 
-### 3.1 Dependency Alignment
+1) **Dependency alignment** between spec/tasks and index.
+2) **Namespace & naming alignment** with the merged registry view.
+3) **Pattern reuse** when a patterns registry exists.
+4) **Cross-repo owner boundaries** when dependencies resolve outside the current repo.
 
-If `INDEX_PATH` exists:
-- The spec dependency list in tasks must match the dependency graph.
-- If mismatch:
-  - create a blocking note
-  - do not proceed to cross-SPEC API/model naming changes until resolved
+In `--safety-mode=strict`:
 
-### 3.2 Namespace & Naming Alignment
-
-If registries exist:
-- APIs referenced in tasks must match `api-registry.json`.
-- Models must match `data-model-registry.json`.
-- Terms must match `glossary.json`.
-
-If conflicts exist:
-- In `--strict` mode: stop.
-- Otherwise: implement only local changes that do not widen the conflict and record recommendations.
-
-### 3.3 Pattern Reuse
-
-If `patterns-registry.json` exists:
-- Prefer shared patterns over new ad-hoc solutions.
+- Stop when a new shared-name creation would likely conflict with any loaded registry view.
 
 ---
 
 ## 4) Implementation Strategy
 
-Implement tasks in this order:
+Implement tasks in a dependency-safe order:
 
-1) **Shared Interfaces / Contracts**
-   - Only when explicitly required by tasks and aligned with registries.
-
-2) **Domain Models**
-   - Use canonical names from registry.
-
-3) **Service / Use Case Layer**
-   - Keep business logic here (not in UI JSON).
-
-4) **API / Controllers**
-   - Ensure route names match registry.
-
-5) **Observability**
-   - Logging, metrics, tracing per spec NFRs.
-
-6) **Security**
-   - Auth/authz hooks
-   - Rate limits
-   - Audit trails if required
-
-7) **UI Components** (if applicable)
+1) Shared interfaces/contracts (only when explicitly required and registry-aligned)
+2) Domain models
+3) Service/use case layer
+4) API/controllers
+5) Observability
+6) Security
+7) UI components (if applicable)
 
 ---
 
 ## 5) UI JSON Addendum (Conditional)
 
 Apply when any of these are true:
+
 - Spec category is `ui` in SPEC_INDEX.
 - `ui.json` exists in the spec folder.
 - The spec explicitly mentions Penpot/UI JSON flow.
 
 Rules:
-- `ui.json` is **design-owned**.
-- Treat `ui.json` as read-only for developers unless there is a controlled additive update policy.
-- UI JSON must remain:
-  - component structure
-  - layout
-  - props metadata
-  - design tokens references
-- **No business logic** embedded in UI JSON.
 
-Required implementation checks:
+- `ui.json` is design-owned.
+- Treat `ui.json` as read-only unless tasks explicitly require an engineering-owned change.
+- No business logic in UI JSON.
 
-### 5.1 Component Mapping
+Required checks:
 
-- Map UI nodes/frames to existing components.
-- If `ui-component-registry.json` exists:
-  - component names must match registry.
-  - if missing, record an additive recommendation.
-
-### 5.2 Logic Separation
-
-- Implement logic in appropriate layers (hooks/services/controllers).
-- The UI layer should only orchestrate calls and render state.
-
-### 5.3 Design Handoff Integrity
-
-- Do not “fix design” by coding a different UI than described.
-- If mismatch is found:
-  - create a task/note for UI team
-  - align before finalizing UI tasks
-
-If the project does not use UI JSON:
-- Skip these checks without failing.
+- Component mapping
+- Logic separation
+- Design handoff integrity
 
 ---
 
@@ -261,49 +261,57 @@ If the project does not use UI JSON:
 
 Generate/update tests aligned with tasks and registries:
 
-- Unit tests for domain logic.
-- Integration tests for service + data access.
-- Contract tests for APIs.
-- Performance tests when NFRs specify SLAs.
-
-For UI specs:
-- Component tests focusing on rendering and state.
-- Avoid encoding business rules inside UI tests that should be verified at service level.
+- Unit tests for domain logic
+- Integration tests for service + data access
+- Contract tests for APIs
+- Performance tests when SLAs exist
 
 ---
 
-## 7) Post-Implementation Validation
+## 7) Checkbox Update Rules
+
+Check a task only if:
+
+- Required code changes are complete.
+- Acceptance criteria are satisfied.
+- Required tests (if listed) are created or updated.
+
+For partial completion:
+
+- Add implementation notes without checking the box.
+
+---
+
+## 8) Post-Implementation Validation
 
 Before marking tasks complete:
 
-- Re-run quick consistency checks:
-  - APIs/models/terms used match registries.
-  - No new conflicting names introduced.
+- Verify the final names used match registries.
+- Record any unavoidable new shared definitions for later additive governance review.
 
-- If new shared definitions were introduced:
-  - record them in implementation notes
-  - recommend running `/smartspec_sync_spec_tasks --mode=additive`
+Recommended follow-up:
+
+- `/smartspec_verify_tasks_progress`
+- `/smartspec_sync_spec_tasks --mode=additive`
 
 ---
 
-## 8) Output Summary
+## 9) Required Final Summary
 
-Provide an implementation summary including:
+Each run must end with a concise summary including:
 
-- Tasks completed
-- Files changed
-- Any registry alignment warnings
-- Any UI JSON compliance notes
-- Recommended follow-up workflows:
-  - `/smartspec_verify_tasks_progress`
-  - `/smartspec_generate_tests` (if needed)
-  - `/smartspec_sync_spec_tasks --mode=additive` (if new shared items emerged)
+- Tasks attempted/completed
+- Files changed/created
+- Registry alignment status
+- UI JSON compliance notes (if applicable)
+- Open risks/blockers
+- Suggested next command
 
 ---
 
 ## Notes
 
-- This workflow is conservative about shared-name creation to prevent cross-SPEC conflicts.
-- The canonical truth for cross-SPEC definitions is `.spec/registry/` when present.
-- `.spec/SPEC_INDEX.json` is the canonical index; root index is legacy mirror.
+- `--kilocode` is a long-standing user-facing capability and must remain supported for backward compatibility.
+- Multi-repo and multi-registry flags bring this execution workflow into full alignment with the v5.6 governance chain.
+- The workflow is conservative by design to prevent cross-SPEC and cross-repo duplication.
 

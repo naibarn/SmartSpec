@@ -1,318 +1,288 @@
 ---
-description: Audit global registries across all specs with v5.2 centralization, multi-repo awareness, and UI JSON addendum
+description: Audit global registries for cross-SPEC and cross-repo naming integrity with SmartSpec v5.6 multi-registry precedence, multi-repo awareness, and chain readiness guarantees
+version: 5.6
 ---
 
 # /smartspec_global_registry_audit
 
-Audit shared registries across the SmartSpec ecosystem to prevent cross-SPEC drift, naming collisions, and inconsistent cross-cutting rules.
+Audit SmartSpec registries to detect naming drift, duplicate shared entities, and cross-repo conflicts before they reach implementation.
 
-This workflow is **SmartSpec v5.2 centralization compatible** and **multi-repo-aware**.
+This v5.6 workflow preserves the v5.2 audit intent and scope while adding:
 
-## Core Principles (v5.2)
+- **Multi-registry support** with explicit precedence rules.
+- **Multi-repo awareness** aligned with the v5.6 chain.
+- **Safety-mode strictness** separated from the existing `--mode` semantics.
+- **Chain readiness reporting** for `/smartspec_generate_spec v5.6` and `/smartspec_generate_tasks v5.6`.
 
-- **Project-owned canonical space:** `.spec/`
-- **Canonical index:** `.spec/SPEC_INDEX.json`
-- **Legacy mirror (optional):** `SPEC_INDEX.json` at repo root
-- **Deprecated tooling index:** `.smartspec/SPEC_INDEX.json` (read-only if present)
-- **Shared registries:** `.spec/registry/`
-- **UI design source of truth (when applicable):** `ui.json` (Penpot-aligned)
+Recommended chain placement:
 
-This workflow is read-only for specs by default, and should not introduce breaking schema changes.
-
----
-
-## What This Audits
-
-If present, the workflow audits these registries:
-
-1) `api-registry.json`
-2) `data-model-registry.json`
-3) `glossary.json`
-4) `critical-sections-registry.json`
-5) `patterns-registry.json` (optional)
-6) `ui-component-registry.json` (optional)
-
-It also audits cross-SPEC usage signals from:
-
-- the canonical SPEC_INDEX
-- spec metadata in `spec.md`
-- tasks signals (when adjacent `tasks.md` exists)
-- UI JSON references (when `ui.json` exists)
+1) `/smartspec_reindex_specs` (when portfolio structure changes)
+2) `/smartspec_validate_index`
+3) `/smartspec_global_registry_audit`
+4) `/smartspec_generate_spec`
+5) `/smartspec_generate_plan`
+6) `/smartspec_generate_tasks`
+7) `/smartspec_sync_spec_tasks`
 
 ---
 
-## When to Use
+## Core Principles
 
-- After adding several new specs
-- After large naming refactors
-- Before major releases
-- When you suspect registry drift between public/private repos
-- After onboarding/handovers
+- **`.spec/` is the canonical project-owned governance layer**.
+- **`.spec/registry/` is the primary shared naming source of truth** for the current repo.
+- **Supplemental registries may exist in sibling repos**.
+- **Audit must not rewrite registry contents** unless a separate future “fix” policy explicitly allows safe normalization.
+
+---
+
+## What It Does
+
+- Resolves primary registry and optional supplemental registries.
+- Builds a merged validation view with deterministic precedence.
+- Loads SPEC_INDEX if available for coverage and ownership signals.
+- Audits:
+  - API registries
+  - data-model registries
+  - glossary
+  - critical sections
+  - patterns (optional)
+  - UI components (optional)
+  - file-ownership (optional)
+- Detects:
+  - same-name/different-meaning conflicts
+  - same-meaning/different-name duplication
+  - missing ownership signals for high-impact shared entities
+  - registry coverage gaps for heavily referenced shared names
+- Produces a structured report with remediation guidance.
+
+---
+
+## Inputs
+
+- Primary registry directory (default `.spec/registry`)
+- Optional supplemental registry roots
+- Optional SPEC_INDEX
+- Optional multi-repo configuration to locate index/specs for coverage analysis
 
 ---
 
 ## Outputs
 
-- A structured audit report under:
-  - `.spec/reports/registry-audit/`
-
-This report is **project-owned** and should be version-controlled.
+- Audit report under:
+  - `.spec/reports/global-registry-audit/`
 
 ---
 
 ## Flags
 
-### Index / Registry
+### Mode (Legacy Semantics Preserved)
 
-- `--index` Path to SPEC_INDEX (optional)
-  - default: auto-detect
+```bash
+--mode=<portfolio|runtime>
+```
 
-- `--registry-dir` Registry directory (optional)
-  - default: `.spec/registry`
+- `portfolio` (default)
+  - Broad, program-level audit.
+  - Emphasizes coverage, duplication risk, and long-term consistency.
 
-### Multi-Repo Support
+- `runtime`
+  - CI-friendly strictness for naming safety.
+  - Emphasizes collision, ownership ambiguity, and breaking risk.
 
-- `--workspace-roots`
-  - Comma-separated list of additional repo roots to search for spec files.
-  - Example:
-    - `--workspace-roots="../Smart-AI-Hub,../smart-ai-hub-enterprise-security"`
+### Safety (NEW, v5.6-aligned)
 
-- `--repos-config`
-  - Path to a JSON config describing known repos and aliases.
-  - Recommended location:
-    - `.spec/smartspec.repos.json`
+```bash
+--safety-mode=<strict|dev>
+--strict
+```
 
-### Audit Interpretation
+- `strict` (default)
+  - Treat cross-registry conflicts as high-severity.
+  - Require explicit remediation steps in the report.
 
-- `--mode` `portfolio | runtime`
-  - `portfolio`:
-    - tolerates planned/backlog gaps
-    - focuses on roadmap-level normalization
-  - `runtime`:
-    - stricter alignment for active/core specs
-  - default: `portfolio`
+- `dev`
+  - Continue with warnings.
+
+`--strict` acts as a legacy alias for strict gating.
+
+### Index
+
+```bash
+--index=<path>
+--specindex=<path>     # legacy alias
+```
+
+### Primary Registry
+
+```bash
+--registry-dir=<dir>
+```
+
+Default:
+- `.spec/registry`
+
+### Supplemental Registries (NEW)
+
+```bash
+--registry-roots=<csv>
+```
+
+- Comma-separated registry directories loaded **read-only**.
+- Intended for multi-repo platforms.
+
+### Multi-Repo (Alignment)
+
+```bash
+--workspace-roots=<csv>
+--repos-config=<path>
+```
+
+- `--repos-config` takes precedence over `--workspace-roots`.
+- Recommended path: `.spec/smartspec.repos.json`.
 
 ### Reporting
 
-- `--report-dir` Output report directory (optional)
-  - default: `.spec/reports/registry-audit/`
-
-- `--strict`
-  - Fail on high-risk drift patterns
-
-- `--dry-run`
-  - Print findings without writing files
+```bash
+--report=<summary|detailed>
+--dry-run
+```
 
 ---
 
-## 0) Resolve Canonical Index & Registry
+## 0) Resolve Index & Registry Context
 
 ### 0.1 Resolve SPEC_INDEX
 
-Detection order:
+Detection order (unless overridden):
 
-1) `.spec/SPEC_INDEX.json` (canonical)
-2) `SPEC_INDEX.json` (legacy root mirror)
+1) `.spec/SPEC_INDEX.json`
+2) `SPEC_INDEX.json`
 3) `.smartspec/SPEC_INDEX.json` (deprecated)
-4) `specs/SPEC_INDEX.json` (older layout)
+4) `specs/SPEC_INDEX.json`
 
-```bash
-INDEX_PATH="${FLAGS_index:-}"
+### 0.2 Resolve Registry View
 
-if [ -z "$INDEX_PATH" ]; then
-  if [ -f ".spec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".spec/SPEC_INDEX.json"
-  elif [ -f "SPEC_INDEX.json" ]; then
-    INDEX_PATH="SPEC_INDEX.json"
-  elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".smartspec/SPEC_INDEX.json" # deprecated
-  elif [ -f "specs/SPEC_INDEX.json" ]; then
-    INDEX_PATH="specs/SPEC_INDEX.json"
-  fi
-fi
+1) Load **primary** registry directory.
+2) Load **supplemental** registries (if provided) as read-only.
 
-if [ ! -f "$INDEX_PATH" ]; then
-  echo "❌ SPEC_INDEX not found. Run /smartspec_reindex_specs first."
-  exit 1
-fi
+**Precedence Rules (v5.6):**
 
-echo "✅ Using SPEC_INDEX: $INDEX_PATH"
-```
-
-### 0.2 Resolve Registry Dir
-
-```bash
-REGISTRY_DIR="${FLAGS_registry_dir:-.spec/registry}"
-
-if [ ! -d "$REGISTRY_DIR" ]; then
-  echo "⚠️ Registry directory not found at $REGISTRY_DIR"
-  echo "Audit will run in index-only mode."
-fi
-```
-
-### 0.3 Resolve Report Dir
-
-```bash
-REPORT_DIR="${FLAGS_report_dir:-.spec/reports/registry-audit}"
-mkdir -p "$REPORT_DIR"
-```
+- If a name exists in the primary registry, it is authoritative.
+- If a name exists only in supplemental registries:
+  - treat as cross-repo candidate
+  - audit for potential duplication risk if the primary registry lacks an equivalent entry
 
 ---
 
-## 1) Resolve Multi-Repo Roots
+## 1) Registry Families to Audit
 
-This audit must be able to see specs distributed across sibling repos.
+Expected files when present:
 
-Priority rules:
+- `api-registry.json`
+- `data-model-registry.json`
+- `glossary.json`
+- `critical-sections-registry.json`
+- `patterns-registry.json` (optional)
+- `ui-component-registry.json` (optional)
+- `file-ownership-registry.json` (optional)
 
-1) If `--repos-config` is provided and valid → use it.
-2) Else if `--workspace-roots` is provided → use it.
-3) Else → fall back to current repo root only.
-
-Suggested config file: `.spec/smartspec.repos.json`
-
-Example:
-
-```json
-{
-  "version": "1.0",
-  "repos": [
-    { "id": "public", "root": "../Smart-AI-Hub" },
-    { "id": "private", "root": "../smart-ai-hub-enterprise-security" }
-  ]
-}
-```
+Missing optional registries are not errors by default.
 
 ---
 
-## 2) Load Canonical Knowledge
+## 2) Conflict Classification (NEW)
 
-- Load SPEC_INDEX.
-- Build a list of all indexed specs and dependency relationships.
+For each registry family, identify:
 
-If registries exist:
-- Load all registry files.
+### 2.1 Same Name, Different Meaning
 
----
+Example patterns:
 
-## 3) Extract Cross-SPEC Usage Signals
+- Different signatures for the same API name.
+- Different field sets for the same model name.
+- Divergent definitions for the same term.
 
-For each indexed spec:
+### 2.2 Same Meaning, Different Name
 
-- Resolve `spec.md` across repo roots.
-- If adjacent `tasks.md` exists, parse shared-name signals.
-- Detect UI presence by:
-  - category = `ui`, OR
-  - `ui.json` existence.
+Example patterns:
 
-This workflow must not rewrite any spec artifact.
+- Two models that appear structurally identical but are named differently.
+- Two API endpoints that expose identical semantics under different names.
 
----
+### 2.3 Ownership Ambiguity
 
-## 4) Audit Rules
-
-### 4.1 API Registry
-
-Detect:
-- duplicate logical endpoint names
-- inconsistent versioning rules
-- conflicting ownership across specs
-
-### 4.2 Data Model Registry
-
-Detect:
-- model name collisions
-- incompatible model evolution notes
-- ambiguous shared vs local models
-
-### 4.3 Glossary
-
-Detect:
-- duplicate terms with divergent definitions
-- inconsistent capitalization/namespace rules
-
-### 4.4 Critical Sections
-
-Detect:
-- cross-cutting requirements that differ between core specs
-  - auth
-  - authorization
-  - audit
-  - rate limiting
-  - observability
-
-### 4.5 Patterns Registry (optional)
-
-Detect:
-- repeated patterns that should be extracted into shared docs
-
-### 4.6 UI Component Registry (optional)
-
-When UI specs exist:
-
-- Validate that component names referenced in UI specs/tasks align with registry.
-- Flag components that appear in multiple UI specs but are not registered.
+- A registry entry referenced by multiple specs without clear owner.
+- A cross-repo candidate lacking an owner spec mapping.
 
 ---
 
-## 5) Status-Aware Severity (Portfolio vs Runtime)
+## 3) Coverage & Reference Analysis (Index-Aware)
 
-To avoid forcing low-quality placeholder specs, severity is interpreted based on mode:
+If SPEC_INDEX is available:
 
-### Portfolio Mode (default)
-
-- Missing shared-name declarations in planned specs → warning
-- Inconsistent definitions across core active specs → error
-
-### Runtime Mode
-
-- Any drift impacting active/core specs → error
-- Conflicts that could break contracts → error
-
-If a spec has no explicit status, assume `active`.
+- Compute which specs reference which shared entities.
+- Flag high-frequency names that are not present in the primary registry.
+- In multi-repo mode, attempt to resolve owner specs across configured repo roots.
 
 ---
 
-## 6) Cross-Repo Drift Lens
+## 4) Severity Rules
 
-If multi-repo roots are configured:
+Severity is determined by both `--mode` and `--safety-mode`.
 
-- Identify shared names that exist only in one repo’s specs.
-- Identify registry entries referenced heavily in private specs but not in public ones.
+### 4.1 Baseline Severity by `--mode`
 
-Report these as:
+- `runtime`:
+  - Cross-registry same-name conflicts are **blocking**.
+  - Ownership ambiguity for high-impact shared names is **blocking**.
 
-- "Cross-Repo Consistency Risks"
+- `portfolio`:
+  - Same-name conflicts are **high-visibility warnings** with remediation steps.
 
-This helps your public/private split remain intentional.
+### 4.2 Safety Overrides
+
+- `safety-mode=strict`:
+  - Escalate cross-repo collisions to blocking for runtime contexts.
+
+- `safety-mode=dev`:
+  - Downgrade to warnings, but require explicit next actions.
 
 ---
 
-## 7) Report Structure
+## 5) Report Structure
 
-Write a structured report including:
+Write a report under `.spec/reports/global-registry-audit/` containing:
 
 - Index path used
-- Registry dir used
-- Repo roots resolved
-- Counts per registry type
-- Top collisions/drift risks
-- Cross-repo risk summary
-- UI component alignment summary
-- Recommended remediation workflows
+- Primary registry dir
+- Supplemental registry roots
+- Multi-repo config summary
+- Conflicts by family:
+  - same-name/different-meaning
+  - same-meaning/different-name
+- Ownership ambiguity list
+- Coverage gaps
+- UI registry summary (if present)
+- Recommended remediation steps
+- **Chain readiness notes** for:
+  - `/smartspec_generate_spec v5.6`
+  - `/smartspec_generate_tasks v5.6`
 
-Suggested follow-ups:
+---
 
-- `/smartspec_validate_index`
-- `/smartspec_sync_spec_tasks --mode=additive`
-- `/smartspec_reindex_specs`
-- `/smartspec_generate_spec --repair-legacy --repair-additive-meta`
+## 6) Recommended Follow-ups
+
+- `/smartspec_validate_index --report=detailed`
+- `/smartspec_reindex_specs` (when large structural changes occurred)
+- `/smartspec_generate_spec` for owner clarification
+- `/smartspec_sync_spec_tasks --mode=additive` after governance review
 
 ---
 
 ## Notes
 
-- This workflow is **analysis-first**; it should not mutate registries by default.
-- If your team later wants an auto-append mode, add it explicitly and keep it append-only.
-- `.spec/` remains the canonical shared truth for SmartSpec v5.2 projects.
+- This audit is intentionally conservative.
+- It prioritizes early detection of cross-repo naming drift.
+- It does not mutate registries by default.
+- Multi-registry flags are optional for single-repo projects but strongly recommended for shared-platform architectures.
 

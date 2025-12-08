@@ -1,376 +1,266 @@
 ---
-description: Plan and prioritize a SmartSpec portfolio with v5.2 centralization, multi-repo awareness, and UI JSON addendum
-version: 5.2
+description: Plan and prioritize a SmartSpec portfolio with v5.6 multi-repo + multi-registry awareness, registry gap analysis, and chain-consistent safety semantics
+version: 5.6
 ---
 
 # /smartspec_portfolio_planner
 
-Create a strategic, multi-SPEC portfolio plan that helps large teams coordinate delivery across **public/private** and other multi-repo layouts while preventing cross-SPEC drift.
+Generate a portfolio-level roadmap and prioritization view across many specs.
 
-This workflow is **SmartSpec v5.2 centralization compatible** and **multi-repo-aware**.
+This v5.6 workflow preserves the v5.2 strengths:
+
+- Whole-portfolio dependency-aware planning
+- Index-first reasoning when available
+- Registry gap lens
+- Multi-repo scan support
+
+And adds v5.6 alignment features:
+
+- Multi-registry awareness with explicit precedence
+- `--specindex` alias consistency
+- `--safety-mode` semantics separated from `--mode portfolio|runtime`
+- Chain readiness hints for spec/tasks generation
 
 ---
 
-## Core Principles (v5.2)
+## Core Principles
 
-- **Project-owned canonical space:** `.spec/`
-- **Canonical index:** `.spec/SPEC_INDEX.json`
-- **Legacy mirror (optional):** `SPEC_INDEX.json` at repo root
-- **Deprecated tooling index:** `.smartspec/SPEC_INDEX.json` (read-only if present)
-- **Shared registries:** `.spec/registry/`
-- **UI design source of truth (when applicable):** `ui.json` (Penpot-aligned)
-
-This workflow is primarily analytical and should not mutate specs by default.
+- `.spec/` is the canonical governance space.
+- `.spec/SPEC_INDEX.json` is the canonical index.
+- `.spec/registry/` is the primary naming source of truth.
+- Root `SPEC_INDEX.json` is a legacy mirror.
+- `.smartspec/` is tooling-only.
 
 ---
 
 ## What It Does
 
-- Resolves canonical index and registry.
-- Supports **multi-repo spec resolution** for analysis.
-- Builds high-level portfolio views:
-  - dependency-first roadmap
-  - category-based streams
-  - cross-cutting capability map (security/observability/data/platform/ui)
-  - public ↔ private split lens
-  - UI design-to-component readiness lens
-- Detects:
-  - missing foundational specs
-  - duplicate or overlapping responsibilities
-  - orphaned planned specs
-  - risk clusters in dependency graphs
-  - registry gaps that block multi-team execution
-- Generates a portfolio report under `.spec/reports/`.
-
----
-
-## When to Use
-
-- Quarterly/half-year planning
-- Large-scale re-architecture
-- Before onboarding multiple teams
-- When public/private repos must be synchronized deliberately
-- After major reindex or lifecycle changes
+- Resolves index, registries, and multi-repo roots.
+- Loads a portfolio of specs.
+- Builds an end-to-end dependency graph.
+- Identifies cross-cutting shared work.
+- Produces a prioritized roadmap with:
+  - foundation phases
+  - shared contract milestones
+  - cross-team sequencing
+  - risk and governance notes
+- Runs a registry gap analysis across the merged registry view.
+- Emits a structured report and optional plan output.
 
 ---
 
 ## Inputs
 
-- Canonical SPEC_INDEX
-- Optional registries
-- Optional scope filters
+- SPEC_INDEX (recommended)
+- Spec files referenced by the index
+- Primary registry
+- Optional supplemental registries
+- Optional multi-repo configuration
 
 ---
 
 ## Outputs
 
-- Portfolio report under:
+- Portfolio plan document (implementation-dependent)
+- Report under:
   - `.spec/reports/portfolio-planner/`
-
-This report is project-owned and should be version-controlled when useful.
 
 ---
 
 ## Flags
 
-### Index / Registry
+### Portfolio Mode (Legacy Semantics Preserved)
 
-- `--index` Path to SPEC_INDEX (optional)
-  - default: auto-detect
+```bash
+--mode=<portfolio|runtime>
+```
 
-- `--registry-dir` Registry directory (optional)
-  - default: `.spec/registry`
+- `portfolio` (default)
+  - prioritization, roadmap, governance maturity
 
-### Multi-Repo Support
+- `runtime`
+  - CI-friendly checks for release readiness
 
-- `--workspace-roots`
-  - Comma-separated list of additional repo roots to search for spec files.
-  - Example:
-    - `--workspace-roots="../Smart-AI-Hub,../smart-ai-hub-enterprise-security"`
+### Safety (NEW, v5.6-aligned)
 
-- `--repos-config`
-  - Path to JSON config describing known repos and aliases.
-  - Recommended location:
-    - `.spec/smartspec.repos.json`
+```bash
+--safety-mode=<strict|dev>
+--strict
+```
 
-### Planning Views
+- `strict` (default)
+  - block recommendations that would cause cross-repo duplication risk
 
-- `--view` Optional focus view selector
-  - values: `full`, `dependency`, `category`, `capability`, `public-private`, `ui`
-  - default: `full`
+- `dev`
+  - proceed with warnings
 
-### Interpretation
+`--strict` remains a legacy alias.
 
-- `--mode` `portfolio | runtime`
-  - `portfolio`:
-    - optimized for roadmap-level planning and incomplete planned specs
-  - `runtime`:
-    - emphasizes delivery readiness of active/core specs
-  - default: `portfolio`
+### Index
 
-### Reporting
+```bash
+--index=<path>
+--specindex=<path>    # legacy alias
+```
 
-- `--report-dir` Output report directory (optional)
-  - default: `.spec/reports/portfolio-planner/`
+### Registries
 
-- `--strict`
-  - Fail only on critical structural inconsistencies (rare for planning)
+```bash
+--registry-dir=<dir>
+--registry-roots=<csv>
+```
 
-- `--dry-run`
-  - Print findings without writing files
+Registry precedence:
+
+1) Primary registry is authoritative.
+2) Supplemental registries are read-only validation sources.
+
+### Multi-Repo
+
+```bash
+--workspace-roots=<csv>
+--repos-config=<path>
+```
+
+- `--repos-config` takes precedence.
+- Recommended path: `.spec/smartspec.repos.json`.
+
+### Scope Selection
+
+Implementation-dependent options may include:
+
+```bash
+--categories=<csv>
+--spec-ids=<csv>
+--include-drafts=<true|false>
+```
+
+### Output
+
+```bash
+--output=<path>
+--report=<summary|detailed>
+--dry-run
+```
 
 ---
 
-## 0) Resolve Canonical Index & Registry
+## 0) Resolve Canonical Context
 
 ### 0.1 Resolve SPEC_INDEX
 
-Detection order:
+Auto-detect order (unless overridden):
 
-1) `.spec/SPEC_INDEX.json` (canonical)
-2) `SPEC_INDEX.json` (legacy root mirror)
+1) `.spec/SPEC_INDEX.json`
+2) `SPEC_INDEX.json`
 3) `.smartspec/SPEC_INDEX.json` (deprecated)
-4) `specs/SPEC_INDEX.json` (older layout)
+4) `specs/SPEC_INDEX.json`
 
-```bash
-INDEX_PATH="${FLAGS_index:-}"
+### 0.2 Resolve Registry View
 
-if [ -z "$INDEX_PATH" ]; then
-  if [ -f ".spec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".spec/SPEC_INDEX.json"
-  elif [ -f "SPEC_INDEX.json" ]; then
-    INDEX_PATH="SPEC_INDEX.json"
-  elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".smartspec/SPEC_INDEX.json" # deprecated
-  elif [ -f "specs/SPEC_INDEX.json" ]; then
-    INDEX_PATH="specs/SPEC_INDEX.json"
-  fi
-fi
+- Load primary registry directory.
+- Load supplemental registries (if provided) read-only.
 
-if [ ! -f "$INDEX_PATH" ]; then
-  echo "❌ SPEC_INDEX not found. Run /smartspec_reindex_specs first."
-  exit 1
-fi
+Precedence:
 
-echo "✅ Using SPEC_INDEX: $INDEX_PATH"
-```
+- Primary registry entries override supplemental entries of the same name.
 
-### 0.2 Resolve Registry Dir
+### 0.3 Resolve Multi-Repo Roots
 
-```bash
-REGISTRY_DIR="${FLAGS_registry_dir:-.spec/registry}"
-REGISTRY_AVAILABLE=false
+- Build repo root list using `--repos-config` when provided.
+- Otherwise add `--workspace-roots`.
 
-if [ -d "$REGISTRY_DIR" ]; then
-  REGISTRY_AVAILABLE=true
-  echo "✅ Registry detected at: $REGISTRY_DIR"
-else
-  echo "ℹ️ Registry not found at $REGISTRY_DIR (planner will run in index-first mode)"
-fi
-```
+If `--repos-config` is provided and index entries contain `repo:` labels:
 
-### 0.3 Resolve Report Dir
-
-```bash
-REPORT_DIR="${FLAGS_report_dir:-.spec/reports/portfolio-planner}"
-mkdir -p "$REPORT_DIR"
-
-VIEW="${FLAGS_view:-full}"
-MODE="${FLAGS_mode:-portfolio}"
-STRICT="${FLAGS_strict:-false}"
-DRY_RUN="${FLAGS_dry_run:-false}"
-```
+- Validate mapping coverage.
 
 ---
 
-## 1) Resolve Multi-Repo Roots
+## 1) Load Portfolio Scope
 
-Priority rules:
+If index exists:
 
-1) If `--repos-config` is provided and valid → use it.
-2) Else if `--workspace-roots` is provided → use it.
-3) Else → fall back to current repo root only.
+- Use the index as the primary portfolio map.
+- Optionally filter by category or explicit spec IDs.
 
-Recommended config file: `.spec/smartspec.repos.json`
+If index does not exist:
 
-Example:
-
-```json
-{
-  "version": "1.0",
-  "repos": [
-    { "id": "public", "root": "../Smart-AI-Hub" },
-    { "id": "private", "root": "../smart-ai-hub-enterprise-security" }
-  ]
-}
-```
-
-The planner uses these roots to:
-- verify path plausibility
-- enhance UI evidence checks
-- improve public/private readiness assessments
-
-It does not rewrite files in other repos.
+- Fall back to scanning `specs/` roots.
+- Insert a report recommendation to run `/smartspec_reindex_specs`.
 
 ---
 
-## 2) Load Canonical Knowledge
+## 2) Dependency Graph & Sequencing
 
-- Load SPEC_INDEX.
-- Build summary counts by:
-  - category
-  - status
-  - dependency depth
+- Build a global dependency DAG.
+- Detect cycles and missing nodes.
+- Mark cross-repo dependencies as **external**.
 
-If registries exist:
-- Load registry metadata for gap detection.
+In strict safety mode:
 
----
-
-## 3) Portfolio Views
-
-### 3.1 Dependency View
-
-Generate:
-- topological ordering (best-effort)
-- identify blockers:
-  - planned specs required by active specs
-  - circular clusters (reference validate reports)
-
-In runtime mode:
-- emphasize active/core sequences.
-
-### 3.2 Category View
-
-Group by category using your existing taxonomy.
-
-Highlight:
-- over-concentration in one category
-- missing foundational categories
-
-### 3.3 Capability View
-
-Map specs to cross-cutting capabilities:
-
-- security
-- observability
-- data platform
-- infra
-- integration
-- ui
-
-This view helps identify that core pillars exist before feature-level specs scale.
-
-### 3.4 Public ↔ Private View
-
-This view is advisory and avoids schema changes.
-
-Heuristics:
-- infer repo scope from path prefix patterns when available
-- infer by category tags if present
-
-Flag risks:
-- private-only core dependency with no public integration plan
-- duplicated ownership of the same domain concept across repos
-
-### 3.5 UI View (Conditional)
-
-Apply when the portfolio contains UI specs.
-
-Detect UI specs by:
-- category = `ui`, OR
-- `spec.ui === true`, OR
-- `ui.json` presence in any repo root.
-
-Report:
-- UI specs missing `ui.json` (warn)
-- UI component naming alignment with registry (if present)
-- UI specs that embed heavy business logic in tasks/spec text
-
-Non-UI projects:
-- This view should be empty without error.
+- If critical external dependencies cannot be resolved:
+  - mark them as blocking items in the roadmap.
 
 ---
 
-## 4) Registry Gap Lens (Read-Only)
+## 3) Registry Gap Lens (v5.6-Expanded)
 
-If `REGISTRY_AVAILABLE=true`:
+Compute:
 
-- Estimate whether the portfolio references shared names that are:
-  - unregistered
-  - inconsistently defined
-  - duplicated
+- Which shared names are referenced by many specs.
+- Which of those are missing from the primary registry.
+- Which exist only in supplemental registries.
 
-Output:
-- prioritized registry hardening recommendations.
+Rules:
 
-This workflow does not write registries.
-
----
-
-## 5) Status-Aware Planning Semantics
-
-To avoid forcing low-quality placeholders:
-
-### Portfolio Mode (default)
-
-- Planned/backlog/idea/draft specs may:
-  - be missing `spec.md`
-  - be orphaned
-  - have incomplete dependencies
-
-These result in:
-- info/warn-level planning notes.
-
-### Runtime Mode
-
-- Active/core/stable specs are expected to:
-  - have resolvable artifacts
-  - have valid dependency chains
-
-These become:
-- readiness risks.
-
-If a spec has no explicit status, assume `active`.
+- Names found only in supplemental registries should be flagged as likely cross-repo owners.
+- The planner must not recommend creating new shared names that would collide with any loaded registry view.
 
 ---
 
-## 6) Output Report Structure
+## 4) Risk & Governance Lens
 
-Write a structured report containing:
+Include:
+
+- ownership ambiguity hotspots
+- cross-repo duplication risks
+- inconsistent status metadata
+- UI portfolio consistency signals (if UI registries exist)
+
+---
+
+## 5) Report Structure
+
+Write a report under `.spec/reports/portfolio-planner/` containing:
 
 - Index path used
-- Registry availability
-- Repo roots used
-- Overall portfolio counts
-- View-specific sections based on `--view`
-- Top risks and blockers
-- Cross-repo alignment notes
-- UI readiness section (if applicable)
-- Suggested next workflows
-
-Default location:
-- `.spec/reports/portfolio-planner/portfolio-report.md`
-
-If `--dry-run`:
-- print only.
+- Primary registry dir
+- Supplemental registry roots
+- Multi-repo roots summary
+- Portfolio scope summary
+- Dependency sequencing summary
+- Registry gap findings
+- Cross-repo duplication risk list
+- Suggested governance actions
+- **Chain readiness notes** for:
+  - `/smartspec_generate_spec v5.6`
+  - `/smartspec_generate_tasks v5.6`
 
 ---
 
-## 7) Recommended Follow-ups
+## 6) Recommended Follow-ups
 
-- `/smartspec_validate_index --mode=portfolio`
-- `/smartspec_spec_lifecycle_manager`
-- `/smartspec_reindex_specs`
+- `/smartspec_validate_index`
+- `/smartspec_global_registry_audit`
+- `/smartspec_generate_spec`
 - `/smartspec_generate_plan`
 - `/smartspec_generate_tasks`
-- `/smartspec_global_registry_audit`
 
 ---
 
 ## Notes
 
-- The portfolio planner is an **executive-level lens** that complements strict validation.
-- It should help teams decide what to build next without creating new cross-SPEC conflicts.
-- `.spec/` remains the canonical project-owned space for SmartSpec v5.2 projects.
+- This workflow is a strategic governance and prioritization tool.
+- It remains backward compatible with v5.2 index schemas.
+- Multi-registry support is essential for accurate portfolio insights in multi-repo platforms.
 

@@ -1,169 +1,310 @@
-# SmartSpec Manual: /smartspec_generate_tasks
+# SmartSpec v5.6 — TASKS Generation Manual (Multi-Repo + Multi-Registry Aligned)
 
-This guide explains how to generate a high-quality `tasks.md` from a feature specification using SmartSpec.
-
----
-
-## What this command does
-
-`/smartspec_generate_tasks` converts a feature spec into a structured task plan that is ready for implementation and verification.
-
-It typically produces:
-
-- A `tasks.md` file with:
-  - Phases
-  - Task IDs (T001, T002, …)
-  - Dependencies
-  - Expected files to create/edit
-  - Acceptance criteria
-  - Suggested validation commands
-
-Depending on your project conventions, it may also propose or generate supporting artifacts referenced by tasks (e.g., OpenAPI, data-model notes).
+> This manual keeps the original SmartSpec manual style while reflecting the **/smartspec_generate_tasks v5.6** workflow.
+>
+> - All essential behaviors from earlier manuals are preserved.
+> - Enhancements focus on **multi-repo**, **multi-registry**, and end-to-end consistency with **/smartspec_generate_spec v5.6**.
+> - Subtasks remain enabled by default to maximize LLM reliability.
 
 ---
 
-## Required input
+# 1. Summary
 
-You must provide a path to a SPEC document (usually `spec.md`).
+The `/smartspec_generate_tasks` command generates `tasks.md` from a SmartSpec `spec.md`.
+
+In v5.6, this workflow is designed to be:
+
+- The **primary execution blueprint** for implementation
+- Cross-SPEC aligned via `SPEC_INDEX.json`
+- Registry-aware for shared APIs, models, glossary, patterns, and UI components
+- **Multi-repo safe** (prevents duplicate implementations across repos)
+- **Multi-registry aware** (validates against supplemental registries)
+- LLM-safe through atomic subtasks, explicit dependencies, and strong guard rails
+
+---
+
+# 2. Usage
 
 ```bash
-/smartspec_generate_tasks specs/feature/spec-005-promo-system/spec.md
+/smartspec_generate_tasks <path_to_spec.md> [options...]
+```
+
+Examples:
+
+```bash
+/smartspec_generate_tasks specs/checkout/spec.md
+/smartspec_generate_tasks specs/profile/spec.md --nosubtasks
+/smartspec_generate_tasks specs/ui/cart/spec.md --ui-mode=inline --mode=dev
+
+# Multi-repo tasks generation
+/smartspec_generate_tasks specs/checkout/spec.md \
+  --repos-config=.spec/smartspec.repos.json \
+  --registry-roots="../repo-a/.spec/registry,../repo-b/.spec/registry"
+
+# Lightweight multi-repo mode
+/smartspec_generate_tasks specs/checkout/spec.md \
+  --workspace-roots="../Repo-A,../Repo-B"
 ```
 
 ---
 
-## Output location
+# 3. Output Location
 
-By default, SmartSpec should create:
+By default:
 
 ```text
-specs/feature/<spec-name>/tasks.md
+<same-folder-as-spec>/tasks.md
 ```
 
-in the same folder as the input spec.
-
 ---
 
-## SPEC_INDEX.json resolution (updated)
-
-SmartSpec uses a SPEC index (when available) to resolve cross-spec dependencies and references.
-
-When you do **not** provide a custom index path, the expected lookup order is:
-
-1. `SPEC_INDEX.json` at the repository root (preferred)
-2. `.smartspec/SPEC_INDEX.json` (fallback)
-
-If no index is found:
-
-- The command should warn clearly.
-- It should still be able to generate `tasks.md` without failing.
-
----
-
-## Common options (recommended)
-
-> Your implementation may support a subset of these. This manual documents the expected behavior aligned with the updated workflows.
-
-### 1) Dry-run / planning-only mode
+# 4. Workflow Mode (Strict vs Dev)
 
 ```bash
-/smartspec_generate_tasks specs/feature/spec-005-promo-system/spec.md --nogenerate
+--mode=<strict|dev>
 ```
 
-Expected behavior:
+- `strict` (default)
+  - Recommended for production/CI.
+  - Requires critical context when expected by project policy.
+  - Enforces cross-repo ownership clarity.
+  - Requires at least a scoped repository scan.
 
-- Analyze the spec.
-- Show what tasks and files would be generated.
+- `dev`
+  - Recommended for early-stage projects and local iteration.
+  - Allows best-effort tasks generation if context is incomplete.
+  - Inserts high-visibility warnings in `tasks.md`.
+  - Adds bootstrap tasks for missing governance artifacts.
+
+---
+
+# 5. Index & Registry Options
+
+## 5.1 SPEC_INDEX Path
+
+```bash
+--index=<path_to_SPEC_INDEX.json>
+--specindex=<path_to_SPEC_INDEX.json>   # legacy alias
+```
+
+Behavior:
+- Overrides automatic index detection.
+- Enables explicit cross-SPEC dependency alignment.
+
+## 5.2 Primary Registry Directory
+
+```bash
+--registry-dir=<dir>
+```
+
+Default:
+- `.spec/registry`
+
+Behavior:
+- Used as the **authoritative** registry source for shared names.
+
+---
+
+# 6. Multi-Registry Options (NEW)
+
+## 6.1 Supplemental Registry Roots
+
+```bash
+--registry-roots=<csv>
+```
+
+Purpose:
+- Load additional registry directories **read-only** for cross-repo validation.
+- Detect shared entities defined outside the current repo.
+
+Precedence rules:
+1) The primary registry (`--registry-dir`) is authoritative.
+2) Supplemental registries (`--registry-roots`) inform warnings and anti-duplication checks.
+
+If an entity exists only in a supplemental registry:
+- Tasks should prefer `Resource usage: reuse`.
+- The workflow should emit warnings if the spec attempts to create an equivalent entity.
+
+---
+
+# 7. Multi-Repo Options (NEW)
+
+These flags mirror `/smartspec_generate_spec v5.6` and `/smartspec_validate_index`.
+
+## 7.1 Workspace Roots
+
+```bash
+--workspace-roots=<csv>
+```
+
+Behavior:
+- Adds sibling repo roots to search for dependency specs.
+
+## 7.2 Repos Config
+
+```bash
+--repos-config=<path>
+```
+
+Behavior:
+- Uses a structured mapping of repo IDs to physical roots.
+- Takes precedence over `--workspace-roots`.
+
+Suggested default:
+- `.spec/smartspec.repos.json`
+
+---
+
+# 8. Dry Run
+
+```bash
+--dry-run
+--nogenerate   # alias
+```
+
+Behavior:
+- Analyze specs and show tasks that would be generated.
 - Do not write files.
 
-### 2) Use a specific spec index
+---
+
+# 9. Subtask Control (DEFAULT = ON)
 
 ```bash
-/smartspec_generate_tasks specs/feature/spec-005-promo-system/spec.md --specindex SPEC_INDEX.json
+--nosubtasks
+```
+
+Behavior:
+- Generate only top-level tasks (T001, T002, ...).
+
+Default:
+- Subtasks are generated automatically to prevent LLM drift.
+
+Subtask format:
+- `T001.1, T001.2, ...`
+
+Each subtask should include dependencies when logical ordering exists.
+
+---
+
+# 10. UI Mode Options
+
+```bash
+--ui-mode=<auto|json|inline>
+--no-ui-json      # alias for inline
+```
+
+- `auto` (default)
+  - Resolves UI mode from index category, `ui.json`, and explicit UI JSON references.
+
+- `json`
+  - UI design is driven by `ui.json`.
+  - Tasks will include generating/validating `ui.json` and mapping UI nodes to components.
+
+- `inline`
+  - UI requirements remain in code/spec without a `ui.json` contract.
+  - Tasks will still enforce modern responsive design and UI/logic separation.
+
+LLMs must not override the resolved UI mode.
+
+---
+
+# 11. What SmartSpec Generates
+
+Top-level categories:
+
+```text
+T001 — Setup & Baseline
+T002 — Core Implementation
+T003 — Cross-SPEC Shared Work
+T004 — Integrations
+T005 — Testing
+T006 — Observability & Operations
+T007 — Security & Compliance
+T008 — UI & UX
 ```
 
 ---
 
-## Best practices
+# 12. Resource Usage (Multi-Repo Aware)
 
-### Keep specs explicit for integrations
+Every task/subtask includes:
 
-If the spec includes external dependencies (auth, payments, messaging), include:
-
-- The expected service name
-- API prefix/path
-- Token/auth patterns (if applicable)
-- Link to an existing authoritative spec
-
-This reduces assumption prompts later.
-
-### Use consistent task structure
-
-A strong `tasks.md` should include for each task:
-
-- Files to create/edit
-- Clear acceptance criteria
-- A validation command (if the task is testable)
-
----
-
-## Example: Typical generate flow
-
-```bash
-# 1) Write or update your spec
-#    specs/feature/spec-005-promo-system/spec.md
-
-# 2) Generate tasks
-/smartspec_generate_tasks specs/feature/spec-005-promo-system/spec.md
-
-# 3) Review the task plan
-#    specs/feature/spec-005-promo-system/tasks.md
+```yaml
+Resource usage:
+  type: reuse | create
+  chain_owner:
+    api_owner: <spec-id|null>
+    model_owner: <spec-id|null>
+    pattern_owner: <spec-id|null>
+    terminology_owner: <spec-id|null>
+  registry:
+    api: <name if applicable>
+    model: <name if applicable>
+    ui_component: <name if applicable>
+  files:
+    - <paths when known>
+  justification: <required for create>
+  repo_context:
+    owner_repo: <id|unknown>
+    consumer_repo: <id|current>
 ```
 
----
-
-## How this command fits the system
-
-- Use this first to produce `tasks.md`.
-- Then implement with:
-
-  ```bash
-  /smartspec_implement_tasks specs/feature/spec-005-promo-system/tasks.md
-  ```
-
-- Finally verify with:
-
-  ```bash
-  /smartspec_verify_tasks_progress specs/feature/spec-005-promo-system/tasks.md
-  ```
+Rules:
+- `reuse` → MUST call/import canonical implementations.
+- `create` → MUST justify creation and confirm no equivalent exists in any loaded registry view.
+- When `owner_repo != consumer_repo`, tasks must specify the import/integration boundary.
 
 ---
 
-## Troubleshooting
+# 13. Guard Rails in tasks.md
 
-### “SPEC_INDEX.json not found”
-
-This should not block generation.
-
-Recommended fix:
-
-- Create or move the index to repository root:
-
-  ```text
-  SPEC_INDEX.json
-  ```
-
-### Generated tasks feel too vague
-
-Improve spec clarity:
-
-- Add a short architecture section.
-- Add explicit file/module expectations.
-- Add acceptance criteria per major capabilities.
+Generated `tasks.md` begins with global rules that enforce:
+- Loading referenced specs + registries before coding
+- No reimplementation of shared entities
+- Cross-repo reuse when owners live in another repository
+- Strict adherence to Resource usage
+- Respect for resolved UI mode
+- Version pinning and regeneration policy when upstream specs change
 
 ---
 
-## Summary
+# 14. Version Pinning
 
-Use `/smartspec_generate_tasks` to turn a well-defined spec into an actionable plan.  
-A clear spec and a root-level `SPEC_INDEX.json` will significantly improve task quality and reduce assumption prompts downstream.
+Generated tasks include:
+
+```text
+Generated from SPEC:
+  id: <spec-id>
+  version: <front-matter | git hash | UNKNOWN>
+  source: <front-matter | git | unknown>
+  generated_at: <timestamp>
+```
+
+Rule:
+- If any referenced spec updates after `generated_at`, STOP and regenerate `tasks.md`.
+
+---
+
+# 15. Troubleshooting
+
+| Issue | Likely Cause | Fix |
+|------|--------------|-----|
+| Tasks suggest duplicate logic across repos | Multi-repo roots not provided | Add `--repos-config` or `--workspace-roots` and reload dependency specs |
+| Shared names mismatch | Only local registry loaded | Add `--registry-roots` or define a shared registry strategy |
+| Strict mode blocks generation | Missing critical governance context | Initialize `.spec/SPEC_INDEX.json` and primary registries or use `--mode=dev` for bootstrap |
+
+---
+
+# 16. Final Notes
+
+This manual reflects the v5.6 workflow and keeps the original SmartSpec style.
+
+The recommended chain for multi-repo projects is:
+
+1) `/smartspec_validate_index --repos-config=... --registry-roots=...`
+2) `/smartspec_generate_spec ... --repos-config=... --registry-roots=...`
+3) `/smartspec_generate_tasks ... --repos-config=... --registry-roots=...`
+
+This ensures consistent governance across repositories and minimizes duplicate implementations.
+

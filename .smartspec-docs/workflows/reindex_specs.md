@@ -1,257 +1,254 @@
 ---
-description: SmartSpec Reindex Specs Guide (v5.2)
-version: 5.2
-last_updated: 2025-12-07
+description: SmartSpec Reindex Specs Manual (v5.6)
+version: 5.6
+last_updated: 2025-12-08
 ---
 
 # SmartSpec Reindex Specs Guide
 
-This guide explains how to use `/smartspec_reindex_specs` in SmartSpec v5.2.
+Rebuild or refresh the project’s `SPEC_INDEX.json` by scanning existing spec folders.
 
-Reindexing rebuilds the project’s `SPEC_INDEX.json` by scanning existing spec folders and consolidating metadata into a canonical index. In v5.2, this workflow is designed to remain compatible with the existing `SPEC_INDEX.json` schema already used in production.
+This v5.6 manual preserves the original reindex style:
+
+- Non-destructive discovery
+- Schema stability
+- Support for legacy mirrors
+- Multi-repo scanning
+
+And adds optional v5.6 readiness enhancements to improve the full chain:
+
+- Multi-registry warning-only checks
+- Optional repo-hint enrichment
+- UI-aware index warnings
 
 ---
 
 ## Key Concepts
 
-### SmartSpec Centralization (v5.2)
+### SmartSpec Centralization
 
-SmartSpec v5.2 separates **tooling files** from **project-owned truth**.
-
-- **Project-owned canonical space:** `.spec/`
+- **Canonical project-owned layer:** `.spec/`
 - **Canonical index:** `.spec/SPEC_INDEX.json`
-- **Shared registries (optional):** `.spec/registry/`
-- **Legacy root mirror:** `SPEC_INDEX.json`
-- **Deprecated tooling index:** `.smartspec/SPEC_INDEX.json`
+- **Shared registries:** `.spec/registry/`
+- **Legacy mirror:** `SPEC_INDEX.json` (optional)
+- `.smartspec/` is tooling-only
 
-Reindexing writes the rebuilt index to the canonical location by default.
+### Why Reindexing Matters
 
-### Multi-Repo Reality
+Reindexing ensures:
 
-Many large projects distribute specs across sister repositories (e.g., public + private + tools). In v5.2, `/smartspec_reindex_specs` can **scan across multiple repo roots** to discover `specs/**/spec.md` while keeping the output schema stable.
-
-Important intent:
-
-- Multi-repo roots are used for **read-only discovery**.
-- The canonical output is written to the **current repo** unless you override `--output-index`.
-
-### UI Design Addendum
-
-When the portfolio contains UI specs:
-
-- The **UI design source of truth** is `ui.json` in the UI spec folder.
-- `spec.md` documents constraints and mapping.
-- UI JSON should not contain business logic.
-
-The reindex workflow does not validate UI JSON deeply, but it detects UI markers to improve category correctness.
+- Specs are discoverable by stable IDs.
+- Dependencies are visible and consistent across teams.
+- Downstream workflows (generate_spec/plan/tasks/sync) operate on the same portfolio map.
 
 ---
 
-## What Reindexing Produces
+## 1. Summary
 
-By default, the workflow writes:
+`/smartspec_reindex_specs`:
+
+1) Discovers `spec.md` files under configured roots.
+2) Extracts stable metadata such as:
+   - spec id
+   - title
+   - category
+   - status
+   - dependencies
+   - path
+3) Detects duplicate IDs and path conflicts.
+4) Writes the canonical index to `.spec/SPEC_INDEX.json`.
+5) Optionally writes the legacy root mirror.
+6) Produces a report that can be used as the governance starting point.
+
+---
+
+## 2. Usage
+
+```bash
+/smartspec_reindex_specs [options...]
+```
+
+Examples:
+
+```bash
+# Basic reindex
+/smartspec_reindex_specs
+
+# Multi-repo reindex
+/smartspec_reindex_specs \
+  --repos-config=.spec/smartspec.repos.json \
+  --roots="specs" \
+  --mirror-root=true
+
+# Warning-only registry readiness
+/smartspec_reindex_specs \
+  --registry-dir=.spec/registry \
+  --registry-roots="../Repo-A/.spec/registry,../Repo-B/.spec/registry"
+```
+
+---
+
+## 3. What Reindexing Produces
+
+By default:
 
 - **Canonical index:** `.spec/SPEC_INDEX.json`
 
-Optionally, it can also write:
+Optionally:
 
 - **Legacy mirror:** `SPEC_INDEX.json` at repo root
-  - Only recommended if your existing tools still read the root mirror.
 
-It also generates a report under:
+Reports:
 
-- **Default:** `.spec/reports/reindex-specs/`
-
----
-
-## When to Use
-
-- After adding/removing many specs
-- After moving/renaming spec folders
-- When dependencies or counts appear inconsistent
-- After a multi-repo restructure
-- Before major releases
+- `.spec/reports/reindex-specs/`
 
 ---
 
-## Inputs
+## 4. Key Flags
 
-The reindex workflow scans:
-
-- `specs/**/spec.md`
-
-It may also read an existing index to preserve legacy fields required by production:
-
-- `.spec/SPEC_INDEX.json`
-- `SPEC_INDEX.json` (root)
-
----
-
-## Command Reference
-
-### Basic Usage (Single Repo)
+### 4.1 Index Output
 
 ```bash
-/smartspec_reindex_specs
+--out=<path>                 # or --output-index if supported
+--mirror-root=<true|false>
 ```
 
-### Reindex With Detailed Report
+Defaults:
+
+- `--out` → `.spec/SPEC_INDEX.json`
+- `--mirror-root` → `true` only when a root mirror already exists
+
+### 4.2 Spec Discovery
 
 ```bash
-/smartspec_reindex_specs --report-dir=.spec/reports/reindex-specs --strict=false
+--roots=<csv>
+--include-drafts=<true|false>
 ```
 
-### Multi-Repo Scan With Workspace Roots
+Default roots:
+
+- `specs/` (plus any legacy project roots your system supports)
+
+### 4.3 Multi-Repo
+
+```bash
+--workspace-roots=<csv>
+--repos-config=<path>
+```
+
+- `--repos-config` takes precedence over `--workspace-roots`.
+
+### 4.4 Optional Multi-Registry Readiness (Warning-Only)
+
+```bash
+--registry-dir=<dir>
+--registry-roots=<csv>
+```
+
+Behavior:
+
+- Load registries read-only to emit early warnings such as:
+  - potential shared-name ambiguity
+  - likely cross-repo naming drift
+- This does not modify registry files.
+
+### 4.5 Optional Repo Hint Enrichment
+
+```bash
+--emit-repo-hints=<true|false>
+```
+
+Rules:
+
+- Must remain backward compatible.
+- If your index schema supports a `repo` field:
+  - populate it when enabled.
+- Otherwise:
+  - include repo hints in the report only.
+
+### 4.6 Reporting & Safety
+
+```bash
+--report=<summary|detailed>
+--dry-run
+--strict
+```
+
+---
+
+## 5. How Reindexing Works (High-Level)
+
+1) Build repo root search list:
+   - current repo
+   - `--repos-config` roots
+   - `--workspace-roots` roots
+2) Scan configured spec roots under each repo root.
+3) Extract stable metadata from each spec.
+4) Detect duplicates and conflicts.
+5) Optionally load registries for readiness warnings.
+6) Write canonical index and optional mirror.
+7) Emit a structured report.
+
+---
+
+## 6. UI-Aware Index Notes
+
+To reduce UI drift:
+
+- If a spec includes `ui.json` but is not categorized as `ui`, reindex should warn.
+- If a spec is categorized `ui` but lacks `ui.json` in JSON-first projects, reindex should warn.
+
+---
+
+## 7. Best Practices
+
+### Single Repo
+
+```bash
+/smartspec_reindex_specs --report=detailed
+```
+
+### Two or More Repos
 
 ```bash
 /smartspec_reindex_specs \
-  --workspace-roots="../Smart-AI-Hub,../smart-ai-hub-enterprise-security"
+  --repos-config=.spec/smartspec.repos.json \
+  --roots="specs" \
+  --report=detailed
 ```
 
-### Multi-Repo Scan With Config
+Use registry readiness warnings when migrating to strict chain governance:
 
 ```bash
 /smartspec_reindex_specs \
-  --repos-config=.spec/smartspec.repos.json
-```
-
-Example config:
-
-```json
-{
-  "version": "1.0",
-  "repos": [
-    { "id": "public", "root": "../Smart-AI-Hub" },
-    { "id": "private", "root": "../smart-ai-hub-enterprise-security" }
-  ]
-}
-```
-
-### Control Root Mirror
-
-```bash
-/smartspec_reindex_specs --mirror-root=true
-/smartspec_reindex_specs --mirror-root=false
-```
-
-### Dry Run
-
-```bash
-/smartspec_reindex_specs --dry-run
+  --registry-dir=.spec/registry \
+  --registry-roots="../Repo-A/.spec/registry,../Repo-B/.spec/registry"
 ```
 
 ---
 
-## Flags
+## 8. Recommended Follow-Up Workflows
 
-### Index Input / Output
-
-- `--index`
-  - Override the existing index path used for bootstrapping legacy fields.
-  - If omitted, auto-detect order:
-    1) `.spec/SPEC_INDEX.json`
-    2) `SPEC_INDEX.json`
-    3) `.smartspec/SPEC_INDEX.json` (deprecated)
-    4) `specs/SPEC_INDEX.json`
-
-- `--output-index`
-  - Path for the rebuilt **canonical** index.
-  - Default: `.spec/SPEC_INDEX.json`
-
-- `--mirror-root`
-  - Also write/update root `SPEC_INDEX.json`.
-  - Default behavior:
-    - `true` if a root mirror already exists
-    - otherwise `false`
-
-### Multi-Repo Support (v5.2)
-
-- `--workspace-roots`
-  - Comma-separated list of additional repo roots to scan.
-
-- `--repos-config`
-  - JSON config for structured multi-repo scanning.
-  - Recommended location: `.spec/smartspec.repos.json`
-
-If neither is provided, scanning is limited to the current repo.
-
-### Reporting / Safety
-
-- `--report-dir`
-  - Default: `.spec/reports/reindex-specs/`
-
-- `--strict`
-  - Fail on warnings such as duplicate IDs or severe dependency anomalies.
-
-- `--dry-run`
-  - Print the rebuilt index summary without writing files.
+- `/smartspec_validate_index`
+- `/smartspec_generate_spec`
+- `/smartspec_generate_plan`
+- `/smartspec_generate_tasks`
+- `/smartspec_sync_spec_tasks`
 
 ---
 
-## How Reindexing Handles Multi-Repo Output
+## 9. For the LLM
 
-Because your existing ecosystem relies on stable `SPEC_INDEX.json` shape, the reindex workflow keeps the index schema compatible by default.
+When consuming a newly reindexed portfolio:
 
-- `path` values remain **repo-relative** (e.g., `specs/core/spec-core-001-authentication/`).
-- The workflow does **not** embed absolute paths into `path`.
-
-If you later want explicit public/private labeling, add optional fields through governance workflows rather than requiring them here.
-
----
-
-## UI-Aware Index Notes
-
-The reindex workflow will warn when:
-
-- A spec appears to be UI (has `ui.json`) but category is not `ui`.
-- A spec is categorized as `ui` but `ui.json` cannot be found.
-
-These warnings are advisory and become stricter only when your team policy enables strict gating.
+- Treat `.spec/SPEC_INDEX.json` as canonical.
+- Do not rely on `.smartspec/` for governance.
+- Use registries for shared naming before suggesting any new shared entity.
+- If duplicate IDs are reported, stop and reconcile ownership.
 
 ---
 
-## Common Pitfalls
+## 10. Summary
 
-### Duplicate IDs Across Repos
-
-When scanning multiple repos, you may discover duplicate spec IDs.
-
-Recommended fixes:
-
-- Rename one of the specs to avoid global ID collisions.
-- Or introduce a governance rule for ID namespaces per repo (if your organization needs it).
-
-### Unexpected Root Mirror Changes
-
-If you do not want root `SPEC_INDEX.json` to be touched, explicitly set:
-
-```bash
-/smartspec_reindex_specs --mirror-root=false
-```
-
----
-
-## Recommended Follow-Up Workflows
-
-- `/smartspec_validate_index --workspace-roots=...`
-- `/smartspec_sync_spec_tasks --mode=additive` (after review)
-- `/smartspec_spec_lifecycle_manager`
-- `/smartspec_portfolio_planner`
-
----
-
-## Best Practices
-
-- Treat `.spec/SPEC_INDEX.json` as the single source of truth.
-- Keep root `SPEC_INDEX.json` only as a legacy mirror for tools that still require it.
-- When working across public/private repos, always provide:
-  - `--workspace-roots` or `--repos-config`
-  - so scanning reflects your real system.
-- Run `/smartspec_validate_index` after large reindex operations.
-
----
-
-## Summary
-
-`/smartspec_reindex_specs` in v5.2 provides a safe, schema-compatible way to rebuild your index while respecting the new centralization model and the reality of multi-repo ecosystems. It strengthens planning and execution by ensuring all downstream workflows rely on a consistent, canonical index.
+`/smartspec_reindex_specs v5.6` provides a stable, non-destructive foundation for large SmartSpec portfolios and enables reliable multi-repo governance with optional warning-only registry readiness hooks.
 

@@ -1,22 +1,29 @@
 ---
-description: SmartSpec Portfolio Planner Guide (v5.2)
-version: 5.2
-last_updated: 2025-12-07
+description: SmartSpec Portfolio Planner Guide (v5.6)
+version: 5.6
+last_updated: 2025-12-08
 ---
 
 # SmartSpec Portfolio Planner Guide
 
-This guide explains how to use `/smartspec_portfolio_planner` in SmartSpec v5.2.
+This guide explains how to use `/smartspec_portfolio_planner` in SmartSpec v5.6.
 
 The portfolio planner provides a strategic, multi-SPEC view for large projects. It is designed to help teams prioritize work, detect dependency risks, and coordinate large-scale delivery across capability areas such as security, observability, platform, integration, and UI.
+
+This v5.6 guide preserves the original v5.2 structure and readability while adding:
+
+- **Multi-registry** awareness with explicit precedence
+- `--specindex` alias consistency
+- `--safety-mode` semantics separated from `--mode=portfolio|runtime`
+- Chain readiness hints for generate_spec and generate_tasks
 
 ---
 
 ## Key Concepts
 
-### SmartSpec Centralization (v5.2)
+### SmartSpec Centralization (v5.6)
 
-SmartSpec v5.2 separates **tooling** from **project-owned truth**.
+SmartSpec v5.6 separates **tooling** from **project-owned truth**.
 
 - **Project-owned canonical space:** `.spec/`
 - **Canonical index:** `.spec/SPEC_INDEX.json`
@@ -25,6 +32,40 @@ SmartSpec v5.2 separates **tooling** from **project-owned truth**.
 - **Deprecated tooling index:** `.smartspec/SPEC_INDEX.json`
 
 The portfolio planner **reads** from the canonical layer to generate planning reports.
+
+### Portfolio vs Runtime Interpretation
+
+The planner uses the same interpretation model as validation and lifecycle workflows:
+
+- `--mode=portfolio` (default)
+  - Designed for roadmap-level planning.
+  - Planned/backlog/idea/draft specs may be incomplete without being treated as readiness blockers.
+
+- `--mode=runtime`
+  - Designed for delivery readiness.
+  - Emphasizes that active/core/stable specs should have resolvable artifacts and valid dependency chains.
+
+### Safety Mode (NEW in v5.6)
+
+v5.6 introduces `--safety-mode` to standardize strictness across the chain.
+
+- `strict` (default)
+  - Blocks recommendations that would cause cross-repo duplication risk.
+
+- `dev`
+  - Continues with high-visibility warnings.
+
+`--strict` remains a legacy alias for strict gating.
+
+### Multi-Registry Precedence (NEW in v5.6)
+
+- **Primary registry:** `--registry-dir` (default `.spec/registry`)
+- **Supplemental registries:** `--registry-roots` (read-only)
+
+Precedence rules:
+
+1) The primary registry is authoritative.
+2) Supplemental registries are validation sources used to prevent cross-repo duplication.
 
 ### UI Design Addendum
 
@@ -52,6 +93,7 @@ The report may include:
 - public/private split insights (heuristic)
 - UI readiness and component alignment checks (conditional)
 - registry gap observations (read-only)
+- cross-repo reuse risk notes (v5.6)
 
 ---
 
@@ -62,6 +104,7 @@ The report may include:
 - Before onboarding multiple teams
 - After major index reindexing
 - After lifecycle transitions for large sets of specs
+- When public/private repos share domain ownership
 
 ---
 
@@ -88,7 +131,7 @@ The planner relies on:
 ### Detailed Report
 
 ```bash
-/smartspec_portfolio_planner --report-dir=.spec/reports/portfolio-planner --view=full
+/smartspec_portfolio_planner --report=detailed --view=full
 ```
 
 ### View-Specific Planning
@@ -99,6 +142,24 @@ The planner relies on:
 /smartspec_portfolio_planner --view=capability
 /smartspec_portfolio_planner --view=public-private
 /smartspec_portfolio_planner --view=ui
+```
+
+### Runtime Gate Lens
+
+```bash
+/smartspec_portfolio_planner --mode=runtime --safety-mode=strict
+```
+
+### Multi-repo + multi-registry planning
+
+```bash
+/smartspec_portfolio_planner \
+  --repos-config=.spec/smartspec.repos.json \
+  --registry-dir=.spec/registry \
+  --registry-roots="../Repo-A/.spec/registry,../Repo-B/.spec/registry" \
+  --view=full \
+  --mode=portfolio \
+  --report=detailed
 ```
 
 ---
@@ -115,8 +176,23 @@ The planner relies on:
     3) `.smartspec/SPEC_INDEX.json` (deprecated)
     4) `specs/SPEC_INDEX.json` (older layout)
 
+- `--specindex`
+  - Legacy alias for `--index`.
+
 - `--registry-dir`
   - Default: `.spec/registry`
+
+- `--registry-roots`
+  - Supplemental registries (read-only validation).
+
+### Multi-Repo
+
+- `--workspace-roots`
+  - Comma-separated list of additional repo roots to search for specs.
+
+- `--repos-config`
+  - JSON config describing known repos and aliases.
+  - Recommended: `.spec/smartspec.repos.json`
 
 ### Planning View
 
@@ -130,24 +206,18 @@ The planner relies on:
   - Values: `portfolio`, `runtime`
   - Default: `portfolio`
 
-**Meaning:**
-
-- `portfolio`
-  - Designed for roadmap-level planning.
-  - Planned/backlog/idea/draft specs may be incomplete without being treated as readiness blockers.
-
-- `runtime`
-  - Designed for delivery readiness.
-  - Emphasizes that active/core/stable specs should have resolvable artifacts and valid dependency chains.
-
 ### Reporting / Safety
 
-- `--report-dir`
-  - Default: `.spec/reports/portfolio-planner/`
+- `--report`
+  - Values: `summary`, `detailed`
+  - Default: `summary`
+
+- `--safety-mode`
+  - Values: `strict`, `dev`
+  - Default: `strict`
 
 - `--strict`
-  - Rarely needed for planning.
-  - Use only when you want to treat structural inconsistencies as hard failures.
+  - Legacy alias for strict gating.
 
 - `--dry-run`
   - Print findings without writing report files.
@@ -175,6 +245,13 @@ Use follow-up workflows:
 ### Foundational Gaps
 
 If core capabilities (auth, authorization, audit, rate limiting, observability) are missing or weakly defined, the planner will highlight this as a scaling risk.
+
+### Registry Gap Lens (v5.6)
+
+In multi-repo platforms:
+
+- Names present only in supplemental registries are likely owned elsewhere.
+- The planner should treat them as **reuse** candidates until governance clarifies ownership.
 
 ---
 
@@ -211,6 +288,7 @@ The planner does not modify UI files.
 - Treat root `SPEC_INDEX.json` as a legacy mirror for backward compatibility.
 - Use `portfolio` mode for strategy and roadmap.
 - Use `runtime` mode before release gates.
+- For multi-repo portfolios, run with `--registry-roots` to reduce duplicate-shared-name risk.
 - For UI-heavy programs, maintain `ui.json` early to reduce rework during implementation.
 
 ---
@@ -222,7 +300,7 @@ The planner does not modify UI files.
 Use:
 
 ```bash
-/smartspec_portfolio_planner --mode=portfolio
+/smartspec_portfolio_planner --mode=portfolio --safety-mode=dev
 ```
 
 ### UI warnings appear in a non-UI project
@@ -233,5 +311,5 @@ Confirm that no spec is incorrectly categorized as `ui` in the index.
 
 ## Summary
 
-The SmartSpec Portfolio Planner is an executive-level lens that complements strict validation. It helps teams prioritize the right specs in the right order, while remaining aligned to the v5.2 centralization model and the optional UI JSON design workflow.
+The SmartSpec Portfolio Planner is an executive-level lens that complements strict validation. In v5.6, it remains aligned to the centralization model while adding multi-registry awareness and chain-consistent safety semantics so multi-repo programs can plan accurately without encouraging accidental duplication.
 

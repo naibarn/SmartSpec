@@ -1,13 +1,16 @@
 ---
-description: Verify implementation progress against tasks/specs with SmartSpec v5.2 centralization and UI JSON addendum
-version: 5.2
+description: Verify implementation progress against tasks/specs with SmartSpec v5.6 centralization, multi-repo + multi-registry alignment, safety-mode, and UI JSON addendum
+version: 5.6
 ---
 
 # /smartspec_verify_tasks_progress
 
 Verify real implementation progress against `tasks.md`, `spec.md`, and the canonical SmartSpec centralized knowledge layer.
 
-This workflow enforces SmartSpec v5.2 centralization:
+This v5.6 workflow preserves the original v5.2 intent and structure while extending it to match the upgraded chain (spec → plan → tasks → implement → verify) for multi-repo and multi-registry programs.
+
+SmartSpec centralization remains unchanged:
+
 - **`.spec/` is the canonical project-owned space**.
 - **`.spec/SPEC_INDEX.json` is the canonical index**.
 - **`.spec/registry/` is the shared source of truth**.
@@ -20,13 +23,14 @@ This workflow enforces SmartSpec v5.2 centralization:
 ## What It Does
 
 - Resolves canonical index and registry locations.
+- Builds a merged registry validation view (primary + supplemental).
 - Identifies the target spec and its adjacent tasks.
 - Verifies progress using evidence from:
   - task status markers
   - code structure changes
   - test coverage signals
   - configuration and documentation updates
-- Detects cross-SPEC drift risks.
+- Detects cross-SPEC and cross-repo drift risks.
 - Validates UI separation rules when UI JSON is present.
 - Produces a progress report and next-step recommendations.
 
@@ -38,6 +42,7 @@ This workflow enforces SmartSpec v5.2 centralization:
 - Before merging a large PR.
 - Before cutting a release.
 - After running `/smartspec_implement_tasks`.
+- After cross-repo dependency updates.
 
 ---
 
@@ -49,6 +54,11 @@ This workflow enforces SmartSpec v5.2 centralization:
 - Expected adjacent files:
   - `tasks.md`
   - (UI specs) `ui.json`
+
+- Optional governance inputs:
+  - `.spec/SPEC_INDEX.json`
+  - `.spec/registry/*.json`
+  - supplemental registries from sibling repos
 
 ---
 
@@ -62,20 +72,47 @@ This workflow enforces SmartSpec v5.2 centralization:
 
 ## Flags
 
+### Index / Registry (v5.6-aligned)
+
 - `--index` Path to SPEC_INDEX (optional)  
   default: auto-detect
 
-- `--registry-dir` Registry directory (optional)  
+- `--specindex` Legacy alias for `--index`
+
+- `--registry-dir` Primary registry directory (optional)  
   default: `.spec/registry`
 
-- `--report-dir` Output report directory (optional)  
-  default: `.spec/reports/verify-tasks-progress/`
+- `--registry-roots` Supplemental registry dirs, comma-separated (optional)
+  - **Read-only validation sources** to prevent cross-repo duplicate naming.
+
+### Multi-Repo (NEW alignment)
+
+- `--workspace-roots` Comma-separated repo roots to search (optional)
+
+- `--repos-config` Path to structured repo config (optional)
+  - takes precedence over `--workspace-roots`
+  - recommended: `.spec/smartspec.repos.json`
+
+### Target Selection
 
 - `--spec` Explicit spec path (optional)
 
 - `--tasks` Explicit tasks path (optional)
 
-- `--strict` Fail on warnings or ambiguous completion signals (optional)
+### Reporting
+
+- `--report-dir` Output report directory (optional)  
+  default: `.spec/reports/verify-tasks-progress/`
+
+- `--report` `summary` | `detailed` (optional)
+  default: `summary`
+
+### Safety / Preview
+
+- `--safety-mode` `strict` | `dev` (optional)
+  default: `strict`
+
+- `--strict` Legacy alias for strict gating
 
 - `--dry-run` Print report only (do not write files)
 
@@ -92,58 +129,20 @@ Detection order:
 3) `.smartspec/SPEC_INDEX.json` (deprecated)  
 4) `specs/SPEC_INDEX.json` (older layout)
 
-```bash
-INDEX_PATH="${FLAGS_index:-}"
+### 0.2 Resolve Registry View
 
-if [ -z "$INDEX_PATH" ]; then
-  if [ -f ".spec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".spec/SPEC_INDEX.json"
-  elif [ -f "SPEC_INDEX.json" ]; then
-    INDEX_PATH="SPEC_INDEX.json"
-  elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".smartspec/SPEC_INDEX.json" # deprecated
-  elif [ -f "specs/SPEC_INDEX.json" ]; then
-    INDEX_PATH="specs/SPEC_INDEX.json"
-  fi
-fi
+1) Load primary registry from `--registry-dir`.
+2) If provided, load `--registry-roots` as **read-only**.
 
-if [ -n "$INDEX_PATH" ] && [ -f "$INDEX_PATH" ]; then
-  echo "✅ Using SPEC_INDEX: $INDEX_PATH"
-else
-  echo "⚠️ SPEC_INDEX not found. Verification will proceed with local evidence only."
-  INDEX_PATH=""
-fi
-```
+**Precedence rules:**
 
-### 0.2 Resolve Registry Directory
+- Primary registry entries are authoritative.
+- Supplemental registries are used to detect collisions and ownership ambiguity.
 
-```bash
-REGISTRY_DIR="${FLAGS_registry_dir:-.spec/registry}"
-REGISTRY_AVAILABLE=false
+### 0.3 Resolve Multi-Repo Roots
 
-if [ -d "$REGISTRY_DIR" ]; then
-  REGISTRY_AVAILABLE=true
-fi
-
-REPORT_DIR="${FLAGS_report_dir:-.spec/reports/verify-tasks-progress}"
-mkdir -p "$REPORT_DIR"
-
-STRICT="${FLAGS_strict:-false}"
-DRY_RUN="${FLAGS_dry_run:-false}"
-```
-
-### 0.3 Expected Registries (if present)
-
-- `api-registry.json`
-- `data-model-registry.json`
-- `glossary.json`
-- `critical-sections-registry.json`
-- `patterns-registry.json` (optional)
-- `ui-component-registry.json` (optional)
-
-Rules:
-- If registries exist, they are authoritative for shared-name verification.
-- This workflow does not rewrite registries.
+- Build repo root list using `--repos-config` if present.
+- Otherwise merge `--workspace-roots` with the current repo.
 
 ---
 
@@ -152,10 +151,11 @@ Rules:
 Priority:
 
 1) Use `--spec` / `--tasks` if provided.
-2) If `INDEX_PATH` exists, allow selecting a spec by ID.
+2) If index exists, allow selecting by spec ID (implementation-dependent).
 3) Otherwise, require a spec path.
 
 Default tasks location:
+
 - `tasks.md` next to `spec.md`.
 
 ---
@@ -179,45 +179,50 @@ Create a spec-aligned checklist to evaluate evidence for:
 3) **Test coverage**
 4) **NFR fulfillment**
 5) **Cross-SPEC alignment**
-6) **UI compliance (if applicable)**
+6) **Cross-repo reuse correctness**
+7) **UI compliance (if applicable)**
 
 ---
 
 ## 4) Validate Dependency Readiness
 
-If `INDEX_PATH` exists:
+If index is available:
 
 - Cross-check spec dependencies.
 - Warn if:
-  - a dependency spec is not implemented or is missing critical artifacts.
-  - tasks appear to implement dependent features out of order.
+  - a dependency spec is missing critical artifacts
+  - tasks appear to implement dependent features out of order
 
-In `--strict` mode:
+In `--safety-mode=strict`:
+
 - Treat major dependency-order violations as errors.
 
 ---
 
 ## 5) Registry Alignment Checks (Conditional)
 
-If `REGISTRY_AVAILABLE=true`:
+If registries are available:
 
-- Verify that names referenced in the target spec/tasks (and observed in code, when inferable) match registries:
+- Verify that names referenced in the target spec/tasks (and observed in code when inferable) match the merged registry view:
   - API names/route prefixes
   - model names
   - domain terms
   - critical cross-cutting sections
+  - shared patterns
+  - UI component names (if UI registry exists)
 
-If mismatch detected:
-- Prefer that implementation aligns to registry.
-- Record drift warnings.
+**v5.6 cross-repo safeguard:**
 
-This workflow does not rename registry entries.
+- If the same name exists in a supplemental registry with a conflicting meaning, the report must:
+  - mark it as an ownership ambiguity
+  - recommend governance reconciliation
+  - discourage local “new shared name” creation
 
 ---
 
 ## 6) Evidence-Based Progress Evaluation
 
-The verification should distinguish between:
+The verification must distinguish between:
 
 - **Declared progress** (task checkboxes, status labels)
 - **Observed progress** (code/tests/config changes)
@@ -225,14 +230,16 @@ The verification should distinguish between:
 ### 6.1 Task Status Signals
 
 - Parse `tasks.md` status markers.
-- Identify blocked or missing tasks.
+- Identify blocked, missing, or newly introduced tasks.
 
 ### 6.2 Code Structure Signals
 
-Best-effort checks:
+Best-effort checks may include:
+
 - Modules/services created for major task groups.
 - API/controller presence for declared endpoints.
-- Data model definitions aligned with spec.
+- Data model definitions aligned with spec and registries.
+- Shared utility usage when tasks prefer reuse.
 
 ### 6.3 Test Signals
 
@@ -243,6 +250,7 @@ Best-effort checks:
 ### 6.4 NFR Signals
 
 When spec includes NFRs:
+
 - Verify evidence exists for:
   - logging
   - metrics
@@ -265,7 +273,7 @@ Rules:
 1) **UI design source of truth is JSON** (`ui.json`).
 2) Treat `ui.json` as design-owned.
 3) Do not embed business logic in UI JSON.
-4) Verify that UI implementation aligns with `ui.json` component structure.
+4) Verify that UI implementation aligns with `ui.json` structure.
 
 Checks:
 
@@ -273,65 +281,44 @@ Checks:
   - confirm `tasks.md` includes component mapping and logic separation tasks.
 
 - If `ui-component-registry.json` exists:
-  - verify that component names used in tasks/implementation match registry.
+  - verify that component names used in tasks/implementation match the registry.
 
-- If a UI spec is declared but `ui.json` is missing:
-  - warn and recommend creation.
-
-Non-UI projects:
-- Do not fail.
-- Skip UI checks unless a spec explicitly declares itself as UI.
+- If UI specs are active but `ui.json` is missing:
+  - add a high-visibility warning.
 
 ---
 
-## 8) Progress Scoring (Optional Heuristic)
+## 8) Report Schema (Suggested)
 
-Provide a qualitative summary per major task group:
+A v5.6 report should include:
 
-- Not started
-- In progress
-- Blocked
-- Functionally complete (tests missing)
-- Complete (with tests)
-
-Avoid overstating completion without evidence.
-
----
-
-## 9) Report
-
-Write a structured report to `REPORT_DIR` including:
-
-- Index path used
-- Registry availability
-- Target spec/tasks paths
-- Dependency findings
-- Task status summary
-- Evidence summary (code/tests/NFR)
-- Cross-SPEC drift warnings
-- UI JSON compliance summary (if applicable)
-- Recommended next actions
-
-If `--dry-run`:
-- Print the report only.
+- Spec ID/title/path
+- Tasks path
+- Index path used (or NONE)
+- Primary registry dir
+- Supplemental registry roots
+- Multi-repo roots or config used
+- Declared vs observed completion summary
+- Dependency readiness
+- Registry alignment status
+- UI compliance (if applicable)
+- Recommended next tasks
 
 ---
 
-## 10) Recommended Follow-ups
-
-Depending on findings:
+## 9) Recommended Follow-Ups
 
 - `/smartspec_fix_errors`
 - `/smartspec_generate_tests`
-- `/smartspec_refactor_code`
-- `/smartspec_sync_spec_tasks --mode=additive` (after review)
+- `/smartspec_sync_spec_tasks`
+- `/smartspec_global_registry_audit` (for large drift)
 - `/smartspec_validate_index`
 
 ---
 
 ## Notes
 
-- This workflow is intentionally conservative to prevent false completion claims.
-- `.spec/SPEC_INDEX.json` is canonical; root index remains a legacy mirror.
-- `.spec/registry/` is the authoritative shared-name source when present.
+- This workflow is intentionally conservative.
+- It must not mark tasks “done” solely based on checkbox state without any observed evidence.
+- In multi-repo programs, lack of `--registry-roots` should reduce confidence scoring and be recorded explicitly in the report.
 

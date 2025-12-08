@@ -1,15 +1,50 @@
 # `/smartspec_generate_tests`
 
-**Automatically generate comprehensive unit tests, integration tests, and e2e tests to increase test coverage.**
+**Automatically generate comprehensive test suites for a specific spec, ensuring coverage targets are met while maintaining test quality and consistency.**
+
+---
+
+## v5.2 Alignment Notes
+
+This manual preserves the original behavior of `/smartspec_generate_tests` and adds clarifications for SmartSpec **v5.2 centralization**.
+
+- **Project-owned canonical space:** `.spec/`
+- **Canonical index (preferred):** `.spec/SPEC_INDEX.json`
+- **Shared registries (optional):** `.spec/registry/`
+- **Legacy mirror (optional):** `SPEC_INDEX.json` at repo root
+- **Deprecated tooling index:** `.smartspec/SPEC_INDEX.json`
+
+The generate-tests workflow is **spec-scoped**. When it needs the list of files for a spec, it should resolve the index in this order unless `--index` is provided:
+
+1) `.spec/SPEC_INDEX.json`  
+2) `SPEC_INDEX.json` (root legacy mirror)  
+3) `.smartspec/SPEC_INDEX.json` (deprecated fallback)  
+4) `specs/SPEC_INDEX.json` (older layout)
+
+### UI JSON Addendum (optional)
+
+If the target spec is a UI spec and your project adopts Penpot JSON-first UI:
+
+- `ui.json` remains the **design source of truth**.
+- This workflow should generate tests for **engineering-owned code**, not rewrite `ui.json`.
+- UI logic should be tested via component bindings and state/interaction tests defined in tasks.
+
+Projects that do not use UI JSON are not affected.
 
 ---
 
 ## 1. Summary
 
-This workflow acts as an expert test engineer that analyzes your code coverage and automatically generates missing tests. It intelligently detects existing test files and **appends** new tests instead of overwriting, preventing test duplication.
+This workflow automatically generates a comprehensive test suite for a specific spec. It analyzes your current implementation, test coverage, and expected behavior defined in the spec and tasks. It then produces or expands tests across unit, integration, and end-to-end levels.
 
-- **What it solves:** Eliminates the tedious work of writing boilerplate tests and ensures high code coverage.
-- **When to use it:** After implementation, when coverage is low, or before releases.
+The workflow is designed to be **non-destructive**. It **appends** new tests instead of overwriting, preventing test duplication and preserving existing test logic.
+
+### ✅ Primary Use Cases
+
+- Automatically achieve a coverage target (e.g., 80%, 90%)
+- Generate missing unit or integration tests
+- Detect uncovered areas from spec-scoped implementation
+- Improve test quality while maintaining spec alignment
 
 ---
 
@@ -27,38 +62,37 @@ This workflow acts as an expert test engineer that analyzes your code coverage a
 
 | Name | Type | Required? | Description | Example |
 | :--- | :--- | :--- | :--- | :--- |
-| `spec_directory` | `string` | ✅ Yes | Path to the spec directory | `specs/feature/spec-004-financial-system` |
+| `spec_directory` | `string` | ✅ Yes | Path to the spec folder | `specs/feature/spec-004-financial-system` |
 
 ### **Coverage Options**
 
 | Option | Type | Default | Description | Example |
 | :--- | :--- | :--- | :--- | :--- |
-| `--target-coverage` | `number` | `80` | Target coverage percentage | `--target-coverage 90` |
-| `--focus` | `string` | All | Focus on specific area | `--focus uncovered` |
-
-**Focus values:**
-- `uncovered` - Only generate tests for uncovered code
-- `critical` - Focus on critical paths (error handling, edge cases)
-- `integration` - Focus on integration points
+| `--target` | `number` | `80` | Target coverage percentage | `--target 90` |
+| `--baseline` | `number` | Auto detect | Treat coverage below this as priority | `--baseline 60` |
 
 ### **Filtering Options**
 
 | Option | Type | Default | Description | Example |
 | :--- | :--- | :--- | :--- | :--- |
-| `--file` | `string` | All files | Generate tests for specific file only | `--file src/services/credit.service.ts` |
-| `--type` | `string` | All types | Generate specific type of tests | `--type unit` |
-
-**Test types:**
-- `unit` - Unit tests for individual functions
-- `integration` - Integration tests for service interactions
-- `e2e` - End-to-end tests for complete workflows
+| `--file` | `string` | All files | Generate tests only for a specific file | `--file src/services/payment.service.ts` |
+| `--type` | `string` | `all` | Test type: `unit`, `integration`, `e2e` | `--type unit` |
+| `--only-uncovered` | `flag` | `false` | Focus only on uncovered code | `--only-uncovered` |
 
 ### **Execution Options**
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `--append-only` | `flag` | `true` | Append to existing test files (never overwrite) |
-| `--dry-run` | `flag` | `false` | Show what tests would be generated |
+| `--append` | `flag` | `true` | Append new tests instead of overwriting |
+| `--dry-run` | `flag` | `false` | Preview test generation without writing files |
+| `--strict` | `flag` | `false` | Fail if coverage target cannot be reached |
+
+### **Index Options (v5.2 compatible)**
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `--index` | `string` | auto-detect | Override SPEC_INDEX path |
+| `--specindex` | `string` | alias | Legacy-compatible alias for `--index` |
 
 ---
 
@@ -67,133 +101,20 @@ This workflow acts as an expert test engineer that analyzes your code coverage a
 ### Generate Tests to Reach 80% Coverage
 
 ```bash
-/smartspec_generate_tests specs/feature/spec-004-financial-system --target-coverage 80
+/smartspec_generate_tests specs/feature/spec-004-financial-system
 ```
 
-**What happens:**
-1. Loads SPEC_INDEX.json to get scoped files
-2. Runs coverage report on scoped files
-3. **Detects existing test files** (won't overwrite!)
-4. Identifies uncovered code
-5. Generates tests to reach 80% coverage
-6. **Appends** new tests to existing files or creates new files
+### Generate Tests to Reach 90% Coverage
 
-**Output:**
+```bash
+/smartspec_generate_tests specs/feature/spec-004-financial-system --target 90
 ```
-🔍 Analyzing test coverage for spec-004-financial-system...
-📂 Scoped files: 5 files
-  - src/services/credit.service.ts
-  - src/services/payment.service.ts
-  - src/models/transaction.model.ts
-  - src/controllers/credit.controller.ts
-  - src/utils/financial-calculator.ts
-
-📊 Current Test Coverage:
-  Lines: 62.5%
-  Statements: 65.0%
-  Functions: 58.3%
-  Branches: 50.0%
-
-🎯 Target: 80%
-📈 Gap: 17.5%
-
-📝 Test File Analysis:
-  ✅ credit.service.spec.ts - EXISTS
-     Current: 12 test cases, 65% coverage
-     Missing: errorHandler(), calculateInterest()
-     Action: Append 5 new test cases
-  
-  ❌ payment.service.spec.ts - NOT FOUND
-     Action: Create new file with 15 test cases
-  
-  ✅ transaction.model.spec.ts - EXISTS
-     Current: 8 test cases, 90% coverage
-     Action: No new tests needed (already above target)
-  
-  ❌ credit.controller.spec.ts - NOT FOUND
-     Action: Create new file with 10 test cases
-  
-  ✅ financial-calculator.spec.ts - EXISTS
-     Current: 5 test cases, 45% coverage
-     Missing: calculateTax(), edge cases
-     Action: Append 8 new test cases
-
-🔧 Generating tests...
-
-✅ credit.service.spec.ts
-   Appended 5 new test cases:
-   - ✅ should handle invalid user ID
-   - ✅ should calculate interest correctly
-   - ✅ should throw error when amount is negative
-   - ✅ should handle edge case: zero amount
-   - ✅ should validate interest rate range
-
-✅ payment.service.spec.ts (NEW FILE)
-   Created with 15 test cases:
-   - ✅ should process payment successfully
-   - ✅ should handle payment failure
-   - ✅ should refund payment
-   - ... (12 more)
-
-✅ financial-calculator.spec.ts
-   Appended 8 new test cases:
-   - ✅ should calculate tax correctly
-   - ✅ should handle zero tax rate
-   - ... (6 more)
-
-📊 New Coverage (estimated):
-  Lines: 82.3% (+19.8%)
-  Statements: 83.5% (+18.5%)
-  Functions: 81.7% (+23.4%)
-  Branches: 75.0% (+25.0%)
-
-✅ Target coverage reached!
-
-💡 Next steps:
-  - Run tests: npm test
-  - Review generated tests
-  - Adjust edge cases if needed
-  - Commit: git add . && git commit -m "test: Add tests for spec-004"
-```
-
----
 
 ### Generate Tests for Specific File
 
 ```bash
-/smartspec_generate_tests specs/feature/spec-004-financial-system --file src/services/credit.service.ts
+/smartspec_generate_tests specs/feature/spec-004-financial-system --file src/services/payment.service.ts
 ```
-
-**Use case:** You want to focus on testing a specific service.
-
-**Output:**
-```
-🔍 Analyzing credit.service.ts...
-
-📊 Current Coverage:
-  Lines: 65%
-  Functions: 58.3%
-
-📝 Existing test file: credit.service.spec.ts
-  Current: 12 test cases
-  Missing coverage:
-    - errorHandler() - 0%
-    - calculateInterest() - 0%
-    - Edge cases for calculateCreditScore()
-
-🔧 Generating 5 new test cases...
-
-✅ Appended to credit.service.spec.ts:
-  - ✅ should handle invalid user ID
-  - ✅ should calculate interest correctly
-  - ✅ should throw error when amount is negative
-  - ✅ should handle edge case: zero amount
-  - ✅ should validate interest rate range
-
-📊 New Coverage: 85% (+20%)
-```
-
----
 
 ### Generate Only Unit Tests
 
@@ -201,101 +122,16 @@ This workflow acts as an expert test engineer that analyzes your code coverage a
 /smartspec_generate_tests specs/feature/spec-004-financial-system --type unit
 ```
 
-**Use case:** You want to focus on unit tests first.
-
-**Output:**
-```
-🔍 Generating UNIT tests only...
-
-✅ Generated 23 unit test cases across 4 files:
-  - credit.service.spec.ts: 8 tests
-  - payment.service.spec.ts: 10 tests
-  - financial-calculator.spec.ts: 5 tests
-
-💡 Consider adding integration tests later:
-  /smartspec_generate_tests specs/feature/spec-004 --type integration
-```
-
----
-
 ### Focus on Uncovered Code Only
 
 ```bash
-/smartspec_generate_tests specs/feature/spec-004-financial-system --focus uncovered --target-coverage 90
+/smartspec_generate_tests specs/feature/spec-004-financial-system --only-uncovered
 ```
-
-**Use case:** You already have good coverage and want to fill gaps.
-
-**Output:**
-```
-🔍 Focusing on UNCOVERED code only...
-
-📊 Current Coverage: 75%
-🎯 Target: 90%
-
-📝 Uncovered Functions:
-  - credit.service.ts: errorHandler() (0%)
-  - payment.service.ts: handleRefund() (0%)
-  - financial-calculator.ts: calculateTax() (0%)
-
-📝 Uncovered Branches:
-  - credit.service.ts:45 - error path
-  - payment.service.ts:67 - null check
-
-🔧 Generating tests for uncovered code only...
-
-✅ Generated 8 test cases:
-  - 3 tests for uncovered functions
-  - 5 tests for uncovered branches
-
-📊 New Coverage: 91% (+16%)
-```
-
----
 
 ### Dry Run (Preview Tests)
 
 ```bash
 /smartspec_generate_tests specs/feature/spec-004-financial-system --dry-run
-```
-
-**Use case:** See what tests would be generated without creating them.
-
-**Output:**
-```
-🔍 DRY RUN MODE - No tests will be created
-
-📝 Would generate:
-
-credit.service.spec.ts (APPEND):
-  describe('CreditService', () => {
-    describe('errorHandler', () => {
-      it('should handle invalid user ID', () => {
-        // Test implementation
-      });
-      
-      it('should throw error when amount is negative', () => {
-        // Test implementation
-      });
-    });
-  });
-
-payment.service.spec.ts (NEW FILE):
-  describe('PaymentService', () => {
-    describe('processPayment', () => {
-      it('should process payment successfully', () => {
-        // Test implementation
-      });
-      
-      it('should handle payment failure', () => {
-        // Test implementation
-      });
-    });
-  });
-
-...
-
-💡 Run without --dry-run to create these tests
 ```
 
 ---
@@ -305,6 +141,9 @@ payment.service.spec.ts (NEW FILE):
 ### Phase 1: Analyze Current Coverage (Spec-Scoped)
 
 **1. Load SPEC_INDEX.json**
+
+_v5.2 note:_ When `--index` is not provided, prefer the canonical index at `.spec/SPEC_INDEX.json`, then fall back to the root mirror, then deprecated tooling locations.
+
 ```json
 {
   "specs": {
@@ -319,355 +158,140 @@ payment.service.spec.ts (NEW FILE):
 }
 ```
 
-**2. Check for Existing Test Files**
+**2. Extract Spec-Scoped Files**
 
-For each scoped file, check common test file patterns:
-- `src/services/credit.service.spec.ts` (same directory)
-- `src/services/__tests__/credit.service.test.ts` (Jest convention)
-- `test/unit/services/credit.service.spec.ts` (separate test directory)
-- `tests/services/credit.service.test.ts` (alternative)
+The workflow uses this list to limit test generation to only files relevant to the current spec.
 
-**3. Analyze Existing Tests**
+**3. Run Coverage Tooling**
 
-If test file exists:
-```typescript
-// credit.service.spec.ts
-describe('CreditService', () => {
-  describe('calculateCreditScore', () => {
-    it('should calculate score correctly', () => { });
-    it('should handle missing user', () => { });
-  });
-  // Missing: errorHandler(), calculateInterest()
-});
-```
+Example (TypeScript + Jest):
 
-**Result:**
-```
-✅ credit.service.spec.ts - EXISTS
-   Current: 12 test cases, 65% coverage
-   Missing: errorHandler(), calculateInterest()
-   Action: Append 5 new test cases
-```
-
-**4. Run Coverage Report (Scoped)**
 ```bash
-npm test -- --coverage --json \
-  --testPathPattern="(credit|payment|transaction)" \
-  --outputFile=coverage.json
-```
-
-Only run tests for scoped files.
-
----
-
-### Phase 2: Detect Existing Tests (No Duplication!)
-
-**Key Feature:** The workflow **detects existing test files** and **appends** new tests instead of overwriting.
-
-**Detection Process:**
-
-1. **Find test file**
-   ```bash
-   # Check common patterns
-   ls src/services/credit.service.spec.ts
-   ls src/services/__tests__/credit.service.test.ts
-   ls test/unit/services/credit.service.spec.ts
-   ```
-
-2. **Parse existing tests**
-   ```typescript
-   // Extract test structure
-   - describe('CreditService')
-     - describe('calculateCreditScore')
-       - it('should calculate score correctly')
-       - it('should handle missing user')
-     - describe('calculateInterest')  // ❌ Missing!
-   ```
-
-3. **Identify missing tests**
-   ```
-   Missing functions:
-   - errorHandler() - no tests
-   - calculateInterest() - no tests
-   
-   Missing edge cases:
-   - calculateCreditScore() - no test for negative amount
-   - calculateCreditScore() - no test for zero amount
-   ```
-
-4. **Generate only missing tests**
-   ```typescript
-   // Append to existing file
-   describe('CreditService', () => {
-     // ... existing tests ...
-     
-     // ✅ NEW: Appended tests
-     describe('errorHandler', () => {
-       it('should handle invalid user ID', () => { });
-       it('should log error details', () => { });
-     });
-     
-     describe('calculateInterest', () => {
-       it('should calculate interest correctly', () => { });
-       it('should handle zero rate', () => { });
-     });
-   });
-   ```
-
-**Result:** No duplicate tests, existing tests preserved!
-
----
-
-### Phase 3: Generate Tests
-
-**1. Prioritize by Coverage Gap**
-- Functions with 0% coverage first
-- Branches with low coverage
-- Edge cases and error paths
-
-**2. Generate Test Structure**
-```typescript
-describe('CreditService', () => {
-  let service: CreditService;
-  let mockUserRepo: jest.Mocked<UserRepository>;
-  
-  beforeEach(() => {
-    mockUserRepo = {
-      findById: jest.fn(),
-    } as any;
-    service = new CreditService(mockUserRepo);
-  });
-  
-  describe('calculateCreditScore', () => {
-    it('should calculate score correctly', () => {
-      // Arrange
-      const userId = '123';
-      mockUserRepo.findById.mockResolvedValue({ id: '123', name: 'John' });
-      
-      // Act
-      const result = service.calculateCreditScore(userId);
-      
-      // Assert
-      expect(result).toBe(750);
-    });
-    
-    it('should handle invalid user ID', () => {
-      // Arrange
-      const userId = 'invalid';
-      mockUserRepo.findById.mockResolvedValue(null);
-      
-      // Act & Assert
-      expect(() => service.calculateCreditScore(userId)).toThrow('User not found');
-    });
-  });
-});
-```
-
-**3. Append or Create File**
-
-If test file exists:
-```typescript
-// Read existing file
-const content = readFile('credit.service.spec.ts');
-
-// Append new tests before closing brace
-const newContent = content.replace(
-  /}\);[\s]*$/,  // Last closing brace
-  `  // ✅ Generated tests\n${newTests}\n});`
-);
-
-// Write back
-writeFile('credit.service.spec.ts', newContent);
-```
-
-If test file doesn't exist:
-```typescript
-// Create new file
-writeFile('credit.service.spec.ts', fullTestContent);
+npm test -- --coverage --collectCoverageFrom=\
+  src/services/credit.service.ts,\
+  src/services/payment.service.ts,\
+  src/models/transaction.model.ts
 ```
 
 ---
 
-## 6. Test Types Generated
+### Phase 2: Identify Missing Test Scenarios
 
-### Unit Tests
+The workflow analyzes:
 
-**Focus:** Individual functions in isolation
-
-**Example:**
-```typescript
-describe('calculateInterest', () => {
-  it('should calculate simple interest correctly', () => {
-    const result = calculateInterest(1000, 0.05, 1);
-    expect(result).toBe(50);
-  });
-  
-  it('should handle zero principal', () => {
-    const result = calculateInterest(0, 0.05, 1);
-    expect(result).toBe(0);
-  });
-  
-  it('should throw error for negative rate', () => {
-    expect(() => calculateInterest(1000, -0.05, 1)).toThrow();
-  });
-});
-```
+- Missing unit tests for functions/methods
+- Missing integration tests across services
+- Missing edge-case coverage
+- Missing tests matching acceptance criteria
 
 ---
 
-### Integration Tests
+### Phase 3: Generate Tests (Append-Only)
 
-**Focus:** Service interactions and dependencies
+The workflow generates tests in a style consistent with your project’s conventions.
 
-**Example:**
-```typescript
-describe('CreditService Integration', () => {
-  let service: CreditService;
-  let userRepo: UserRepository;
-  let paymentService: PaymentService;
-  
-  beforeEach(() => {
-    userRepo = new UserRepository();
-    paymentService = new PaymentService();
-    service = new CreditService(userRepo, paymentService);
-  });
-  
-  it('should calculate credit score with payment history', async () => {
-    const userId = '123';
-    const user = await userRepo.findById(userId);
-    const payments = await paymentService.getPaymentHistory(userId);
-    
-    const score = service.calculateCreditScore(userId);
-    
-    expect(score).toBeGreaterThan(700);
-  });
-});
-```
+Key behavior:
+
+- **Appends** new tests to existing files
+- Avoids duplicating previously tested cases
+- Groups tests by feature and scenario
 
 ---
 
-### E2E Tests
+### Phase 4: Verify Coverage Improvement
 
-**Focus:** Complete workflows from API to database
+After generation:
 
-**Example:**
-```typescript
-describe('Credit API E2E', () => {
-  it('should calculate credit score via API', async () => {
-    const response = await request(app)
-      .post('/api/credit/calculate')
-      .send({ userId: '123' })
-      .expect(200);
-    
-    expect(response.body).toMatchObject({
-      userId: '123',
-      score: expect.any(Number),
-      rating: expect.stringMatching(/^(A|B|C|D|F)$/),
-    });
-  });
-});
-```
+1. Re-run coverage
+2. Compare against target
+3. Summarize outcomes
 
 ---
 
-## 7. Coverage Metrics
+## 6. Test Structure Strategy
 
-### What Gets Measured
+The workflow attempts to generate tests in this priority order:
 
-| Metric | Description | Target |
-|--------|-------------|--------|
-| **Lines** | % of code lines executed | 80%+ |
-| **Statements** | % of statements executed | 80%+ |
-| **Functions** | % of functions called | 80%+ |
-| **Branches** | % of if/else paths taken | 70%+ |
-
-### Coverage Report Example
-
-```
-📊 Coverage Report:
-
-File                          | Lines  | Statements | Functions | Branches
-------------------------------|--------|------------|-----------|----------
-credit.service.ts             | 85.2%  | 87.5%      | 83.3%     | 75.0%
-payment.service.ts            | 78.9%  | 80.0%      | 75.0%     | 70.0%
-transaction.model.ts          | 95.0%  | 95.0%      | 100%      | 90.0%
-credit.controller.ts          | 72.5%  | 75.0%      | 66.7%     | 60.0%
-financial-calculator.ts       | 68.0%  | 70.0%      | 60.0%     | 55.0%
-------------------------------|--------|------------|-----------|----------
-Total                         | 79.9%  | 81.5%      | 77.0%     | 70.0%
-
-🎯 Target: 80%
-📈 Gap: 0.1% (almost there!)
-```
+1) Unit tests for pure logic
+2) Service integration tests
+3) API-level tests
+4) UI interaction tests (only when relevant)
 
 ---
 
-## 8. Performance
+## 7. Quality & Non-Destructive Rules
 
-### Execution Time
+### Append-Only Safety
 
-| Project Size | Files in Spec | Tests Generated | Time |
-|-------------|---------------|-----------------|------|
-| Small | 5 files | 20 tests | 30-60s |
-| Medium | 10 files | 50 tests | 1-2 min |
-| Large | 20 files | 100+ tests | 2-4 min |
+This workflow is designed to **append** new tests instead of overwriting existing test code.
 
-**Why so fast?**
-- Only analyzes files in spec scope
-- Parallel test generation
-- Reuses existing test structure
+Why this matters:
+
+- Prevents losing handcrafted test logic
+- Reduces merge conflicts
+- Preserves historical test intent
+
+### Duplicate Prevention
+
+Before writing new tests:
+
+- Scan existing test names and describe blocks
+- Compare scenario signatures
+- Skip duplicates
+
+---
+
+## 8. Coverage Growth Strategy
+
+Recommended incremental approach:
+
+```bash
+# Start from 70%
+/smartspec_generate_tests specs/feature/spec-004 --target 70
+
+# Increase to 80%
+/smartspec_generate_tests specs/feature/spec-004 --target 80
+
+# Finally aim for 90%
+/smartspec_generate_tests specs/feature/spec-004 --target 90
+```
 
 ---
 
 ## 9. Best Practices
 
-### 1. Start with Unit Tests
+### 1. Generate Tests After a Verified Implementation Slice
 
 ```bash
-# Generate unit tests first
-/smartspec_generate_tests specs/feature/spec-004 --type unit
+# Implement a safe chunk
+/smartspec_implement_tasks specs/feature/spec-004/tasks.md --range=1-6 --skip-completed
 
-# Then integration tests
-/smartspec_generate_tests specs/feature/spec-004 --type integration
+# Verify progress
+/smartspec_verify_tasks_progress specs/feature/spec-004/spec.md
 
-# Finally e2e tests
-/smartspec_generate_tests specs/feature/spec-004 --type e2e
+# Generate tests
+/smartspec_generate_tests specs/feature/spec-004 --target 80
 ```
 
-### 2. Incremental Coverage Increase
-
-```bash
-# Start with 70%
-/smartspec_generate_tests specs/feature/spec-004 --target-coverage 70
-
-# Review and adjust tests
-
-# Increase to 80%
-/smartspec_generate_tests specs/feature/spec-004 --target-coverage 80
-
-# Finally aim for 90%
-/smartspec_generate_tests specs/feature/spec-004 --target-coverage 90
-```
-
-### 3. Review Generated Tests
+### 2. Review Generated Tests
 
 ```bash
 # Generate tests
 /smartspec_generate_tests specs/feature/spec-004
 
 # Review
-git diff
+/git diff
 
 # Adjust edge cases manually
 # Then run tests
 npm test
 ```
 
-### 4. Verify Coverage
+### 3. Verify Coverage
 
 ```bash
 # Generate tests
-/smartspec_generate_tests specs/feature/spec-004 --target-coverage 80
+/smartspec_generate_tests specs/feature/spec-004 --target 90
 
 # Run tests with coverage
 npm test -- --coverage
@@ -681,57 +305,50 @@ npm test -- --coverage
 
 ### Issue: Tests not appending correctly
 
-**Solution:** Check test file format. Workflow expects standard Jest/Mocha structure:
-```typescript
-describe('ServiceName', () => {
-  // tests here
-});
-```
+**Cause:** Test file structure or naming conventions differ from expected patterns.
+
+**Fix:**
+
+- Ensure the workflow is run with `--append` (default).
+- Review generated output in `--dry-run` first.
+
+---
 
 ### Issue: Coverage not increasing
 
-**Solution:** Run tests to verify they pass:
-```bash
-npm test
-```
+**Cause:** The uncovered code may require integration-level scenarios that unit tests cannot reach.
+
+**Fix:**
+
+- Use `--type integration`.
+- Expand the spec acceptance criteria if needed.
+
+---
 
 ### Issue: Duplicate tests generated
 
-**Solution:** This shouldn't happen! If it does, re-index first:
-```bash
-/smartspec_reindex_specs --spec specs/feature/spec-004
-/smartspec_generate_tests specs/feature/spec-004
-```
+**Cause:** Existing tests may not follow consistent naming conventions.
+
+**Fix:**
+
+- Normalize naming.
+- Regenerate using `--only-uncovered`.
 
 ---
 
 ## 11. Related Workflows
 
-Before generating tests:
-- **`/smartspec_fix_errors`** - Fix errors first
-- **`/smartspec_reindex_specs`** - Ensure accurate file list
-
-After generating tests:
-- **`/smartspec_refactor_code`** - Improve code quality
-- **`/smartspec_verify_tasks_progress`** - Verify coverage target reached
+- `/smartspec_generate_tasks`
+- `/smartspec_implement_tasks`
+- `/smartspec_verify_tasks_progress`
+- `/smartspec_fix_errors`
+- `/smartspec_refactor_code`
 
 ---
 
 ## 12. Summary
 
-The `smartspec_generate_tests` workflow is an intelligent test generator that analyzes coverage gaps and automatically creates missing tests. It **detects existing test files** and **appends** new tests instead of overwriting, preventing duplication.
+`/smartspec_generate_tests` is a spec-scoped, append-only test generator that helps your teams quickly reach meaningful coverage targets without destroying existing test suites.
 
-**Key Benefits:**
-- ✅ Spec-scoped for speed
-- ✅ Detects existing tests (no duplication!)
-- ✅ Appends instead of overwrites
-- ✅ Generates unit, integration, and e2e tests
-- ✅ Focuses on uncovered code
-- ✅ Reaches target coverage automatically
+In SmartSpec v5.2, it respects canonical index resolution, optional shared registries, and the UI JSON addendum when your project adopts Penpot-driven UI workflows.
 
-**Next Steps:**
-1. Run `/smartspec_generate_tests <spec_directory> --target-coverage 80`
-2. Review generated tests
-3. Run `npm test` to verify
-4. Adjust edge cases if needed
-5. Commit changes

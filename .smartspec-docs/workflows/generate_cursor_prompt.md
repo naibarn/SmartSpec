@@ -1,150 +1,144 @@
-# `/smartspec_generate_cursor_prompt.md`
+# Manual — Generate Cursor Prompt Workflow (English Version)
 
-**Generates a list of user-friendly prompts for manual, step-by-step execution in platforms like Cursor and Google Antigravity.**
-
----
-
-## 1. Summary
-
-This command is the heart of the manual "vibe coding" workflow. It takes technical tasks from your `tasks.md` file and converts them into a series of simple, human-readable prompts. It's designed for a developer who wants to work interactively with an AI assistant, one task at a time.
-
-- **What it solves:** It saves you from having to manually formulate a good prompt for every single task. It provides just enough context for the AI to be helpful without overwhelming it.
-- **When to use it:** Use this command when your target platform is **Cursor or Google Antigravity**, or any other platform that relies on a **manual copy-paste workflow**.
+> This manual has been rewritten entirely in English and aligned with the workflow described in **smartspec_generate_cursor_prompt.md**, including canonical context resolution, registry alignment, cross‑SPEC context loading, UI JSON rules, and optimized Cursor‑ready prompt generation.
 
 ---
 
-## 2. Target Platforms & Execution Model
+## 1. Overview
+The **/generate_cursor_prompt.md** command produces a series of clean, human‑readable prompts suitable for manual, step‑by‑step execution in environments like **Cursor IDE** or **Google Antigravity**.  
+This updated version now fully follows SmartSpec’s centralized workflow:
 
-This command is **specifically designed for interactive, manual workflows**.
-
-| Platform | How to Execute the Generated Prompts | Workflow |
-| :--- | :--- | :--- |
-| **Cursor** | Copy and paste each prompt section, one by one. | Manual, Interactive |
-| **Antigravity** | Copy and paste each prompt section, one by one. | Manual, Interactive |
+- Detect canonical **SPEC_INDEX**
+- Load shared registries (API, models, glossary, UI components, etc.)
+- Read `spec.md`, `tasks.md`, and `ui.json` (if present)
+- Validate naming consistency across SPECs
+- Generate conflict‑free prompts tailored for Cursor
 
 ---
 
-## 3. Usage
+## 2. Purpose of the Command
+- Convert selected tasks into **individually executable prompts**
+- Preserve canonical shared naming (APIs, models, domain terms)
+- Ensure implementation is consistent with project‑wide context
+- Support UI JSON specifications when applicable
 
+---
+
+## 3. Target Platforms & Execution Model
+| Platform | How to Use | Workflow |
+|---|---|---|
+| **Cursor** | Copy and paste one prompt at a time | Manual / Interactive |
+| **Antigravity** | Same copy‑paste flow | Manual / Interactive |
+
+---
+
+## 4. Usage
 ```bash
-/smartspec_generate_cursor_prompt.md <tasks_path> --tasks <task_id_or_range> [options...]
+/generate_cursor_prompt.md <tasks_path> --tasks <task_id_or_range> [options...]
 ```
 
----
+### Arguments
+| Name | Type | Required | Description | Example |
+|---|---|---|---|---|
+| `tasks_path` | string | ✔ | Path to `tasks.md` | `specs/features/login/tasks.md` |
 
-## 4. Parameters & Options
-
-### **Primary Argument**
-
-| Name | Type | Required? | Description | Example |
-| :--- | :--- | :--- | :--- | :--- |
-| `tasks_path` | `string` | ✅ Yes | The full path to the source `tasks.md` file. | `specs/features/new-login/tasks.md` |
-
-### **Options**
-
+### Options
 | Option | Value | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `--tasks` | `<task_id_or_range>` | (none) | ✅ **Required.** The ID of the task(s) you want to generate prompts for. Supports single tasks (`T001`), ranges (`T001-T005`), or comma-separated lists (`T001,T003`). |
-| `--cursor` | (flag) | ✅ **Yes** | Optimizes the prompt language and structure for Cursor. This is the default. |
-| `--antigravity` | (flag) | (unset) | Optimizes the prompt language and structure for Google Antigravity. |
-| `--breakdown` | (flag) | (unset) | Automatically breaks down large tasks (>8 hours) into smaller, more manageable sub-task prompts. |
+|---|---|---|---|
+| `--tasks` | task ID(s) | ✔ | Select one or more tasks | `T001,T003` |
+| `--cursor` | flag | Yes | Optimize prompt structure for Cursor |
+| `--antigravity` | flag | - | Optimize prompts for Antigravity |
+| `--breakdown` | flag | - | Auto‑split large tasks |
 
 ---
 
-## 5. How Multiple Tasks are Handled
+## 5. Integrated SmartSpec Workflow
+The complete workflow from **smartspec_generate_cursor_prompt.md** is now applied to this command.
 
-This command bundles all specified tasks into **one single file**, but structures it as a **list of distinct prompts**.
+### **Step 0: Load Canonical Context**
+- Resolve canonical **SPEC_INDEX**
+- Load registries:
+  - API registry
+  - model registry
+  - glossary
+  - critical sections
+  - patterns
+  - UI component registry (if available)
+- **No new shared names may be invented** unless declared in "Open Questions / Registry Additions".
 
-**Example Command:**
-```bash
-/smartspec_generate_cursor_prompt.md specs/services/user-profile/tasks.md --tasks T001-T003
-```
+### **Step 1: Identify Target Spec & Tasks**
+- Read `spec.md`
+- Read `tasks.md`
+- Read `ui.json` if it exists
 
-**Resulting Prompt File (`cursor-prompt-T001-T003.md`):**
+### **Step 2: Compile Cross‑SPEC Context**
+- Extract dependency SPECs using SPEC_INDEX
+- Summaries are concise and limited to context needed by tasks
 
-This single file will contain a list of prompts, clearly separated for easy copying.
+### **Step 3: Consistency Validation**
+- Validate naming against registries
+- Validate task order against cross‑SPEC dependencies
+
+### **Step 4: Build the Final Cursor Prompt File**
+The generated prompt file must contain:
+1. **Project Context**
+2. **Target Spec Information** (ID, title, objective)
+3. **Dependencies**
+4. **Canonical Names (Do Not Rename)**
+5. **Ordered Tasks**
+6. **Testing Requirements**
+7. **UI JSON Rules** (if applicable)
+8. **Open Questions / Registry Additions**
+9. **Definition of Done**
+
+---
+
+## 6. Output Format
+The command generates a **single file** containing multiple prompts, clearly separated, e.g.:
 
 ```markdown
 --- PROMPT FOR TASK T001 ---
-
-# Task T001: Create User Model
-
-**Goal:** Create the Prisma model for the `User`.
-
-**Files to create:**
-- `prisma/schema.prisma`
-
-**Instructions:**
-1. Add a `User` model to the `schema.prisma` file.
-2. Include fields: `id`, `email`, `password`.
-
+...content...
 ---
-
 --- PROMPT FOR TASK T002 ---
-
-# Task T002: Create Database Migration
-
-**Goal:** Generate a new database migration based on the updated schema.
-
-**Instructions:**
-1. Run the command `npx prisma migrate dev --name init-user`.
-
----
-
---- PROMPT FOR TASK T003 ---
-
-# Task T003: Implement User Service
-
-**Goal:** Create the basic `UserService`.
-
-**Files to create:**
-- `src/services/user.service.ts`
-
-**Instructions:**
-1. Create a `UserService` class.
-2. Add a `createUser` method that takes an email and password.
-
+...content...
 ---
 ```
 
-**Your Workflow:**
-1. Open the generated file.
-2. Copy the first prompt (for T001).
-3. Paste into Cursor and let it run.
-4. Copy the second prompt (for T002).
-5. Paste into Cursor and let it run.
-6. Continue for all tasks.
+You then copy each section into Cursor **one prompt at a time**.
 
 ---
 
-## 6. Detailed Examples
-
-### **Example 1: Generating Prompts for a Feature**
-
-**Goal:** Get a list of prompts to implement a new feature with Cursor.
-
+## 7. Examples
+### Example 1: Generate prompts for task range
 ```bash
-/smartspec_generate_cursor_prompt.md specs/features/new-feature/tasks.md --tasks T021-T025
+/generate_cursor_prompt.md specs/user/tasks.md --tasks T001-T003
 ```
+Output: `cursor-prompt-T001-T003.md`
 
-**Result:** A single file `cursor-prompt-T021-T025.md` is created, containing five separate, easy-to-copy prompts.
-
-### **Example 2: Generating Prompts for Antigravity**
-
-**Goal:** Get prompts optimized for Google Antigravity.
-
+### Example 2: Use Antigravity mode
 ```bash
-/smartspec_generate_cursor_prompt.md specs/services/auth/tasks.md --tasks T010,T012 --antigravity
+/generate_cursor_prompt.md specs/auth/tasks.md --tasks T010,T012 --antigravity
 ```
-
-**Result:** A file `cursor-prompt-T010,T012.md` is created with prompts tailored for Antigravity's style.
+Output: prompts optimized for Antigravity
 
 ---
 
-## 7. Troubleshooting
+## 8. Troubleshooting
+| Problem | Cause | Fix |
+|---|---|---|
+| Task not found | Wrong ID | Check tasks.md |
+| Prompts too simple | tasks.md lacks detail | Add clearer steps |
+| AI becomes confused | Multiple prompts pasted at once | Paste one at a time |
 
-| Problem | Cause | Solution |
-| :--- | :--- | :--- |
-| **"Task ID not found"** | The task ID is incorrect. | Check the `tasks.md` file for the correct task ID. |
-| **Prompts are too simple** | The task descriptions in `tasks.md` are not detailed enough. | Add more detail to the task descriptions in `tasks.md` to get richer prompts. |
-| **AI is confused** | You may have pasted multiple prompts at once. | Ensure you are only copying and pasting one prompt section at a time. |
+---
+
+## 9. Final Notes
+This manual unifies the original simple workflow with SmartSpec’s full canonical workflow:
+- Registry‑aligned naming rules
+- Cross‑SPEC context resolution
+- UI JSON support
+- Cursor‑optimized formatting
+
+The result is a high‑quality, conflict‑free implementation prompt that guides Cursor toward consistent, correct output across large multi‑SPEC systems.
+

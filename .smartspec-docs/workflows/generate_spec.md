@@ -1,393 +1,378 @@
-# `/smartspec_generate_spec.md`
+# SmartSpec v5.6 — SPEC Generation Manual (Multi-Repo + Multi-Registry Aligned)
 
-**Generates a new, comprehensive SPEC document from a high-level idea, with fine-grained control over its structure and content.**
-
----
-
-## 1. Summary
-
-This is the starting point for any new project or feature in SmartSpec. It transforms a vague, high-level idea into a structured, detailed, and machine-readable blueprint (`spec.md`). This document becomes the single source of truth for the entire development lifecycle.
-
-- **What it solves:** It prevents ambiguity, ensures all critical aspects (security, performance, data models) are considered upfront, and provides the necessary context for AI agents.
-- **When to use it:** At the very beginning of a new project, or when starting a significant new feature.
+> This manual retains the original SmartSpec manual style while reflecting the **/smartspec_generate_spec v5.6** workflow.
+>
+> - All essential behaviors from earlier SPEC manuals are preserved.
+> - Enhancements focus on **task-readiness**, **multi-repo**, and **multi-registry** consistency.
+> - The manual is aligned end-to-end with:
+>   - `/smartspec_validate_index v5.6 alignment`
+>   - `/smartspec_generate_tasks v5.6`
 
 ---
 
-## 2. Usage
+# 1. Summary
+
+The `/smartspec_generate_spec` command creates a new `spec.md` or repairs a legacy spec while enforcing SmartSpec centralization rules.
+
+In v5.6, the SPEC workflow is designed to:
+
+- Produce **task-ready specs** that are clear enough to generate high-quality `tasks.md`
+- Prevent cross-SPEC and cross-repo duplication of:
+  - APIs
+  - data models
+  - glossary terms
+  - patterns
+  - UI components
+- Align naming and ownership with canonical registries
+- Support both **single-repo** and **multi-repo** architectures
+- Preserve legacy spec content in repair modes
+
+---
+
+# 2. Usage
 
 ```bash
-/smartspec_generate_spec.md <description_or_path> [options...]
+/smartspec_generate_spec <path_to_spec.md> [options...]
 ```
 
----
-
-## 3. Parameters & Options
-
-This command offers a rich set of parameters and options to tailor the generated SPEC to your exact needs.
-
-### **Primary Argument**
-
-| Name | Type | Required? | Description | Example |
-| :--- | :--- | :--- | :--- | :--- |
-| `description_or_path` | `string` | ✅ Yes | A natural language description of the feature, OR the path to an existing `spec.md` file to edit. | `"Create a new payment gateway using Stripe"` or `specs/feature/spec-004/spec.md` |
-
-### **Profile & Mode Options**
-
-These options control the overall structure and verbosity of the SPEC.
-
-| Option | Values | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `--profile` | `basic`, `backend-service`, `financial`, `full` | `full` | Selects a template with a predefined set of sections. `financial` is the most comprehensive. |
-| `--mode` | `standard`, `compact` | `standard` | `compact` generates a condensed 5-section SPEC for simple projects. |
-
-### **Content Control Options**
-
-These flags allow you to fine-tune the content of specific sections.
-
-| Option | Values | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `--security` | `none`, `basic`, `stride-basic`, `stride-full` | `auto` | Controls the level of detail in the Security section. `stride-full` is the most detailed. |
-| `--di` | `full`, `minimal`, `none` | `auto` | Controls the Dependency Injection pattern documentation. `--no-di` is a shorthand for `none`. |
-| `--performance` | `full`, `basic`, `none` | `auto` | Controls the detail of performance requirements. `basic` includes key metrics like P99, TPS, uptime. |
-| `--domain` | `healthcare`, `iot`, `logistics`, `ai`, `fintech`, `saas`, `internal` | (none) | Provides a hint to the AI about the project's domain to generate more relevant content. |
-
-## Parse Command-Line Flags
-
-### 0.1 Profile Selection
-
-```
---profile=<type>
-
-Options:
-  basic           - Minimal SPEC (Overview, Architecture, API/Data)
-  backend-service - Standard backend (DI, testing, monitoring)
-  financial       - Full security + performance (STRIDE, SLA, metrics)
-  full            - All sections (default - v4.0 compatibility)
-```
-
-### 0.2 Mode Selection
-
-```
---mode=<type>
-
-Options:
-  standard - Full SPEC with all details (default)
-  compact  - Condensed 5-section SPEC for simple projects
-```
-
-### 0.3 Security Level
-
-```
---security=<level>
-
-Options:
-  none         - No security section
-  basic        - Basic security considerations
-  stride-basic - STRIDE table (5-10 lines, key threats only)
-  stride-full  - Complete STRIDE model (100+ lines, detailed)
-  auto         - Auto-detect based on profile (default)
-```
-
-### 0.4 DI Pattern Control
-
-```
---di=<level>
-
-Options:
-  full    - Complete DI pattern documentation (default for backend)
-  minimal - Brief DI pattern mention
-  none    - No DI pattern section
-  auto    - Auto-detect based on project type (default)
-
-Shorthand:
-  --no-di  - Same as --di=none
-```
-
-### 0.5 Performance Requirements Control
-
-```
---performance=<level>
-
-Options:
-  full    - Complete performance requirements
-  basic   - Key metrics only (P99, TPS, uptime)
-  none    - No performance section
-  auto    - Auto-detect based on profile/domain (default)
-```
-
-### 0.6 Force Update Critical Sections
-
-```
---force-update=<sections>
-
-Options:
-  all                          - Allow update all critical sections
-  stride,config,di            - Allow specific sections
-  none                        - Preserve all critical sections (default)
-```
-
-### 0.7 Content Preservation Strategy (NEW v5.1)
-
-```
---preserve-strategy=<strategy>
-
-Options:
-  conservative - Preserve all existing detailed content, only add missing sections (default)
-  balanced     - Merge existing with new, prefer existing for critical sections
-  aggressive   - Regenerate all, only preserve critical sections marked with meta tags
-  
---preserve-sections=<sections>
-
-Specify sections to always preserve (comma-separated):
-  --preserve-sections=stride,performance,di,api-spec,data-model
-```
-
-### 0.8 Output Organization
-
-```
---no-backup        - Don't create backup files
---no-report        - Don't generate reports
---no-diff          - Don't generate diff report (NEW v5.1)
---output-dir=<dir> - Custom output directory (default: .smartspec/)
-```
-
-### 0.9 Validation
-
-```
---validate-consistency  - Check consistency between sections
---validate-quality      - Check content quality (NEW v5.1)
---no-validation        - Skip validation checks
-```
-
-### 0.10 Domain Hints
-
-```
---domain=<type>
-
-Options:
-  healthcare - Real-time + privacy critical
-  iot        - High throughput, telemetry
-  logistics  - High SLA requirements
-  ai         - Latency sensitive
-  fintech    - Security + performance critical
-  saas       - Scalability focused
-  internal   - Lower requirements
-```
-<br>
-
-# Domain Option Summary
-
-This document explains the meaning and purpose of each `--domain=<type>` option and how they differ. Each domain indicates the **primary operational constraints** and **system expectations** for a service.
-
-* * *
-
-## `healthcare` — Real-time + Privacy Critical
-
-**Use for:** medical systems, patient data, telemedicine
-
-**Key Characteristics:**
-
-- Extremely strict privacy requirements
-- Heavy emphasis on audit trails and access tracking
-- Real-time responsiveness for clinical decisions
-- Regulatory alignment (e.g., HIPAA-like constraints)
-
-* * *
-
-## `iot` — High Throughput, Telemetry Focused
-
-**Use for:** sensors, smart devices, industrial IoT
-
-**Key Characteristics:**
-
-- Massive volume of small telemetry events
-- Needs high ingestion throughput
-- Optimized for streaming, buffering, and batching
-- Emphasis on horizontal scalability
-
-* * *
-
-## `logistics` — High SLA Requirements
-
-**Use for:** package tracking, routing systems, fleet management
-
-**Key Characteristics:**
-
-- System downtime directly impacts physical operations
-- Requires strict uptime and reliability guarantees
-- Strong consistency for tracking data
-- Failover, retries, and idempotency are essential
-
-* * *
-
-## `ai` — Latency Sensitive
-
-**Use for:** model inference, LLM services, AI-driven user interactions
-
-**Key Characteristics:**
-
-- Low latency is critical for user experience
-- Often involves GPU/accelerator workloads
-- Requires caching, batching, and fast request handling
-- Focus on optimizing inference time
-
-* * *
-
-## `fintech` — Security + Performance Critical
-
-**Use for:** payments, wallets, credit systems, finance platforms
-
-**Key Characteristics:**
-
-- Strongest security requirements (fraud prevention, tamper-proofing)
-- High performance for time-sensitive money operations
-- Must guarantee transaction correctness
-- Requires encryption, audit logging, and compliance
-
-* * *
-
-## `saas` — Scalability Focused
-
-**Use for:** multi-tenant SaaS products, productivity tools, CRM
-
-**Key Characteristics:**
-
-- Designed to scale to many customers and tenants
-- Data isolation between tenants is essential
-- Supports configuration-driven features and expansion
-- Emphasis on maintainability and horizontal growth
-
-* * *
-
-## `internal` — Lower Requirements
-
-**Use for:** internal tools, admin dashboards, non-critical systems
-
-**Key Characteristics:**
-
-- Relaxed performance and security needs
-- Prioritizes development speed and simplicity
-- Lightweight documentation and overhead
-- Adequate but not strict validations
-
-* * *
-
-## Summary Table
-
-| Domain | Primary Focus |
-| --- | --- |
-| **healthcare** | Privacy, real-time safety |
-| **iot** | Throughput, event ingestion |
-| **logistics** | High reliability, uptime |
-| **ai** | Low-latency inference |
-| **fintech** | Security + correctness |
-| **saas** | Scalability & multi-tenancy |
-| **internal** | Simplicity & speed |
-
-* * *
-
-<br>
-
-### **File & Operation Options**
-
-These options control how the command operates and handles files.
-
-| Option | Values | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `--force-update` | `all`, `stride,config,di` | `none` | A comma-separated list of critical sections to allow overwriting when editing an existing SPEC. Use with caution. |
-| `--output-dir` | `<directory_path>` | `.smartspec/` | Specifies a custom directory for the output files. |
-| `--no-backup` | (flag) | (unset) | If set, disables the creation of backup files (`.bak`) when editing. |
-| `--no-report` | (flag) | (unset) | If set, suppresses the generation of a summary report. |
-| `--no-validation` | (flag) | (unset) | If set, skips all validation checks for consistency and completeness. |
-
----
-
-## 4. Detailed Examples
-
-### **Example 1: Creating a Simple SPEC for a Prototype**
-
-**Goal:** Create a minimal SPEC for a quick prototype.
+Examples:
 
 ```bash
-/smartspec_generate_spec.md "Create a simple user login page" --profile=basic --mode=compact
+# New spec generation
+/smartspec_generate_spec specs/core/spec-core-004-rate-limiting/spec.md --new
+
+# Legacy repair (non-destructive)
+/smartspec_generate_spec specs/legacy/spec.md --repair-legacy
+
+# Add small meta blocks safely
+/smartspec_generate_spec specs/legacy/spec.md --repair-legacy --repair-additive-meta
+
+# Multi-repo spec generation with structured config
+/smartspec_generate_spec specs/checkout/spec.md \
+  --repos-config=.spec/smartspec.repos.json \
+  --registry-roots="../Repo-A/.spec/registry,../Repo-B/.spec/registry"
+
+# Lightweight multi-repo mode
+/smartspec_generate_spec specs/checkout/spec.md \
+  --workspace-roots="../Repo-A,../Repo-B"
 ```
-
-**Result:** A short, 5-section `spec.md` is created, perfect for getting started quickly.
-
-### **Example 2: Creating a Comprehensive SPEC for a Fintech Feature**
-
-**Goal:** Create a detailed, secure, and performant SPEC for a new financial feature.
-
-```bash
-/smartspec_generate_spec.md "Build a credit purchase system with PCI DSS compliance" --profile=financial --security=stride-full --performance=full --domain=fintech
-```
-
-**Result:** A highly detailed `spec.md` with comprehensive security (STRIDE), performance, and audit sections, tailored for the fintech domain.
-
-### **Example 3: Creating a New SPEC from a Detailed User Request**
-
-**Goal:** Generate a comprehensive SPEC for a new, complex feature by providing a detailed, multi-line description directly in the command.
-
-**User's Idea (The `description_or_path` argument):**
-
-> "I need to build a real-time collaborative whiteboard feature.
-> Key requirements:
-> - Users can create, join, and share whiteboards via a unique URL.
-> - It must support basic drawing tools: pen, eraser, shapes (circle, square), and text boxes.
-> - All actions must be synced in real-time (<200ms latency) across all participants using WebSockets.
-> - The backend should be built on Node.js and the frontend in React.
-> - User authentication is handled by a separate, existing service, so we just need to validate a JWT token.
-> - All whiteboard data must be saved to a PostgreSQL database."
-
-**Command:**
-
-```bash
-/smartspec_generate_spec.md "I need to build a real-time collaborative whiteboard feature. Key requirements: - Users can create, join, and share whiteboards via a unique URL. - It must support basic drawing tools: pen, eraser, shapes (circle, square), and text boxes. - All actions must be synced in real-time (<200ms latency) across all participants using WebSockets. - The backend should be built on Node.js and the frontend in React. - User authentication is handled by a separate, existing service, so we just need to validate a JWT token. - All whiteboard data must be saved to a PostgreSQL database." --profile=full --security=stride-basic --domain=saas
-```
-
-**Result:**
-
-This command generates a highly detailed `spec.md` file. The AI uses the rich description to populate multiple sections:
-
-*   **`## 2. Functional Requirements`**: The drawing tools, sharing mechanism, and real-time sync are listed as key features.
-*   **`## 4. Technical Specifications`**: The tech stack (Node.js, React, WebSockets, PostgreSQL) is documented.
-*   **`## 5. Data Models`**: A preliminary data model for `Whiteboard` and `DrawingAction` is created.
-*   **`## 6. Security`**: The JWT validation requirement is noted under an `Authentication` subsection.
-*   **`## 8. Performance`**: The `<200ms` latency requirement is added as a key performance indicator (KPI).
-
-### **Example 4: Editing an Existing SPEC to Update Security**
-
-**Goal:** Update the security section of an existing SPEC without touching other critical parts.
-
-```bash
-/smartspec_generate_spec.md specs/services/user-profile/spec.md --force-update=stride --security=stride-full
-```
-
-**Result:** The `spec.md` file is updated in place. Only the security section is regenerated with a full STRIDE analysis. A backup (`spec.md.bak`) is created automatically.
 
 ---
 
-## 5. How to Verify the Result
+# 3. Output Location
 
-1.  **Check the file:** Ensure the `spec.md` file has been created in the correct directory.
-2.  **Review the content:** Open the file and check that the sections match the profile and options you selected (e.g., if you used `--security=stride-full`, look for a detailed STRIDE table).
-3.  **Check for completeness:** Read through the generated content. While much of it will be boilerplate, ensure it has correctly incorporated your high-level description and domain hints.
+By default, SmartSpec writes or updates:
 
----
+```text
+<same-folder-as-target>/spec.md
+```
 
-## 6. Troubleshooting
+Reports are written under:
 
-| Problem | Cause | Solution |
-| :--- | :--- | :--- |
-| **File not created** | Incorrect path or permissions issue. | Verify the path is correct and that you have write permissions in the target directory. |
-| **Critical sections not updated** | The `--force-update` flag was not used. | When editing, you must explicitly allow updates to protected sections like `security`, `di`, and `config` using `--force-update=<section_name>`. |
-| **Content is irrelevant** | The initial description was too vague or the wrong domain was used. | Re-run the command with a more detailed description and a specific `--domain` hint. |
+```text
+.spec/reports/generate-spec/
+```
 
 ---
 
-## 7. For the LLM
+# 4. Index & Registry Options
 
-- **Primary Goal:** To convert a user's natural language description and command-line options into a structured `spec.md` file.
-- **Key Entities:** `description_or_path`, `--profile`, `--mode`, `--security`, `--di`, `--performance`, `--domain`, `--force-update`.
-- **Workflow Position:** This is always the **first step** in the SmartSpec workflow.
-- **Output Artifact:** A single Markdown file (`spec.md`) which serves as the input for `/smartspec_generate_plan.md` and `/smartspec_generate_tasks.md`.
+## 4.1 SPEC_INDEX Path
+
+```bash
+--index=<path_to_SPEC_INDEX.json>
+--specindex=<path_to_SPEC_INDEX.json>   # legacy alias (recommended support)
+```
+
+Behavior:
+- Overrides automatic index detection.
+- Enables explicit cross-SPEC dependency alignment.
+
+## 4.2 Primary Registry Directory
+
+```bash
+--registry-dir=<dir>
+```
+
+Default:
+- `.spec/registry`
+
+Behavior:
+- Treats this directory as the **authoritative** registry source for shared names.
+
+---
+
+# 5. Multi-Registry Options (NEW)
+
+## 5.1 Supplemental Registry Roots
+
+```bash
+--registry-roots=<csv>
+```
+
+Purpose:
+- Load additional registry directories **read-only** for cross-repo validation.
+- Detect shared entities defined outside the current repository.
+
+Precedence rules:
+1) The primary registry (`--registry-dir`) is authoritative.
+2) Supplemental registries (`--registry-roots`) are validation sources.
+
+If an entity exists only in a supplemental registry:
+- The spec should be written with explicit **Reuse vs. Local** intent.
+- In strict safety mode, the workflow should warn against proposing a conflicting shared name.
+
+---
+
+# 6. Multi-Repo Options (NEW)
+
+These flags align with `/smartspec_validate_index` and `/smartspec_generate_tasks`.
+
+## 6.1 Workspace Roots
+
+```bash
+--workspace-roots=<csv>
+```
+
+Behavior:
+- Adds sibling repo roots to search for dependency specs.
+- Use when specs are distributed across multiple repositories.
+
+## 6.2 Repos Config
+
+```bash
+--repos-config=<path>
+```
+
+Behavior:
+- Uses a structured mapping of repo IDs to physical roots.
+- Takes precedence over `--workspace-roots`.
+
+Suggested default path:
+- `.spec/smartspec.repos.json`
+
+Recommended structure:
+
+```json
+{
+  "version": "1.0",
+  "repos": [
+    { "id": "public",  "root": "../Repo-A" },
+    { "id": "private", "root": "../Repo-B" }
+  ]
+}
+```
+
+---
+
+# 7. Registry Update Mode (Legacy-Compatible)
+
+```bash
+--mode=<recommend|additive>
+```
+
+- `recommend` (default)
+  - Do not write registries.
+  - Output suggested additions to the report.
+
+- `additive`
+  - Append missing entries only.
+  - Never delete, rename, or restructure existing entries.
+  - Should provide a diff-style summary in the report.
+
+---
+
+# 8. Safety Mode (Strict vs Dev)
+
+To avoid confusion with registry update mode, v5.6 uses a separate flag:
+
+```bash
+--safety-mode=<strict|dev>
+--strict   # legacy boolean equivalent to strict
+```
+
+- `strict` (default)
+  - Use for CI / shared branches / production-grade governance.
+  - Requires ownership clarity for shared names.
+  - Fails or blocks when cross-SPEC conflicts would create duplicate shared entities.
+  - Requires explicit cross-repo reuse notes when dependencies live in another repo.
+
+- `dev`
+  - Use for early-stage projects or local iteration.
+  - Allows best-effort spec generation.
+  - Inserts high-visibility warnings in reports.
+  - Recommends initializing missing index/registries.
+
+---
+
+# 9. UI Mode Options
+
+```bash
+--ui-mode=<auto|json|inline>
+--no-ui-json       # alias for inline
+```
+
+- `auto` (default)
+  - Resolves UI mode using precedence:
+    1) explicit flags
+    2) SPEC_INDEX category (UI)
+    3) existing `ui.json`
+    4) explicit UI JSON references in text
+    5) fallback to `inline`
+
+- `json`
+  - UI design source of truth is `ui.json`.
+  - The spec should link to `ui.json` and define UI/logic boundaries.
+
+- `inline`
+  - UI requirements remain inside `spec.md`.
+  - The spec must still state UI/UX goals and conversation with design system or tokens when defined.
+
+---
+
+# 10. What SmartSpec Generates in Spec Content
+
+When creating a new `spec.md`, SmartSpec includes the established core sections (legacy-consistent):
+
+- Overview
+- Goals & Non-Goals
+- Scope
+- Dependencies
+- Functional Requirements
+- Non-Functional Requirements
+- High-level Architecture
+- Data Models
+- API Contracts
+- Error Handling
+- Security Considerations
+- Observability
+- Testing Strategy
+- Migration / Backward Compatibility (when relevant)
+- UI Section (conditional)
+- Ownership & Reuse (recommended for task-readiness)
+
+---
+
+# 11. Task-Readiness Enhancements (v5.6)
+
+To ensure excellent `tasks.md` downstream, the spec should contain concise, explicit hints:
+
+1) **Ownership & Reuse notes**
+   - Which APIs/models/components are reused from other specs
+   - Which ones are local-only
+
+2) **Dependency clarity**
+   - Must match SPEC_INDEX when present
+
+3) **UI boundary statements**
+   - Clear separation of presentation vs domain logic
+
+4) **Lightweight module intent**
+   - Optional file or module boundaries when they prevent duplication
+
+5) **Versioning readiness**
+   - Prefer a front-matter `version:` field
+
+These additions are intentionally lightweight to avoid making specs overly complex.
+
+---
+
+# 12. Cross-Repo Anti-Duplication Guidance
+
+If a dependency is resolved from another repository:
+
+- The spec must include explicit guidance clarifying:
+  - the owner repo
+  - the canonical spec ID
+  - reuse expectations
+  - what should NOT be reimplemented locally
+
+This ensures that `/smartspec_generate_tasks` will correctly generate `reuse` tasks rather than parallel `create` tasks.
+
+---
+
+# 13. Legacy Repair Options
+
+## 13.1 Non-Destructive Repair
+
+```bash
+--repair-legacy
+```
+
+Behavior:
+- Treats the existing `spec.md` as read-only for core narrative.
+- Extracts missing structure and centralization signals.
+- Does not remove or rewrite original explanations.
+
+## 13.2 Additive Metadata
+
+```bash
+--repair-additive-meta
+```
+
+Behavior:
+- Allows insertion of a clearly labeled metadata block, for example:
+  - "Centralization & Task-Readiness Additive Metadata"
+- Must not change the meaning of any existing section.
+
+---
+
+# 14. Reports & Readiness Checklist
+
+Reports are designed to help teams judge whether a spec is ready for tasks generation.
+
+A typical report should include:
+- Index path used
+- Registry directory used
+- Supplemental registry roots used
+- Multi-repo roots used
+- Safety mode
+- UI mode
+- Extracted entities summary
+- Ownership clarity notes
+- Cross-SPEC conflict warnings
+- Cross-repo duplication risks
+- Versioning status
+- Recommended follow-up workflows
+
+---
+
+# 15. Recommended Chain for Multi-Repo Projects
+
+To keep governance consistent across two or more repos:
+
+1) `/smartspec_validate_index`  
+   - with `--repos-config` and `--registry-roots`
+
+2) `/smartspec_generate_spec`  
+   - with the same multi-repo and multi-registry flags
+
+3) `/smartspec_generate_tasks`  
+   - with the same multi-repo and multi-registry flags
+
+This ensures that shared ownership and naming rules remain consistent across the entire pipeline.
+
+---
+
+# 16. Troubleshooting
+
+| Issue | Likely Cause | Fix |
+|------|--------------|-----|
+| Spec appears to redefine shared APIs/models | Only local registry loaded | Add `--registry-roots` or define a shared registry strategy |
+| Dependencies cannot be resolved | Missing multi-repo roots | Add `--repos-config` or `--workspace-roots` |
+| Strict mode blocks spec update | Ownership unclear | Add explicit Ownership & Reuse notes or run validate_index first |
+| UI mode resolved unexpectedly | Ambiguous UI signals | Explicitly set `--ui-mode` |
+
+---
+
+# 17. Final Notes
+
+This manual reflects **/smartspec_generate_spec v5.6** and maintains the original SmartSpec manual readability.
+
+It is intentionally aligned with:
+- `/smartspec_validate_index v5.6 alignment`
+- `/smartspec_generate_tasks v5.6`
+
+For single-repo projects, the new flags are optional.
+For multi-repo platforms, they are strongly recommended to prevent duplicate implementations and naming drift.
+

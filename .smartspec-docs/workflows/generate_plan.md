@@ -1,137 +1,253 @@
-# `/smartspec_generate_plan.md`
+---
+description: SmartSpec Generate Plan Manual (v5.6)
+version: 5.6
+last_updated: 2025-12-08
+---
 
-**Generates a high-level, phased project plan from a SPEC document, complete with realistic timelines, milestones, and risk assessment.**
+# `/smartspec_generate_plan`
+
+Generate a high-level, dependency-aware `plan.md` from one or more SmartSpec specs.
+
+This v5.6 manual preserves the original planning intent:
+
+- Provide a strategic, phased roadmap.
+- Keep planning high-level; detailed execution belongs in `tasks.md`.
+- Respect centralization rules.
+
+And extends it to align with the v5.6 chain for multi-repo portfolios.
 
 ---
 
 ## 1. Summary
 
-This command transforms a detailed `spec.md` into a strategic, actionable implementation plan (`plan.md`). It serves as the bridge between specification and execution, breaking down a complex project into logical phases, estimating timelines, and defining clear milestones with exit criteria.
+`/smartspec_generate_plan`:
 
-- **What it solves:** It provides a strategic roadmap, aligns team expectations, and surfaces potential risks and resource needs before development begins. It automates the tedious process of project planning based on engineering best practices.
-- **When to use it:** After the `spec.md` is finalized and you need a high-level strategic plan before breaking it down into granular tasks.
+1) Reads target `spec.md` files.
+2) Uses `SPEC_INDEX.json` (when available) to build a dependency-first plan.
+3) Validates shared-name assumptions against registries.
+4) Produces a structured plan that can safely drive downstream tasks generation.
+5) Adds reconciliation steps when governance ambiguity is detected.
+
+In v5.6, planning is explicitly **multi-repo** and **multi-registry aware**.
 
 ---
 
 ## 2. Usage
 
 ```bash
-/smartspec_generate_plan.md <spec_path> [options...]
+/smartspec_generate_plan <spec_path> [options...]
 ```
 
----
-
-## 3. Parameters & Options
-
-### **Primary Argument**
-
-| Name | Type | Required? | Description | Example |
-| :--- | :--- | :--- | :--- | :--- |
-| `spec_path` | `string` | ✅ Yes | The full path to the source `spec.md` file that will be used to generate the plan. | `specs/features/new-login/spec.md` |
-
-### **Options**
-
-These optional flags provide more control over the generation process.
-
-| Option | Value | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `--output` | `<filename>` | `plan.md` | Specifies a custom name for the output plan file. | `--output=roadmap.md` |
-| `--specindex` | `<path>` | `.smartspec/SPEC_INDEX.json` | Points to a custom `SPEC_INDEX.json` file for resolving dependencies. | `--specindex=config/spec_index_v2.json` |
-| `--nogenerate` | (flag) | (unset) | Performs a "dry run". The AI will analyze the SPEC and output its analysis to the console without writing any files. Useful for validation. |
-
----
-
-## 4. Under the Hood: How the Plan is Generated
-
-The AI follows a sophisticated process to create a realistic and comprehensive plan:
-
-1.  **SPEC Analysis:** It parses all sections of the `spec.md`, extracting key entities like complexity, domain (e.g., `fintech`, `healthcare`), compliance needs (PCI DSS, HIPAA), and technical requirements.
-2.  **Timeline Calculation:** A formula is used to estimate the timeline:
-    - **Base Timeline:** Determined by project complexity (Low: 8 weeks, Critical: 20+ weeks).
-    - **Multipliers:** Adjusted by domain (e.g., `fintech` adds 1.3x) and the number of microservices.
-    - **Risk Buffer:** A buffer (20-35%) is added based on risk and complexity.
-3.  **Phase Distribution:** The total timeline is distributed across standard software development phases (Foundation, Core Development, Testing, Deployment).
-4.  **Milestone Generation:** For each phase, it generates detailed milestones with:
-    - **Deliverables:** Concrete outputs for the phase.
-    - **Acceptance Criteria:** A checklist to verify completion.
-    - **Quality Gates:** Measurable standards (e.g., code coverage > 85%, zero critical bugs).
-    - **Performance Validation:** Specific targets (e.g., P99 latency < 200ms).
-
-This automated process ensures consistency and incorporates best practices into every plan.
-
----
-
-## 5. Detailed Examples
-
-### **Example 1: Basic Plan Generation**
-
-**Goal:** Create a standard `plan.md` for a new backend service.
+Examples:
 
 ```bash
-/smartspec_generate_plan.md specs/services/user-profile/spec.md
+/smartspec_generate_plan specs/checkout/spec.md
+
+/smartspec_generate_plan specs/checkout/spec.md \
+  --ui-mode=auto
+
+# Multi-repo planning
+/smartspec_generate_plan specs/checkout/spec.md \
+  --repos-config=.spec/smartspec.repos.json \
+  --registry-roots="../Repo-A/.spec/registry,../Repo-B/.spec/registry" \
+  --report=detailed
 ```
-
-**Result:** A new file is created at `specs/services/user-profile/plan.md` outlining the phases, timeline, and milestones for building the service.
-
-### **Example 2: Generating a Plan with a Custom Output Name**
-
-**Goal:** Generate a plan but name it `roadmap.md` instead of the default.
-
-```bash
-/smartspec_generate_plan.md specs/services/user-profile/spec.md --output=roadmap.md
-```
-
-**Result:** The plan is generated and saved as `specs/services/user-profile/roadmap.md`.
-
-### **Example 3: Performing a "Dry Run" for Analysis**
-
-**Goal:** Analyze the SPEC and see the proposed plan in the console without creating a file.
-
-```bash
-/smartspec_generate_plan.md specs/critical/payment-gateway/spec.md --nogenerate
-```
-
-**Result:** The AI outputs a detailed analysis, including the calculated timeline, risk assessment, and proposed phases, directly to the console. No `plan.md` file is written, allowing you to review the plan before committing to it.
-
-### **Example 4: Generating a Plan for a Complex Financial SPEC**
-
-**Goal:** Generate a plan for a high-complexity fintech feature that requires PCI DSS compliance.
-
-**Prerequisite:** The file `specs/critical/payment-gateway/spec.md` exists and contains a `domain: fintech` hint and requirements for handling credit card data.
-
-```bash
-/smartspec_generate_plan.md specs/critical/payment-gateway/spec.md
-```
-
-**Result:** A highly detailed `plan.md` is generated with the following special characteristics:
-- **Increased Timeline:** The timeline is automatically extended due to the `fintech` domain factor and a larger risk buffer.
-- **Compliance Phase:** A dedicated phase for "Security & PCI DSS Compliance" is added.
-- **Detailed Milestones:** Milestones include specific deliverables and quality gates for PCI DSS, such as implementing data encryption, secure key management, and passing security scans.
 
 ---
 
-## 6. How to Verify the Result
+## 3. Inputs & Outputs
 
-1.  **Check the File:** Ensure the `plan.md` (or your custom output file) has been created in the correct directory.
-2.  **Review the Content:** Read the plan. Does it logically break down the project? Do the phases and timelines seem reasonable given the SPEC's complexity?
-3.  **Check for Specifics:** If you provided a complex SPEC (e.g., fintech), verify that the plan includes relevant compliance tasks and security-focused milestones.
+### Inputs
+
+- One primary `spec.md` path
+- Optional additional spec IDs (when supported)
+- Optional index + registries
+- (UI specs) optional `ui.json`
+
+### Outputs
+
+- `plan.md` next to the primary spec (default)
+- Optional custom output path via `--output`
+- Report: `.spec/reports/generate-plan/`
 
 ---
 
-## 7. Troubleshooting
+## 4. Centralization & Index Rules
 
-| Problem | Cause | Solution |
-| :--- | :--- | :--- |
-| **File not created** | The source `spec.md` path is incorrect, or you used `--nogenerate`. | Verify the path to the `spec.md` file is correct. If you used `--nogenerate`, this is the expected behavior. |
-| **Plan seems too simple/short** | The source `spec.md` may lack detail, complexity, or domain hints. | Enhance the `spec.md` with more specific technical requirements, data models, and domain context, then re-run the command. |
-| **Plan is not created in the right place** | The output path is always relative to the directory of the input `spec_path`. | This is by design. The `plan.md` is always co-located with its corresponding `spec.md`. |
+### Canonical Sources
+
+- `.spec/SPEC_INDEX.json` (canonical)
+- `.spec/registry/` (canonical shared naming)
+- Root `SPEC_INDEX.json` (legacy mirror)
+
+### SPEC_INDEX Auto-Detect Order
+
+1) `.spec/SPEC_INDEX.json`
+2) `SPEC_INDEX.json`
+3) `.smartspec/SPEC_INDEX.json` (deprecated)
+4) `specs/SPEC_INDEX.json`
 
 ---
 
-## 8. For the LLM
+## 5. Key Flags
 
-- **Primary Goal:** To convert a detailed `spec.md` into a high-level, phased `plan.md`.
-- **Key Entities:** `spec_path`, `--output`, `--specindex`, `--nogenerate`.
-- **Workflow Position:** This is the **second step** in the SmartSpec workflow, after `generate_spec`.
-- **Input Artifact:** `spec.md`.
-- **Output Artifact:** `plan.md` (or custom name from `--output`).
+### 5.1 Output
+
+```bash
+--output=<path>
+--dry-run
+--nogenerate          # alias if supported
+```
+
+### 5.2 Index & Registry
+
+```bash
+--index=<path>
+--specindex=<path>    # legacy alias
+--registry-dir=<dir>
+--registry-roots=<csv>
+```
+
+Registry precedence:
+
+1) `--registry-dir` is authoritative.
+2) `--registry-roots` are read-only validation sources.
+
+### 5.3 Multi-Repo
+
+```bash
+--workspace-roots=<csv>
+--repos-config=<path>
+```
+
+- `--repos-config` takes precedence over `--workspace-roots`.
+
+### 5.4 Safety
+
+```bash
+--safety-mode=<strict|dev>
+--strict                  # legacy alias
+```
+
+### 5.5 UI Mode Alignment
+
+```bash
+--ui-mode=<auto|json|inline>
+--no-ui-json              # alias for inline (if supported)
+```
+
+---
+
+## 6. How Planning Works (High-Level)
+
+1) Resolve the canonical index and registry roots.
+2) Build multi-repo search roots when configured.
+3) Identify planning scope:
+   - the target spec
+   - optional related specs by ID/category
+4) Read specs (read-only).
+5) Build or validate the dependency graph.
+6) Detect shared entities and ownership signals.
+7) Validate against the merged registry view.
+8) Produce phased plan:
+   - Foundations
+   - Shared contracts and patterns
+   - Data models and domain
+   - Services and use cases
+   - APIs and integrations
+   - Observability and security
+   - UI (conditional)
+9) Add explicit reconciliation items when governance ambiguity exists.
+
+---
+
+## 7. Multi-Repo Planning Rules (v5.6)
+
+When a dependency spec resolves to another repository:
+
+- Label it as **external dependency**.
+- Emphasize **reuse-not-rebuild**.
+- Ensure the plan does not schedule parallel creation of shared APIs/models owned elsewhere.
+
+If a critical dependency cannot be resolved in `strict` safety mode:
+
+- The plan must include an early blocking milestone:
+  - “Resolve missing dependency spec and confirm ownership boundaries.”
+
+---
+
+## 8. Multi-Registry Rules (v5.6)
+
+- The plan must treat any shared-name that exists in **any loaded registry** as a reuse candidate.
+- If the same name appears in multiple registries with inconsistent meaning:
+  - Add an explicit reconciliation milestone.
+- The plan must not instruct creation of a shared entity that would collide with any loaded registry view.
+
+---
+
+## 9. UI Addendum
+
+UI sections are included when:
+
+- Index category is `ui`, or
+- `ui.json` exists, or
+- the spec declares JSON-driven UI workflows.
+
+Planning rules:
+
+- In `json` UI mode:
+  - Plan `ui.json` validation/update before component implementation.
+  - Plan component mapping and design-token alignment.
+  - Keep business logic outside UI JSON.
+
+- In `inline` UI mode:
+  - Plan modern responsive UI implementation guided by the spec narrative.
+  - Still emphasize shared component reuse.
+
+---
+
+## 10. Best Practices
+
+### Single Repo
+
+```bash
+/smartspec_generate_plan specs/.../spec.md
+```
+
+### Two or More Repos
+
+```bash
+/smartspec_generate_plan specs/.../spec.md \
+  --repos-config=.spec/smartspec.repos.json \
+  --registry-dir=.spec/registry \
+  --registry-roots="../Repo-A/.spec/registry,../Repo-B/.spec/registry"
+```
+
+---
+
+## 11. Related Workflows
+
+- `/smartspec_validate_index`
+- `/smartspec_generate_spec`
+- `/smartspec_generate_tasks`
+- `/smartspec_generate_tests`
+- `/smartspec_sync_spec_tasks`
+
+---
+
+## 12. For the LLM
+
+When using a plan to guide tasks and implementation:
+
+- Treat registries as authoritative for shared naming.
+- Respect cross-repo ownership boundaries.
+- Do not invent new shared APIs/models when reuse is indicated.
+- If index and spec dependencies conflict, stop and reconcile.
+- Re-run planning when upstream specs change materially.
+
+---
+
+## 13. Summary
+
+`/smartspec_generate_plan v5.6` provides a governance-aware roadmap that remains compatible with legacy SmartSpec expectations while protecting multi-repo programs from duplicated shared work and naming drift.
+

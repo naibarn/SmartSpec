@@ -1,40 +1,50 @@
 ---
-description: Generate an implementation prompt for AI coding tools using SmartSpec centralization (.spec) and UI JSON addendum
-version: 5.2
+description: Generate an implementation prompt for AI coding from SmartSpec v5.6 tasks/specs with multi-repo + multi-registry alignment, UI mode support, and anti-duplication guardrails
+version: 5.6
+last_updated: 2025-12-08
 ---
 
 # /smartspec_generate_implement_prompt
 
-Generate a high-quality **implementation prompt** for AI coding tools (Claude Code, Roo Code, Kilo Code, Gemini CLI, Antigravity, etc.) that ensures consistent, conflict-resistant execution aligned with SmartSpec v5.2 centralization.
+Generate a high-quality, tool-agnostic implementation prompt that instructs an LLM to implement a spec safely and consistently using the canonical SmartSpec chain.
 
-This workflow enforces:
-- **`.spec/` as the canonical project-owned space**
-- **`.spec/SPEC_INDEX.json` as canonical index** when available
-- **`.spec/registry/` as shared source of truth**
-- `.smartspec/` as tooling-only
-- **UI specs use `ui.json` as design source of truth** for Penpot integration
+This workflow is designed to reduce implementation drift, prevent duplicate shared code creation, and preserve the detailed execution intent captured in `tasks.md`.
+
+This v5.6 document preserves the original v5.2 structure and intent while aligning with the upgraded chain:
+
+1) `/smartspec_validate_index`
+2) `/smartspec_generate_spec`
+3) `/smartspec_generate_plan`
+4) `/smartspec_generate_tasks`
+5) `/smartspec_sync_spec_tasks`
+6) `/smartspec_generate_implement_prompt`
+7) `/smartspec_implement_tasks`
+8) `/smartspec_verify_tasks_progress`
 
 ---
 
 ## What It Does
 
 - Resolves canonical index and registry locations.
-- Reads the target `spec.md` and `tasks.md`.
-- Collects dependency and shared-knowledge slices.
-- Applies UI JSON addendum rules conditionally.
-- Generates a structured prompt that:
-  - prevents re-inventing shared names
-  - prevents cross-SPEC contract drift
-  - enforces dependency-first implementation order
-  - keeps UI design separate from business logic
+- Builds a merged registry validation view (primary + supplemental).
+- Builds multi-repo search context when configured.
+- Reads `spec.md`, `tasks.md`, and related referenced artifacts.
+- Compiles cross-SPEC dependency context.
+- Applies a pre-prompt consistency gate.
+- Outputs a structured implementation prompt that:
+  - is faithful to tasks sequencing
+  - emphasizes reuse over reinvention
+  - includes UI/UX rules when relevant
+  - includes testing and verification expectations
 
 ---
 
 ## When to Use
 
-- Right before starting implementation with an AI coding agent.
-- After `tasks.md` has been generated and reviewed.
-- When coordinating across multiple specs or repos.
+- Immediately before running `/smartspec_implement_tasks`.
+- When a human engineer wants an LLM-friendly implementation brief.
+- After significant changes to `spec.md` or `tasks.md`.
+- In multi-repo programs where shared APIs/models/registries must not be duplicated.
 
 ---
 
@@ -47,31 +57,95 @@ This workflow enforces:
   - `tasks.md`
   - (UI specs) `ui.json`
 
+- Optional governance context:
+  - `.spec/SPEC_INDEX.json`
+  - `.spec/registry/*.json`
+  - supplemental registries in sibling repos
+
+- Optional supporting artifacts referenced by spec/tasks:
+  - datamodel files
+  - API contracts
+  - UI component registries
+  - architecture diagrams (if text-linked)
+
 ---
 
 ## Outputs
 
-- An implementation-ready prompt text.
-- Optional tool-specific notes (e.g., for Gemini TOML conversion by sync scripts).
+- An implementation prompt file or console output (implementation-dependent).
+- A report under:
+  - `.spec/reports/generate-implement-prompt/`
 
 ---
 
 ## Flags
 
+### Index / Registry (v5.6-aligned)
+
 - `--index` Path to SPEC_INDEX (optional)  
   default: auto-detect
 
-- `--registry-dir` Registry directory (optional)  
+- `--specindex` Legacy alias for `--index`
+
+- `--registry-dir` Primary registry directory (optional)  
   default: `.spec/registry`
 
-- `--spec` Explicit spec path (optional)
+- `--registry-roots` Supplemental registry roots (optional)
+  - Comma-separated
+  - **Read-only validation sources**
 
-- `--tasks` Explicit tasks path (optional)
+Registry precedence:
 
-- `--focus` Optional focus hint  
-  examples: `api`, `model`, `service`, `ui`, `tests`, `observability`, `security`
+1) Primary registry (`--registry-dir`) is authoritative.
+2) Supplemental registries (`--registry-roots`) are used to detect collisions and ownership ambiguity.
 
-- `--strict` Fail when canonical context is missing or conflicts are detected (optional)
+### Multi-Repo (NEW alignment)
+
+- `--workspace-roots` Comma-separated repo roots (optional)
+
+- `--repos-config` Path to structured repo config (optional)
+  - Takes precedence over `--workspace-roots`
+  - Recommended: `.spec/smartspec.repos.json`
+
+### Target Selection
+
+- `--spec` Explicit `spec.md` path (optional)
+
+- `--tasks` Explicit `tasks.md` path (optional)
+
+### UI Mode (Optional)
+
+- `--ui-mode=<auto|json|inline>`
+- `--no-ui-json` Alias for inline mode (optional)
+
+### Safety / Preview
+
+- `--safety-mode=<strict|dev>` (optional)
+  default: `strict`
+
+- `--strict` Legacy alias
+
+- `--dry-run` Print prompt/report without writing files
+
+### Tool Targeting (Optional)
+
+Use these flags when you want the generated prompt to be optimized for a specific AI coding environment.
+
+- `--kilocode`
+  - Generate a KiloCode-optimized implementation prompt format.
+  - This flag must be **non-breaking** and should not remove any tool-agnostic guardrails.
+  - When enabled, the prompt may include:
+    - a short “KiloCode Execution Notes” block
+    - explicit file-read sequencing
+    - stricter stop conditions for shared-name collisions
+
+If no tool-targeting flag is provided, the workflow outputs a **tool-agnostic** prompt.
+
+### Output
+
+- `--output` Path for prompt output (optional)
+
+- `--report` `summary|detailed` (optional)
 
 ---
 
@@ -86,40 +160,10 @@ Detection order:
 3) `.smartspec/SPEC_INDEX.json` (deprecated)  
 4) `specs/SPEC_INDEX.json` (older layout)
 
-```bash
-INDEX_PATH="${FLAGS_index:-}"
+### 0.2 Resolve Registry View
 
-if [ -z "$INDEX_PATH" ]; then
-  if [ -f ".spec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".spec/SPEC_INDEX.json"
-  elif [ -f "SPEC_INDEX.json" ]; then
-    INDEX_PATH="SPEC_INDEX.json"
-  elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".smartspec/SPEC_INDEX.json" # deprecated
-  elif [ -f "specs/SPEC_INDEX.json" ]; then
-    INDEX_PATH="specs/SPEC_INDEX.json"
-  fi
-fi
-
-if [ -n "$INDEX_PATH" ] && [ -f "$INDEX_PATH" ]; then
-  echo "✅ Using SPEC_INDEX: $INDEX_PATH"
-else
-  echo "⚠️ SPEC_INDEX not found. Prompt will be generated from local context only."
-  INDEX_PATH=""
-fi
-```
-
-### 0.2 Resolve Registry Directory
-
-```bash
-REGISTRY_DIR="${FLAGS_registry_dir:-.spec/registry}"
-
-if [ ! -d "$REGISTRY_DIR" ]; then
-  echo "⚠️ Registry directory not found at $REGISTRY_DIR"
-fi
-
-FOCUS="${FLAGS_focus:-}"
-```
+1) Load primary registry from `--registry-dir`.
+2) If provided, load `--registry-roots` as read-only.
 
 ### 0.3 Expected Registries (if present)
 
@@ -129,10 +173,7 @@ FOCUS="${FLAGS_focus:-}"
 - `critical-sections-registry.json`
 - `patterns-registry.json` (optional)
 - `ui-component-registry.json` (optional)
-
-Rules:
-- The prompt must reference canonical names from these registries where available.
-- If the implementation will require a new shared name, list it explicitly as a **pending registry addition**.
+- `file-ownership-registry.json` (optional)
 
 ---
 
@@ -140,12 +181,9 @@ Rules:
 
 Priority:
 
-1) `--spec` / `--tasks` if provided.
-2) If `INDEX_PATH` exists, select spec by ID.
-3) Otherwise, require a spec path.
-
-Default tasks location:
-- `tasks.md` next to `spec.md`.
+1) Use `--spec` / `--tasks` when provided.
+2) Otherwise infer `tasks.md` adjacent to `spec.md`.
+3) If index exists, enable spec ID resolution (implementation-dependent).
 
 ---
 
@@ -153,189 +191,200 @@ Default tasks location:
 
 - Read `spec.md`.
 - Read `tasks.md`.
-- If UI spec:
-  - detect and read `ui.json`.
+- Detect `ui.json` if present.
+- Load dependency specs when resolvable.
 
-Do not rewrite these inputs.
+The workflow must not rewrite spec/tasks.
 
 ---
 
 ## 3) Compile Cross-SPEC Context
 
-If `INDEX_PATH` exists:
+When an index exists:
 
-- Load dependency IDs for the target spec.
-- Summarize the minimum required knowledge from dependencies:
-  - shared API prefixes
-  - shared models
-  - cross-cutting security/observability constraints
+- Load upstream dependency specs.
+- Load cross-cutting core specs referenced by category or registry relationships.
 
-If registries exist:
+In multi-repo mode:
 
-- Extract only relevant slices of:
-  - APIs
-  - models
-  - glossary terms
-  - critical sections
-  - patterns
-
-Keep the prompt compact and actionable.
+- Resolve dependency specs across `--repos-config` or `--workspace-roots`.
+- Mark them as **external owners** where applicable.
 
 ---
 
 ## 4) Consistency Gate (Pre-Prompt)
 
-Validate before generating the final prompt:
+Before generating the prompt, confirm:
 
-- Task dependency order does not conflict with SPEC_INDEX.
-- Names in tasks/spec match registries (when present).
-- No duplicated/conflicting namespace is implied.
+1) **Dependencies are declared** and not contradictory between spec and index.
+2) **Shared names** referenced in spec/tasks are not colliding with any loaded registry view.
+3) **Ownership & Reuse** instructions exist for high-impact shared APIs/models/terms.
+4) UI mode is resolvable when UI addendum applies.
 
-In `--strict` mode:
-- Stop and list conflicts with suggested resolutions.
+In `--safety-mode=strict`:
+
+- If ownership ambiguity is detected for a shared name that appears in supplemental registries but not in the primary registry, the workflow must:
+  - add an explicit “ownership clarification required” block in the prompt
+  - strongly discourage local creation of a new shared definition
 
 ---
 
 ## 5) UI JSON Addendum (Conditional)
 
-Apply when **any** of these are true:
-- Spec category is `ui` in the index.
-- `ui.json` exists in the spec folder.
-- The spec explicitly mentions Penpot/UI JSON workflow.
+Apply when any of these are true:
 
-Prompt rules:
+- Spec category is `ui` in SPEC_INDEX
+- `ui.json` exists
+- The spec declares a JSON-driven UI workflow
 
-1) Treat `ui.json` as **design-owned**.
-2) Do **not** embed business logic inside UI JSON.
-3) Separate work into three tracks:
-   - UI design alignment (with UI team)
-   - Component implementation
-   - Business logic/services
-4) If `ui-component-registry.json` exists:
-   - component names must match registry.
-5) If the project does not use UI JSON:
-   - do not fail
-   - keep UI instructions text-based in `spec.md`.
+UI rules to add into the prompt:
+
+1) `ui.json` is the design source of truth in JSON mode.
+2) Map UI nodes/frames to components.
+3) Use `ui-component-registry.json` when present.
+4) Keep business logic out of UI JSON.
+5) Ensure the UI is modern, consistent, and coherent with project-wide patterns.
 
 ---
 
-## 6) Prompt Structure (Tool-Agnostic)
+## 6) KiloCode Mode Switching Strategy (v5.6)
 
-The generated implementation prompt must follow this structure:
+When `--kilocode` is enabled, the generated prompt must explicitly instruct the agent to **actively switch between KiloCode modes** to maximize quality and reduce drift.
 
-1) **Role & Objective**
-   - You are implementing SmartSpec: `<SPEC_ID> - <TITLE>`
+This section restores and expands the intent implied in the legacy manual (v5.2) that KiloCode execution benefits from Orchestrator-driven subtask management.
 
-2) **Canonical Context**
-   - SPEC_INDEX path used (or NONE)
-   - Registry directory used (or NONE)
+### 6.1 Recommended Mode Flow
 
-3) **Non-Negotiable Constraints**
-   - Do not invent new shared names when registries exist.
-   - Do not change public contracts without a migration plan.
-   - Respect dependency order.
+The prompt should recommend this default order for most SmartSpec implementations:
 
-4) **Spec Summary**
-   - Scope
-   - Key FRs
-   - Key NFRs
+1) **Architect**
+   - Read spec, tasks, index, and registries.
+   - Summarize constraints, dependencies, and reuse boundaries.
+   - Confirm UI mode (`json` vs `inline`) when applicable.
 
-5) **Dependencies**
-   - What must already exist
-   - What must be integrated
+2) **Orchestrator** (primary execution coordinator)
+   - Build the master execution map using the existing SmartSpec task IDs.
+   - Prepare a live checklist that anticipates subtask numbering.
 
-6) **Canonical Names (Do Not Rename)**
-   - APIs
-   - Models
-   - Terms
-   - Patterns
+3) **Code**
+   - Implement with tight adherence to the Orchestrator plan.
 
-7) **Implementation Tasks (Ordered)**
-   - Derived from `tasks.md`
+4) **Debug**
+   - Fix failing tests and contract mismatches.
 
-8) **Testing Expectations**
-   - Unit / Integration / Contract / Security / Performance
-   - UI tests when applicable
+5) **Ask** (as-needed)
+   - Clarify ambiguous requirements or cross-repo ownership conflicts.
 
-9) **UI JSON Rules (if applicable)**
-   - Mapping constraints
-   - Logic separation
+### 6.2 Per-Task Orchestrator Switch (Critical for Subtasks)
 
-10) **Open Questions / Pending Registry Additions**
+KiloCode can trigger reliable **automatic subtask decomposition** only when the agent is operating in **Orchestrator** mode.
 
-11) **Definition of Done**
+Therefore, when `--kilocode` is enabled, the prompt must instruct a **repeatable per-task loop**:
 
----
+1) **Switch to Orchestrator** before starting each top-level SmartSpec task.
+2) In Orchestrator, restate the task ID and scope, then request subtask breakdown using the SmartSpec numbering convention.
+   - Example intent:
+     - “For task `T0001`, break into `T0001.1`, `T0001.2`, … aligned with the spec and registries.”
+3) Confirm the subtasks match:
+   - dependencies
+   - ownership/reuse boundaries
+   - registry naming
+   - UI mode constraints (if applicable)
+4) **Switch to Code** to implement the approved subtasks in order.
+5) **Return to Orchestrator** when moving to the next top-level task.
 
-## 7) Example Implementation Prompt Template
+This loop prevents the LLM from skipping decomposition and reduces drift during long implementations.
 
-```text
-You are implementing SmartSpec: <SPEC_ID> - <TITLE>.
+### 6.3 Subtask Behavior
 
-Canonical context:
-- SPEC_INDEX: <INDEX_PATH or NONE>
-- Registry dir: <REGISTRY_DIR or NONE>
+- **Default behavior in v5.6 remains: subtask decomposition ON** for KiloCode prompts.
+- Use `--nosubtasks` only when:
+  - tasks are already highly granular, or
+  - the implementation environment cannot handle multi-level checklists.
 
-Hard rules:
-- Use canonical names from registries when available.
-- Do not introduce new shared API/model/term names without listing them under "Pending Registry Additions".
-- Respect dependency order from SPEC_INDEX.
-- Do not alter public contracts without a phased migration plan.
+### 6.3 Anti-Duplication Emphasis for Orchestrator
 
-Spec objectives:
-- <short bullet list>
+The prompt should explicitly remind Orchestrator to:
 
-Dependencies:
-- <dep-1> (why it matters)
-- <dep-2> ...
-
-Canonical names to use:
-- APIs: <list>
-- Models: <list>
-- Terms: <list>
-- Patterns: <list>
-
-Implementation order (from tasks.md):
-1) <task group 1>
-2) <task group 2>
-...
-
-Testing:
-- Unit: ...
-- Integration: ...
-- Contract: ...
-- Security: ...
-- Performance: ... (if SLAs exist)
-
-UI (only if category=ui or ui.json exists):
-- Treat ui.json as design-owned.
-- Map UI nodes to components using registry names when available.
-- Keep business logic outside UI JSON.
-
-Pending Registry Additions:
-- <item 1> (evidence from spec/tasks)
-
-Definition of Done:
-- All tasks completed
-- No registry drift introduced
-- Tests green
-- UI JSON rules satisfied when applicable
-```
+- Load and respect the merged registry view.
+- Treat names found in any registry as existing shared assets.
+- Avoid scheduling creation of new shared APIs/models/terms when ownership appears external.
 
 ---
 
-## 8) Recommended Follow-ups
+## 7) Prompt Structure (Tool-Agnostic)
 
-- `/smartspec_generate_cursor_prompt` (if you want a Cursor-tailored variant)
+A v5.6 implementation prompt should contain:
+
+1) **Purpose & scope**
+2) **Files to read first** (must include):
+   - target `spec.md`
+   - target `tasks.md`
+   - dependency specs
+   - relevant registries
+   - any referenced datamodel or API contract files
+3) **Non-negotiable constraints**
+   - reuse-over-rebuild rules
+   - registry alignment rules
+   - cross-repo owner boundaries
+4) **Task execution order**
+   - follow task IDs and subtask numbering
+5) **Implementation guidance**
+   - architecture boundaries
+   - data and API rules
+6) **Testing expectations**
+7) **Verification and acceptance checks**
+8) **Stop conditions**
+   - when tasks contradict specs
+   - when a shared-name collision is detected
+
+---
+
+## 7) Anti-Duplication Guardrails (v5.6)
+
+The prompt must explicitly instruct the LLM to:
+
+- Treat names found in any loaded registry view as **existing shared assets**.
+- Prefer calling or importing shared code from owner specs.
+- Avoid creating new parallel datamodels, API registries, or policy rules when ownership is already declared elsewhere.
+- Search for existing utilities or patterns created by upstream specs before writing new code.
+
+---
+
+## 8) Example Implementation Prompt Template
+
+The workflow may output a template like the following (illustrative):
+
+- Read these files first:
+  - `<spec.md>`
+  - `<tasks.md>`
+  - `<dependency spec.md>`
+  - `.spec/SPEC_INDEX.json`
+  - `.spec/registry/api-registry.json`
+  - `.spec/registry/data-model-registry.json`
+  - `.spec/registry/glossary.json`
+  - `ui.json` (if present)
+
+- Follow tasks in order. Use the exact task/subtask IDs as headings in your implementation notes.
+- If a task says “reuse” or references an owner spec, do not create a new implementation.
+- If you detect a naming collision with any registry, stop and report.
+
+---
+
+## 9) Recommended Follow-ups
+
+- `/smartspec_implement_tasks`
 - `/smartspec_generate_tests`
 - `/smartspec_verify_tasks_progress`
-- `/smartspec_sync_spec_tasks --mode=additive` (after review)
+- `/smartspec_fix_errors`
+- `/smartspec_sync_spec_tasks`
 
 ---
 
 ## Notes
 
-- This workflow ensures AI agents receive the same centralized truth your team uses.
-- `.spec/` remains the canonical project-owned source of shared knowledge.
-- Root `SPEC_INDEX.json` is treated as a legacy mirror.
+- This workflow is a **prompt generator**, not an implementation engine.
+- Its primary purpose is to preserve the clarity of `tasks.md` and prevent LLM drift.
+- Multi-repo and multi-registry flags are optional in single-repo environments but strongly recommended for platform programs.
+- Do not remove or compress essential explanatory content originating from tasks/specs when assembling the final prompt.
 

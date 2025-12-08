@@ -99,7 +99,7 @@ CRITICAL (3):
   Confidence: 95%
   
   [Show fix] [Skip] [Skip all critical]
-
+  
 ✗ src/models/transaction.model.ts:12
   TS2304: Cannot find name 'TransactionStatus'
   Fix: Import TransactionStatus from './types'
@@ -224,23 +224,9 @@ CRITICAL (3):
   TS2345: Argument type mismatch
   Would fix: Cast userId to number using parseInt()
   
-  Before:
-    const score = calculateScore(userId);
-  
-  After:
-    const score = calculateScore(parseInt(userId));
-
 ✗ src/models/transaction.model.ts:12
   TS2304: Cannot find name 'TransactionStatus'
   Would fix: Add import statement
-  
-  Before:
-    status: TransactionStatus;
-  
-  After:
-    import { TransactionStatus } from './types';
-    ...
-    status: TransactionStatus;
 
 ...
 
@@ -273,9 +259,16 @@ CRITICAL (3):
 
 ### Phase 1: Detect Errors (Spec-Scoped)
 
-**1. Load SPEC_INDEX.json**
+**1. Load SPEC_INDEX.json (Canonical-first)**
+
+SmartSpec v5.2 resolves the index in this order unless `--index` is provided:
+
+1) `.spec/SPEC_INDEX.json` (canonical)  
+2) `SPEC_INDEX.json` at repo root (legacy mirror)  
+3) `.smartspec/SPEC_INDEX.json` (deprecated fallback)
+
 ```bash
-cat .smartspec/SPEC_INDEX.json
+cat .spec/SPEC_INDEX.json
 ```
 
 Extract scoped files for the spec:
@@ -459,7 +452,7 @@ function getPayment(): Payment {
 
 // After
 function getPayment(): Payment | null {
-  return null;  // ✅ OK
+  return null;
 }
 ```
 
@@ -475,14 +468,14 @@ TS2339: Property 'score' does not exist on type 'CreditResult'
 **Fix:**
 ```typescript
 // Before
-export interface CreditResult {
+interface CreditResult {
   userId: string;
 }
 
 // After
-export interface CreditResult {
+interface CreditResult {
   userId: string;
-  score: number;  // ✅ Added
+  score: number;
 }
 ```
 
@@ -498,19 +491,19 @@ TS2554: Expected 2 arguments, but got 1
 **Fix:**
 ```typescript
 // Before
-const result = calculateInterest(amount);
+calculateInterest(amount);
 
 // After
-const result = calculateInterest(amount, rate);
+calculateInterest(amount, rate);
 ```
 
 ---
 
 ## 7. Confidence Levels
 
-| Confidence | Description | Action |
-|-----------|-------------|--------|
-| **100%** | Simple, safe fixes (imports, typos) | Auto-apply |
+| Confidence | Fix Type | Action |
+| :--- | :--- | :--- |
+| **100%** | Simple fixes (imports, typos) | Auto-apply |
 | **90-95%** | Type casts, null checks | Auto-apply with review |
 | **70-80%** | Complex type changes | Ask for confirmation |
 | **<70%** | Uncertain fixes | Show suggestion, manual review |
@@ -521,7 +514,17 @@ const result = calculateInterest(amount, rate);
 
 ### Backup Before Fixing
 
-Before making any changes, create backup:
+Before making any changes, create a backup.
+
+**Default backup location (v5.2):**
+```
+.spec/backups/
+  ├── credit.service.ts.backup-20240115-103000
+  ├── payment.service.ts.backup-20240115-103000
+  └── ...
+```
+
+**Legacy backup location (older versions / transitional projects):**
 ```
 .smartspec/backups/
   ├── credit.service.ts.backup-20240115-103000
@@ -531,6 +534,10 @@ Before making any changes, create backup:
 
 **Restore from backup:**
 ```bash
+# v5.2 default
+cp .spec/backups/credit.service.ts.backup-20240115-103000 src/services/credit.service.ts
+
+# legacy fallback
 cp .smartspec/backups/credit.service.ts.backup-20240115-103000 src/services/credit.service.ts
 ```
 
@@ -544,15 +551,11 @@ After each fix:
 
 ### Rollback on Failure
 
-If fix introduces new errors:
-```
-⚠️  Fix introduced new errors:
-  - TS2322: Type mismatch at line 47
-
-Rolling back changes...
-✅ Rolled back to previous state
-💡 Manual review needed for this error
-```
+If a fix creates new errors:
+1. Rollback the fix immediately
+2. Mark as "Failed" in report
+3. Add to "Requires Manual Fix" list
+4. Continue with other fixes
 
 ---
 
@@ -560,16 +563,15 @@ Rolling back changes...
 
 ### Execution Time
 
-| Project Size | Files in Spec | Errors | Time |
-|-------------|---------------|--------|------|
-| Small | 5 files | 10 errors | 10-20s |
-| Medium | 10 files | 30 errors | 30-60s |
-| Large | 20 files | 50+ errors | 1-2 min |
+Typical performance (spec-scoped):
+- **Small spec (1-5 files):** 5-15 seconds
+- **Medium spec (6-20 files):** 15-45 seconds
+- **Large spec (20+ files):** 45-120 seconds
 
-**Why so fast?**
-- Only scans files in spec scope (not entire project)
-- Parallel error detection
-- Cached TypeScript compilation
+Performance depends on:
+- Language tooling (TypeScript, ESLint)
+- Project size
+- Machine resources
 
 ---
 
@@ -592,10 +594,7 @@ Rolling back changes...
 
 ```bash
 # Preview fixes first
-/smartspec_fix_errors specs/feature/spec-004 --dry-run
-
-# Review proposed fixes, then apply
-/smartspec_fix_errors specs/feature/spec-004
+/smartspec_fix_errors specs/critical/payment-gateway --dry-run
 ```
 
 ### 3. Verify After Fixing
@@ -612,15 +611,27 @@ Rolling back changes...
 
 ```bash
 # Fix errors
-/smartspec_fix_errors specs/feature/spec-004 --auto-fix
+/smartspec_fix_errors specs/feature/spec-004
 
 # Review changes
-git diff
+/git diff
 
 # Commit
-git add .
-git commit -m "fix: Auto-fix errors in spec-004"
+/git add . && git commit -m "fix: resolve errors for spec-004"
 ```
+
+### 5. Respect UI JSON Ownership (UI Specs)
+
+If your spec is categorized as **UI** and uses `ui.json` as the design source of truth:
+
+- Treat `ui.json` as **design-owned**.
+- `smartspec_fix_errors` should focus on code files listed in the SPEC_INDEX entry.
+- Do **not** auto-edit `ui.json` unless the tasks explicitly instruct a change that belongs to the engineering side (rare).
+- If errors are caused by UI-to-component mismatches, prefer:
+  1) updating the UI component registry, or  
+  2) adding a dedicated binding/refactor task.
+
+This keeps the Penpot-driven workflow stable while still allowing engineering to resolve runtime and type errors safely.
 
 ---
 
@@ -628,53 +639,65 @@ git commit -m "fix: Auto-fix errors in spec-004"
 
 ### Issue: Too many false positive fixes
 
-**Solution:** Use lower confidence threshold or manual review:
-```bash
-/smartspec_fix_errors specs/feature/spec-004 --dry-run
-```
+**Cause:** The workflow may misinterpret complex architectural patterns with limited context.
+
+**Solution:**
+1. Re-run with `--interactive` (default) to review each fix.
+2. Use `--file` to limit scope.
+3. Consider adding clarifying comments or types in the code.
 
 ### Issue: Fix introduces new errors
 
-**Solution:** The workflow automatically rolls back. Review manually:
-```
-⚠️  Fix introduced new errors - rolled back
-💡 Manual review needed for: src/services/credit.service.ts:45
-```
+**Cause:** The proposed fix may be correct locally but breaks related code.
+
+**Solution:**
+1. Use backups to rollback.
+2. Re-run with `--severity critical` first.
+3. Consider manual fix for this case.
 
 ### Issue: SPEC_INDEX.json outdated
 
-**Solution:** Re-index first:
-```bash
-/smartspec_reindex_specs --spec specs/feature/spec-004
-/smartspec_fix_errors specs/feature/spec-004
-```
+**Cause:** Index may not reflect current file list.
+
+**Solution:**
+1. Run reindex for the spec:
+   ```bash
+   /smartspec_reindex_specs --spec specs/feature/spec-004
+   ```
+2. Re-run fix:
+   ```bash
+   /smartspec_fix_errors specs/feature/spec-004
+   ```
 
 ---
 
 ## 12. Related Workflows
 
-After fixing errors, continue with:
+Before fixing errors:
+- **`/smartspec_reindex_specs`** - Ensure the file registry is accurate
+- **`/smartspec_verify_tasks_progress`** - Identify failing tasks and error scope
 
-- **`/smartspec_generate_tests`** - Generate tests for fixed code
+After fixing errors:
+- **`/smartspec_generate_tests`** - Add missing tests
 - **`/smartspec_refactor_code`** - Improve code quality
-- **`/smartspec_verify_tasks_progress`** - Verify all errors are fixed
+- **`/smartspec_implement_tasks`** - Continue implementing remaining tasks
 
 ---
 
 ## 13. Summary
 
-The `smartspec_fix_errors` workflow is an intelligent code debugger that automatically detects and fixes errors in spec-scoped files. By focusing only on files related to a specific spec, it's **10x faster** than project-wide error checking.
+The `smartspec_fix_errors` workflow is a spec-scoped auto-debugger that finds and resolves compilation, type, and linting errors safely. It is designed to keep large projects moving without losing control of architecture or spec boundaries.
 
 **Key Benefits:**
-- ✅ Spec-scoped for speed (only 5-10 files vs 500+ files)
-- ✅ Intelligent error detection (TypeScript + ESLint)
-- ✅ Automatic fix generation with confidence scoring
-- ✅ Safety features (backup, verification, rollback)
-- ✅ Multiple severity levels and filtering options
-- ✅ Dry run mode for preview
+- ✅ Spec-scoped error detection
+- ✅ Severity-based prioritization
+- ✅ Safe fix generation with confidence scoring
+- ✅ Safety features (backups + rollback)
+- ✅ Works smoothly with centralization and UI addendum rules
 
 **Next Steps:**
-1. Run `/smartspec_fix_errors <spec_directory>` to fix errors
-2. Review proposed fixes
-3. Verify with `/smartspec_verify_tasks_progress`
-4. Continue with `/smartspec_generate_tests` or `/smartspec_refactor_code`
+1. Reindex if required: `/smartspec_reindex_specs --spec <spec_dir>`
+2. Fix errors: `/smartspec_fix_errors <spec_dir>`
+3. Verify progress: `/smartspec_verify_tasks_progress <tasks.md>`
+4. Generate tests or refactor as needed
+

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SmartSpec Installer (Project-Local)
 # Platform: Linux / macOS (bash)
-# Version: 5.6
+# Version: 5.6.1
 #
 # This script:
 #   - Downloads the SmartSpec distribution repo
@@ -17,8 +17,8 @@
 #       .gemini/commands
 #
 # NOTE:
-#   - Set SMARTSPEC_REPO_URL and SMARTSPEC_REPO_BRANCH as needed, or
-#     edit defaults below.
+#   - The distribution repo is fixed to https://github.com/naibarn/SmartSpec
+#   - You may override the branch with SMARTSPEC_REPO_BRANCH if needed.
 
 set -euo pipefail
 
@@ -26,7 +26,9 @@ set -euo pipefail
 # Configuration
 ###############################
 
-: "${SMARTSPEC_REPO_URL:=https://github.com/your-org/SmartSpec.git}"
+# Fixed distribution repository (do NOT override)
+SMARTSPEC_REPO_URL="https://github.com/naibarn/SmartSpec.git"
+# Branch may be overridden via environment but defaults to main
 : "${SMARTSPEC_REPO_BRANCH:=main}"
 
 SMARTSPEC_DIR=".smartspec"
@@ -80,8 +82,6 @@ copy_dir() {
     return 0
   fi
   mkdir -p "$dst"
-  # Copy contents of src into dst
-  # shellcheck disable=SC2115
   cp -R "$src"/. "$dst"/
 }
 
@@ -90,10 +90,10 @@ copy_dir() {
 ###############################
 
 log "============================================="
-log "🚀 SmartSpec Installer (Linux/macOS) v5.6"
+log "🚀 SmartSpec Installer (Linux/macOS) v5.6.1"
 log "============================================="
 log "Project root: $(pwd)"
-log "Repo:         ${SMARTSPEC_REPO_URL} (${SMARTSPEC_REPO_BRANCH})"
+log "Repo:         ${SMARTSPEC_REPO_URL} (branch: ${SMARTSPEC_REPO_BRANCH})"
 log ""
 
 ###############################
@@ -178,7 +178,6 @@ else
   sync_to() {
     local src="$WORKFLOWS_DIR" dst="$1"
     if [ ! -d "$dst" ]; then
-      # create the directory so the user can start using it
       mkdir -p "$dst"
     fi
     copy_dir "$src" "$dst"

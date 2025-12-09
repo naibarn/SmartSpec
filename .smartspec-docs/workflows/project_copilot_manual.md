@@ -232,6 +232,20 @@ In each folder we have:
 > After these tasks files are created, you can run the copilot again to reassess progress (including implementation tasks, CI, security and UI readiness).
 
 ---
+## 6.5 Example answer (shortened)
+```
+/smartspec_project_copilot \
+  --aspect=roadmap \
+  --lang=th \
+  --spec-path=specs/core/spec-core-UM-001/spec.md \
+  "Summarize the remaining unfinished work for user management, and respond using the following structure:
+   1) Status summary
+   2) Critical issues & remediation
+   3) Timeline / phased plan
+   4) Next SmartSpec commands to use (with runnable example /smartspec_... commands)
+   5) Weakness & Risk Check"
+```
+
 
 # 7. Using with Kilo (`--kilocode`)
 

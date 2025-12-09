@@ -136,6 +136,32 @@ SmartSpec includes specialized profiles for different domains:
 
 ---
 
+## 🧭 /smartspec_project_copilot – Project-Level Entry Point
+
+`/smartspec_project_copilot` is the **recommended first command** when you open a project with SmartSpec.
+
+Instead of starting directly from a single SPEC or workflow, this copilot acts as a **project-level navigator** that helps you:
+
+- **Understand the current project state**  
+  - Scan existing SPECs, plans, tasks, and registries.
+  - Identify which parts of the SmartSpec chain are already in place.
+
+- **Choose the right next workflow**  
+  - Suggest when to run `/smartspec_generate_spec`, `/smartspec_generate_plan`, `/smartspec_generate_tasks`, or `/smartspec_implement_tasks`.
+  - Help you decide between automated vs. manual / “vibe coding” flows.
+
+- **Guide new contributors**  
+  - Explain how the project is structured.
+  - Point to the most relevant specs and workflows to start from.
+
+Use it when you **don’t want to think about which command to run first** – just ask the project copilot to guide you.
+
+👉 **Full manual:**  
+See the detailed documentation in:  
+[`.smartspec-docs/workflows/project_copilot_manual.md`](.smartspec-docs/workflows/project_copilot_manual.md)
+
+---
+
 ## 📖 Core Commands
 
 Each command corresponds to a workflow that you can customize. Click on a command to see its detailed documentation.

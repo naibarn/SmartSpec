@@ -1,6 +1,10 @@
 ---
-
-## manual: /smartspec\_project\_copilot version: 5.7 compatible\_workflow\_versions: 5.6.x language: en role: User guide for Project-level advisor / workflow router / roadmap planner
+manual: /smartspec_project_copilot
+version: 5.7
+compatible_workflow_versions: 5.6.x
+language: en
+role: User guide for project-level SmartSpec copilot
+---
 
 # 1. Overview
 

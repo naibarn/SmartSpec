@@ -168,6 +168,7 @@ Each command corresponds to a workflow that you can customize. Click on a comman
 
 | Command | Description | Full Docs |
 | :--- | :--- | :--- |
+| `/smartspec_project_copilot.md` | this copilot acts as a **project-level navigator** Understand the current project state. | [**[Details]**](.smartspec-docs/workflows/project_copilot_manual.md) |
 | `/smartspec_generate_spec.md` | Create a structured SPEC from an idea. | [**[Details]**](.smartspec-docs/workflows/generate_spec.md) |
 | `/smartspec_generate_plan.md` | Generate a high-level implementation plan. | [**[Details]**](.smartspec-docs/workflows/generate_plan.md) |
 | `/smartspec_generate_tasks.md` | Break the plan into granular tasks. | [**[Details]**](.smartspec-docs/workflows/generate_tasks.md) |

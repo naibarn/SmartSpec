@@ -1,461 +1,607 @@
----
-workflow: /smartspec_project_copilot
-version: 5.6.2
-role: project-level governance / advisor / workflow router / roadmap planner
+name: /smartspec_project_copilot
+version: 5.6.3
+role: project-level governance/advisor/router
 write_guard: NO-WRITE
-status: stable
-compatible_kb:
-  - SmartSpec Workflow & Manual Guardrails v5.6+ (this KB)
+purpose: Provide portfolio/project-level status summaries and recommend safe next SmartSpec workflows & commands, using read-only RAG over SmartSpec artifacts, registries, and reports. Never modify specs, tasks, code, or registries.
 ---
 
-# 1. Summary
+## 1) Summary
 
-`/smartspec_project_copilot` is a **project-level copilot** for SmartSpec.
-It reads SmartSpec artifacts, registries, and reports, then answers
-natural-language questions such as:
+`/smartspec_project_copilot` is a **project-level SmartSpec copilot**.
 
-- "How far along is this project?"
-- "Which services are ready for release?"
-- "What should we do next after this CI/security/UI report?"
-- "Which SmartSpec workflows should I run next?"
+It reads SmartSpec artifacts (specs, plans, tasks, indexes, registries, reports) across a repository or workspace and answers natural-language questions like:
 
-This workflow is **governance-only**:
-- It **does not modify** code, specs, tasks, or registries.
-- It **summarises**, **assesses progress**, and **recommends** concrete
-  next steps and ready-to-run commands.
-- Under `--kilocode` it uses **Kilo Orchestrator mode** conceptually to
-  analyse intent, plan chunked reads, and combine summaries into advice.
+- "How far along is this project/service/domain?"
+- "Which parts are ready for production, and which are blocked?"
+- "What should we do next, and which SmartSpec workflows should we run?"
+
+It is **governance- and advisory-only**:
+
+- `write_guard: NO-WRITE` — it **never edits** specs, tasks, plans, code, or registries.
+- It may optionally emit **its own summary/report** (for example under `.spec/reports/project_copilot/`) when the platform orchestrator chooses to persist outputs, but the copilot itself must treat all existing project artifacts as read-only.
+
+Core responsibilities:
+
+- Provide **status & progress summaries** per project/domain/service across phases:
+  - Spec → Plan → Tasks → Implementation/CI → Security/Quality → UI → Release.
+- Highlight **critical issues & risks**:
+  - missing or inconsistent specs, plans, or tasks;
+  - broken or unhealthy SPEC_INDEX and registries;
+  - missing or failing security/CI/UI reports;
+  - web/AI/data guardrail gaps (React/Next.js/RSC/Node/npm, AI/LLM, sensitive data).
+- Recommend **next SmartSpec workflows & example commands** to move forward safely.
+- Respect **multi-repo and multi-registry ownership**:
+  - never encourage duplicating shared APIs/models/components;
+  - always emphasise reuse/integration over reimplementation.
+- Obey **KB guardrails** (RAG sources, chunked reading, Kilo semantics, design systems, AI/data safety).
+
+> This workflow is the **front door** into a SmartSpec-enabled project. It is a
+> router, not an executor: it helps you decide *what to do next* and *which
+> workflow(s) to run*, rather than performing changes itself.
 
 
-# 2. When to Use
+### 1.1 v5.6.2 (baseline, retained)
+
+- Defined `/smartspec_project_copilot` as:
+  - project-level governance & advisor;
+  - NO-WRITE;
+  - Kilo-friendly (Orchestrator + chunked reading).
+- Established RAG sources under `.spec/`, `.smartspec/`, and `.smartspec-docs/`.
+- Introduced progress + "what next" answer patterns.
+
+### 1.2 v5.6.3 (patch-level tightening)
+
+All changes are **additive** — no flags or behaviours are removed.
+
+- Adds a **fixed answer layout** for status/roadmap questions:
+  1. Status summary
+  2. Critical issues & remediation
+  3. Timeline / phased plan (optional but recommended)
+  4. Recommended SmartSpec workflows & commands
+  5. Weakness & Risk Check
+- Tightens **command correctness**:
+  - Before recommending any CLI command, the copilot must inspect the
+    corresponding workflow spec under `.smartspec/workflows/` and manual under
+    `.smartspec-docs/workflows/` (when present) to confirm the command name and
+    flags.
+  - It must **not invent CLI names or flags** that do not appear in those
+    sources. If unsure, it should describe the action in words rather than
+    guessing a command.
+- Clarifies **chunked reading & context limits**:
+  - RAG over project artifacts must be done via chunked reading (≈300–600 lines
+    per chunk, ≤ ~800 lines total input per LLM step) with summarisation.
+- Clarifies **Kilo semantics**:
+  - Orchestrator handles planning & chunk routing; Code-mode only reads and
+    summarises chunks (NO-WRITE).
+- Aligns with v5.6.x web/AI/data guardrails:
+  - copilot must surface relevant risks and point to appropriate workflows
+    (e.g. web-stack guardrails, AI/LLM safety, data-sensitivity workflows),
+    rather than suggesting ad-hoc scripts.
+
+---
+
+## 2) When to Use
 
 Use `/smartspec_project_copilot` when you:
 
-- Want a single entry point to understand project status without learning
-  each `/smartspec_*` workflow.
-- Want to know progress by service/domain (e.g., "billing", "checkout")
-  across phases (spec, plan, tasks, CI, security, UI, release).
-- Need help interpreting dense SmartSpec reports and deciding what to do next.
-- Want a short-term roadmap for a feature or product based on current
-  SmartSpec artifacts and reports.
-- Want natural-language routing to the right SmartSpec workflows, with
-  example commands and flags.
+- Are new to a SmartSpec-enabled repo and want a **high-level orientation**.
+- Want to know **project or domain progress** in SmartSpec terms:
+  - How many specs exist? Are they healthy?
+  - Which specs have plans and tasks?
+  - Where are CI/security/UI guardrails in place or missing?
+- Want to understand **what to do next**:
+  - Which SmartSpec workflows should be run, in what order, and why?
+- Are looking at a SmartSpec report (e.g., index validation, portfolio planner,
+  security or UI audit) and want it **translated into a roadmap**.
+- Need a **governance-centric view** of: multi-repo ownership, registries,
+  design systems, and AI/data risks.
 
 Do **not** use this workflow when you:
 
-- Expect it to directly edit code/spec/tasks (it is strictly NO-WRITE).
-- Want to bypass specialist workflows such as security audits, CI gates,
-  or performance verifiers.
-- Intend to bypass human approvals for security/architecture decisions.
+- Intend to directly edit specs, tasks, plans, code, or registries.
+- Already know exactly which workflow to run and just need its CLI usage
+  (go directly to the specific workflow manual instead).
+- Need low-level implementation advice or code snippets that contradict
+  existing specs/plans/tasks.
 
+---
 
-# 3. Inputs & Outputs
+## 3) Inputs / Outputs
 
-## 3.1 Inputs
+### 3.1 Inputs (from the user)
 
-- Natural-language questions in any supported language (TH/EN encouraged).
+- A natural-language question (English or another supported language).
 - Optional flags (see Section 5) to:
-  - narrow project scope;
-  - focus on specific aspects (status, roadmap, security, CI, UI, perf);
-  - point to specific reports or custom index/registry locations;
-  - control output format and language.
+  - focus on a domain/service/spec;
+  - highlight specific aspects (status, roadmap, security, CI, UI, perf);
+  - choose language or output format.
 
-## 3.2 Readable artifacts (RAG sources)
+### 3.2 RAG sources (read-only)
 
-When answering, the copilot may read:
+The copilot must treat the following as **primary evidence** sources, read-only:
 
 - **Index**
-  - `.spec/SPEC_INDEX.json` (primary)
-  - legacy mirrors per KB Section 5.1, if present.
+  - `.spec/SPEC_INDEX.json` (canonical).
+  - Optional legacy/mirror locations (e.g., repo-root `SPEC_INDEX.json`,
+    `.smartspec/SPEC_INDEX.json`, `specs/SPEC_INDEX.json`) for backward
+    compatibility, but `.spec/` is authoritative.
 
-- **Registries** under `.spec/registry/`:
-  - `tool-version-registry.json`
-  - `design-tokens-registry.json`
-  - `ui-component-registry.json`
-  - `app-component-registry.json`
-  - `patterns-registry.json`
-  - other registries relevant to the question.
+- **Registries** (under `.spec/registry/` and `--registry-roots`)
+  - `tool-version-registry.json` (web-stack baselines).
+  - `design-tokens-registry.json`.
+  - `ui-component-registry.json`, `app-component-registry.json`.
+  - `patterns-registry.json`.
+  - Any API/data/glossary registries defined by the project.
 
-- **Specs & adjacent files**
-  - `specs/<category>/<spec-id>/spec.md`
-  - `plan.md`, `tasks.md`, `ui.json` in the same folder.
+- **Specs & local artifacts**
+  - `specs/<category>/<spec-id>/spec.md`.
+  - `plan.md`, `tasks.md`, and `ui.json` (if present) in the same folder.
 
-- **Reports** under `.spec/reports/<workflow-name>/...`:
-  - CI quality gate, security evidence audit, release readiness, UI audits,
-    NFR/perf verifiers, etc.
+- **Reports** (under `.spec/reports/**`)
+  - index validation & portfolio reports;
+  - CI, security, performance, and observability reports;
+  - UI validation and consistency audits;
+  - any other workflow-specific reports defined by the KB.
 
 - **Workflow specs & manuals**
-  - `.smartspec/workflows/smartspec_*.md` (workflow definitions, flags,
-    usage, examples).
-  - `.smartspec-docs/workflows/**` (manuals and examples for workflows).
+  - `.smartspec/workflows/smartspec_*.md`.
+  - `.smartspec-docs/workflows/**` (user-facing manuals).
 
-All reading is **read-only** and follows chunking rules (Section 9.3).
+All of the above are **read-only** from the copilot’s perspective.
 
-## 3.3 Outputs
+### 3.3 Outputs
 
-- Human-readable summary of project/feature/service status.
-- Progress per phase (spec, plan, tasks, CI, security, UI, release) with
-  rough percentage estimates when feasible.
-- Highlighted risks and blockers (Weakness & Risk Check style).
-- Recommended next steps and **ready-to-run commands** for relevant
-  `/smartspec_*` workflows, including example flags.
-- Optional JSON/machine-readable structure when `--output-format json|mixed`
-  is used.
+Primary output: a **human-readable answer** (Markdown by default) that follows
+Section 9’s layout, containing at minimum:
 
+1. **Status summary**.
+2. **Critical issues & remediation**.
+3. **Timeline / phased plan** (when appropriate).
+4. **Recommended SmartSpec workflows & commands**.
+5. **Weakness & Risk Check**.
 
-# 4. Modes
+Optional output (platform-controlled, not required by this spec): a short
+summary/report persisted under `.spec/reports/project_copilot/` containing:
 
-## 4.1 Role & write guard
+- question, timestamp, and scope;
+- referenced specs, reports, registries;
+- key status metrics (e.g., portfolio health, completion %);
+- recommended workflows and their rationale;
+- audit metadata (workflow version, KB version/hash, flags).
 
-- Role: Governance / Advisor / Router.
-- Write guard: **NO-WRITE**.
-  - May read files and reports.
-  - May generate summaries and recommendations.
-  - Must **not** modify code, specs, tasks, or registries.
+The copilot itself never decides to write these reports; that is controlled by
+an external orchestrator.
 
-## 4.2 Safety modes
+---
 
-- `--safety-mode conservative` (default)
-  - Conservative recommendations, extra warnings for security/version issues.
-- `--safety-mode balanced`
-  - Balanced risk vs velocity.
-- `--safety-mode aggressive`
-  - More opinionated suggestions, but still within KB guardrails.
+## 4) Modes
 
-`--strict` is a legacy alias for `--safety-mode conservative`.
+### 4.1 Role & write guard
 
-## 4.3 Kilo / Orchestrator interaction
+- Role: **project-level governance / advisor / router**.
+- `write_guard: NO-WRITE`.
 
-When `--kilocode` is present:
+Implications:
 
-- Conceptual Kilo mode: **Orchestrator (Ask/Architect)**.
-- Orchestrator is responsible for:
-  - interpreting natural-language intent;
-  - planning which files/registries/reports to read;
-  - orchestrating chunked reads as described in Section 9.3;
-  - combining summaries into a final human/JSON answer.
-- Code mode (if used under the hood) is only for:
-  - reading and slicing files into chunks;
-  - generating short summaries of those chunks.
-- The workflow remains NO-WRITE even under Kilo.
+- The copilot must not:
+  - modify specs, plans, tasks, code, or registry files;
+  - run external commands or tools by itself.
+- It may:
+  - read artifacts and reports;
+  - summarise, interpret, and recommend **other** workflows and actions.
 
+### 4.2 Safety semantics
 
-# 5. Flags
+This workflow does not use `--safety-mode` to control writes (there are none),
+but it must:
 
-All flags are additive; none may be removed in future versions.
+- call out when **critical governance artefacts are missing**:
+  - no SPEC_INDEX;
+  - no relevant registries (e.g., `tool-version-registry.json` for web stacks);
+  - no security/CI reports in a production context;
+- clearly label its recommendations as **high-risk / incomplete** in the
+  Weakness & Risk Check when such gaps exist.
 
-## 5.1 Scope & focus
+### 4.3 UI mode semantics
 
-- `--project-scope <pattern>`
-  - Focus on a subset of services/specs/domains (e.g. `billing`,
-    `payment-service`, `apps/console`).
-- `--focus <aspect>`
-  - `status`    → overall progress/status (default).
-  - `roadmap`   → prioritised next steps and phases.
-  - `workflows` → recommended workflows to run.
-  - `reports`   → interpret existing reports.
-  - `security`  → security-focused view.
-  - `ci`        → CI and quality gate focus.
-  - `ui`        → UI/design-system focus.
-  - `perf`      → NFR/performance focus.
-- `--reports <list>`
-  - Comma-separated workflow names whose reports should be prioritised.
+The copilot must respect the project’s UI mode conventions:
 
-## 5.2 Index / registry / reports roots
+- JSON-first UI → treat `ui.json` and UI registries as primary evidence and
+  route toward UI workflows that preserve this pattern.
+- Inline UI → treat spec text and code reports as the primary sources.
 
-- `--index` / `--specindex`
-  - Override index path; defaults to detection order in KB Section 5.1.
-- `--registry-dir <path>`
-  - Primary registry root. Default: `.spec/registry`.
-- `--registry-roots <paths>`
-  - Additional read-only registries (e.g., platform-level).
-- `--reports-root <path>`
-  - Default: `.spec/reports`.
+It should **not** recommend large-scale mode changes (e.g., converting an
+inline UI project to JSON-first) without explicit signals in the spec/KB.
 
-## 5.3 Multi-repo / workspace
+### 4.4 Platform & KiloCode
 
-- `--workspace-roots <paths>`
-  - Multiple repo roots to scan for specs and `.spec/` folders.
-- `--repos-config <path>`
-  - Structured multi-repo config; takes precedence over
-    `--workspace-roots`.
+When invoked with `--kilocode` under Kilo:
 
-## 5.4 Knowledge & docs
+- Effective role: **Ask/Architect (NO-WRITE)**.
+- Behaviour:
+  - Orchestrator:
+    - interprets the user’s question;
+    - plans which files/reports to read;
+    - coordinates **chunked reading** and summarisation.
+  - Code-mode:
+    - reads files in chunks;
+    - summarises into notes;
+    - never writes project files.
 
-- `--system-prompt-path <path>`
-  - Default: `.smartspec/system_prompt_smartspec.md`.
-- `--kb-path <path>`
-  - Default: `.smartspec/knowledge_base_smartspec.md`.
-- `--docs-root <path>`
-  - Default: `.smartspec-docs/workflows`.
+If `--kilocode` is present but not in a Kilo environment, treat it as a
+no-op meta-flag; still apply chunked reading and RAG rules.
 
-## 5.5 Output
+---
 
-- `--output-format <mode>`
-  - `human` → narrative answer.
-  - `json`  → machine-readable answer only.
-  - `mixed` → human + JSON appendix.
-- `--lang <code>`
-  - `th`, `en`, or `th-en` (bilingual summary).
-- `--run-label <string>`
-  - Optional label stored in reports (if any are written).
+## 5) Flags
 
-## 5.6 Safety & misc
+> **Non-removal guarantee:** All flags present in v5.6.2 remain supported. New
+> flags are additive and optional.
 
-- `--safety-mode <level>`
-- `--strict` → alias for `--safety-mode conservative`.
-- `--kilocode` → Kilo-aware behaviour (see Section 6).
+### 5.1 Scope & focus
 
+- `--domain=<name>`
+  - Emphasise a specific domain or service (e.g., `billing`, `user-management`).
 
-# 6. KiloCode Support (Meta-Flag)
+- `--spec-id=<id>`
+  - Focus on a single spec by ID.
 
-- `--kilocode` is always accepted.
-- For this workflow, `--kilocode` means:
-  - adopt a Kilo-oriented mental model: Orchestrator-led, Ask/Architect;
-  - assume Kilo constraints such as ~800-line context per LLM call;
-  - prefer high-level reasoning and planning over code synthesis;
-  - when suggesting commands for other workflows, include `--kilocode`
-    when the environment suggests they will also run under Kilo.
+- `--spec-path=<path>`
+  - Focus on a spec by filesystem path.
 
-The workflow must not assume Kilo is always available; if Kilo is not
-present, `--kilocode` becomes a no-op hint and is mentioned as such in
-summaries.
+- `--aspect=<status|roadmap|security|ci|ui|perf|all>`
+  - Highlight specific aspects in the answer.
 
+### 5.2 Index / registry / multi-repo
 
-# 7. Canonical Folders & File Placement
+- `--index=<path>`
+- `--registry-dir=<path>`
+- `--registry-roots=<dir1,dir2,...>`
+- `--workspace-roots=<root1,root2,...>`
+- `--repos-config=<path>` (recommended).
 
-This workflow follows KB Section 5:
+These flags behave consistently with other v5.6 workflows.
 
-- Index:
-  - prefer `.spec/SPEC_INDEX.json`.
-- Registries:
-  - `.spec/registry/**` as primary;
-  - `--registry-roots` as supplemental, read-only.
-- Specs:
-  - `specs/<category>/<spec-id>/spec.md` as primary spec locations,
-    with adjacent `plan.md`, `tasks.md`, `ui.json`.
-- Reports:
-  - `.spec/reports/<workflow-name>/` for reports from other workflows.
+### 5.3 Reports & evidence selection
 
-If key artifacts are missing (no index, no registry, no reports), the copilot
-must treat this as a governance gap and call it out explicitly.
+- `--report=<path>`
+  - Hint: focus on this particular report first (e.g., a recent
+    `validate_index` or security report).
 
+- `--max-reports=<n>`
+  - Soft cap on the number of reports to include.
 
-# 8. Multi-repo & Multi-registry Rules
+### 5.4 Output & language
 
-- Respect `--repos-config` over `--workspace-roots`.
-- Treat `--registry-dir` as authoritative; `--registry-roots` are
-  read-only validation sources.
-- When detecting duplicate entities across registries (APIs, models,
-  components, tokens), highlight them as reuse opportunities and potential
-  conflicts; recommend consolidation tasks instead of creating new copies.
+- `--lang=<en|th|auto>`
+  - `auto` = infer from question.
 
+- `--format=<markdown|plain|json>`
+  - Default: `markdown`.
 
-# 9. Weakness & Risk Check (Built-in)
+- `--short`
+  - Request a shorter answer, but the copilot must still include all structural
+    sections, even if condensed.
 
-Every answer must embed a brief **Weakness & Risk Check**, including:
+### 5.5 Kilo / subtasks
 
-1. Gaps in specs/plans/tasks for the scope in question.
-2. Missing or outdated reports (CI, security, UI, perf, release readiness).
-3. Registry gaps (missing tool-version registry, design tokens, component
-   registries, patterns, etc.).
-4. React/Next.js/RSC/version risks when relevant (per KB Section 18 & 19).
-5. Design-system/UI governance issues when relevant (per KB Section 20).
-6. Multi-repo/registry conflicts or divergence.
+- `--kilocode`
+  - Enable Kilo semantics when available.
 
-The copilot must:
-- call these out clearly; and
-- connect them to concrete next steps and recommended workflows.
+- `--nosubtasks`
+  - Optional hint to Orchestrator: do not further decompose the copilot’s own
+    work into additional subtasks. Chunked reading still applies.
 
+No flag may relax the NO-WRITE guarantee.
 
-# 10. Legacy Flags Inventory
+---
 
-Because `/smartspec_project_copilot` is introduced in the 5.6 series, the
-initial inventory is:
+## 6) Canonical Folders & File Placement
 
-- Kept as-is:
-  - `--project-scope`
-  - `--focus`
-  - `--reports`
-  - `--index` / `--specindex`
-  - `--workspace-roots`
-  - `--repos-config`
+The copilot assumes the standard SmartSpec layout:
+
+- **Indexes**
+  - `.spec/SPEC_INDEX.json` (canonical).
+  - Legacy mirrors as described in the KB.
+
+- **Registries**
+  - `.spec/registry/**` as primary.
+  - `--registry-roots` directories as read-only supplements.
+
+- **Specs & artifacts**
+  - `specs/<category>/<spec-id>/spec.md`.
+  - `plan.md`, `tasks.md`, `ui.json` (if present) beside `spec.md`.
+
+- **Reports**
+  - `.spec/reports/<workflow-name>/**`.
+
+If the repository deviates from this, the copilot must:
+
+- infer where possible using flags and KB rules; and
+- otherwise call out the deviation in the Weakness & Risk Check.
+
+---
+
+## 7) Multi-repo / Multi-registry Rules
+
+1. Use `--repos-config` as the primary way to map logical repo IDs to
+   filesystem roots; fall back to `--workspace-roots` when absent.
+2. When resolving dependencies via SPEC_INDEX:
+   - check the current repo first;
+   - then repos from `--repos-config`;
+   - then `--workspace-roots`.
+3. Treat all **non-current** repositories as read-only evidence sources.
+4. When a shared entity has an owner in another repo (per registries/index):
+   - emphasise reuse/integration over reimplementation.
+5. When registries conflict across repos (for example, different
+   `ui-component-registry.json` entries for the same name):
+   - surface the conflict as a risk;
+   - recommend follow-up workflows or governance steps, not silent merging.
+
+---
+
+## 8) RAG & Chunked Reading
+
+The copilot must use **chunked reading** for large files and collections,
+following KB limits:
+
+- Per LLM step, aim for **≈300–600 lines per chunk**, never exceeding roughly
+  800 lines of combined input text.
+- For each chunk read, immediately produce a **short note/summary** and discard
+  the raw text from the active context.
+- Use only these notes (plus question and relevant metadata) as the basis for
+  final reasoning.
+
+Prioritise reading:
+
+1. SPEC_INDEX and registries, to understand ownership and topology.
+2. Specs, plans, tasks, and key reports relevant to the question’s domain.
+3. Workflow specs/manuals needed to propose correct CLI commands.
+
+The copilot must avoid loading entire repositories or long reports into a
+single context window.
+
+---
+
+## 9) Answer Layout (Mandatory)
+
+Unless the user explicitly requests a different structure, answers must follow
+this layout (section titles may be localised but structure must remain):
+
+1. **Status summary**
+   - Brief overview of the scope (project/domain/service) and data sources
+     used.
+   - Where possible, approximate phase completion (e.g., Spec 100%, Plan 60%,
+     Tasks 20%, Security 0%).
+
+2. **Critical issues & remediation**
+   - Bullets for major risks/blockers.
+   - Each issue should have a short suggested remediation.
+
+3. **Timeline / phased plan** (optional but recommended)
+   - A small number of ordered steps or phases (Phase 0, 1, 2…) describing
+     what to do next.
+
+4. **Recommended SmartSpec workflows & commands**
+   - List workflows (e.g., `/smartspec_generate_spec`,
+     `/smartspec_generate_plan`, `/smartspec_generate_tasks`,
+     `/smartspec_implement_tasks`, `/smartspec_validate_index`, etc.).
+   - For each workflow, include:
+     - purpose (one line);
+     - 1–3 example CLI commands in a `bash` block that are consistent with the
+       workflow’s manual.
+
+5. **Weakness & Risk Check**
+   - Short recap of:
+     - what evidence was used;
+     - which assumptions were made;
+     - which gaps remain (missing index, outdated registries, absent reports,
+       etc.).
+
+Even in `--short` mode, all five sections must appear (possibly condensed).
+
+---
+
+## 10) Command Correctness Rules
+
+When recommending CLI commands, the copilot must:
+
+1. **Inspect workflow specs & manuals**
+   - For each workflow it wants to recommend, read the corresponding
+     `.smartspec/workflows/smartspec_*.md` and, when present,
+     `.smartspec-docs/workflows/**` to confirm:
+     - the CLI name or pattern;
+     - supported flags;
+     - typical usage patterns and defaults.
+
+2. **Avoid inventing commands or flags**
+   - Never output a `smartspec_*` command (or subcommand/flag) that does not
+     appear in those sources.
+   - If the copilot is unsure whether a command exists, it should describe the
+     desired action in natural language instead of guessing.
+
+3. **Prefer canonical examples**
+   - Use examples that match the manuals’ recommended usage as closely as
+     possible.
+   - If the manual presents multiple variants, pick the safest
+     production-appropriate one (typically strict/safety modes on).
+
+4. **Localisation & Kilo**
+   - When the user is on Kilo and `--kilocode` is relevant for that workflow,
+     it may show additional variants including `--kilocode`.
+
+5. **No self-recursion**
+   - Do not propose commands that recursively invoke `/smartspec_project_copilot`
+     itself, unless the user explicitly asks how to do so.
+
+---
+
+## 11) Weakness & Risk Check (Per Answer)
+
+Every answer must include a short **Weakness & Risk Check** section that:
+
+- Lists key **limitations of the evidence** used:
+  - index missing or partial;
+  - registries absent or clearly stale (e.g., old tool-version baselines);
+  - missing or incomplete security/CI/UI reports.
+- Flags **high-risk conditions**, such as:
+  - React/Next.js/RSC stack detected but no `tool-version-registry.json`;
+  - AI/LLM features with no prompt/logging policy;
+  - sensitive data flows with no classification or masking policy.
+- Clearly states when recommendations are **exploratory** and must not be used
+  as-is for production decisions.
+
+When context is too weak to give a meaningful answer, the copilot must say so
+explicitly and suggest which workflows or artefacts need to be prepared first.
+
+---
+
+## 12) KiloCode Support (Meta-Flag)
+
+As a governance-level workflow, `/smartspec_project_copilot` must support Kilo
+semantics while remaining NO-WRITE.
+
+- Accepts `--kilocode` as a meta-flag.
+- Under Kilo:
+  - Orchestrator decomposes the question into subtasks (file discovery,
+    summarisation, analysis);
+  - Code-mode reads chunks and produces notes only;
+  - final answer is assembled according to Section 9.
+- Under non-Kilo:
+  - `--kilocode` is a no-op; chunked reading still applies.
+
+The workflow must **never** use Kilo/Code-mode to modify project files.
+
+---
+
+## 13) Inline Detection Rules
+
+This workflow must not call other SmartSpec workflows directly. Instead, it:
+
+- Detects environment markers for Kilo/ClaudeCode/Antigravity from context.
+- Detects web-stack usage by scanning specs, plans, tasks, and reports for
+  React/Next.js/RSC/Node/npm hints.
+- Detects AI/LLM features from spec/report content (chat, copilots, agents,
+  prompt-based flows, etc.).
+- Detects data sensitivity from references to PII, financial/health data,
+  trade secrets, or regulated data.
+- Recommends follow-up workflows **by name and example command only**, never by
+  invoking them.
+
+---
+
+## 14) Best Practices
+
+- Treat `/smartspec_project_copilot` as the **entry point** for humans, not as
+  an automation primitive.
+- Encourage natural-language questions; do not force users to know workflow
+  names or flags in advance.
+- Always refer to actual specs, registries, and reports rather than making
+  assumptions.
+- Prefer **SmartSpec workflows** over ad-hoc shell scripts when recommending
+  next steps.
+- Emphasise reuse and ownership:
+  - highlight when a spec tries to re-invent shared APIs/models/components;
+  - route toward integration and migration rather than duplication.
+- In web-stack projects, always reference `tool-version-registry.json` and
+  relevant security reports when discussing dependency or security issues.
+- For AI/LLM features, treat models as untrusted:
+  - encourage guardrails (prompt hygiene, injection defence, logging policies,
+    red-teaming);
+  - avoid embedding real secrets/PII into prompts, examples, or answers.
+- For sensitive data flows, keep data-protection and compliance workflows
+  visible in recommendations.
+
+---
+
+## 15) Legacy Flags Inventory
+
+- **Kept (from v5.6.2):**
+  - `--domain`
+  - `--spec-id`
+  - `--spec-path`
+  - `--aspect`
+  - `--index`
   - `--registry-dir`
   - `--registry-roots`
-  - `--reports-root`
-  - `--system-prompt-path`
-  - `--kb-path`
-  - `--docs-root`
-  - `--output-format`
+  - `--workspace-roots`
+  - `--repos-config`
+  - `--report`
+  - `--max-reports`
   - `--lang`
-  - `--run-label`
-  - `--safety-mode`
+  - `--format`
+  - `--short`
   - `--kilocode`
+  - `--nosubtasks`
 
-- Kept as legacy alias:
-  - `--strict` → `--safety-mode conservative`.
+No legacy flag or behaviour is removed. New v5.6.3 semantics are additive and
+focus on answer layout, command correctness, and stricter RAG/reading rules.
 
-- New additive flags in 5.6.2:
-  - none (this version refines behaviour & guardrails only).
+---
 
-Future versions must only **add** flags or behaviours; no removals.
+## 16) For the LLM / Step-by-step Flow & Stop Conditions
 
+### 16.1 Step-by-step flow (internal)
 
-# 11. Examples (User-facing)
+1. **Parse question & flags**
+   - Extract domain/spec/aspect/lang/format hints.
 
-These examples are illustrative; actual invocation syntax depends on the
-host tool (Kilo/Roo/Claude/Antigravity/Gemini).
+2. **Resolve index & registries**
+   - Locate SPEC_INDEX using canonical order (or `--index`).
+   - Locate registries under `.spec/registry/` and `--registry-roots`.
 
-## 11.1 Quick project status (no flags)
+3. **Identify relevant specs & reports**
+   - Use SPEC_INDEX, flags, and question text to locate the most relevant
+     specs, plans, tasks, and reports.
 
-User runs:
+4. **Plan chunked reading**
+   - For each chosen file, plan chunk boundaries (≈300–600 lines).
+   - Read, summarise, and discard raw text, keeping only notes.
 
-> `/smartspec_project_copilot`
+5. **Infer progress & issues**
+   - From presence and state of specs/plans/tasks/reports.
+   - From index/registry health (missing, inconsistent, or conflicting entries).
 
-and asks in natural language:
+6. **Detect web/AI/data sensitivities**
+   - From specs, registries, and reports.
 
-> ตอนนี้โปรเจกต์พัฒนาถึงขั้นตอนไหนแล้ว
-> มี service อะไรเสร็จแล้วบ้าง
-> แต่ละ service เสร็จไปประมาณกี่เปอร์เซ็นต์
-> และควรทำอะไรต่อก่อน–หลัง
+7. **Decide which SmartSpec workflows are relevant**
+   - For each potential workflow, open its spec/manual to confirm purpose,
+     semantics, CLI name, and flags.
 
-The copilot:
-- discovers relevant specs via `SPEC_INDEX`;
-- inspects `spec.md`/`plan.md`/`tasks.md` and key reports per service;
-- estimates progress % per phase;
-- recommends next workflows and actions.
+8. **Craft recommended commands**
+   - Use only documented CLI forms; if in doubt, describe the action instead of
+     guessing.
 
-## 11.2 Billing & subscription progress example
+9. **Assemble answer using Section 9 layout**
+   - Status summary;
+   - Critical issues & remediation;
+   - Timeline/phased plan (if applicable);
+   - Recommended workflows & commands;
+   - Weakness & Risk Check.
 
-User asks (no flags required):
+10. **Apply language & format**
+    - Render in the requested language and output format.
 
-> อยากเช็คความคืบหน้าระบบ billing หน่อย
-> ทั้งระบบ billing core และการเรียกเก็บเงินตาม subscription plan
-> พัฒนาไปถึงขั้นตอนไหนแล้ว และต้องทำอะไรต่อ
+11. **(Optional) Provide a machine-readable summary**
+    - If `--format=json` or mixed-mode is requested, include a structured
+      representation of the same sections.
 
-The copilot should:
+### 16.2 Stop conditions
 
-1. Use `SPEC_INDEX` to find specs with billing/subscription in their names,
-   e.g.:
-   - `spec-076-billing-system`
-   - `spec-090-billing-and-subscription-ui`.
-2. Inspect folders:
-   - both have `spec.md` and `plan.md`.
-   - both are missing `tasks.md`.
-3. Conclude (for example):
-   - Spec phase ~100%.
-   - Planning phase ~100%.
-   - Implementation planning ~0%.
-4. Respond in plain language with recommended commands, such as:
+The workflow must stop when:
 
-```bash
-/smartspec_generate_tasks specs/feature/spec-076-billing-system
-/smartspec_generate_tasks specs/feature/spec-090-billing-and-subscription-ui
-```
+- It has produced an answer that:
+  - reflects the available evidence;
+  - highlights major risks and next steps;
+  - includes recommended workflows & commands that pass command correctness
+    rules; and
+  - explicitly documents relevant weaknesses/assumptions.
 
-If the environment suggests Kilo, the copilot should also show the Kilo
-variants:
+If at any point the workflow determines that the evidence is too weak to answer
+safely, it must:
 
-```bash
-/smartspec_generate_tasks specs/feature/spec-076-billing-system --kilocode
-/smartspec_generate_tasks specs/feature/spec-090-billing-and-subscription-ui --kilocode
-```
-
-## 11.3 Interpreting a CI or security report
-
-User pastes a CI/security report and asks:
-
-> จาก report นี้ เราต้องทำอะไรต่อ
-> มี blocker อะไรบ้างที่ต้องแก้ก่อนปล่อย production
-
-The copilot should:
-- recognise which workflow generated the report (e.g., `ci_quality_gate`,
-  `security_evidence_audit`);
-- read only the relevant parts of the report in chunks;
-- summarise passes/failures and highlight blockers;
-- recommend next steps and follow-up workflows.
-
-
-# 12. Best Practices
-
-- Treat this workflow as the **front door** to SmartSpec for most users.
-- Encourage natural-language questions; do not require users to know
-  flags or individual workflow names.
-- Use chunked reading consistently for large files and reports.
-- When recommending commands, prefer canonical paths and include
-  `--kilocode` when Kilo is in play.
-- Always surface important risks (security, versions, design system)
-  together with actionable next steps.
-
-
-# 13. For the LLM / Stop Conditions
-
-This section is binding for the model that executes this workflow.
-
-## 13.1 General duties
-
-- Always honour NO-WRITE: never propose direct edits to code/spec/tasks.
-- Always perform a Weakness & Risk Check before final answers.
-- Prefer reading from real artifacts (index, registries, specs, reports,
-  workflow docs) instead of guessing.
-
-## 13.2 Kilo & context management
-
-When `--kilocode` is present or the environment suggests Kilo:
-
-1. Assume an **Orchestrator** mental model.
-2. Respect a hard limit of ~800 lines of combined input context per call.
-3. Use chunked reading for large files:
-   - read at most ~300–600 lines per chunk;
-   - immediately summarise each chunk into a short note;
-   - discard the raw text from the active prompt and reason from notes.
-4. Prefer reading only the sections most relevant to the question.
-5. If context is still insufficient after reasonable chunking, say so and
-   suggest concrete next actions (e.g., run more workflows, create missing
-   plans/specs, or narrow the scope).
-
-These principles also apply outside Kilo as good practice.
-
-## 13.3 Progress & "what next" questions
-
-When the user asks about progress of a system/domain/service (e.g., billing,
-subscription, authentication, a specific app):
-
-1. Use `SPEC_INDEX` to find related specs and their folders.
-2. For each relevant spec folder, inspect the presence of:
-   - `spec.md`
-   - `plan.md`
-   - `tasks.md`
-   - relevant reports under `.spec/reports/**`.
-3. Approximate progress by phase and, if meaningful, as rough percentages.
-4. Explain the reasoning (which files/evidence you used).
-5. Recommend specific next steps and ready-to-run commands for other
-   workflows, using flags and examples from their `.smartspec/workflows`
-   specs and manuals.
-6. When appropriate and under Kilo, include `--kilocode` in those example
-   commands.
-
-## 13.4 Workflow-introspection
-
-When you recommend `/smartspec_*` workflows:
-
-- Look up their definitions in `.smartspec/workflows/smartspec_*.md`.
-- Prefer flags and usage patterns that are explicitly documented there.
-- Do not invent new flags or modes unless the user explicitly defines them.
-- Do not attempt to "call" those workflows programmatically; only output
-  textual recommendations and example commands.
-
-## 13.5 Stop conditions
-
-Stop and return an answer when:
-
-- You have:
-  - summarised the relevant status/progress;
-  - highlighted the main risks/gaps;
-  - proposed concrete next steps and example commands; and
-  - included a brief Weakness & Risk Check.
-
-If you cannot confidently answer even after reasonable chunked reading of the
-most relevant artifacts, state clearly that the information is insufficient
-and suggest what artifacts/workflows the user should create or run next.
+- say so clearly; and
+- suggest which SmartSpec workflows or artefacts the user should create/run
+  first, before calling `/smartspec_project_copilot` again.
 

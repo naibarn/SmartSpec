@@ -845,6 +845,99 @@ cannot confidently answer:
 This keeps behaviour honest and encourages improving the project’s
 SmartSpec/registry/report coverage over time.
 
+## 24 SmartSpec Workflow Inventory (v5.6.x)
+
+This KB governs the following SmartSpec workflows. Each workflow must obey
+the general guardrails in this document (multi-repo, registries, UI mode,
+Kilo semantics, web/AI/data safety, etc.).
+
+- `smartspec_check_kilo_mode` – Detect and describe Kilo / non-Kilo context and
+  how SmartSpec workflows should behave under KiloCode.
+
+- `smartspec_ci_quality_gate` – CI-oriented quality gate that checks specs,
+  tasks, tests, coverage and key reports before allowing merges/releases.
+
+- `smartspec_data_migration_governance` – Plan and govern data migrations
+  (domains, ownership, safety, backfill/rollback, audit requirements).
+
+- `smartspec_fix_errors` – Suggest and apply **governed** fixes for issues
+  found by index/registry/spec validation workflows (read KB before edits).
+
+- `smartspec_generate_cursor_prompt` – Generate safe, contextual prompts for
+  Cursor/Antigravity assistants (prompt hygiene + KB rules apply).
+
+- `smartspec_generate_implement_prompt` – Generate implementation prompts for
+  AI agents based on spec/plan/tasks with guardrails from this KB.
+
+- `smartspec_generate_plan` – Create dependency-aware implementation plans
+  from one or more specs (v5.6 chain step 3).
+
+- `smartspec_generate_spec` – Turn ideas or reverse-engineered inputs into
+  governed SmartSpec `spec.md` files.
+
+- `smartspec_generate_tasks` – Generate `tasks.md` from existing specs/plans
+  with centralization, UI mode, web/AI/data safety.
+
+- `smartspec_generate_tests` – Generate test plans/specs based on existing
+  specs/plans/tasks and quality gates.
+
+- `smartspec_global_registry_audit` – Audit global registries (API, data,
+  UI components, design tokens) for drift, conflicts, and gaps.
+
+- `smartspec_implement_tasks` – Implement code/config based on `tasks.md`
+  while respecting ownership, web/AI/data guardrails.
+
+- `smartspec_nfr_perf_planner` – Plan non-functional performance work from
+  specs, SLAs and architecture constraints.
+
+- `smartspec_nfr_perf_verifier` – Verify performance/NFR targets via tests,
+  benchmarks, and observability evidence.
+
+- `smartspec_observability_runbook_generator` – Generate runbooks and
+  observability guides from specs, SLOs and incidents.
+
+- `smartspec_portfolio_planner` – Portfolio-level planner across many specs
+  (dependencies, health scores, sequencing).
+
+- `smartspec_project_copilot` – Project-level copilot/router that summarises
+  status and recommends next SmartSpec workflows (NO-WRITE).
+
+- `smartspec_refactor_code` – Governed refactoring based on specs and
+  registries (ownership, safety, and tests).
+
+- `smartspec_reindex_specs` – Rebuild SPEC_INDEX from the filesystem under
+  KB rules (layout, ownership, multi-repo).
+
+- `smartspec_release_readiness` – Evaluate whether a service/domain is ready
+  for release based on specs, tests and reports.
+
+- `smartspec_reverse_to_spec` – Reverse-engineer code/behavior into governed
+  SmartSpecs (no secrets, no PII in specs).
+
+- `smartspec_security_evidence_audit` – Collect and evaluate security
+  evidence (threat models, scans, pen tests, controls).
+
+- `smartspec_spec_lifecycle_manager` – Manage lifecycle of specs (draft,
+  active, deprecated) and align downstream artifacts.
+
+- `smartspec_sync_spec_tasks` – Sync changes between spec and tasks, keeping
+  them consistent without losing history.
+
+- `smartspec_ui_consistency_audit` – Check UIs against design tokens,
+  component registries and patterns.
+
+- `smartspec_ui_validation` – Check that critical flows and UIs have proper
+  validation and UX guardrails.
+
+- `smartspec_validate_index` – Validate SPEC_INDEX and registries (missing
+  specs, circular deps, ownership, drift).
+
+- `smartspec_verify_tasks_progress` – Verify that implemented code actually
+  matches `tasks.md` and associated specs/plans/tests.
+
+
+
+
 
 This knowledge base is binding for all SmartSpec workflow/manual answers.
 System prompts should remain **short**, point to this KB for details, and avoid

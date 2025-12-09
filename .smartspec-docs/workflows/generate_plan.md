@@ -1,253 +1,410 @@
 ---
-description: SmartSpec Generate Plan Manual (v5.6)
-version: 5.6
-last_updated: 2025-12-08
+manual_name: /smartspec_generate_plan Manual (EN)
+manual_version: 5.6
+compatible_workflow: /smartspec_generate_plan
+compatible_workflow_versions: 5.6.2 – 5.6.x
+role: user/operator manual (architect, tech lead, PM, platform, spec owner)
 ---
 
-# `/smartspec_generate_plan`
+# /smartspec_generate_plan Manual (v5.6, English)
 
-Generate a high-level, dependency-aware `plan.md` from one or more SmartSpec specs.
+## 1. Overview
 
-This v5.6 manual preserves the original planning intent:
+This manual explains how to use the workflow:
 
-- Provide a strategic, phased roadmap.
-- Keep planning high-level; detailed execution belongs in `tasks.md`.
-- Respect centralization rules.
+> `/smartspec_generate_plan v5.6.x` (e.g., v5.6.2)
 
-And extends it to align with the v5.6 chain for multi-repo portfolios.
+This workflow is the **planning layer** in the SmartSpec chain. It
+creates/updates high-level implementation plans (`plan.md`) that are
+ordered by dependencies and ready to be used by task-generation
+workflows.
+
+The typical v5.6 chain:
+
+1. `/smartspec_validate_index`
+2. `/smartspec_generate_spec`
+3. `/smartspec_generate_plan`
+4. `/smartspec_generate_tasks`
+5. `/smartspec_sync_spec_tasks`
+
+The goals of `/smartspec_generate_plan` are to:
+
+- produce plans that are **task-ready** and safe inputs to
+  `/smartspec_generate_tasks`
+- avoid cross-SPEC and cross-repo drift for shared entities
+- respect **UI mode** (JSON-first vs inline) so UI work aligns with
+  specs and UI workflows
+- behave in a **governance-aware** way: do not silently invent new
+  requirements
+- handle multi-repo / multi-registry safely
+- support KiloCode (`--kilocode`) and the Orchestrator-per-task rule
+
+> **v5.6.2 note**
+> - Introduces `safety_status = SAFE | UNSAFE | DEV-ONLY` in both plans
+>   and reports.
+> - Adds `--run-label` and `--plan-layout` for better traceability and
+>   deterministic output.
+> - Strengthens guidance for AI UI JSON signals and multi-spec Kilo
+>   orchestration.
+> - No existing flags or behaviors are removed; all changes are
+>   additive.
 
 ---
 
-## 1. Summary
+## 2. When to Use
 
-`/smartspec_generate_plan`:
+Use `/smartspec_generate_plan` when you:
 
-1) Reads target `spec.md` files.
-2) Uses `SPEC_INDEX.json` (when available) to build a dependency-first plan.
-3) Validates shared-name assumptions against registries.
-4) Produces a structured plan that can safely drive downstream tasks generation.
-5) Adds reconciliation steps when governance ambiguity is detected.
+- start a new feature/program involving multiple specs
+- want a clear phase-structured plan before breaking work into tasks
+- prepare to run `/smartspec_generate_tasks` on several specs
+- need to re-plan after significant refactors, reindexing, or ownership
+  changes
+- coordinate work across **multiple repos** that share registries or
+  contracts
 
-In v5.6, planning is explicitly **multi-repo** and **multi-registry aware**.
+Do **not** use this workflow when:
+
+- you only need tasks for a single, well-scoped spec →
+  `/smartspec_generate_tasks` alone may be enough
+- you want to mass-edit `spec.md` or `tasks.md` → use the appropriate
+  spec/task workflows instead
+- your process requires fully manual planning for audit reasons
 
 ---
 
-## 2. Usage
+## 3. Core Concepts
+
+### 3.1 SPEC_INDEX and registries
+
+- `SPEC_INDEX` is the central map of all specs in the system.
+- `registries` are catalogs of shared entities that must be reused, not
+  redefined, such as:
+  - API registry
+  - data model registry
+  - glossary
+  - critical sections
+  - UI component registry
+
+`/smartspec_generate_plan` uses the index and registries to:
+
+- understand dependency structure between specs
+- identify which entities must be treated as shared contracts rather
+  than re-created
+
+### 3.2 Safety mode and safety_status
+
+- `--safety-mode=strict` (default)
+  - strict about ownership and duplication
+  - if ambiguity or conflicts could lead to duplicated or conflicting
+    shared entities, the plan must be marked as
+    `safety_status=UNSAFE` (or the run must fail)
+- `--safety-mode=dev`
+  - relaxed mode for sandbox/PoC/exploratory planning
+  - allows incomplete index/registries, but the plan is marked as
+    `safety_status=DEV-ONLY`
+
+Every generated plan must include a header with at least:
+
+- spec IDs in scope
+- SPEC_INDEX path used
+- run-label (if any)
+- timestamp
+- `safety_status = SAFE | UNSAFE | DEV-ONLY`
+
+### 3.3 Alignment between spec ↔ plan ↔ tasks
+
+- `spec.md` is the source-of-truth for requirements.
+- Plans **must not silently introduce new requirements**.
+- If specs are unclear or conflicting, the plan should:
+  - add explicit items like “clarify requirement X in spec”, rather than
+    guessing the requirement.
+- `/smartspec_generate_tasks` is expected to use both spec and plan;
+  the two must remain aligned.
+
+### 3.4 UI mode and AI UI JSON
+
+- UI mode is controlled by `--ui-mode=auto|json|inline`.
+- `json` → JSON-first UI: `ui.json` is a primary design artifact.
+- `inline` → UI is specified inside `spec.md`; no `ui.json` is required.
+
+When UI is in scope, the plan should:
+
+- schedule steps for authoring/reviewing `ui.json` when JSON-first
+- use signals from UI-related workflows when available, such as:
+  - `ui_spec_origin`, `ui_spec_review_status`,
+    `ui_json_quality_status`
+- treat AI-generated UI JSON as **draft** until reviewed and aligned
+  with the design system
+
+---
+
+## 4. Inputs / Outputs
+
+### 4.1 Inputs (artifacts)
+
+- SPEC_INDEX (if present)
+- registries (primary + supplemental)
+- target specs: `specs/<category>/<spec-id>/spec.md`
+- existing `plan.md` (if any)
+- existing `tasks.md` or other reports (read-only context)
+- optional UI governance reports from UI workflows
+
+### 4.2 Inputs (key flags)
+
+- Scope
+  - `--spec=<path>`
+  - `--spec-ids=<id1,id2,...>`
+- Index & registries
+  - `--index`, `--specindex`
+  - `--registry-dir`, `--registry-roots`
+- Multi-repo
+  - `--workspace-roots`
+  - `--repos-config`
+- Identity & layout
+  - `--run-label=<id>`
+  - `--plan-layout=per-spec|consolidated`
+  - `--output=<path>`
+- Safety & UI
+  - `--safety-mode=strict|dev`, `--strict`, `--dry-run`
+  - `--ui-mode=auto|json|inline`
+- Reporting & Kilo
+  - `--report-dir`, `--stdout-summary`
+  - `--kilocode`, `--nosubtasks`
+
+### 4.3 Outputs
+
+- `plan.md` (or the path specified by `--output`) with a header
+  containing `safety_status` and run metadata
+- a planning report under `.spec/reports/generate-plan/` (or
+  `--report-dir`), including:
+  - index/registry context
+  - scope, safety mode, safety_status
+  - dependency graph summary
+  - multi-repo, reuse-not-rebuild, and drift notes
+
+---
+
+## 5. Quick Start Examples
+
+### 5.1 Single spec, strict mode
 
 ```bash
-/smartspec_generate_plan <spec_path> [options...]
-```
-
-Examples:
-
-```bash
-/smartspec_generate_plan specs/checkout/spec.md
-
-/smartspec_generate_plan specs/checkout/spec.md \
-  --ui-mode=auto
-
-# Multi-repo planning
-/smartspec_generate_plan specs/checkout/spec.md \
-  --repos-config=.spec/smartspec.repos.json \
-  --registry-roots="../Repo-A/.spec/registry,../Repo-B/.spec/registry" \
-  --report=detailed
-```
-
----
-
-## 3. Inputs & Outputs
-
-### Inputs
-
-- One primary `spec.md` path
-- Optional additional spec IDs (when supported)
-- Optional index + registries
-- (UI specs) optional `ui.json`
-
-### Outputs
-
-- `plan.md` next to the primary spec (default)
-- Optional custom output path via `--output`
-- Report: `.spec/reports/generate-plan/`
-
----
-
-## 4. Centralization & Index Rules
-
-### Canonical Sources
-
-- `.spec/SPEC_INDEX.json` (canonical)
-- `.spec/registry/` (canonical shared naming)
-- Root `SPEC_INDEX.json` (legacy mirror)
-
-### SPEC_INDEX Auto-Detect Order
-
-1) `.spec/SPEC_INDEX.json`
-2) `SPEC_INDEX.json`
-3) `.smartspec/SPEC_INDEX.json` (deprecated)
-4) `specs/SPEC_INDEX.json`
-
----
-
-## 5. Key Flags
-
-### 5.1 Output
-
-```bash
---output=<path>
---dry-run
---nogenerate          # alias if supported
-```
-
-### 5.2 Index & Registry
-
-```bash
---index=<path>
---specindex=<path>    # legacy alias
---registry-dir=<dir>
---registry-roots=<csv>
-```
-
-Registry precedence:
-
-1) `--registry-dir` is authoritative.
-2) `--registry-roots` are read-only validation sources.
-
-### 5.3 Multi-Repo
-
-```bash
---workspace-roots=<csv>
---repos-config=<path>
-```
-
-- `--repos-config` takes precedence over `--workspace-roots`.
-
-### 5.4 Safety
-
-```bash
---safety-mode=<strict|dev>
---strict                  # legacy alias
-```
-
-### 5.5 UI Mode Alignment
-
-```bash
---ui-mode=<auto|json|inline>
---no-ui-json              # alias for inline (if supported)
-```
-
----
-
-## 6. How Planning Works (High-Level)
-
-1) Resolve the canonical index and registry roots.
-2) Build multi-repo search roots when configured.
-3) Identify planning scope:
-   - the target spec
-   - optional related specs by ID/category
-4) Read specs (read-only).
-5) Build or validate the dependency graph.
-6) Detect shared entities and ownership signals.
-7) Validate against the merged registry view.
-8) Produce phased plan:
-   - Foundations
-   - Shared contracts and patterns
-   - Data models and domain
-   - Services and use cases
-   - APIs and integrations
-   - Observability and security
-   - UI (conditional)
-9) Add explicit reconciliation items when governance ambiguity exists.
-
----
-
-## 7. Multi-Repo Planning Rules (v5.6)
-
-When a dependency spec resolves to another repository:
-
-- Label it as **external dependency**.
-- Emphasize **reuse-not-rebuild**.
-- Ensure the plan does not schedule parallel creation of shared APIs/models owned elsewhere.
-
-If a critical dependency cannot be resolved in `strict` safety mode:
-
-- The plan must include an early blocking milestone:
-  - “Resolve missing dependency spec and confirm ownership boundaries.”
-
----
-
-## 8. Multi-Registry Rules (v5.6)
-
-- The plan must treat any shared-name that exists in **any loaded registry** as a reuse candidate.
-- If the same name appears in multiple registries with inconsistent meaning:
-  - Add an explicit reconciliation milestone.
-- The plan must not instruct creation of a shared entity that would collide with any loaded registry view.
-
----
-
-## 9. UI Addendum
-
-UI sections are included when:
-
-- Index category is `ui`, or
-- `ui.json` exists, or
-- the spec declares JSON-driven UI workflows.
-
-Planning rules:
-
-- In `json` UI mode:
-  - Plan `ui.json` validation/update before component implementation.
-  - Plan component mapping and design-token alignment.
-  - Keep business logic outside UI JSON.
-
-- In `inline` UI mode:
-  - Plan modern responsive UI implementation guided by the spec narrative.
-  - Still emphasize shared component reuse.
-
----
-
-## 10. Best Practices
-
-### Single Repo
-
-```bash
-/smartspec_generate_plan specs/.../spec.md
-```
-
-### Two or More Repos
-
-```bash
-/smartspec_generate_plan specs/.../spec.md \
-  --repos-config=.spec/smartspec.repos.json \
+smartspec_generate_plan \
+  --spec=specs/payments/spec-pay-001-checkout/spec.md \
+  --index=.spec/SPEC_INDEX.json \
   --registry-dir=.spec/registry \
-  --registry-roots="../Repo-A/.spec/registry,../Repo-B/.spec/registry"
+  --safety-mode=strict \
+  --run-label=checkout-v2-planning \
+  --stdout-summary
+```
+
+Result:
+
+- `plan.md` next to `spec.md` with header and `safety_status`.
+- planning report in `.spec/reports/generate-plan/`.
+
+### 5.2 Multiple specs, per-spec plans
+
+```bash
+smartspec_generate_plan \
+  --spec-ids=payments.checkout,identity.login \
+  --index=.spec/SPEC_INDEX.json \
+  --registry-dir=.spec/registry \
+  --plan-layout=per-spec \
+  --safety-mode=strict \
+  --run-label=release-2024Q4 \
+  --stdout-summary
+```
+
+Each spec gets its own `plan.md`, ordered according to the dependency
+graph from the index.
+
+### 5.3 Consolidated plan for multiple specs
+
+```bash
+smartspec_generate_plan \
+  --spec-ids=payments.checkout,identity.login \
+  --index=.spec/SPEC_INDEX.json \
+  --registry-dir=.spec/registry \
+  --plan-layout=consolidated \
+  --output=plans/release-2024Q4-plan.md \
+  --run-label=release-2024Q4 \
+  --safety-mode=strict \
+  --stdout-summary
 ```
 
 ---
 
-## 11. Related Workflows
+## 6. Multi-repo / Multi-registry Examples
 
-- `/smartspec_validate_index`
-- `/smartspec_generate_spec`
-- `/smartspec_generate_tasks`
-- `/smartspec_generate_tests`
-- `/smartspec_sync_spec_tasks`
+### 6.1 Monorepo with multiple services
+
+```bash
+smartspec_generate_plan \
+  --spec-ids=billing.invoice,notifications.email \
+  --index=.spec/SPEC_INDEX.json \
+  --registry-dir=.spec/registry \
+  --workspace-roots="." \
+  --plan-layout=per-spec \
+  --safety-mode=strict \
+  --stdout-summary
+```
+
+### 6.2 Multi-repo, shared platform registry
+
+```bash
+smartspec_generate_plan \
+  --spec-ids=teamA.web_portal,teamB.mobile_app \
+  --specindex=../platform/.spec/SPEC_INDEX.json \
+  --registry-dir=.spec/registry \
+  --registry-roots="../platform/.spec/registry" \
+  --workspace-roots="../platform,../teamA,../teamB" \
+  --repos-config=.spec/smartspec.repos.json \
+  --plan-layout=consolidated \
+  --output=.spec/plans/cross-team-2024Q4.md \
+  --safety-mode=strict \
+  --stdout-summary
+```
+
+External specs and shared entities are treated as **external
+dependencies** with explicit reuse-not-rebuild notes.
 
 ---
 
-## 12. For the LLM
+## 7. UI JSON vs Inline UI Examples
 
-When using a plan to guide tasks and implementation:
+### 7.1 JSON-first UI with AI-generated UI JSON
 
-- Treat registries as authoritative for shared naming.
-- Respect cross-repo ownership boundaries.
-- Do not invent new shared APIs/models when reuse is indicated.
-- If index and spec dependencies conflict, stop and reconcile.
-- Re-run planning when upstream specs change materially.
+```bash
+smartspec_generate_plan \
+  --spec=specs/web/spec-web-001-dashboard/spec.md \
+  --index=.spec/SPEC_INDEX.json \
+  --registry-dir=.spec/registry \
+  --ui-mode=json \
+  --run-label=dashboard-ui-v3 \
+  --safety-mode=strict \
+  --stdout-summary
+```
+
+The resulting plan should include phases for:
+
+- authoring/updating `ui.json` aligned with the design system and UI
+  registries
+- reviewing AI-generated UI JSON when `meta.source=ai` and
+  `meta.review_status=unreviewed`
+- separating layout from business logic
+
+### 7.2 Legacy UI (inline only)
+
+```bash
+smartspec_generate_plan \
+  --spec=specs/legacy/spec-legacy-ui-001/spec.md \
+  --index=.spec/SPEC_INDEX.json \
+  --registry-dir=.spec/registry \
+  --ui-mode=inline \
+  --safety-mode=dev \
+  --run-label=legacy-ui-cleanup \
+  --stdout-summary
+```
+
+Here the plan focuses on refactoring UI according to inline spec
+requirements, without requiring `ui.json`, while optionally suggesting a
+future move to JSON-first.
 
 ---
 
-## 13. Summary
+## 8. KiloCode Usage Examples
 
-`/smartspec_generate_plan v5.6` provides a governance-aware roadmap that remains compatible with legacy SmartSpec expectations while protecting multi-repo programs from duplicated shared work and naming drift.
+### 8.1 Kilo, multiple specs, per-spec plans
+
+```bash
+smartspec_generate_plan \
+  --spec-ids=payments.checkout,identity.login \
+  --index=.spec/SPEC_INDEX.json \
+  --registry-dir=.spec/registry \
+  --kilocode \
+  --plan-layout=per-spec \
+  --run-label=release-2024Q4 \
+  --safety-mode=strict \
+  --stdout-summary
+```
+
+On Kilo:
+
+- Orchestrator breaks work into subtasks per spec, ordered by
+  dependencies from SPEC_INDEX.
+- Code mode reads specs/index/registries and generates plans.
+- If any scope is `UNSAFE`, the overall run is considered `UNSAFE`.
+
+### 8.2 Disable subtasks for a small scope
+
+```bash
+smartspec_generate_plan \
+  --spec=specs/tools/spec-tools-001-linter/spec.md \
+  --index=.spec/SPEC_INDEX.json \
+  --registry-dir=.spec/registry \
+  --kilocode \
+  --nosubtasks \
+  --run-label=tools-linter-plan \
+  --stdout-summary
+```
+
+---
+
+## 9. Best Practices
+
+- Use `--safety-mode=strict` by default for production-bound work.
+- Run with `--dry-run` the first time in a new repo or configuration.
+- Keep `.spec/SPEC_INDEX.json` and `.spec/registry/` up to date and
+  plan remediation work when they fall behind reality.
+- Socialize the meaning of `safety_status`:
+  - SAFE → may be used for downstream automation after appropriate
+    review.
+  - UNSAFE → requires resolution of conflicts/ambiguities first.
+  - DEV-ONLY → for sandbox/PoC; not a release plan.
+- Maintain spec ↔ plan alignment; if they drift, fix the spec first and
+  regenerate the plan.
+
+---
+
+## 10. Risks if you don’t use (or misuse) this workflow
+
+- The spec → plan → tasks chain becomes inconsistent, causing teams to
+  implement different interpretations of the same feature.
+- Shared entities (APIs/models/terms) are duplicated across repos
+  without a clear view of drift.
+- AI-generated UI JSON reaches production with no explicit review
+  phases.
+- Multi-repo programs evolve with reimplementation instead of reuse,
+  leading to long-term maintenance issues.
+
+---
+
+## 11. FAQ / Troubleshooting
+
+**Q1: Can I use this without SPEC_INDEX?**  
+Yes. The workflow operates in local-spec-only mode and the plan should
+include a Phase 0 recommending index/registry initialization before
+production use.
+
+**Q2: What if we don’t want UI JSON / AI UI yet?**  
+Use `--ui-mode=inline` and keep UI requirements in `spec.md`. The plan
+can still suggest a future migration path to JSON-first.
+
+**Q3: How much should we trust `safety_status`?**  
+Treat `safety_status` as a strong signal for CI and release boards,
+especially SAFE vs UNSAFE in strict mode. Human review is still
+recommended for major initiatives.
+
+**Q4: Does this workflow modify specs or tasks?**  
+No. It only creates/updates plans and planning reports. Specs and tasks
+are managed by other workflows in the SmartSpec chain.
+
+---
+
+End of `/smartspec_generate_plan v5.6.2 – 5.6.x` manual (English).
+If future versions significantly change safety-mode, plan-layout, UI
+mode, or multi-repo behavior, create a new manual (e.g., v5.7) and
+clearly state the compatible workflow versions.
 

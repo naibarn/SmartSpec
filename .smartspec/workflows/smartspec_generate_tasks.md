@@ -1,304 +1,516 @@
----
-description: Generate tasks.md from spec(s) with SmartSpec centralization (.spec), v5.6 cross-repo + multi-registry alignment, UI mode controls, and LLM-safe guardrails
-version: 5.6
----
-
-# /smartspec_generate_tasks
-
-Generate a high-quality `tasks.md` from one or more existing specs while enforcing SmartSpec centralization rules and providing **LLM-safe, duplication-resistant** implementation guidance.
-
-This v5.6 workflow preserves all essential behavior from v5.5 and earlier versions while adding **multi-repo** and **multi-registry** support to ensure that the chain:
-
-> `/smartspec_generate_spec` → `/smartspec_generate_tasks`
-
-remains consistent across projects that split specs and shared logic into two or more repositories.
+name: /smartspec_generate_tasks
+version: 5.6.4
+role: tasks-generation/execution
+write_guard: ALLOW-WRITE
+purpose: Generate high-quality `tasks.md` from one or more existing
+         specs with v5.6 centralization, multi-repo/multi-registry
+         safety, UI mode alignment, KiloCode-compatible orchestration,
+         and web/AI/data-aware guardrails (including React/Next.js/RSC/
+         Node/npm, AI/LLM features, and data-sensitivity rules).
 
 ---
 
-## Goals
+## 1) Summary
 
-1. Produce `tasks.md` that is consistent with:
-   - the target spec(s)
-   - cross-spec registries
-   - dependency graph in SPEC_INDEX
-   - cross-repo ownership boundaries
+`/smartspec_generate_tasks` generates or updates `tasks.md` for one or
+more specs while enforcing SmartSpec centralization rules and providing
+LLM-safe, duplication-resistant guidance.
 
-2. Prevent cross-SPEC drift:
-   - avoid re-inventing names
-   - avoid conflicting API/model/term/UI definitions
-   - reuse shared patterns instead of duplicating
-   - respect ownership for shared entities
+It is the execution-planning step in the v5.6 chain:
 
-3. Support UI workflows:
-   - JSON-driven UI (`ui.json`) for UI specs (default)
-   - inline UI mode when explicitly requested
+1. `/smartspec_generate_spec`
+2. `/smartspec_generate_plan`
+3. `/smartspec_generate_tasks`
+4. `/smartspec_sync_spec_tasks`
 
-4. Provide fine-grained tasks and subtasks by default:
-   - atomic subtasks (T0001.1 style)
-   - explicit dependency graph
+Core goals:
 
-5. Provide multi-repo and multi-registry validation:
-   - ensure referenced specs can be resolved across sibling repos
-   - ensure shared registries are loaded consistently
-   - reduce duplicate implementations across repos
+- produce tasks that are:
+  - consistent with the target spec(s) and plan(s);
+  - aligned with SPEC_INDEX dependency graph;
+  - aligned with cross-spec registries and cross-repo ownership;
+- prevent cross-SPEC drift and duplication:
+  - avoid re-inventing shared names and entities;
+  - reuse shared patterns instead of duplicating;
+  - respect ownership for shared APIs/models/terms/UI components;
+- support UI workflows:
+  - JSON-first UI (`ui.json`) when appropriate;
+  - inline UI mode when explicitly requested or inferred;
+- provide fine-grained tasks and subtasks by default:
+  - atomic subtasks (`T0001.1` style);
+  - explicit dependency graph;
+- support multi-repo/multi-registry validation and reuse:
+  - cross-repo spec resolution using `--repos-config` and
+    `--workspace-roots`;
+  - primary vs supplemental registry precedence and conflict surfacing;
+- apply modern web and AI/data guardrails:
+  - React/Next.js/RSC/Node/npm dependency and security tasks;
+  - AI/LLM prompt and logging safety tasks;
+  - data-sensitivity and secret/PII propagation guardrails.
+
+> **Execution-focused but governance-aware**
+>
+> - This workflow **may write** `tasks.md` and reports in the current
+>   repo (subject to `--dry-run`/`--nogenerate` and safety modes).
+> - It **does not** modify specs, tests, code, or registries.
+> - It focuses on tasks, sequencing, and guard rails, not on specific
+>   command lines or CI configuration.
+
+**v5.6 baseline (retained):**
+
+- multi-repo and multi-registry flags;
+- reuse vs create resource semantics;
+- cross-repo anti-duplication and chain ownership hints;
+- JSON vs inline UI mode;
+- strict vs dev mode via `--mode`.
+
+**v5.6.3 (additive hardening, retained):**
+
+- Added:
+  - explicit Modes section (role, write_guard, safety, UI, Kilo);
+  - `--safety-mode` and `--strict` as aliases for `--mode`;
+  - KiloCode support via `--kilocode` and `--nosubtasks`;
+  - React/Next.js/RSC/Node/npm guardrails based on
+    `tool-version-registry.json` and web-stack detection;
+  - design-system/App-component-aware UI tasks;
+  - AI/LLM feature and data-sensitivity aware tasks;
+  - Secret/PII propagation guardrails for `tasks.md` and reports;
+  - optional `--report-dir` and `--stdout-summary` flags.
+
+**v5.6.4 (patch-level tightening):**
+
+- Added canonical section layout consistent with other v5.6.4 workflows
+  (plan/spec):
+  - Canonical Folders & File Placement.
+  - KiloCode Support (Meta-Flag).
+  - Inline Detection Rules.
+  - Best Practices.
+- Clarified audit metadata expectations for reports.
+- Clarified behavior when `tool-version-registry.json` is missing for
+  web stacks: tasks must bootstrap/refresh the registry under a
+  responsible owner.
+- Added explicit `safety_status` header recommendation for `tasks.md`.
+- Strengthened guidance on avoiding secret/PII propagation into
+  `tasks.md` and reports (with redaction/cleanup tasks).
 
 ---
 
-## Inputs
+## 2) When to Use
 
-- A target spec path (recommended):
-  - e.g. `specs/checkout/spec.md`
+Use `/smartspec_generate_tasks` when:
 
-- Optional flags:
-  - index/registry overrides
-  - strict/dev mode
-  - UI mode
-  - subtask control
-  - multi-repo and multi-registry roots
+- you have one or more **existing specs** and (optionally) plans, and
+  you want `tasks.md` as an execution-ready breakdown;
+- you want tasks aligned with:
+  - centralization and registry rules;
+  - UI mode (JSON-first vs inline);
+  - multi-repo ownership boundaries;
+- you are implementing or maintaining:
+  - React/Next.js/Node-based services;
+  - AI/LLM-driven features or copilots;
+  - data flows with sensitive/regulated data;
+- you need tasks that are compatible with CI/CD and governance gates.
 
----
+Do **not** use this workflow to:
 
-## Outputs
-
-- `tasks.md` next to the target `spec.md` by default.
-
-- The generated file includes:
-  - global guard rails
-  - top-level tasks
-  - automatic subtasks (default)
-  - resource usage metadata
-  - chain ownership hints when applicable
-  - UI tasks aligned to UI mode
-  - cross-SPEC/cross-repo warnings or blocking tasks
-  - version pinning block
+- author or repair specs (use `/smartspec_generate_spec`);
+- generate plans (use `/smartspec_generate_plan`);
+- directly modify registry definitions (use appropriate registry
+  workflows or manual governance).
 
 ---
 
-## Flags
+## 3) Inputs / Outputs
 
-### Index / Registry
+### 3.1 Inputs (artifacts, read-only)
+
+- **Target spec path** (recommended)
+  - e.g. `specs/checkout/spec.md`.
+
+- **SPEC_INDEX** (if present)
+  - `.spec/SPEC_INDEX.json` (canonical)
+  - `SPEC_INDEX.json` at repo root (legacy mirror)
+  - `.smartspec/SPEC_INDEX.json` (deprecated)
+  - `specs/SPEC_INDEX.json` (older layout)
+
+- **Registries**
+  - primary: `.spec/registry/` by default
+  - supplemental: directories from `--registry-roots`
+  - includes, when present:
+    - `api-registry.json`
+    - `data-model-registry.json`
+    - `glossary.json`
+    - `ui-component-registry.json`
+    - `app-component-registry.json`
+    - `design-tokens-registry.json`
+    - `patterns-registry.json`
+    - `tool-version-registry.json` (for frameworks/tools baselines)
+
+- **Optional plan**
+  - `plan.md` next to `spec.md` (if exists) as sequencing/context
+    input.
+
+- **Optional UI artifacts**
+  - `ui.json` or other UI JSON, when `UI_MODE=json`.
+
+- **Multi-repo context**
+  - `--workspace-roots` and/or `--repos-config` for resolving specs in
+    other repos (read-only).
+
+### 3.2 Inputs (flags)
+
+All CLI flags are described in **Section 5**.
+
+### 3.3 Outputs
+
+- **tasks.md**
+  - by default, `tasks.md` next to the target `spec.md`.
+  - contains:
+    - global implementation rules;
+    - top-level tasks (T001, T002, ...);
+    - subtasks (T001.1, T001.2, ...) when subtasks are enabled;
+    - resource usage metadata (reuse vs create, chain_owner, registry);
+    - UI tasks aligned with resolved UI mode;
+    - cross-SPEC/cross-repo warnings and tasks;
+    - web-stack/AI/data-sensitivity-specific guardrail tasks;
+    - version pinning and `safety_status` header.
+
+- **Report** (recommended)
+  - default directory: `.spec/reports/generate-tasks/`.
+  - includes at least:
+    - index path used;
+    - registry directories used;
+    - workspace roots / repos-config used;
+    - safety mode;
+    - UI mode;
+    - spec path/IDs;
+    - detection of web stacks, AI/LLM features, data-sensitivity;
+    - whether `tool-version-registry.json` was present & used;
+    - summary of reuse/create decisions;
+    - any secret/PII flags or redaction tasks;
+    - audit metadata:
+      - workflow name & version;
+      - SmartSpec KB version/hash (if available);
+      - key flags (`--safety-mode`/`--mode`, `--kilocode`, `--index`,
+        `--registry-dir`);
+      - timestamp.
+
+When `--dry-run` or `--nogenerate` is enabled, no files are written;
+`tasks.md` and report content are simulated/printed only.
+
+---
+
+## 4) Modes
+
+### 4.1 Role & write guard
+
+- Role: **tasks-generation/execution**
+- Write guard: **ALLOW-WRITE**, constrained to:
+  - `tasks.md` next to the target `spec.md`;
+  - `.spec/reports/generate-tasks/` (or `--report-dir`).
+- Specs, registries, and sibling repos are always **read-only**.
+
+### 4.2 Safety mode vs legacy `--mode`
+
+Supported flags:
+
+- `--mode=<strict|dev>`
+  - original flag; retained for backward compatibility.
+- `--safety-mode=<strict|dev>`
+  - alias; preferred in newer workflows.
+- `--strict`
+  - alias for `--safety-mode=strict`.
+
+Resolution rules:
+
+- If both `--mode` and `--safety-mode` are provided and conflict,
+  implementations should treat this as an error and fail fast.
+- If only one is provided, it defines the safety mode.
+- Default: `strict`.
+
+Semantics:
+
+- `strict`
+  - suitable for CI/prod gating;
+  - requires critical context (index + registries) when policy expects;
+  - enforces cross-repo ownership clarity and avoids unsafe web-stack
+    combinations;
+  - may treat severe conflicts as blocking, or mark `safety_status`
+    as `UNSAFE`.
+
+- `dev`
+  - best-effort generation for early-phase or local work;
+  - inserts high-visibility warnings into `tasks.md` and reports when
+    context is incomplete;
+  - may add bootstrap tasks to create/repair missing governance
+    artifacts (indexes, registries);
+  - generated tasks in `dev` mode should be treated as **non-final**;
+  - tasks generated with `dev` must set `safety_status=DEV-ONLY` in
+    the header and **must not** be used as-is for production/release
+    gating without review and, ideally, strict-mode regeneration.
+
+### 4.3 UI mode
+
+Controlled by:
+
+- `--ui-mode=<auto|json|inline>`
+- `--no-ui-json` (alias for `inline`)
+
+`UI_MODE` affects which UI tasks are generated:
+
+- `json` → JSON-first UI (`ui.json` as primary source);
+- `inline` → spec-embedded UI requirements (no `ui.json` dependency);
+- `auto` → infer from spec, index, and presence of `ui.json`.
+
+### 4.4 KiloCode mode
+
+When called with `--kilocode` under a Kilo environment:
+
+- effective role: **Ask/Architect** for orchestration;
+- Orchestrator-per-task rule:
+  - before generating tasks for each target spec, delegate to
+    Orchestrator to decompose spec into task blocks;
+  - unless `--nosubtasks` is set, subtasks are ON by default;
+- code/tool mode performs file I/O and parsing.
+
+If `--kilocode` is provided but Kilo is not detected:
+
+- treat as no-op meta-flag and run in normal single-flow mode.
+
+If Orchestrator is unavailable:
+
+- `strict`: fail fast with a clear infra error;
+- `dev`: may degrade to single-flow while logging the degradation in
+  the report.
+
+---
+
+## 5) Flags
+
+> **Non-removal guarantee:** All flags from v5.6 are preserved.
+
+### 5.1 Index / Registry
 
 - `--index=<path>`
   - Override automatic SPEC_INDEX detection.
 
 - `--specindex=<path>`
-  - Alias for `--index` (legacy-friendly).
+  - Alias for `--index`.
 
 - `--registry-dir=<path>`
   - Primary registry directory.
-  - Default: `.spec/registry`
-
-### Multi-Repo Resolution (NEW in v5.6)
-
-These flags are aligned with `/smartspec_validate_index` and `/smartspec_generate_spec v5.6`.
-
-- `--workspace-roots=<csv>`
-  - Comma-separated list of additional repo roots to search for spec files.
-  - Use when SPEC_INDEX references specs that live in sibling repos.
-  - Example:
-    - `--workspace-roots="../Smart-AI-Hub,../smart-ai-hub-enterprise-security"`
-
-- `--repos-config=<path>`
-  - JSON mapping of repo IDs to physical roots.
-  - Suggested default path: `.spec/smartspec.repos.json`
-  - Takes precedence over `--workspace-roots`.
-
-  Example structure:
-  ```json
-  {
-    "version": "1.0",
-    "repos": [
-      { "id": "public",  "root": "../Smart-AI-Hub" },
-      { "id": "private", "root": "../smart-ai-hub-enterprise-security" }
-    ]
-  }
-  ```
-
-### Multi-Registry Resolution (NEW in v5.6)
+  - Default: `.spec/registry`.
 
 - `--registry-roots=<csv>`
-  - Additional registry directories to load **read-only** for cross-repo validation.
-  - Use when each repo maintains a local registry that must be reconciled.
-  - Example:
-    - `--registry-roots="../repo-a/.spec/registry,../repo-b/.spec/registry"`
+  - Additional registry directories to load read-only.
+  - Primary vs supplemental registry precedence:
+    - primary (`--registry-dir`) is authoritative;
+    - supplemental (`--registry-roots`) are validation-only.
 
-Notes:
-- The workflow should treat `--registry-dir` as the **primary** registry.
-- `--registry-roots` are **supplemental** validation sources.
+### 5.2 Multi-Repo Resolution
 
-### Execution Control
+- `--workspace-roots=<csv>`
+  - Comma-separated list of additional repo roots.
 
-- `--dry-run` / `--nogenerate`
-  - Print tasks without writing files.
+- `--repos-config=<path>`
+  - JSON mapping of repo IDs to filesystem roots.
+  - Preferred over `--workspace-roots`.
+  - Suggested path: `.spec/smartspec.repos.json`.
 
-### Subtask Control
+### 5.3 Execution & Safety
+
+- `--dry-run`
+- `--nogenerate`
+  - Both mean: generate tasks to stdout (or report) without writing.
+
+- `--mode=<strict|dev>`
+- `--safety-mode=<strict|dev>`
+- `--strict`
+  - Safety mode control as described in 4.2.
+
+- `--report-dir=<path>`
+  - Override default `.spec/reports/generate-tasks/`.
+
+- `--stdout-summary`
+  - Emit a short summary at the end (scope, safety mode,
+    `safety_status`, key warnings).
+
+### 5.4 Subtask Control
 
 - `--nosubtasks`
   - Disable automatic subtask decomposition.
   - Default: subtasks ON.
 
-### Workflow Strictness
-
-- `--mode=<strict|dev>`
-
-  - `strict` (default):
-    - Production/CI-grade gating.
-    - Requires critical context (index + API/model registries) when project policy expects them.
-    - Requires at least scoped repository scan.
-    - Enforces cross-repo ownership clarity.
-
-  - `dev`:
-    - Best-effort generation for early-phase or local work.
-    - Inserts high-visibility warnings into `tasks.md` when context is incomplete.
-    - Adds bootstrap tasks to initialize missing governance artifacts.
-
-### UI Mode
+### 5.5 UI Mode
 
 - `--ui-mode=<auto|json|inline>`
-- `--no-ui-json` (alias for inline)
+- `--no-ui-json`
+  - alias for `--ui-mode=inline`.
+
+### 5.6 Kilo / subtasks
+
+- `--kilocode`
+  - enable Kilo semantics when running under Kilo.
 
 ---
 
-## 0) Resolve Canonical Index, Registries, and Multi-Repo Roots
+## 6) Canonical Folders & File Placement
 
-### 0.1 Resolve SPEC_INDEX
+### 6.1 SPEC_INDEX detection
 
 Detection order:
-1. `.spec/SPEC_INDEX.json` (canonical)
-2. `SPEC_INDEX.json` (legacy root mirror)
-3. `.smartspec/SPEC_INDEX.json` (deprecated)
-4. `specs/SPEC_INDEX.json` (older layout)
 
-If `--index/--specindex` is provided, it overrides detection.
+1. `.spec/SPEC_INDEX.json`
+2. `SPEC_INDEX.json` at repo root
+3. `.smartspec/SPEC_INDEX.json`
+4. `specs/SPEC_INDEX.json`
 
-### 0.2 Resolve Primary Registry Directory
+If `--index`/`--specindex` is provided, it overrides detection.
 
-Default:
-- `.spec/registry`
+If no index is found:
 
-Override:
-- `--registry-dir`
+- `strict`:
+  - generation should add a high-severity or blocking task to
+    initialize and validate SPEC_INDEX; `safety_status` should be at
+    most `DEV-ONLY` or `UNSAFE` depending on severity;
+- `dev`:
+  - may proceed with local-only assumptions but must emit a Phase 0
+    bootstrap task for SPEC_INDEX initialization.
 
-### 0.3 Resolve Supplemental Registry Roots
+### 6.2 Registries
 
-If `--registry-roots` is provided:
-- Parse CSV into a list of directories.
-- Load each directory read-only.
+- Primary registry directory: `.spec/registry/` or `--registry-dir`.
+- Supplemental registries: directories from `--registry-roots`
+  (read-only).
 
-### 0.4 Registry View & Precedence (NEW)
+If a shared name is defined in any loaded registry:
 
-The workflow must construct a merged validation view:
+- tasks must treat it as **reused**, not as a new shared entity to
+  create.
 
-1) **Primary registry** (`--registry-dir`)
-2) **Supplemental registries** (`--registry-roots`, read-only)
+When `tool-version-registry.json` exists in the primary registry:
 
-Rules:
-- If a name exists in the primary registry, it is authoritative.
-- If a name exists only in a supplemental registry:
-  - treat it as a **cross-repo candidate**
-  - emit warnings if the target spec attempts to create a duplicate entity
+- treat it as the authoritative description of allowed and minimum
+  patched tool/framework versions (including React/Next.js/Node).
+- tasks must:
+  - avoid recommending versions below configured `min_patch`;
+  - avoid downgrades across series except as explicit emergency
+    rollbacks with justification;
+  - surface incompatible combinations as tasks for consolidation.
 
-### 0.5 Resolve Multi-Repo Roots
+When a registry that is clearly relevant (for example,
+`tool-version-registry.json` in a React/Next.js/Node stack) is missing
+or obviously stale:
 
-If `--repos-config` is provided:
-- Load JSON.
-- Construct repo root list using configured `root` values.
-- Validate mapping for any `repo` labels used by SPEC_INDEX entries.
+- tasks must include Phase 0 work to create or refresh that registry
+  under the appropriate owner (platform/security) rather than silently
+  assuming defaults.
 
-If `--workspace-roots` is provided:
-- Add these roots to the search list.
+### 6.3 Tasks files
 
-If neither is provided:
-- Use current repo root only.
+- Default location for single-spec runs:
+  - `specs/<category>/<spec-id>/tasks.md`.
+- For multi-spec scopes (if supported by the caller):
+  - behavior must be documented in report and stdout summary, with
+    explicit paths for each `tasks.md` created.
+
+Every generated or updated `tasks.md` should include at least:
+
+- a header block with spec IDs, index path, generated_at,
+  `safety_status`, and safety mode.
+
+### 6.4 Reports
+
+- Default directory: `.spec/reports/generate-tasks/`.
+- Suggested file naming pattern:
+  - `<timestamp>_<spec-id>_generate-tasks.{md|json}`.
+
+The workflow must **not** create new top-level directories outside
+`.spec/` or `specs/` by default.
 
 ---
 
-## 1) Identify Target Spec(s)
+## 7) Multi-repo / Multi-registry Rules
 
-- Validate the target `spec.md` path.
+1. Use `--repos-config` when available to map logical repo IDs to
+   filesystem roots.
+2. Use `--workspace-roots` as a simpler fallback list of sibling
+   repositories.
+3. When resolving dependencies from SPEC_INDEX:
+   - search current repo first;
+   - then repos from `--repos-config`;
+   - then `--workspace-roots`.
+4. Dependencies that resolve to other repos are treated as **external
+   owners**:
+   - tasks must prefer reuse (client/integration) over re-creating
+     equivalent functionality.
+5. For entities already present in registries (APIs, models, terms,
+   components):
+   - tasks must not schedule creation of conflicting shared entities;
+   - instead, they must schedule integration, adapter, or migration
+     work.
+6. Conflicts between primary and supplemental registries must be
+   surfaced as explicit tasks for reconciliation, preferring the
+   platform/global registry as a starting point.
+
+---
+
+## 8) Identify Target Spec(s) & Dependencies
+
+- Validate target `spec.md` path.
 - Resolve spec ID via SPEC_INDEX when available.
-- Identify dependencies from index and from spec content.
-
----
-
-## 2) Resolve Dependency Specs Across Repos (NEW)
-
-When a dependency ID is present:
-
-- Use SPEC_INDEX to obtain `path` and `repo` labels (if present).
-- Attempt to locate the physical `spec.md` across:
-  - current repo root
-  - `repos-config` roots
-  - `workspace-roots`
+- Read dependency info from:
+  - SPEC_INDEX;
+  - spec content;
+  - plan (if present).
+- Label dependencies as critical or non-critical based on registries
+  and spec metadata.
 
 Strict vs dev:
 
 - `strict`:
-  - If a **critical dependency** (shared API/model owner) cannot be resolved:
-    - Insert a blocking task `T000 — Resolve missing dependency spec`.
-    - Avoid generating create-type tasks for those shared entities.
+  - unresolved **critical** dependencies should produce blocking or
+    high-severity tasks (e.g., `T000 — Resolve missing dependency
+    spec`) and avoid create-type tasks for those entities.
 
 - `dev`:
-  - Insert warnings and allow partial planning.
+  - may proceed with explicit warning and bootstrap tasks.
 
 ---
 
-## 3) Read Spec in Read-Only Mode
+## 9) Read Spec (Read-only) & Ownership Gate
 
-Extract:
-- scope
-- functional requirements
-- non-functional requirements
-- dependencies
-- APIs
-- data models
-- domain terms
-- UI sections
+Parse spec (and plan, if present) for:
 
-Also collect **ownership and reuse signals**.
+- scope, functional and non-functional requirements;
+- APIs, models, domain terms;
+- UI surfaces and flows;
+- integrations and external dependencies;
+- web stack hints (React/Next.js/Node/RSC/etc.);
+- AI/LLM feature hints (chat, copilots, agents, etc.);
+- data-sensitivity hints (PII, financial/health, regulated data);
+- ownership & reuse signals (e.g., "reuses shared API X").
 
----
+Use registries to classify each entity as:
 
-## 4) Cross-SPEC & Cross-Repo Ownership Gate
+- owned by this spec;
+- owned by another spec (same repo);
+- owned by another spec (other repo);
+- unknown.
 
-### 4.1 Registry Ownership Validation
+Apply cross-repo anti-duplication:
 
-For each shared entity referenced by the spec:
-
-- Determine whether it is:
-  - owned by this spec
-  - owned by another spec (same repo)
-  - owned by another spec (different repo)
-  - unknown
-
-### 4.2 Chain Ownership (Compatible with v5.5)
-
-Where applicable, tasks should capture chain ownership hints:
-
-```yaml
-chain_owner:
-  api_owner: <spec-id|null>
-  model_owner: <spec-id|null>
-  pattern_owner: <spec-id|null>
-  terminology_owner: <spec-id|null>
-```
-
-### 4.3 Cross-Repo Anti-Duplication Rule (NEW)
-
-If a referenced owner spec is resolved in another repo:
-
-- The workflow must:
-  - prefer `type: reuse` tasks
-  - add explicit notes detailing:
-    - which repo owns the canonical implementation
-    - where to import/call from
-- It must **not** generate parallel create-type tasks for equivalent logic.
+- if owner spec in another repo is resolved:
+  - generate `reuse` tasks with explicit integration boundaries;
+  - do not generate parallel `create` tasks for equivalent logic.
 
 ---
 
-## 5) Generate Top-Level Tasks
+## 10) Task Structure & Resource Usage Metadata
 
-Preserve the established categories:
+### 10.1 Top-level tasks & subtasks
+
+Preserve and extend categories such as:
 
 1. Setup & Baseline
 2. Core Implementation
@@ -308,45 +520,35 @@ Preserve the established categories:
 6. Observability & Ops
 7. Security
 8. UI & UX
+9. AI/LLM & Data-Sensitivity (when applicable)
 
-IDs:
-- `T001`, `T002`, …
+Top-level IDs: `T001`, `T002`, …
 
----
+Subtasks:
 
-## 6) Automatic Subtask Decomposition (Default)
+- default: ON, generating atomic subtasks (`T001.1`, `T001.2`, …) with
+  explicit dependencies where ordering matters;
+- `--nosubtasks`: generate only top-level tasks without subtask IDs.
 
-By default:
+### 10.2 Resource usage metadata
 
-- Each top-level task is decomposed into atomic subtasks:
-  - `T002.1`, `T002.2`, …
-
-- Subtasks must include explicit dependencies when logical ordering exists.
-
-Disable via:
-- `--nosubtasks`
-
----
-
-## 7) Resource Usage Metadata (Multi-Repo Aware)
-
-Every task/subtask must include:
+Each task/subtask should include a metadata block, for example:
 
 ```yaml
 Resource usage:
   type: reuse | create
   chain_owner:
-    api_owner: ...
-    model_owner: ...
-    pattern_owner: ...
-    terminology_owner: ...
+    api_owner: <spec-id|null>
+    model_owner: <spec-id|null>
+    pattern_owner: <spec-id|null>
+    terminology_owner: <spec-id|null>
   registry:
-    api: ...
-    model: ...
-    ui_component: ...
+    api: <entry-id|null>
+    model: <entry-id|null>
+    ui_component: <entry-id|null>
   files:
-    - ...
-  justification: ...
+    - <path-or-glob>
+  justification: <short description>
   repo_context:
     owner_repo: <id|unknown>
     consumer_repo: <id|current>
@@ -354,102 +556,428 @@ Resource usage:
 
 Rules:
 
-- `reuse`:
-  - MUST call/import the canonical implementation.
-  - If owner_repo is different from consumer_repo, the task must state the import/integration boundary.
+- `type: reuse`
+  - must reference canonical owner;
+  - if `owner_repo != consumer_repo`, specify import/integration
+    boundaries and protocols.
 
-- `create`:
-  - MUST justify creation.
-  - MUST confirm the entity is not present in **any** loaded registry view.
-
----
-
-## 8) Repository Scan (Scoped)
-
-In `strict` mode:
-- Perform at least a **scoped** scan within the bounded context.
-
-Optional extension:
-- When multi-repo roots are provided, implementations may run a **light cross-repo scan** for naming collisions and duplicated service stubs.
-
-If potential duplicates are found:
-- Insert a warning and convert create-type tasks to reuse-type where appropriate.
+- `type: create`
+  - must justify creation (e.g., "no registry entry found");
+  - must confirm entity is not present in any loaded registry.
 
 ---
 
-## 9) UI Addendum (Mode-Dependent)
+## 11) UI Addendum (Mode-Dependent)
 
-### 9.1 JSON Mode
+Apply when the spec is UI-related or references UI surfaces.
 
-Tasks must include:
-- Generate or validate `ui.json` first.
-- Map UI nodes to components.
-- Enforce design token usage.
-- Extract business logic from UI.
+### 11.1 JSON-first UI (`UI_MODE=json`)
 
-### 9.2 Inline Mode
+Tasks should include:
 
-Tasks must include:
-- Modern responsive layout tasks.
-- Shared component reuse tasks.
-- Container/logic separation tasks.
+- generate or validate `ui.json` for the scope:
+  - ensure it uses canonical component names from
+    `ui-component-registry.json` / `app-component-registry.json`;
+  - ensure it references design tokens instead of hard-coded styles;
+- map UI nodes to components:
+  - prefer App-level components (e.g., `AppButton`, `AppCard`,
+    `AppInput`, `AppDialog`, `AppEmptyState`, `AppErrorState`);
+- separation of concerns:
+  - keep business logic out of `ui.json`;
+  - domain rules live in spec and code, not in layout metadata;
+- consistency & UX:
+  - use existing layout patterns from `patterns-registry.json`;
+  - handle loading/empty/error states via standard components.
+
+### 11.2 Inline UI (`UI_MODE=inline`)
+
+Tasks should include:
+
+- implement modern responsive layouts per spec;
+- reuse shared components and patterns rather than bespoke UI;
+- keep layout/state and domain logic separated;
+- adopt design tokens and App-level components even without `ui.json`.
+
+### 11.3 UI Governance & AI-generated UI JSON
+
+Where AI-generated `ui.json` or UI governance reports exist, tasks
+should:
+
+- review UI surfaces with `ui_spec_origin=AI` &
+  `ui_spec_review_status=UNREVIEWED`;
+- remediate where `ui_json_quality_status` is WEAK or BROKEN;
+- schedule UI consistency/validation workflows (by name) where needed;
+- never assume AI-generated UI JSON is production-ready without human
+  review.
 
 ---
 
-## 10) Global Guard Rails (Inserted into tasks.md)
+## 12) Web Stack Security & Dependency Guardrails
 
-The generated `tasks.md` must start with:
+When the spec (or registries) indicate React/Next.js/Node/RSC usage:
+
+1. **Tool-version-registry integration**
+   - read `tool-version-registry.json` when present;
+   - generate tasks to:
+     - keep dependencies at or above `min_patch` for each allowed
+       series;
+     - avoid disallowed downgrade paths;
+     - converge multiple services on compatible series where possible.
+
+2. **Missing or stale tool-version registry**
+   - if web stack is present but `tool-version-registry.json` is
+     missing or clearly obsolete, generate Phase 0 tasks to:
+     - create or refresh the registry under platform/security;
+     - populate minimum patched baselines according to policy.
+
+3. **RSC and `react-server-dom-*` surfaces**
+   - tasks to:
+     - review data crossing RSC boundaries;
+     - validate serialization and streaming safety;
+     - ensure access control and auth checks at server actions.
+
+4. **SSR/Edge runtimes**
+   - tasks to:
+     - validate environment variables and secrets are not leaked;
+     - harden headers and caching behavior;
+     - confirm that sensitive data does not flow into client bundles.
+
+5. **CI/release guardrails**
+   - tasks to:
+     - maintain lockfiles (`package-lock.json`, `yarn.lock`,
+       `pnpm-lock.yaml`);
+     - run dependency scanners (`npm audit`/SCA);
+     - configure dependency bots (Dependabot/Renovate/etc.);
+     - compare runtime tool versions to registry baselines in CI.
+
+---
+
+## 13) AI & Data-Sensitivity Guardrails
+
+When the spec includes AI/LLM features:
+
+- tasks must:
+  - define prompt and context construction rules (including safe data);
+  - implement prompt injection defenses and instruction hierarchy;
+  - define logging and trace policies that exclude secrets/PII;
+  - run red-team style tests for adversarial prompts and edge cases.
+
+When the spec handles sensitive data:
+
+- tasks must:
+  - classify data and apply anonymization/masking where appropriate;
+  - ensure secrets/PII do not appear in:
+    - `tasks.md` examples;
+    - logs or stack traces copied into tasks;
+    - any persistently stored prompt templates;
+  - integrate external data-protection tooling (DLP, secret scanners)
+    where required by policy.
+
+---
+
+## 14) Global Guard Rails in `tasks.md`
+
+Generated `tasks.md` should start with an implementation rules block,
+for example:
 
 ```markdown
 > IMPLEMENTATION RULES
-> - Load and read all referenced specs and registries before coding.
+> - Load and read all referenced specs, plans, and registries before coding.
 > - NEVER reimplement shared APIs, models, or UI components that have existing owners.
 > - Cross-repo owners MUST be reused through defined import/integration boundaries.
-> - Follow Resource usage strictly (reuse vs create).
-> - Respect resolved UI mode (json/inline).
-> - If any referenced SPEC is updated after generation time, STOP and regenerate tasks.md.
-> - If contradictions between spec.md and tasks.md are found, STOP and reconcile.
-> - tasks.md IS the primary execution plan.
+> - Follow Resource usage metadata strictly (reuse vs create).
+> - Respect resolved UI mode (json/inline) and design-system guidance.
+> - If any referenced SPEC or PLAN is updated after generated_at, STOP and regenerate tasks.md.
+> - If contradictions between spec.md/plan.md and tasks.md are found, STOP and reconcile.
+> - tasks.md IS the primary execution plan, but spec.md remains the source-of-truth for requirements.
+> - Do NOT place secrets, access tokens, passwords, or PII in tasks.md, examples, or logs.
 ```
 
 ---
 
-## 11) Version Pinning
+## 15) Version Pinning & Safety Header
 
-Generated tasks must include:
+Include a version pinning header at the top of `tasks.md`, such as:
 
-```markdown
-Generated from SPEC:
-  id: <spec-id>
-  version: <front-matter | git hash | UNKNOWN>
-  source: <front-matter | git | unknown>
+```yaml
+Tasks metadata:
+  spec_id: <spec-id>
+  spec_version: <front-matter | git-hash | UNKNOWN>
+  index_path: <SPEC_INDEX path | UNKNOWN>
   generated_at: <timestamp>
-
-If any referenced spec updates after generated_at:
-  STOP and regenerate tasks.md.
+  generated_by: /smartspec_generate_tasks v5.6.4
+  safety_mode: strict | dev
+  safety_status: SAFE | UNSAFE | DEV-ONLY
 ```
+
+Rules:
+
+- `safety_status=SAFE` only when strict mode finds no blocking issues.
+- `safety_status=UNSAFE` when strict mode finds unresolved conflicts
+  or missing critical context.
+- `safety_status=DEV-ONLY` for dev mode runs or exploratory tasks.
+
+Tasks should include a rule that if any referenced spec or plan updates
+after `generated_at`, `tasks.md` must be regenerated.
 
 ---
 
-## 12) Reconciliation Task
+## 16) Reconciliation Task
 
-In all modes, the workflow should add:
+All generated `tasks.md` should include a reconciliation task, for
+example:
 
 ```markdown
-T999 — SPEC/TASK Alignment Review
+T999 — SPEC/PLAN/TASK Alignment Review
+- Verify there are no contradictions between spec.md, plan.md (if present), and tasks.md.
+- Confirm cross-repo reuse directives remain consistent.
+- Confirm web-stack, AI, and data-sensitivity guardrails are implemented as planned.
+- Update spec or plan first if misalignment is found, then regenerate tasks.md.
 ```
-
-Purpose:
-- verify no contradiction between spec and tasks
-- confirm cross-repo reuse directives remain consistent
 
 ---
 
-## Notes
+## 17) Weakness & Risk Check (Quality Gate)
 
-- `.spec/` remains canonical for index and registries when present.
-- `.smartspec/` is tooling only.
-- Multi-repo flags are optional and safe to omit for single-repo projects.
-- Multi-registry roots are validation-only sources by default.
-- This v5.6 workflow is designed to be fully consistent with `/smartspec_generate_spec v5.6`.
+Before treating `/smartspec_generate_tasks v5.6.4` as complete, verify:
+
+1. **Write safety**
+   - `--dry-run`/`--nogenerate` prevent all writes;
+   - writes are limited to `tasks.md` and reports under `.spec/`.
+
+2. **Index & registry correctness**
+   - SPEC_INDEX detection order is followed;
+   - primary vs supplemental registries are respected;
+   - shared entities are reused, not duplicated.
+
+3. **Multi-repo safety**
+   - sibling repos are read-only;
+   - external owners are modeled as `reuse` tasks, not duplicated
+     implementations.
+
+4. **UI governance**
+   - UI mode is consistent with other workflows;
+   - JSON-first tasks use design tokens and App-level components;
+   - no business logic is encoded in `ui.json` tasks.
+
+5. **Safety-mode behavior**
+   - strict/dev semantics match expectations;
+   - conflicts and missing context are surfaced via `safety_status` and
+     explicit tasks.
+
+6. **Web-stack guardrails**
+   - React/Next.js/RSC/Node/npm tasks respect registry baselines;
+   - RSC/SSR/Edge and `react-server-dom-*` have explicit guard tasks;
+   - missing `tool-version-registry.json` leads to registry bootstrap
+     tasks.
+
+7. **Design-system alignment**
+   - App-level components and design tokens are preferred over raw
+     components and ad-hoc styles.
+
+8. **AI & data-sensitivity**
+   - AI/LLM features yield prompt/logging/injection/red-team tasks;
+   - sensitive data yields classification/masking and DLP/secret
+     scanner integration tasks.
+
+9. **Secret/PII propagation**
+   - generation avoids inserting secrets/PII/logs;
+   - suspicious content is flagged in the report for human redaction.
+
+10. **KiloCode support**
+    - `--kilocode` and `--nosubtasks` behave as documented;
+    - Orchestrator-per-task rule is honored under Kilo.
+
+---
+
+## 18) Legacy Flags Inventory
+
+- **Kept (legacy behavior):**
+  - `--index`
+  - `--specindex`
+  - `--registry-dir`
+  - `--registry-roots`
+  - `--workspace-roots`
+  - `--repos-config`
+  - `--dry-run`
+  - `--nogenerate`
+  - `--nosubtasks`
+  - `--mode`
+  - `--ui-mode`
+  - `--no-ui-json`
+
+- **New additive flags (v5.6.x):**
+  - `--safety-mode`
+  - `--strict`
+  - `--report-dir`
+  - `--stdout-summary`
+  - `--kilocode`
+
+No legacy flag is removed; `--mode` remains supported and mapped to
+`safety-mode` semantics.
+
+---
+
+## 19) KiloCode Support (Meta-Flag)
+
+As a tasks-generation workflow, `/smartspec_generate_tasks` must
+support KiloCode semantics without depending on them.
+
+- Accepts `--kilocode` as a meta-flag.
+- Under Kilo:
+  - Orchestrator coordinates per-spec tasks-generation steps;
+  - Code/tool mode reads specs, plans, indexes, registries, and writes
+    `tasks.md` and reports;
+  - write guard and safety-mode rules apply as in non-Kilo mode.
+- Under non-Kilo:
+  - `--kilocode` is treated as a no-op.
+
+### 19.1 Orchestrator loop (Kilo + subtasks)
+
+For each spec (or group of specs) in scope, in dependency order:
+
+1. Resolve index/registry context.
+2. Resolve multi-repo dependencies.
+3. Read spec(s) and optional plan(s).
+4. Detect web stacks, AI/LLM features, and data-sensitivity markers.
+5. Build a high-level task graph.
+6. Decompose into tasks and subtasks (unless `--nosubtasks`).
+7. Attach resource usage metadata and ownership info.
+8. Apply UI, web-stack, AI, and data-sensitivity guardrails.
+9. Compute `safety_status` for the scope and propagate it into headers
+   and reports.
+
+Subtasks are ON by default; `--nosubtasks` can disable them.
+
+---
+
+## 20) Inline Detection Rules
+
+The workflow must not call other SmartSpec workflows programmatically.
+Instead, it:
+
+- detects environment markers for Kilo/ClaudeCode/Antigravity from the
+  system context;
+- checks for `--kilocode` in arguments;
+- detects web stack usage by:
+  - inspecting specs and optional dependency files (when available)
+    for references to React, Next.js, Node, RSC/server actions,
+    `react-server-dom-*`, SSR/Edge runtimes;
+  - considering hints in SPEC_INDEX or registries;
+- detects AI/LLM features by:
+  - scanning specs and plans for AI/LLM descriptions (chat, copilots,
+    agents, prompt-based flows, etc.);
+- detects data sensitivity by:
+  - scanning specs for references to PII, financial/health data,
+    trade secrets, or regulated zones;
+- only **recommends** follow-up workflows (for example,
+  `/smartspec_generate_plan`, `/smartspec_release_readiness`,
+  `/smartspec_ui_validation`, `/smartspec_ui_consistency_audit`) in
+  human-readable text;
+- never invokes other workflows directly.
+
+---
+
+## 21) Best Practices
+
+- For CI/prod-bound work, use `--safety-mode=strict` or
+  `--mode=strict`.
+- Use `--dry-run` or `--nogenerate` the first time in a repo to verify
+  index/registry resolution.
+- Keep `.spec/SPEC_INDEX.json` and `.spec/registry/` up to date; add
+  tasks to repair them when they lag behind reality.
+- Prefer `--repos-config` under `.spec/` for multi-repo setups.
+- Decide on UI mode (JSON-first vs inline) early per spec and keep it
+  consistent across related specs.
+- Treat `tasks.md` as an execution contract:
+  - always include header with `safety_status`;
+  - ensure T999 reconciliation is reviewed before major work.
+- For web stacks (React/Next.js/Node/RSC):
+  - keep dependencies aligned with `tool-version-registry.json`;
+  - always include tasks for RSC/SSR/Edge hardening.
+- For AI/LLM features:
+  - treat the model as untrusted; plan guardrails and red-team-style
+    testing;
+  - never include real user data, secrets, or PII as examples in
+    `tasks.md`.
+- For sensitive or regulated data:
+  - assume external protection tooling (DLP, secret scanners, SCA)
+    complements this workflow;
+  - make those dependencies explicit in tasks.
+
+---
+
+## 22) For the LLM / Step-by-step Flow & Stop Conditions
+
+### 22.1 Step-by-step flow
+
+1. Parse flags and environment:
+   - `--index`/`--specindex`, `--registry-dir`, `--registry-roots`,
+     `--workspace-roots`, `--repos-config`, `--mode`, `--safety-mode`,
+     `--strict`, `--dry-run`, `--nogenerate`, `--ui-mode`,
+     `--no-ui-json`, `--kilocode`, `--nosubtasks`, `--report-dir`,
+     `--stdout-summary`.
+
+2. Resolve SPEC_INDEX following canonical order; set local-spec-only
+   mode and bootstrap tasks if missing.
+
+3. Resolve registries and detect presence/absence of
+   `tool-version-registry.json` and design-system registries.
+
+4. Resolve multi-repo roots via `--repos-config` and
+   `--workspace-roots`.
+
+5. Identify target spec(s) and read each `spec.md` (and `plan.md`, if
+   available).
+
+6. Detect:
+   - web stack usage (React/Next.js/Node/RSC/etc.);
+   - AI/LLM features;
+   - data-sensitivity.
+
+7. Use SPEC_INDEX and registries to resolve dependencies and ownership;
+   classify entities as reuse/create.
+
+8. Build a category-structured task outline and generate top-level
+   tasks.
+
+9. Unless `--nosubtasks`, decompose into subtasks with explicit
+   ordering and dependency metadata.
+
+10. Attach resource usage metadata to each task/subtask.
+
+11. Resolve `UI_MODE` and apply the UI addendum to generate appropriate
+    UI tasks.
+
+12. Apply web-stack guardrail tasks, including registry baselines,
+    RSC/SSR/Edge hardening, and CI/dependency hygiene.
+
+13. Apply AI & data-sensitivity tasks where applicable.
+
+14. Insert global implementation rules and version pinning header,
+    including `safety_status`.
+
+15. Insert reconciliation task T999.
+
+16. Perform a best-effort scan of generated text for obvious
+    secret/PII/log content; avoid adding or mark for redaction.
+
+17. If not `--dry-run`/`--nogenerate`, write `tasks.md` and report to
+    canonical locations; otherwise simulate and print.
+
+18. If `--stdout-summary` is set, print a summary of scope, safety
+    mode, `safety_status`, index/registry paths, and key warnings.
+
+### 22.2 Stop conditions
+
+The workflow must stop after:
+
+- completing write/simulated-write operations in the current repo; and
+- emitting the report and optional stdout summary.
+
+It must **not**:
+
+- modify `spec.md`, `plan.md`, or registry definitions;
+- write into sibling repos;
+- invoke other SmartSpec workflows programmatically.
 

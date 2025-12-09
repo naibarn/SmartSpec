@@ -2,7 +2,7 @@
 manual: /smartspec_project_copilot
 version: 5.7
 compatible_workflow_versions: 5.6.x
-language: en
+language: th
 role: User guide for project-level SmartSpec copilot
 ---
 

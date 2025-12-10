@@ -1,5 +1,5 @@
 name: /smartspec_project_copilot
-version: 5.6.3
+version: 5.7.0
 role: project-level governance/advisor/router
 write_guard: NO-WRITE
 purpose: Provide portfolio/project-level status summaries and recommend safe next SmartSpec workflows & commands, using read-only RAG over SmartSpec artifacts, registries, and reports. Never modify specs, tasks, code, or registries.

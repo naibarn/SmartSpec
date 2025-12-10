@@ -1,5 +1,5 @@
 name: /smartspec_generate_tasks
-version: 5.6.4
+version: 5.7.0
 role: tasks-generation/execution
 write_guard: ALLOW-WRITE
 purpose: Generate high-quality `tasks.md` from one or more existing

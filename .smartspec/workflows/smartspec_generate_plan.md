@@ -1,5 +1,5 @@
 name: /smartspec_generate_plan
-version: 5.6.4
+version: 5.7.0
 role: plan-generation/orchestration
 write_guard: ALLOW-WRITE
 purpose: Generate a high-level, dependency-aware implementation plan

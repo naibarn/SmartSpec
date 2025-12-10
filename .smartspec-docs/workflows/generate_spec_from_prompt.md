@@ -23,8 +23,8 @@ Key properties:
 
 Typical flow:
 
-1. You describe the feature in Thai or English in a single prompt.
-2. The workflow analyses the prompt + project context and decides:
+1. You describe the feature in a single prompt.
+2. The workflow analyses the prompt and project context and decides:
    - which category to use (e.g. `ecommerce`, `miniapp`, `admin`),
    - how many specs are needed (1–3 by default, up to 5 with a flag),
    - unique `spec-id`s for each spec.
@@ -91,7 +91,7 @@ The generated specs follow the **SPEC-first rules from the governance knowledge 
 ### 4.1 Starter specs vs refined specs
 
 - **Starter spec** (this workflow):
-  - Created from a prompt + light project context.
+  - Created from a prompt plus light project context.
   - Detailed enough to plan tasks and discuss with stakeholders.
   - Not yet fully aligned with all project-wide constraints.
 
@@ -101,7 +101,7 @@ The generated specs follow the **SPEC-first rules from the governance knowledge 
 
 ### 4.2 Categories & `spec-id`s
 
-The workflow tries to infer a suitable category and spec-id from:
+The workflow tries to infer a suitable category and `spec-id` from:
 
 - existing entries in `.spec/SPEC_INDEX.json`,
 - existing `specs/<category>/<spec-id>/` patterns,
@@ -128,7 +128,7 @@ This keeps each spec focused and easier to implement.
 ```bash
 /smartspec_generate_spec_from_prompt \
   "Create a modern ecommerce website with strong SEO, showing featured products and product images on the home page, allowing users to add items to a cart, proceed to checkout, place an order, and receive an invoice with payment instructions."
-
+```
 
 Typical result (summary):
 
@@ -147,7 +147,7 @@ If you prefer a single spec for the whole feature:
 
 ```bash
 /smartspec_generate_spec_from_prompt \
-  "สร้าง website ecommerce ตั้งแต่หน้าแคตตาล็อกจนถึง invoice แบบครบวงจร" \
+  "Create a single, end-to-end ecommerce website specification that covers product catalog, search, cart, checkout, order management, and invoice generation in one cohesive spec." \
   --max-specs=1
 ```
 
@@ -160,7 +160,7 @@ Result:
 
 ```bash
 /smartspec_generate_spec_from_prompt \
-  "สร้าง miniapp ให้ผู้ใช้ upload รูปภาพ 5 รูป + พิมพ์ข้อความภาษาไทย แล้วใช้ Kie.ai / Google Nano Banana Pro แปลงข้อความเป็น prompt ที่สมบูรณ์และเจนภาพกลับมา พร้อมหน้า gallery เก็บประวัติ"
+  "Create a miniapp where users can upload up to 5 images and type a short English description. The backend should convert the description into a detailed prompt for Google Nano Banana Pro via Kie.ai, generate an image, and show the results in a gallery with history and filters."
 ```
 
 Result (example split):
@@ -177,7 +177,7 @@ Next steps:
 
 ```bash
 /smartspec_generate_spec_from_prompt.md \
-  "สร้าง mobile + web app สำหรับ membership พร้อมระบบแต้มสะสม" \
+  "Create a cross-platform membership application for web and mobile, including sign-up, sign-in, profile management, and a points-based loyalty system." \
   --kilocode
 ```
 
@@ -256,4 +256,3 @@ They aim to be detailed enough to drive planning and implementation, but you sho
 ---
 
 End of `/smartspec_generate_spec_from_prompt v5.6.x` manual (English).
-

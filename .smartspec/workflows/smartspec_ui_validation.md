@@ -1,5 +1,5 @@
 name: /smartspec_ui_validation
-version: 5.6.4
+version: 5.7.0
 role: verification/governance
 write_guard: NO-WRITE
 purpose: Validate implemented UI behavior and coverage against UI specs

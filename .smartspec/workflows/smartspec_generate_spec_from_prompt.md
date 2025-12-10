@@ -1,9 +1,16 @@
-# /smartspec_generate_spec_from_prompt v5.6.0
+name: /smartspec_generate_spec_from_prompt
+version: 5.7.0
+role: spec-generation/bootstrap
+write_guard: ALLOW-WRITE (scoped)
+purpose: Generate one or more starter `spec.md` files directly from a natural language prompt, aligned with SmartSpec SPEC-first governance, without overwriting existing specs and with optional SPEC_INDEX updates.
 
-## Summary
+---
 
-Generate one or more starter `spec.md` files directly from a natural language
-prompt, using existing project structure as context.
+## 1) Summary
+
+`/smartspec_generate_spec_from_prompt` generates one or more starter
+`spec.md` files directly from a natural language prompt, using existing
+project structure as context. fileciteturn24file0
 
 This workflow is designed for **first-time spec creation** from a prompt. After
 it creates starter specs, you should refine them with
@@ -21,16 +28,18 @@ Key safety constraints:
 - SPEC_INDEX is updated **only when explicitly requested** via
   `--update-index`.
 
+This v5.7.0 workflow is an additive upgrade of the original v5.6 design (no
+flags or behaviours removed).
+
 ---
 
-## When to Use
+## 2) When to Use
 
 Use this workflow when:
 
-- you have an idea/requirement like:
+- you have an idea or requirement like:
 
-  > "สร้าง website ที่สวยงาม ทันสมัย มี SEO ที่ดี แสดงรายการสินค้าและรูปภาพ\
-  > บนหน้าแรก มีตะกร้าสินค้า / checkout / order / invoice"
+  > "Create a modern ecommerce website with strong SEO, a clean modern design, product listings with images on the home page, a cart, a checkout flow, order creation, and an invoice page with payment instructions."
 
 - and your project does **not yet** have a detailed `spec.md` for it.
 
@@ -42,9 +51,9 @@ It is **not** meant to replace `/smartspec_generate_spec`. Instead:
 
 ---
 
-## Inputs & Outputs
+## 3) Inputs & Outputs
 
-### Inputs
+### 3.1 Inputs
 
 - **Positional prompt (required)**  
   Natural language requirement, in Thai or English.
@@ -58,7 +67,7 @@ It is **not** meant to replace `/smartspec_generate_spec`. Instead:
   - Existing `specs/**/spec.md` naming patterns.
   - Registries under `.spec/registry/**` for design systems and tools.
 
-### Outputs
+### 3.2 Outputs
 
 - One or more new folders under `specs/<category>/<spec-id>/` with:
   - `spec.md` – a **complete starter spec**, aligned with governance rules.
@@ -73,7 +82,7 @@ This keeps the workflow safe for first-time use in existing projects.
 
 ---
 
-## Modes (Role, Write Guard, Safety)
+## 4) Modes (Role, Write Guard, Safety)
 
 - **Role**: Ask/Architect + Implement (spec writer).
 - **write_guard**: ALLOW-WRITE, strictly limited to:
@@ -88,12 +97,13 @@ This keeps the workflow safe for first-time use in existing projects.
 
 ---
 
-## CLI Usage & Flags
+## 5) CLI Usage & Flags
 
-### 1) Simple usage (recommended)
+### 5.1 Simple usage (recommended)
 
 ```bash
-/smartspec_generate_spec_from_prompt "สร้าง website ที่สวยงาม ทันสมัย มี SEO ที่ดี..."
+/smartspec_generate_spec_from_prompt \
+  "Create a modern ecommerce website with strong SEO, a product list with images on the home page, a cart, a checkout flow, order creation, and an invoice page with payment instructions."
 ```
 
 The workflow will:
@@ -104,7 +114,8 @@ The workflow will:
 4. Print which files were created and how to refine them with
    `/smartspec_generate_spec`.
 
-### 2) Optional flags (kept minimal)
+### 5.2 Optional flags (kept minimal)
+ (kept minimal)
 
 To keep the user experience simple, flags are optional and limited:
 
@@ -143,7 +154,7 @@ To keep the user experience simple, flags are optional and limited:
 - `--kilocode`  
   Enable Kilo Orchestrator behaviour according to governance rules.
 
-### 3) Kilo usage
+### 5.3 Kilo usage
 
 ```bash
 /smartspec_generate_spec_from_prompt.md \
@@ -158,7 +169,7 @@ On Kilo:
 
 ---
 
-## Canonical Folders & File Placement
+## 6) Canonical Folders & File Placement
 
 This workflow must respect the standard layout:
 
@@ -188,7 +199,7 @@ This workflow must respect the standard layout:
 
 ---
 
-## Behaviour & Step-by-step Flow
+## 7) Behaviour & Step-by-step Flow
 
 1. **Read context & KBs**  
    - Load governance and install/usage KBs.  
@@ -262,7 +273,7 @@ This workflow must respect the standard layout:
 
 ---
 
-## KiloCode Support (Meta-Flag)
+## 8) KiloCode Support (Meta-Flag)
 
 - Flag: `--kilocode` (universal, required by governance).
 
@@ -278,7 +289,7 @@ The workflow must **not** enable Orchestrator unless `--kilocode` is present.
 
 ---
 
-## Weakness & Risk Check
+## 9) Weakness & Risk Check
 
 Before finishing, the workflow should self-assess and report:
 
@@ -310,9 +321,9 @@ Before finishing, the workflow should self-assess and report:
 
 ---
 
-## Legacy Flags Inventory
+## 10) Legacy Flags Inventory
 
-This is a **new** workflow in v5.6.0, so:
+This is a **new** workflow in v5.7.0, so:
 
 - Kept: N/A
 - Alias: N/A
@@ -333,13 +344,13 @@ All flags are additive and do not conflict with existing workflows.
 
 ---
 
-## Quick Start Examples
+## 11) Quick Start Examples
 
-### 1) Simple ecommerce website (single repo)
+### 11.1 Simple ecommerce website (single repo)
 
 ```bash
 /smartspec_generate_spec_from_prompt \
-  "สร้าง website ที่สวยงาม ทันสมัย มี SEO ที่ดี แสดงรายการสินค้าและรูปภาพสินค้าบนหน้าแรก มีให้กดใส่ตะกร้า แล้วไปหน้า checkout สร้าง order และ invoice พร้อมรายละเอียดการโอนเงิน"
+  "Create a modern ecommerce website with strong SEO, a product list with images on the home page, a cart, a checkout flow, order creation, and an invoice with payment instructions."
 ```
 
 Example output (summary):
@@ -353,19 +364,19 @@ Example output (summary):
   - `/smartspec_generate_spec --spec-ids=ecommerce_checkout_flow`
   - `/smartspec_generate_spec --spec-ids=ecommerce_order_billing`
 
-### 2) Force everything into a single spec
+### 11.2 Force everything into a single spec
 
 ```bash
 /smartspec_generate_spec_from_prompt \
-  "สร้าง website ecommerce ตั้งแต่หน้าแคตตาล็อกจนถึง invoice แบบครบวงจร" \
+  "Create an end-to-end ecommerce website specification that covers catalog browsing, product search, cart, checkout, order management, and invoice generation in a single cohesive spec." \
   --max-specs=1
 ```
 
-### 3) Kilo usage
+### 11.3 Kilo usage
 
 ```bash
 /smartspec_generate_spec_from_prompt.md \
-  "สร้าง miniapp ให้ผู้ใช้ upload รูป + พิมพ์ข้อความไทย แล้วยิงไป Kie.ai" \
+  "Create a miniapp where users can upload images and type a short description, then send the request to Kie.ai to generate images using Google Nano Banana Pro, with a basic history view." \
   --kilocode
 ```
 
@@ -374,5 +385,5 @@ On Kilo, Orchestrator may split by spec-id, but writes remain limited to
 
 ---
 
-End of `/smartspec_generate_spec_from_prompt` workflow spec v5.6.0.
+End of `/smartspec_generate_spec_from_prompt` workflow spec v5.7.0.
 

@@ -362,6 +362,6 @@ Detailed changes for each version are tracked in:
 
 - **[v5.2 Release Notes](.smartspec-docs/release-notes/RELEASE_NOTES_v5.2.md)**
 - **[v5.6 Release Notes](.smartspec-docs/release-notes/smartspec_v_56_release_notes_en.md)**
-
+- **[v5.7 Release Notes](.smartspec-docs/release-notes/smart_spec_release_notes_v_5_7.md)**
 
 Future releases should add new files under `.smartspec-docs/release-notes/` and link them here.

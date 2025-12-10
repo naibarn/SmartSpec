@@ -1,5 +1,5 @@
 name: /smartspec_generate_spec
-version: 5.6.3
+version: 5.7.0
 role: spec-generation/authoring
 write_guard: ALLOW-WRITE
 purpose: Generate or repair SmartSpec `spec.md` files with v5.6

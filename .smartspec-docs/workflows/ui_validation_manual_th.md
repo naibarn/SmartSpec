@@ -1,18 +1,15 @@
----
-manual_name: /smartspec_ui_validation Manual (TH)
-manual_version: 5.6
-compatible_workflow: /smartspec_ui_validation
-compatible_workflow_versions: 5.6.2 – 5.6.x
-role: user/operator manual (frontend, QA, UX, release, platform)
----
+| manual_name | manual_version | compatible_workflow | compatible_workflow_versions | role |
+| --- | --- | --- | --- | --- |
+| /smartspec_ui_validation Manual (TH) | 5.6 | /smartspec_ui_validation | 5.6.2 – 5.6.x | user/operator manual (frontend, QA, UX, release, platform) |
 
 # /smartspec_ui_validation คู่มือการใช้งาน (v5.6, ภาษาไทย)
+
 
 ## 1. ภาพรวม (Overview)
 
 คู่มือนี้อธิบายวิธีใช้งาน workflow:
 
-> `/smartspec_ui_validation v5.6.x` (เช่น 5.6.2, 5.6.3)
+> `/smartspec_ui_validation v5.6.x` (เช่น 5.6.2, 5.6.3, 5.6.4)
 
 workflow นี้เป็น **ชั้น governance ด้าน UI correctness & validation** มีหน้าที่หลักคือ:
 
@@ -29,10 +26,15 @@ workflow นี้เป็น **ชั้น governance ด้าน UI correct
 - ตั้งแต่ v5.6.3 ขึ้นไป ยังอ่าน **metadata ของ `ui.json` ที่ AI generate**
   (เช่น origin, review status, design system version, style preset)
   เพื่อช่วยประเมินว่าเราควรเชื่อถือ spec จาก AI แค่ไหนในแต่ละ flow
+- ตั้งแต่ v5.6.4 เพิ่มการมอง **หลักฐานด้าน security & dependency**
+  (โดยเฉพาะกรณี React/Next.js/RSC, Node/npm) และใช้
+  **design system / component registry** เป็นบริบทในการประเมินความเสี่ยง
+  (โดยไม่เพิ่ม flag ใหม่ และยังคง NO-WRITE ตามเดิม)
 
 > **สำคัญ:**
 > - workflow นี้ **ไม่รัน test**, ไม่เปิด browser/device และไม่แก้โค้ดหรือ config
-> - อ่านเฉพาะ **artifacts และรายงาน test** ที่มีอยู่แล้ว แล้วสรุปเป็น governance view
+> - อ่านเฉพาะ **artifacts, test reports, security/dependency reports และ registries**
+>   ที่มีอยู่แล้ว แล้วสรุปเป็น governance view
 
 ### 1.1 ทำไมต้องใช้ workflow นี้
 
@@ -47,30 +49,37 @@ workflow นี้เป็น **ชั้น governance ด้าน UI correct
 - ในระบบที่ `ui.json` ถูก generate โดย AI เป็นหลัก:
   - บาง flow ใช้ spec ที่ AI เขียนแบบยังไม่เคยมีคน review
   - คุณไม่รู้เลยว่า flow ไหนเชื่อถือได้มากน้อยต่างกันอย่างไร
+- ในระบบ web สมัยใหม่ (React/Next.js/RSC, Node/npm):
+  - มี SCA report, lockfile, security gate อยู่แล้ว แต่ไม่ได้โยงกับ UI flow ที่ critical
+  - ใช้ React Server Components หรือ `react-server-dom-*` ในพื้นที่สำคัญ
+    โดยไม่มี governance เรื่องเวอร์ชันที่ patch แล้วหรือการป้องกันข้อมูลรั่ว
 
 `/smartspec_ui_validation` ช่วยเชื่อม:
 
-- spec/UI JSON (รวมถึงที่ AI generate) ↔ implementation ↔ test reports
+> spec/UI JSON (รวมถึงที่ AI generate) ↔ implementation ↔ test & security reports
 
 ให้กลายเป็นรายงานเดียวที่ตอบคำถามว่า
 
 > "ก่อน release รอบนี้ UI ที่ critical ถูก validate ครบในระดับที่องค์กรยอมรับหรือยัง?"
-> และ
-> "เรากำลังฝากชีวิตไว้กับ `ui.json` ที่ AI เขียนล้วน ๆ โดยไม่มี review กี่จุด?"
+> และ  
+> "เรากำลังฝากชีวิตไว้กับ `ui.json` ที่ AI เขียน + dependency/surface เสี่ยง
+> ที่ยังไม่มีหลักฐาน security ครบกี่จุด?"
 
 ### 1.2 ข้อดีของการใช้
 
-- ทำให้ **frontend, QA, UX, release** คุยกันบนภาษากลางชุดเดียว
+- ทำให้ **frontend, QA, UX, security, release** คุยกันบนภาษากลางชุดเดียว
 - เห็น **coverage และ gap ต่อ UI unit** อย่างเป็นระบบ
 - เห็นชัดด้วยว่าในแต่ละ flow:
   - spec/UI JSON มาจาก AI หรือคน
   - ผ่าน review แล้วหรือยัง
   - คุณภาพโครงสร้าง `ui.json` อยู่ระดับไหน
+  - มีหลักฐาน security/dependency รองรับ stack เว็บหรือไม่
 - ช่วยให้ release board ตัดสินใจได้ว่า:
   - flow ไหนพร้อม
-  - flow ไหนต้องเพิ่ม test ก่อน
+  - flow ไหนต้องเพิ่ม test / security ก่อน
   - case ไหนสามารถ accept risk ได้พร้อมเหตุผล
-- กลายเป็น **artifact สำหรับ audit** ว่า UI สำคัญผ่านกระบวนการ validation จริง
+- กลายเป็น **artifact สำหรับ audit** ว่า UI สำคัญถูก review ทั้งในแง่ validation
+  และ security evidence ก่อนปล่อยจริง
 
 ### 1.3 ความเสี่ยงหากไม่ใช้ (หรือไม่มี layer นี้)
 
@@ -79,6 +88,10 @@ workflow นี้เป็น **ชั้น governance ด้าน UI correct
 - ปล่อย i18n bug กินเวลาทีหลัง เพราะไม่มีใครเห็นว่า locale ไหนไม่มี coverage
 - ปล่อยให้ `ui.json` ที่ AI generate แบบไม่เคยถูก review เป็น source of truth โดยไม่มีใครรู้ว่า flow ไหนเสี่ยง
 - ไม่มีเอกสารแสดงว่าหน้าไหนผ่าน/ไม่ผ่าน validation → ตอบคำถาม management และ auditor ยาก
+- สำหรับ stack React/Next.js/RSC:
+  - ใช้ dependency ที่มีช่องโหว่หรือเวอร์ชันล้าหลังใน flow critical
+  - ไม่มี SCA/lockfile/tool-version-registry รองรับ
+  - ใช้ RSC/`react-server-dom-*` โดยไม่มีหลักฐานว่ามีการตรวจ data leakage หรือ CVE ที่เกี่ยวข้อง
 
 ---
 
@@ -140,14 +153,35 @@ workflow นี้เป็น **ชั้น governance ด้าน UI correct
   - ถ้า flow นั้น critical/high และยัง `UNREVIEWED` หรือ `ui_json_quality_status` ต่ำ
     → risk จะถูกดันขึ้น และมีโอกาสเป็น `blocking_for_release` ใน strict mode
 
+### 2.6 v5.6.4: Security & design-system clarifications
+
+v5.6.4 **ไม่ได้เพิ่ม flag ใหม่** หรือเปลี่ยน semantics เดิม แต่เพิ่มคำอธิบายด้าน
+governance เพื่อให้ workflow:
+
+- อ่าน **หลักฐานด้าน security & dependency** สำหรับ stack เว็บที่เกี่ยวกับ UI
+  (React/Next.js/RSC, Node/npm) เช่น SCA report, `tool-version-registry.json`,
+  CI security gate summaries, lockfile snapshot แล้วสะท้อนผลใน `risk_level` และ
+  `blocking_for_release` โดยเฉพาะ unit ที่ CRITICAL/HIGH และอยู่ใน strict mode
+- treat การใช้ RSC / `react-server-dom-*` เป็น surface ที่ **ต้องระวังเป็นพิเศษ**
+  ต้องมีหลักฐานว่าใช้เวอร์ชันที่ patch แล้ว และผ่านการ review เรื่อง data leakage
+  ก่อนจะมองว่า flow critical นั้นปลอดภัยพอ
+- ใช้ **design system / component registry** เป็นบริบทในการประเมิน เช่น:
+  - flow สำคัญควรใช้ `AppButton`/`AppCard` ฯลฯ แทนการเรียก component จาก library ตรง ๆ
+  - loading/empty/error states ที่ design system ระบุว่าต้องมี ก็ควรถูก test ด้วย
+
+การเปลี่ยนแปลงนี้เป็นแบบ **additive** และ backward compatible กับ v5.6.2–5.6.3
+
 ---
 
 ## 3. Backward Compatibility Notes
 
-- manual v5.6 นี้รองรับ `/smartspec_ui_validation` ตั้งแต่ **v5.6.2 เป็นต้นไป** (5.6.x)
+- manual v5.6 นี้รองรับ `/smartspec_ui_validation` ตั้งแต่ **v5.6.2 เป็นต้นไป**
+  รวมถึง **v5.6.4**
 - `--strict` ยังคงเป็น alias ของ `--safety-mode=strict`
 - v5.6.3 เพิ่ม flag `--ui-json-ai-strict` และสัญญาณใหม่จาก AI-generated `ui.json`
   ในลักษณะ additive (ไม่ทับ semantics เดิม)
+- v5.6.4 เพิ่มคำอธิบายด้าน **security/dependency** และ **design system**
+  โดยไม่แตะ flag และ NO-WRITE
 
 ---
 
@@ -190,7 +224,7 @@ criticality ถูก derive จาก:
 - `ui_json_quality_status` → ประสิทธิภาพโครงสร้าง `ui.json`
 
 สิ่งเหล่านี้จะถูกใช้ร่วมกับ status อื่น ๆ ในการคำนวณ `risk_level` และ
-`blocking_for_release` โดยเฉพาะใน strict mode และเมื่อเปิด `--ui-json-ai-strict`.
+`blocking_for_release` โดยเฉพาะใน strict mode และเมื่อเปิด `--ui-json-ai-strict`
 
 ### 4.4 Governance-only
 
@@ -200,7 +234,8 @@ workflow นี้ไม่ทำสิ่งต่อไปนี้:
 - ไม่สร้าง/แก้ test file
 - ไม่ emit คำสั่ง test runner แบบพร้อมรัน แล้วถือว่า "approved"
 
-ทำหน้าที่เพียงอ่าน spec/UI JSON + test reports แล้วสรุป governance
+ทำหน้าที่เพียงอ่าน spec/UI JSON + test & security reports
+แล้วสรุป governance
 
 ---
 
@@ -322,6 +357,7 @@ smartspec_ui_validation \
    - ให้ความสำคัญกับ unit ที่:
      - `ui_spec_origin=AI` และ `ui_spec_review_status=UNREVIEWED`
      - `ui_json_quality_status=WEAK/BROKEN`
+     - ไม่มีหรือมีหลักฐาน security/dependency ที่ล้าสมัยสำหรับ UI stack เช่น React/Next.js/RSC
 
 4. **Summary**
    - จำนวน unit ตาม risk level
@@ -427,14 +463,15 @@ smartspec_ui_validation \
 - มองเห็นภาพรวมว่า UI validation ครอบคลุมเท่าไรต่อ flow/screen
 - เห็นว่าแต่ละ flow พึ่งพา `ui.json` จาก AI มากน้อยแค่ไหน และผ่าน review หรือยัง
 - ช่วยให้ release meeting มีข้อมูลเชิงโครงสร้าง ไม่ใช่แค่ "test pass 95%"
-- ทำให้การ prioritize งานเพิ่ม test/a11y/i18n ง่ายขึ้น
+- ทำให้การ prioritize งานเพิ่ม test/a11y/i18n และปรับปรุง dependency/security ง่ายขึ้น
 
 ### 11.2 ความเสี่ยงหากไม่ใช้
 
 - ปล่อย flow สำคัญที่ไม่มี test หรือ coverage เพียงพอ
 - ปล่อย flow สำคัญที่ `ui.json` ถูก generate โดย AI และยังไม่เคยมีมนุษย์ review
 - สร้าง technical debt ด้าน UX และ a11y แบบเงียบ ๆ
-- ไม่มีหลักฐานว่าก่อน release มีการ review DPI/UI correctness จริง
+- ไม่มีหลักฐานว่าก่อน release มีการ review DPI/UI correctness และ
+  security posture จริง
 
 ---
 
@@ -453,9 +490,66 @@ smartspec_ui_validation \
 เช่น login, checkout, payment, consent, identity โดยเฉพาะเมื่อ
 `ui.json` ถูก generate โดย AI และยัง `UNREVIEWED`
 
+**Q4: workflow นี้แทนที่เครื่องมือ security หรือ SCA ได้ไหม?**  
+ไม่ได้ มันแค่อ่านผล security/dependency ที่มีอยู่แล้ว แล้วนำไปประกอบในภาพรวม
+ของแต่ละ UI unit คุณยังต้องใช้ workflow/process ด้าน security โดยเฉพาะควบคู่กัน
+
 ---
 
-จบคู่มือภาษาไทยสำหรับ `/smartspec_ui_validation v5.6.x`.
-หากในอนาคตมีการเปลี่ยน semantics ของ status model หรือ strict-mode อย่างมีนัยสำคัญ
-ควรออก manual v5.7 และระบุช่วงเวอร์ชัน workflow ที่รองรับให้ชัดเจน
+## 13. Security & Dependency Notes (Web/React/Next.js/RSC)
+
+สรุปวิธีที่ `/smartspec_ui_validation` เชื่อมกับเรื่อง security และ dependency
+สำหรับ web stack สมัยใหม่ (ตามที่อัปเดตใน v5.6.4):
+
+- workflow **ไม่รัน** เครื่องมือ security เอง (ไม่มี `npm audit`, ไม่มี test runner)
+  ใช้อ่าน artifacts ที่มีอยู่แล้วเท่านั้น
+- เมื่อ UI implementation ใช้ React/Next.js/RSC หรือ stack ใกล้เคียง
+  (ดูจาก spec, registry, report):
+  - มองว่า **RSC / `react-server-dom-*`** เป็น surface เสี่ยงสูงโดยค่าเริ่มต้น โดยเฉพาะ
+    ใน UI unit ที่ CRITICAL/HIGH
+  - มองหาหลักฐาน เช่น:
+    - SCA/vulnerability report
+    - lockfile snapshot / dependency summary
+    - CI security gate report
+    - `tool-version-registry.json` กลาง สำหรับ React/Next.js/Node
+  - ถ้าไม่มีหรือเก่ามาก ใน unit ที่ CRITICAL/HIGH อาจทำให้:
+    - ยกระดับ `risk_level`
+    - และใน strict mode อาจตั้ง `blocking_for_release=true` พร้อมอธิบายใน `notes`
+- workflow แยก **UI correctness** ออกจาก **dependency safety**
+  แต่ทำให้คุณเห็นสองอย่างนี้ใน report เดียวกัน
+
+**คำแนะนำ:** รัน workflow นี้คู่กับ pipeline security/SCA ปกติ
+เพื่อให้ release board เห็นภาพรวมทั้ง UI validation และ security evidence ต่อ flow
+
+---
+
+## 14. Design-System & Component Registry Notes
+
+v5.6.4 ยังเพิ่มความชัดเจนเรื่องการใช้ design system และ component registry
+เป็นบริบทด้าน governance:
+
+- เมื่อมี registry เช่น `design-tokens-registry.json`,
+  `ui-component-registry.json`, `app-component-registry.json`,
+  `patterns-registry.json` อยู่ใต้ `.spec/registry/`:
+  - workflow มองสิ่งเหล่านี้เป็น input ที่บอก **โครงสร้างและ component ที่ควรใช้**
+    ไม่ใช่แค่คำแนะนำด้านสไตล์
+  - workflow ไม่ตรวจสี/spacing ตรง ๆ (ให้ workflow ด้าน UI consistency ทำ)
+    แต่จะ:
+    - พิจารณาว่า flow สำคัญใช้ App-level component เช่น `AppButton`, `AppCard`
+      ตาม registry หรือยัง
+    - ใส่ `notes` หาก CRITICAL/HIGH unit ใช้ component จาก UI library ตรง ๆ
+      แทน App component อย่างมีนัยสำคัญ
+- ใน flow ที่มี layout/pattern registry ครอบ (เช่น workspace layout, AI run viewer,
+  empty/loading/error pattern):
+  - ถ้าขาด test สำหรับ state สำคัญตาม pattern
+    → ลด `error_state_coverage_status` และดัน `risk_level` ขึ้น
+
+**สรุป:** workflow นี้ใช้ design system และ component registry เป็นส่วนหนึ่งของ
+**governance surface** รอบ ๆ UI validation ใช้คู่กับ workflow ด้าน UI consistency
+เพื่อให้ทั้ง behavior และ visual language เดินไปด้วยกัน
+
+---
+
+จบคู่มือภาษาไทยสำหรับ `/smartspec_ui_validation v5.6.x` ที่อัปเดตให้สอดคล้องกับ
+workflow v5.6.4
 

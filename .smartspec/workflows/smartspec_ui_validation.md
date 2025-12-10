@@ -1,6 +1,5 @@
----
 name: /smartspec_ui_validation
-version: 5.6.3
+version: 5.6.4
 role: verification/governance
 write_guard: NO-WRITE
 purpose: Validate implemented UI behavior and coverage against UI specs
@@ -191,12 +190,12 @@ For each unit, the report SHOULD include at least:
 - `ui_spec_origin`
   - `AI`, `HUMAN`, `MIXED`, `UNKNOWN`
   - derived from `ui.json` meta (e.g., `meta.source`) when present, or
-    inferred/left `UNKNOWN` otherwise.
+  - inferred/left `UNKNOWN` otherwise.
 
 - `ui_spec_review_status`
   - `UNREVIEWED`, `DESIGNER_APPROVED`, `OVERRIDDEN`, `UNKNOWN`
   - derived from `ui.json` meta (e.g., `meta.review_status`) or
-    registries, if available.
+  - registries, if available.
 
 - `ui_json_quality_status`
   - `STRONG` – UI JSON appears coherent, complete, and aligned with
@@ -631,6 +630,14 @@ Before treating this workflow spec as complete, verify that it:
    - does not output ready-to-run test scripts as implicitly approved.
    - may describe missing test patterns conceptually.
 
+10. **Incorporates web-stack security & dependency evidence**
+    - when UI implementation uses React/Next.js/RSC or similar web stacks,
+      the workflow reads available security/dependency evidence (e.g.,
+      SCA reports, dependency snapshots, `tool-version-registry.json`) and
+      reflects missing or outdated evidence in `risk_level` and
+      `blocking_for_release` for critical/high units, especially under
+      strict safety mode.
+
 ---
 
 ## 8) Legacy Flags Inventory
@@ -646,6 +653,10 @@ This workflow is an evolution of `/smartspec_ui_validation` in the
 
 - **New additive flags in v5.6.3**:
   - `--ui-json-ai-strict`.
+
+- **New additive flags in v5.6.4**:
+  - _none_ (this release adds governance clarifications only; no new
+    flags or behavior changes for existing flags).
 
 All other flags from earlier 5.6.x revisions remain valid and
 unchanged.
@@ -766,6 +777,9 @@ This workflow is UI-centric and must respect UI governance:
   - `/smartspec_ui_consistency_audit` for design system adherence and
     AI UI JSON quality.
   - `/smartspec_release_readiness` for overall release gates.
+  - security / dependency workflows and CI gates that interpret
+    React/Next.js/RSC and npm dependency baselines alongside this
+    UI-validation report.
 - Keep validation reports under version control as part of release
   artifacts.
 
@@ -792,8 +806,9 @@ This workflow is UI-centric and must respect UI governance:
      - `--ui-snapshot-report-paths`
      - `--ui-accessibility-report-paths`
      - `--ui-i18n-report-paths`.
-   - load registries (UI/flows, critical-sections, SLOs) to infer
-     critical flows.
+   - load registries (UI/flows, critical-sections, SLOs, and when
+     available `tool-version-registry.json` and design-system registries)
+     to infer critical flows and relevant governance baselines.
 
 3. **Identify UI units & criticality**
    - derive screens/routes/flows from UI specs/JSON + SPEC_INDEX.
@@ -816,18 +831,28 @@ This workflow is UI-centric and must respect UI governance:
      - `cross_env_status`
    - refine `ui_json_quality_status` based on how well tests align with
      the structure and expectations in UI JSON.
+   - where UI is implemented with React/Next.js/RSC or similar web
+     stacks, interpret available security/dependency evidence
+     (e.g., SCA reports, dependency baselines, known high-severity
+     advisories, `tool-version-registry.json`) and reflect gaps in
+     `risk_level` and `blocking_for_release`, especially for
+     critical/high units under strict mode.
    - infer `risk_level` and `blocking_for_release` using safety-mode
-     rules, `criticality`, and AI-origin signals.
+     rules, `criticality`, AI-origin signals, and security/dependency
+     evidence.
 
 5. **Aggregate**
    - compute unit counts by `risk_level` and `blocking_for_release`.
    - highlight high-risk / blocking units, especially critical flows
-     with unreviewed AI-generated UI JSON.
+     with unreviewed AI-generated UI JSON or missing security/dependency
+     evidence for web stacks in scope.
 
 6. **Generate report**
    - serialize per-unit data and summary to `.md` or `.json` in
      `--report-dir`.
    - ensure markdown representation mirrors the JSON field set.
+   - include minimal audit metadata (workflow version, key flags,
+     presence/absence of tool-version and design-system registries).
 
 7. **Optional stdout summary**
    - if `--stdout-summary`, print:
@@ -848,4 +873,192 @@ It MUST NOT:
 - run UI tests or browsers/devices.
 - call other SmartSpec workflows directly (only reference them as
   recommendations).
+
+---
+
+## 15) Security & Dependency Guardrails (Web/React/Next.js/RSC)
+
+This section clarifies how `/smartspec_ui_validation` interacts with
+modern web-stack security and dependency governance while remaining
+**NO-WRITE** and UI-validation focused.
+
+1. **Detection & scope**
+
+   - When evidence suggests the UI implementation uses:
+     - React or React-based frameworks (e.g., Next.js), and/or
+     - SSR/Edge runtimes, server actions, or React Server Components
+       (RSC), and/or
+     - `react-server-dom-*` dependencies, and/or
+     - Node/npm-based dependency trees,
+
+     the workflow MUST treat these as in-scope for **security &
+     dependency risk signals**, in alignment with central security and
+     tool-version policies.
+
+2. **Evidence, not execution**
+
+   - This workflow:
+     - MUST NOT run dependency commands (e.g., `npm audit`, test
+       runners).
+     - MAY read existing security/dependency artifacts, such as:
+       - SCA/vulnerability reports,
+       - dependency snapshots or lockfile summaries,
+       - CI security gate summaries,
+       - `.spec/registry/tool-version-registry.json` entries for
+         React/ReactDOM/Next.js/Node or equivalents.
+   - Missing evidence for critical/high UI units SHOULD be reflected as
+     elevated `risk_level` and may contribute to
+     `blocking_for_release=true` in strict mode.
+
+3. **High-risk RSC / `react-server-dom-*`**
+
+   - If the project uses RSC or any `react-server-dom-*` dependency:
+     - treat this surface as **high risk** by default.
+     - require evidence (via reports/registries) that:
+       - RSC-related packages/frameworks are at or above the
+         organization’s minimum patched baselines for known critical
+         CVEs;
+       - data flowing across the RSC boundary has been reviewed for
+         leakage or unsafe serialization.
+     - For critical/high UI units, absence of such evidence SHOULD
+       raise `risk_level` and, under strict mode, may set
+       `blocking_for_release=true` with explanation in `notes`.
+
+4. **React/Next.js without RSC**
+
+   - For React/Next.js projects without RSC:
+     - highlight gaps in:
+       - routing/middleware hardening,
+       - auth/session handling visible at the UI level,
+       - SSR/Edge behavior where applicable,
+       - npm supply-chain hygiene.
+     - The workflow relies on existing security reports and registry
+       policies to infer whether these concerns have been addressed.
+     - For critical/high units, clear evidence of unresolved
+       high-severity vulnerabilities in UI-facing services SHOULD
+       contribute to higher `risk_level`.
+
+5. **Tool version registry & CVE baselines**
+
+   - When `.spec/registry/tool-version-registry.json` is present:
+     - treat it as authoritative for minimum patched versions and
+       allowed series for React/ReactDOM/Next.js/Node and related
+       tools.
+     - if a UI unit’s implementation falls below the registry’s
+       baselines (as indicated by reports or dependency summaries),
+       reflect this in `risk_level` and, for critical/high units under
+       strict mode, consider it blocking until an exception is
+       documented elsewhere.
+   - When the registry is missing:
+     - do not fail; instead, record the absence as a governance gap in
+       the report summary and encourage follow-up security workflows to
+       establish the registry.
+
+6. **Dependency hygiene & CI gates**
+
+   - The workflow SHOULD:
+     - look for evidence of:
+       - lockfiles (e.g., `package-lock.json`, `yarn.lock`,
+         `pnpm-lock.yaml`),
+       - regular SCA/dependency scans in CI,
+       - automated update tooling (e.g., Dependabot, Renovate) for
+         UI-related services.
+     - treat missing or clearly outdated dependency governance as a
+       contributing factor to higher `risk_level`, especially in
+       strict mode for critical/high UI units.
+   - It MUST clearly separate these signals from functional UI tests
+     and MUST NOT imply that dependencies are safe solely because UI
+     tests are passing.
+
+7. **Safer UI/server integration patterns**
+
+   - When reviewing evidence, the workflow SHOULD flag (via `notes`
+     and `risk_level` only) patterns such as:
+     - unreviewed usage of unsafe HTML injection (e.g.,
+       `dangerouslySetInnerHTML` in React) in critical/high units;
+     - embedding secrets, tokens, or sensitive internal URLs in
+       client bundles or `ui.json`;
+     - bypassing framework CSRF/XSS protections at UI boundaries.
+   - It MAY recommend (conceptually) remediation patterns but MUST NOT
+     emit ready-to-run code patches.
+
+---
+
+## 16) Design-System & Component-Registry Alignment
+
+This section clarifies how `/smartspec_ui_validation` respects design
+systems and component registries while still delegating visual/style
+enforcement to `/smartspec_ui_consistency_audit`.
+
+1. **Design tokens & registries**
+
+   - When `.spec/registry/design-tokens-registry.json`,
+     `ui-component-registry.json`, `app-component-registry.json`, or
+     `patterns-registry.json` exist:
+     - treat them as **governance inputs** that describe intended UI
+       structure and component usage.
+     - do not validate exact colors/spacing/visual patterns here
+       (delegated to UI consistency workflows), but:
+       - use them to understand which components and layout patterns
+         are expected for each UI unit.
+       - note when critical/high units appear to rely heavily on
+         raw library components instead of app-level components where
+         the registry suggests otherwise.
+
+2. **App-level components vs raw library components**
+
+   - Where registries define App-level components (e.g., `AppButton`,
+     `AppCard`, `AppInput`, `AppEmptyState`, `AppErrorState`,
+     `AppSectionHeader`):
+     - prefer these as the primary conceptual UI API when interpreting
+       UI JSON and implementation reports.
+     - if critical/high UI units appear (from reports or mappings) to
+       use raw library components directly (e.g., MUI `Button`,
+       `TextField`) instead of App-level wrappers, treat that as a
+       **risk signal for maintainability and consistency**, not a
+       visual bug.
+     - reflect such drift in `notes` and optionally modestly raise
+       `risk_level`, especially when combined with weak validation
+       coverage.
+
+3. **Layout patterns & states**
+
+   - For projects with patterns defined (e.g., workspace layouts, AI
+     run views, standard empty/loading/error states):
+     - interpret UI specs/UI JSON and implementation mappings in the
+       context of these patterns.
+     - flag in `notes` when critical/high UI units:
+       - lack defined loading/empty/error states, or
+       - diverge from required layout patterns in ways that are likely
+         to reduce usability or create untested states.
+   - The workflow SHOULD ensure that validation coverage considers
+     these states; e.g., missing tests for critical empty/error states
+     should lower `error_state_coverage_status` and raise
+     `risk_level`.
+
+4. **Separation of concerns with `/smartspec_ui_consistency_audit`**
+
+   - `/smartspec_ui_validation`:
+     - focuses on behavior, states, and coverage for each UI unit.
+     - uses design-system and component registries as **context** to
+       interpret risks and missing coverage.
+   - `/smartspec_ui_consistency_audit`:
+     - focuses on design-token usage, spacing, visual coherence,
+       component/theming consistency, and AI UI JSON structural
+       quality.
+   - Reports from this workflow MAY include recommendations to run or
+     re-run `/smartspec_ui_consistency_audit` when design-system
+     misalignment appears to amplify the risk of unvalidated behavior.
+
+5. **AI-product UIs & modern look**
+
+   - For AI/workflow-centric UIs (e.g., smart workspaces, run viewers),
+     where design tokens and patterns prioritize modern layouts:
+     - treat lack of validation for key states (e.g., prompt errors,
+       model changes, diff/compare views) as a validation gap.
+     - ensure that such gaps for critical/high UI units show up in
+       `error_state_coverage_status`, `behavior_validation_status`,
+       and `risk_level` rather than as purely cosmetic issues.
+
+---
 

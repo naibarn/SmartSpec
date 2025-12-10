@@ -16,7 +16,32 @@ SmartSpec V5 supports your favorite AI coding platforms with a single-command in
 - **Gemini CLI** - For terminal-based AI coding assistant.
 - **Cursor / VSCode** - For supercharging your manual "vibe coding" workflow.
 - **Roo Code** - For safety-first, workflow-driven development.
+---
+🚀 New Feature: SmartSpec Copilot — Your Dedicated SmartSpec Help Assistant
 
+SmartSpec 5.6 introduces SmartSpec Copilot, an always-on interactive assistant built using OpenAI CustomGPT:
+
+👉 https://chatgpt.com/g/g-6936ffad015c81918e006a9ee2077074-smartspec-copilot
+ [**[Links]**](https://chatgpt.com/g/g-6936ffad015c81918e006a9ee2077074-smartspec-copilot)
+
+What SmartSpec Copilot provides
+
+You can now ask any SmartSpec-related question in natural language:
+
+Installation issues
+
+Understanding SmartSpec concepts & workflows
+
+How to run SPEC → PLAN → TASKS → IMPLEMENT
+
+How to use any workflow correctly in Kilo, Claude, Antigravity, or CLI
+
+Troubleshooting errors, missing files, index problems
+
+Understanding vibe coding, design philosophy, or workflow order
+
+Copilot responds in English or any language you prefer, including Thai.
+It is now the official support channel for learning and using SmartSpec.
 ---
 
 ## 🚀 Quick Start
@@ -305,5 +330,7 @@ For common issues and solutions, see the **[Troubleshooting Guide](.smartspec-do
 Detailed changes for each version are tracked in:
 
 - **[v5.2 Release Notes](.smartspec-docs/release-notes/RELEASE_NOTES_v5.2.md)**
+- **[v5.6 Release Notes](.smartspec-docs/release-notes/smartspec_v_56_release_notes_en.md)**
+
 
 Future releases should add new files under `.smartspec-docs/release-notes/` and link them here.

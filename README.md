@@ -221,6 +221,36 @@ These workflows help maintain and improve code quality on a spec-scoped basis:
 | `/smartspec_spec_lifecycle_manager.md` | Spec Lifecycle Manager. | [**[Details]**](.smartspec-docs/workflows/spec_lifecycle_manager.md) |
 | `/smartspec_global_registry_audit.md` | Global registry audit. | [**[Details]**](.smartspec-docs/workflows/global_registry_audit.md) |
 
+
+
+---
+
+## 🛡️ Governance & Release Commands
+
+These workflows provide governance, security, and release-readiness checks at a spec or service level.
+
+| Command | Description | Full Docs |
+| :--- | :--- | :--- |
+| `/smartspec_ci_quality_gate.md` | Aggregate CI quality signals (tests, coverage, lint, type-checks, security scans) and decide pass/fail per spec/service. | [**[Details]**](.smartspec-docs/workflows/ci_quality_gate.md) |
+| `/smartspec_release_readiness.md` | Combine signals from UI, tests, NFR/perf, security, and CI to decide if a service/release is ready to ship. | [**[Details]**](.smartspec-docs/workflows/release_readiness.md) |
+| `/smartspec_security_evidence_audit.md` | Collect and summarize security evidence (SCA reports, threat models, hardening, mitigations) for a spec or service. | [**[Details]**](.smartspec-docs/workflows/security_evidence_audit.md) |
+| `/smartspec_data_migration_governance.md` | Plan and govern data migrations with safety, rollback, and audit requirements. | [**[Details]**](.smartspec-docs/workflows/data_migration_governance.md) |
+
+---
+## 📈 NFR, Observability & UI Governance Commands
+
+These workflows help you govern non-functional requirements, observability, and UI quality.
+
+| Command | Description | Full Docs |
+| :--- | :--- | :--- |
+| `/smartspec_nfr_perf_planner.md` | Plan performance and other NFR work (scenarios, SLOs, benchmarks) from specs and expected load. | [**[Details]**](.smartspec-docs/workflows/nfr_perf_planner.md) |
+| `/smartspec_nfr_perf_verifier.md` | Verify performance/NFR results against SLOs using perf test reports and metrics. | [**[Details]**](.smartspec-docs/workflows/nfr_perf_verifier.md) |
+| `/smartspec_observability_runbook_generator.md` | Generate observability and incident runbooks (alerts, dashboards, traces, response steps) from specs and SLO/SLI info. | [**[Details]**](.smartspec-docs/workflows/observability_runbook_generator.md) |
+| `/smartspec_ui_validation.md` | Governance-focused UI validation: connect UI specs/UI JSON, tests, a11y, i18n, visual regression, and security evidence into one report. | [**[Details]**](.smartspec-docs/workflows/ui_validation_manual.md) |
+| `/smartspec_ui_consistency_audit.md` | Audit UI consistency with design tokens, component registries, and layout/state patterns. | [**[Details]**](.smartspec-docs/workflows/ui_consistency_audit_manual.md) |
+
+
+---
 **Note:** All quality workflows operate on a **spec-scoped basis** for optimal performance in large projects. See [SPEC_SCOPED_WORKFLOWS.md](.smartspec-docs/guides/SPEC_SCOPED_WORKFLOWS.md) for details.
 
 ![The SmartSpec Workflow](.smartspec-assets/images/SmartSpec-Pict5.png)

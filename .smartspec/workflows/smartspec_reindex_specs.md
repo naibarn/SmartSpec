@@ -1,291 +1,179 @@
 ---
-description: Rebuild or refresh SPEC_INDEX with SmartSpec v5.6 centralization, multi-repo resolution, and optional multi-registry readiness checks
-version: 5.6
+name: /smartspec_reindex_specs
+version: 5.7.0
+role: index/governance
+write_guard: ALLOW-WRITE
+purpose: Rebuild and refresh SPEC_INDEX with SmartSpec v5.7 governance (multi-repo, multi-registry, repo-hints, safety-mode, UI JSON signals) while preserving full backward compatibility with v5.2–v5.6 behavior.
+version_notes:
+  - v5.6: multi-repo/multi-registry baseline, repo-hints, readiness warnings
+  - v5.7.0: governance alignment; stricter cross-repo safety; UI metadata signals; clarified index invariants; documentation-only update
 ---
 
-# /smartspec_reindex_specs
+# /smartspec_reindex_specs (v5.7.0)
 
-Reindex all SmartSpec specifications and rebuild the project’s SPEC_INDEX in a way that is compatible with the v5.6 chain:
+Rebuild or refresh SPEC_INDEX with SmartSpec **v5.7** rules:
+- canonical `.spec/` ownership
+- multi-repo detection via repos-config/workspace-roots
+- merged registry-awareness for warnings
+- UI JSON governance signals
+- strict safety-mode
 
-1) `/smartspec_validate_index`  
-2) `/smartspec_generate_spec`  
-3) `/smartspec_generate_plan`  
-4) `/smartspec_generate_tasks`  
-5) `/smartspec_sync_spec_tasks`
-
-This workflow **preserves all essential v5.2 reindex capabilities**, including multi-root scanning, safe schema handling, and legacy mirror support, while adding:
-
-- Optional **multi-registry readiness checks**
-- Optional **repo hint enrichment**
-- A consistent flag surface with other v5.6 workflows
+All v5.6 functionality is preserved.
 
 ---
-
-## Core Principles (Unchanged)
-
-- **`.spec/` is the canonical project-owned space**.
-- **`.spec/SPEC_INDEX.json` is the canonical index** when present.
-- Root `SPEC_INDEX.json` may be maintained as a **legacy mirror**.
-- `.smartspec/` is tooling-only.
-- The reindexer must remain schema-compatible with existing downstream tools.
-
----
-
-## New v5.6 Goals
-
-1) Ensure the index is sufficient for stable `generate_spec` and `generate_tasks` output.
-2) Support multi-repo portfolios without creating ambiguous ownership.
-3) Provide early detection of cross-repo naming drift via optional registry awareness.
-4) Avoid any destructive behavior to specs or registries.
+## 1) Responsibilities
+- discover all specs across repo roots
+- rebuild canonical index deterministically
+- preserve stable spec IDs and categories
+- populate safe fields (paths, status, timestamps, repo-hints)
+- detect duplicates / conflicts / category drift
+- optional registry readiness warnings
+- optional root mirror
 
 ---
-
-## What It Does
-
-- Scans one or more spec roots.
-- Builds or refreshes a unified SPEC_INDEX.
-- Preserves stable spec IDs and categories.
-- Updates safe metadata such as:
-  - paths
-  - dependency lists (when clearly declared)
-  - status (when policy allows)
-  - timestamps
-- Optionally validates multi-repo mapping integrity when configured.
-- Optionally emits registry readiness warnings.
-- Writes canonical index to `.spec/SPEC_INDEX.json`.
-- Optionally writes/updates the legacy root mirror.
+## 2) Inputs
+- spec roots (explicit or default `specs/`)
+- existing index files
+- multi-repo configuration
+- optional registry directories
+- UI JSON (read-only signals)
 
 ---
-
-## When to Use
-
-- First-time SmartSpec setup.
-- After adding many new specs.
-- After major folder restructuring.
-- Before adopting multi-repo governance.
-- When index mismatches or missing entries are suspected.
-
----
-
-## Inputs
-
-- Spec roots (default or provided)
-- Existing index files (optional)
-- Optional multi-repo configuration
-- Optional registry directories (validation-only)
-
----
-
-## Outputs
-
+## 3) Outputs
 - `.spec/SPEC_INDEX.json` (canonical)
-- `SPEC_INDEX.json` (legacy mirror, optional)
-- Report under:
-  - `.spec/reports/reindex-specs/`
+- optional root mirror `SPEC_INDEX.json`
+- report under `.spec/reports/reindex-specs/`
 
 ---
-
-## Flags
-
-### Index Targets
-
-- `--out=<path>`
-  - Output path for the generated index.
-  - Default: `.spec/SPEC_INDEX.json`
-
+## 4) Flags
+### 4.1 Output
+- `--out=<path>` (default `.spec/SPEC_INDEX.json`)
 - `--mirror-root=<true|false>`
-  - Write a mirror copy to root `SPEC_INDEX.json`.
-  - Default: `true` if a legacy mirror already exists, else `false`.
 
-### Spec Discovery
-
+### 4.2 Discovery
 - `--roots=<csv>`
-  - Comma-separated list of spec roots to scan.
-  - Default: `specs/` (and any legacy roots your project supports).
-
 - `--include-drafts=<true|false>`
-  - Include draft specs in the index.
 
-### Multi-Repo Resolution (v5.6-aligned)
-
+### 4.3 Multi-Repo (v5.7)
 - `--workspace-roots=<csv>`
-  - Additional repo roots to scan for specs.
-  - Use when specs are distributed across sibling repos.
+- `--repos-config=<path>` (preferred)
 
-- `--repos-config=<path>`
-  - JSON config mapping repo IDs to physical roots.
-  - Takes precedence over `--workspace-roots`.
-  - Recommended path: `.spec/smartspec.repos.json`
+### 4.4 Registry Awareness
+- `--registry-dir=<path>` (default `.spec/registry`)
+- `--registry-roots=<csv>` (read-only supplemental)
 
-- `--specindex=<path>`
-  - Legacy alias for `--index` in workflows that accept it.
-  - For reindex, this flag may be accepted only as an input hint (implementation choice).
-
-### Optional Multi-Registry Readiness (NEW)
-
-> Reindex remains index-focused. Registry checks are **warning-only** by default.
-
-- `--registry-dir=<path>`
-  - Primary registry directory (authoritative for naming in other workflows).
-  - Default: `.spec/registry` when present.
-
-- `--registry-roots=<csv>`
-  - Supplemental registries for read-only validation.
-  - Useful in multi-repo platforms.
-
-Behavior:
-- Load registries to inform **index-level warnings** only.
-- Do not write registries in this workflow.
-
-### Optional Repo Hint Enrichment (NEW, Non-Breaking)
-
+### 4.5 Repo-Hints
 - `--emit-repo-hints=<true|false>`
-  - When enabled, the reindexer may infer a lightweight `repo` hint for each spec entry
-    based on which root it was discovered in.
 
-Rules:
-- Must remain backward compatible.
-- If your current index schema already supports a `repo` field, populate it.
-- If not, emit repo hints **only in the report**.
-
-### Safety & Output
-
-- `--fix` (if supported in your legacy implementation)
-  - Apply safe normalization to index metadata.
-
+### 4.6 Safety / Output
+- `--fix` (safe normalization only)
 - `--report=<summary|detailed>`
-
 - `--dry-run`
-  - Print output without writing files.
+- `--safety-mode=<strict|dev>` (default strict)
+- `--strict` alias
 
 ---
+## 5) Canonical Index Resolution
+Order:
+1. `.spec/SPEC_INDEX.json`
+2. `SPEC_INDEX.json`
+3. `.smartspec/SPEC_INDEX.json`
+4. `specs/SPEC_INDEX.json`
 
-## 0) Resolve Multi-Repo Search Roots
-
-Construct the spec discovery roots in this order:
-
-1) Current repo root
-2) `--repos-config` roots (if provided)
-3) `--workspace-roots` (if provided)
-4) `--roots` spec directories under each repo root
-
-If `--repos-config` is provided:
-
-- Validate that it is parseable.
-- Record repo IDs and roots in the report.
+Missing index → generate new.
+Strict mode logs missing-index as governance risk.
 
 ---
-
-## 1) Discover Specs
-
-For each resolved repo root:
-
-- Scan for `spec.md` files under the configured spec roots.
-- Support legacy folder patterns when they exist.
-
-Rules:
-- Never modify spec contents.
-- Keep discovery deterministic (stable ordering).
+## 6) Multi-Repo Resolution
+Prefer `--repos-config`.
+Else merge workspace-roots + current repo.
+Validate index `repo` fields when present.
+Strict mode: mismatched repo mapping = blocking.
 
 ---
+## 7) Registry Awareness (Warnings Only)
+Load primary + supplemental registries.
+Detect:
+- same-name/different-meaning
+- same-meaning/different-name
+- ownership ambiguity
 
-## 2) Build Index Entries
-
-For each discovered spec:
-
-- Extract stable metadata:
-  - id (from front-matter if present, else derived per legacy rules)
-  - title
-  - category
-  - status
-  - dependencies (declared)
-  - path
-
-- Prefer the spec’s own explicit dependency declarations.
-- When ambiguous, avoid inferring cross-cutting dependencies.
+Reindex never writes registries; surfaces warnings only.
 
 ---
+## 8) UI JSON Governance Signals
+When UI specs include `ui.json`, collect metadata:
+- `source`, `generator`, `generated_at`
+- `design_system_version`, `style_preset`, `review_status`
 
-## 3) Duplicate & Conflict Checks
-
-Detect and report:
-
-- Duplicate spec IDs
-- Multiple specs claiming the same stable path
-- Category conflicts
-
-Severity handling (consistent with validate chain):
-
-- In single-repo usage, these are typically blocking for reindex output.
-- In multi-repo usage, duplicate IDs across repos must be treated as high-severity.
+Missing UI JSON for UI category = warning.
 
 ---
-
-## 4) Optional Registry Readiness Warnings
-
-If `--registry-dir` or `--registry-roots` are provided:
-
-- Load read-only registry views.
-- Emit warnings if:
-  - index contains multiple specs that appear to define the same shared API/model/term family
-    without clear ownership hints.
-  - a spec category implies shared UI components but no UI registry is available.
-
-This step must remain **warning-only** to avoid turning reindex into a heavy governance gate.
+## 9) Spec Discovery
+Scan all repo roots for spec roots.
+Detect `spec.md` using deterministic ordering.
+Support legacy folder structures.
+Never mutate spec files.
 
 ---
+## 10) Build Index Entries
+Extract:
+- id
+- title
+- category
+- status
+- dependencies
+- path
+- optional repo-hints
 
-## 5) Write Canonical Index
-
-Default output:
-
-- `.spec/SPEC_INDEX.json`
-
-Rules:
-- Preserve schema stability.
-- Do not introduce breaking fields.
-- If `repo` is a supported field in your schema:
-  - populate only when `--emit-repo-hints=true`.
-
----
-
-## 6) Optional Root Mirror
-
-If `--mirror-root=true`:
-
-- Write a mirror copy to `SPEC_INDEX.json`.
-- Mark in the report that the root index is a legacy mirror.
-
-Do NOT write `.smartspec/SPEC_INDEX.json`.
+Only infer dependencies when unambiguous.
 
 ---
+## 11) Duplicate & Conflict Checks
+Detect:
+- duplicate IDs
+- duplicate paths
+- category conflicts
 
-## 7) Reporting
+Strict mode treats as blocking.
 
-Write a report in `.spec/reports/reindex-specs/` including:
+---
+## 12) Optional Registry Readiness
+Emit warnings when:
+- multiple specs imply shared API/model ownership
+- UI category has no UI registry present
+- supplemental registry contradicts primary
 
-- Canonical output path used
-- Mirror policy
-- Repo roots scanned
-- Spec roots scanned
-- Duplicate ID/path findings
-- Optional repo hint summary
-- Optional registry readiness warnings
-- Recommended next steps:
+---
+## 13) Write Canonical Index
+Default to `.spec/SPEC_INDEX.json`.
+Schema must remain backward compatible.
+Repo-hints written only when schema already supports them.
+
+---
+## 14) Optional Root Mirror
+Write `SPEC_INDEX.json` only when requested or when a legacy mirror exists.
+Do not write `.smartspec/SPEC_INDEX.json`.
+
+---
+## 15) Reporting
+Include:
+- output path
+- mirror policy
+- repo roots
+- spec roots
+- duplicates/conflicts
+- registry warnings
+- repo-hint summary
+- recommended next steps:
   - `/smartspec_validate_index`
   - `/smartspec_generate_spec`
-  - `/smartspec_generate_plan`
   - `/smartspec_generate_tasks`
 
 ---
+## 16) Legacy Flags Inventory
+Kept:
+- `--roots`, `--include-drafts`, `--workspace-roots`, `--repos-config`, `--mirror-root`, `--fix`, `--report`, `--dry-run`
 
-## Notes
-
-- This v5.6 reindex workflow is intentionally conservative.
-- It supports multi-repo discovery without forcing a single unified registry strategy.
-- Registry flags are included to surface early warnings, not to enforce ownership changes.
-- The primary governance gates remain:
-  - `/smartspec_validate_index v5.6 alignment`
-  - `/smartspec_generate_spec v5.6`
-  - `/smartspec_generate_tasks v5.6`
-
+Additive (v5.7):
+- `--registry-roots`, `--safety-mode`, `--emit-repo-hints`

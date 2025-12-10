@@ -1,6 +1,12 @@
 ---
-description: Reverse-engineer implementation into SmartSpec artifacts with centralization (.spec) and UI JSON addendum
-version: 5.2
+name: /smartspec_reverse_to_spec
+version: 5.7.0
+role: reverse-engineering/authoring
+write_guard: ALLOW-WRITE
+purpose: Reverse-engineer existing implementation into SmartSpec-compatible specs and registries while enforcing centralized governance (.spec/, SPEC_INDEX, registries, UI JSON).
+version_notes:
+  - v5.2: initial reverse-to-spec workflow for SmartSpec centralization
+  - v5.7.0: documentation alignment with SmartSpec v5.6–v5.7 chain; behavior remains backward-compatible with v5.2
 ---
 
 # /smartspec_reverse_to_spec
@@ -10,7 +16,7 @@ Reverse-engineer existing code and project structure into SmartSpec-compatible s
 This workflow is intended for:
 - legacy projects without consistent specs
 - partially documented systems
-- migration to SmartSpec v5.2 centralization
+- migration to SmartSpec centralization
 
 It enforces:
 - **`.spec/` as the canonical project-owned space**
@@ -18,6 +24,14 @@ It enforces:
 - **`.spec/registry/` as shared source of truth**
 - `.smartspec/` as tooling-only
 - **UI design source of truth in `ui.json`** when UI specs exist
+
+> **Write guard & modes (v5.7.0 clarification)**
+> - Role: reverse-engineering/authoring.
+> - Default write behavior by mode:
+>   - `recommend`: read-only (NO-WRITE), only reports.
+>   - `generate-drafts`: ALLOW-WRITE for new spec folders/files.
+>   - `repair-legacy`: ALLOW-WRITE for additive metadata/companion files.
+> - Must never delete or destructively overwrite existing `spec.md` or registry entries.
 
 ---
 
@@ -89,6 +103,13 @@ It enforces:
 
 - `--strict` Fail on high-risk ambiguity (optional)
 
+> **Additive v5.7.0 flags (optional)**
+> - `--registry-roots` Supplemental registry roots (read-only; for cross-repo collision detection).
+> - `--workspace-roots` Additional repo roots to scan.
+> - `--repos-config` Preferred JSON mapping of repos; takes precedence over `--workspace-roots`.
+> - `--safety-mode=<strict|dev>` (alias: `--strict` → `strict`).
+> - `--dry-run` Simulate generate/repair modes without writing files.
+
 ---
 
 ## 0) Resolve Canonical Index & Registry
@@ -102,34 +123,24 @@ Detection order:
 3) `.smartspec/SPEC_INDEX.json` (deprecated)  
 4) `specs/SPEC_INDEX.json` (older layout)
 
-```bash
-INDEX_PATH="${FLAGS_index:-}"
+If none is found:
+- in `recommend` mode: continue with warnings.
+- in `generate-drafts`/`repair-legacy` + `--safety-mode=strict`: treat as high-risk; prefer `--dry-run` and recommendations over writes.
 
-if [ -z "$INDEX_PATH" ]; then
-  if [ -f ".spec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".spec/SPEC_INDEX.json"
-  elif [ -f "SPEC_INDEX.json" ]; then
-    INDEX_PATH="SPEC_INDEX.json"
-  elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".smartspec/SPEC_INDEX.json" # deprecated
-  elif [ -f "specs/SPEC_INDEX.json" ]; then
-    INDEX_PATH="specs/SPEC_INDEX.json"
-  fi
-fi
+### 0.2 Resolve Registry Directory
 
-if [ -n "$INDEX_PATH" ] && [ -f "$INDEX_PATH" ]; then
-  echo "✅ Using SPEC_INDEX: $INDEX_PATH"
-else
-  echo "⚠️ SPEC_INDEX not found. Reverse run may bootstrap a new canonical index in generate modes."
-  INDEX_PATH=""
-fi
+- primary registry: `--registry-dir` (default `.spec/registry`).
+- supplemental registries (v5.7.0): from `--registry-roots` (read-only).
 
-REGISTRY_DIR="${FLAGS_registry_dir:-.spec/registry}"
-mkdir -p "$REGISTRY_DIR"
+Registry rules:
+- primary registry is authoritative.
+- supplemental registries detect collisions and ownership ambiguity.
 
-MODE="${FLAGS_mode:-recommend}"
-SCOPE="${FLAGS_scope:-}"
-```
+### 0.3 Resolve Multi-Repo Roots (v5.7.0)
+
+- build repo roots from `--repos-config` when present.
+- otherwise merge `--workspace-roots` with current repo.
+- treat other repos as **read-only**; do not write specs into sibling repos unless explicitly allowed by governance.
 
 ---
 
@@ -139,6 +150,8 @@ SCOPE="${FLAGS_scope:-}"
   - limit scanning to that path/module.
 - Otherwise:
   - scan key directories for service, domain, infra, and UI layers.
+
+Scope decisions should favor cohesive, meaningful boundaries over overly fine-grained specs.
 
 ---
 
@@ -163,7 +176,7 @@ Do not infer overly fine-grained specs unless the codebase clearly isolates resp
 
 ## 3) Cross-Check With Existing Index
 
-If `INDEX_PATH` exists:
+If SPEC_INDEX exists:
 
 - Match discovered modules to existing specs.
 - Classify findings into:
@@ -171,6 +184,10 @@ If `INDEX_PATH` exists:
   2) Partially covered (missing sections)
   3) Not covered (candidate new spec)
   4) Overlapping (potential split/merge)
+
+Under `--safety-mode=strict` / `--strict`:
+- avoid automatically reassigning ownership.
+- prefer recommendations over destructive moves.
 
 ---
 
@@ -188,7 +205,11 @@ Rules:
 - Prefer aligning inferred names to existing registry names.
 - When a rename/migration seems needed:
   - record a recommendation
-  - do not auto-rename in code in this workflow
+  - do not auto-rename in code in this workflow.
+
+If a name appears in supplemental registries with conflicting meaning:
+- mark as **cross-repo ownership ambiguity**.
+- recommend governance reconciliation.
 
 ---
 
@@ -200,21 +221,40 @@ Apply when:
 - an existing UI spec folder contains `ui.json`.
 
 Rules:
-- UI design source of truth must be **JSON** to support Penpot.
+
+- UI design source of truth should be **JSON** (`ui.json`) for Penpot/JSON-first flows.
 - `ui.json` should not embed business logic.
 - Extract UI concerns into:
   - visual structure
   - component mapping
   - tokens/variants
 
-Required outputs (in generate modes):
-- If a UI spec is inferred and no `ui.json` exists:
-  - create a **placeholder** `ui.json` draft suggestion (not mandatory write unless allowed).
+When generating drafts:
+- if a UI spec is inferred and no `ui.json` exists:
+  - create a **placeholder** `ui.json` draft suggestion or file (depending on mode).
 
 If the project does not use UI JSON:
-- You may allow a non-blocking pathway:
-  - keep UI information in `spec.md`
-  - recommend adopting `ui.json` for design-team workflow
+- allow a non-blocking pathway:
+  - keep UI information in `spec.md`.
+  - recommend adopting `ui.json` for design-team workflows.
+
+For v5.7.0, when creating or suggesting `ui.json`, prefer including a `meta` block:
+
+```jsonc
+{
+  "meta": {
+    "source": "reverse_to_spec",            // tool identifier
+    "generator": "smartspec_reverse_to_spec", // workflow name
+    "generated_at": "<timestamp>",
+    "design_system_version": "TODO_review",
+    "style_preset": "TODO_review",
+    "review_status": "unreviewed"           // unreviewed | designer_approved | overridden
+  },
+  "screens": []
+}
+```
+
+This makes future UI governance and AI-assisted updates safer.
 
 ---
 
@@ -222,13 +262,13 @@ If the project does not use UI JSON:
 
 ### 6.1 `recommend` (default)
 
-- Produce a reverse report.
+- Produce a reverse report only.
 - Suggest:
   - new specs
   - missing sections
   - registry additions
   - index improvements
-- Do not write new files.
+- Do **not** write new files.
 
 ### 6.2 `generate-drafts`
 
@@ -238,12 +278,16 @@ If the project does not use UI JSON:
 - If UI spec:
   - generate a minimal `ui.json` placeholder template.
 - Do not overwrite existing `spec.md`.
+- Respect `--dry-run` by simulating writes.
 
 ### 6.3 `repair-legacy`
 
 - Intended to support older SmartSpec projects.
-- May add **additive metadata** or companion files to align with v5.2.
+- May add **additive metadata** or companion files to align with centralization.
 - Must not delete or rewrite core content of legacy `spec.md`.
+
+Under `--safety-mode=strict`:
+- prefer recommendations or `--dry-run` when ambiguity is high.
 
 ---
 
@@ -287,9 +331,35 @@ Include:
 
 ---
 
-## Notes
+## 10) Weakness & Risk Check (v5.7.0)
 
-- This workflow is a bridge for legacy modernization.
-- It is intentionally conservative to avoid creating new cross-SPEC conflicts automatically.
-- Canonical shared truth lives in `.spec/` when present.
+Before treating this workflow as stable in a repo, verify:
+
+1. It never deletes or destructively rewrites existing specs.
+2. It keeps `.spec/` as canonical and uses mirrors only as secondary.
+3. It respects registry precedence and cross-repo ownership.
+4. It clearly marks speculative inferences vs. confirmed mappings.
+5. It treats UI JSON as design-owned and does not embed business logic.
+6. It records high-ambiguity findings as recommendations instead of applying changes directly.
+
+---
+
+## 11) Legacy Flags Inventory
+
+- **Kept (legacy):**
+  - `--index`
+  - `--registry-dir`
+  - `--scope`
+  - `--mode`
+  - `--mirror-root`
+  - `--strict`
+
+- **New additive (v5.7.0):**
+  - `--registry-roots`
+  - `--workspace-roots`
+  - `--repos-config`
+  - `--safety-mode` (with `--strict` as alias)
+  - `--dry-run`
+
+No legacy flags are removed or weakened.
 

@@ -1,324 +1,423 @@
 ---
-description: Verify implementation progress against tasks/specs with SmartSpec v5.6 centralization, multi-repo + multi-registry alignment, safety-mode, and UI JSON addendum
-version: 5.6
+name: /smartspec_verify_tasks_progress
+version: 5.7.0
+role: verification/governance
+write_guard: NO-WRITE
+purpose: Verify real implementation progress against tasks/specs and the SmartSpec centralized layer under full v5.6–v5.7 governance (multi-repo, multi-registry, safety-mode, UI JSON addendum).
+version_notes:
+  - v5.2: initial verify-tasks workflow
+  - v5.6: centralization + multi-repo / multi-registry alignment
+  - v5.7.0: governance alignment; UI metadata signals; expanded safety; backward-compatible; documentation-only update
 ---
 
-# /smartspec_verify_tasks_progress
+# /smartspec_verify_tasks_progress (v5.7.0)
 
 Verify real implementation progress against `tasks.md`, `spec.md`, and the canonical SmartSpec centralized knowledge layer.
 
-This v5.6 workflow preserves the original v5.2 intent and structure while extending it to match the upgraded chain (spec → plan → tasks → implement → verify) for multi-repo and multi-registry programs.
+This workflow keeps all v5.6 behavior【preserved from spec】 while aligning with the broader v5.7 governance suite:
 
-SmartSpec centralization remains unchanged:
+- centralization: `.spec/`, SPEC_INDEX, `.spec/registry/`
+- multi-repo: `--repos-config`, `--workspace-roots`
+- multi-registry: primary + supplemental registries with precedence
+- safety-mode: `strict` vs `dev` semantics
+- UI JSON: design-owned source of truth, with metadata signals
 
-- **`.spec/` is the canonical project-owned space**.
-- **`.spec/SPEC_INDEX.json` is the canonical index**.
-- **`.spec/registry/` is the shared source of truth**.
-- `SPEC_INDEX.json` at repo root is a **legacy mirror**.
-- `.smartspec/` is tooling-only.
-- **UI specs use `ui.json` as the design source of truth** for Penpot integration.
+> **Scope:**
+> - Read-only with respect to code/spec/tasks/registries/UI JSON.
+> - Writes only **reports** under `.spec/reports/verify-tasks-progress/` unless `--dry-run`.
 
 ---
+## 1) What It Does
 
-## What It Does
-
-- Resolves canonical index and registry locations.
-- Builds a merged registry validation view (primary + supplemental).
-- Identifies the target spec and its adjacent tasks.
-- Verifies progress using evidence from:
+- Resolve canonical index and registry locations.
+- Build a merged registry validation view (primary + supplemental).
+- Identify the target spec and its adjacent tasks.
+- Verify progress using evidence from:
   - task status markers
   - code structure changes
   - test coverage signals
   - configuration and documentation updates
-- Detects cross-SPEC and cross-repo drift risks.
-- Validates UI separation rules when UI JSON is present.
-- Produces a progress report and next-step recommendations.
+- Detect cross-SPEC and cross-repo drift risks.
+- Validate UI separation rules when UI JSON is present.
+- Produce a progress report and next-step recommendations.
+
+(Behavior consistent with the v5.6 description.)
 
 ---
+## 2) When to Use
 
-## When to Use
-
-- During daily/weekly progress reviews.
+- Daily/weekly progress reviews.
 - Before merging a large PR.
 - Before cutting a release.
-- After running `/smartspec_implement_tasks`.
+- After `/smartspec_implement_tasks`.
 - After cross-repo dependency updates.
 
 ---
+## 3) Inputs
 
-## Inputs
+- Target spec path (recommended), e.g.:
+  - `specs/core/spec-core-004-rate-limiting/spec.md`
 
-- Target spec path (recommended)
-  - Example: `specs/core/spec-core-004-rate-limiting/spec.md`
+Expected adjacent files:
 
-- Expected adjacent files:
-  - `tasks.md`
-  - (UI specs) `ui.json`
+- `tasks.md`
+- (UI specs) `ui.json`
 
-- Optional governance inputs:
-  - `.spec/SPEC_INDEX.json`
-  - `.spec/registry/*.json`
-  - supplemental registries from sibling repos
+Governance inputs:
+
+- `.spec/SPEC_INDEX.json`
+- `.spec/registry/*.json`
+- supplemental registries from sibling repos (via `--registry-roots`)
 
 ---
+## 4) Outputs
 
-## Outputs
-
-- A structured progress report under:
+- Structured progress report under:
   - `.spec/reports/verify-tasks-progress/`
-- Optional summary printed to console.
+- Optional summary printed to console / stdout.
+
+Optional future extension (implementation-dependent):
+
+- JSON-formatted report (when `--report-format=json` is supported).
 
 ---
+## 5) Flags (v5.7-aligned)
 
-## Flags
+### 5.1 Index / Registry
 
-### Index / Registry (v5.6-aligned)
+- `--index=<path>`  
+  Path to SPEC_INDEX (optional); default: auto-detect.
 
-- `--index` Path to SPEC_INDEX (optional)  
-  default: auto-detect
+- `--specindex=<path>`  
+  Legacy alias for `--index`.
 
-- `--specindex` Legacy alias for `--index`
+- `--registry-dir=<path>`  
+  Primary registry directory (optional); default: `.spec/registry`.
 
-- `--registry-dir` Primary registry directory (optional)  
-  default: `.spec/registry`
+- `--registry-roots=<csv>`  
+  Supplemental registry dirs (comma- or semicolon-separated).  
+  **Read-only** validation sources to prevent cross-repo duplicate naming.
 
-- `--registry-roots` Supplemental registry dirs, comma-separated (optional)
-  - **Read-only validation sources** to prevent cross-repo duplicate naming.
+### 5.2 Multi-Repo
 
-### Multi-Repo (NEW alignment)
+- `--workspace-roots=<csv>`  
+  Repo roots to search for additional specs.
 
-- `--workspace-roots` Comma-separated repo roots to search (optional)
+- `--repos-config=<path>`  
+  Structured repo config; takes precedence over `--workspace-roots`.  
+  Recommended: `.spec/smartspec.repos.json`.
 
-- `--repos-config` Path to structured repo config (optional)
-  - takes precedence over `--workspace-roots`
-  - recommended: `.spec/smartspec.repos.json`
+### 5.3 Target Selection
 
-### Target Selection
+- `--spec=<path>`  
+  Explicit spec path (optional).
 
-- `--spec` Explicit spec path (optional)
+- `--tasks=<path>`  
+  Explicit tasks path (optional).
 
-- `--tasks` Explicit tasks path (optional)
+Implementation MAY also support:
 
-### Reporting
+- `--spec-id=<id>`  
+  index-based selection (tool-specific).
 
-- `--report-dir` Output report directory (optional)  
-  default: `.spec/reports/verify-tasks-progress/`
+### 5.4 Reporting
 
-- `--report` `summary` | `detailed` (optional)
-  default: `summary`
+- `--report-dir=<path>`  
+  Output report directory (optional); default: `.spec/reports/verify-tasks-progress/`.
 
-### Safety / Preview
+- `--report=<summary|detailed>`  
+  default: `summary`.
 
-- `--safety-mode` `strict` | `dev` (optional)
-  default: `strict`
+- `--report-format=<md|json>` (optional, additive in v5.7)  
+  default: `md` when supported.
 
-- `--strict` Legacy alias for strict gating
+### 5.5 Safety / Preview
 
-- `--dry-run` Print report only (do not write files)
+- `--safety-mode=<strict|dev>`  
+  default: `strict`.
+
+- `--strict`  
+  Legacy alias for `--safety-mode=strict`.
+
+- `--dry-run`  
+  Print report only (no file writes).
 
 ---
+## 6) 0) Resolve Canonical Index & Registry
 
-## 0) Resolve Canonical Index & Registry
-
-### 0.1 Resolve SPEC_INDEX (Single Source of Truth)
+### 6.1 SPEC_INDEX (Single Source of Truth)
 
 Detection order:
 
-1) `.spec/SPEC_INDEX.json` (canonical)  
-2) `SPEC_INDEX.json` (legacy root mirror)  
-3) `.smartspec/SPEC_INDEX.json` (deprecated)  
-4) `specs/SPEC_INDEX.json` (older layout)
+1. `.spec/SPEC_INDEX.json` (canonical)  
+2. `SPEC_INDEX.json` (legacy root mirror)  
+3. `.smartspec/SPEC_INDEX.json` (deprecated)  
+4. `specs/SPEC_INDEX.json` (older layout)
 
-### 0.2 Resolve Registry View
+If no index:
 
-1) Load primary registry from `--registry-dir`.
-2) If provided, load `--registry-roots` as **read-only**.
+- Proceed with local-only context.
+- Record missing index as governance gap in the report.
 
-**Precedence rules:**
+In `strict` safety-mode:
+
+- downgrade confidence and mark some cross-SPEC checks as **incomplete**.
+
+### 6.2 Registry View
+
+1. Load primary registry from `--registry-dir` when present.  
+2. Load `--registry-roots` as read-only.
+
+Precedence rules:
 
 - Primary registry entries are authoritative.
-- Supplemental registries are used to detect collisions and ownership ambiguity.
+- Supplemental registries detect collisions and ownership ambiguity.
 
-### 0.3 Resolve Multi-Repo Roots
+### 6.3 Multi-Repo Roots
 
-- Build repo root list using `--repos-config` if present.
+- Build repo root list using `--repos-config` when present.
 - Otherwise merge `--workspace-roots` with the current repo.
 
----
+Multi-repo metadata (e.g. `repo` field in index) should be used to:
 
-## 1) Identify Target Spec/Tasks
+- find specs across repos safely,
+- understand cross-repo dependencies.
+
+---
+## 7) 1) Identify Target Spec/Tasks
 
 Priority:
 
-1) Use `--spec` / `--tasks` if provided.
-2) If index exists, allow selecting by spec ID (implementation-dependent).
-3) Otherwise, require a spec path.
+1. Use `--spec` / `--tasks` when provided.
+2. If index exists and implementation supports it, select by spec ID.
+3. Otherwise require explicit spec path.
 
 Default tasks location:
 
 - `tasks.md` next to `spec.md`.
 
----
+Ambiguity handling:
 
-## 2) Read Inputs (Read-Only)
+- `strict` safety-mode: treat ambiguous resolution as **blocking** and report it.
+- `dev` safety-mode: list candidates and proceed with lower-confidence checks.
+
+---
+## 8) 2) Read Inputs (Read-Only)
 
 - Read `spec.md`.
-- Read `tasks.md` if present.
-- Detect `ui.json` if present.
+- Read `tasks.md` when present.
+- Detect `ui.json` when present.
 
-Do not rewrite these files.
+Rules:
 
----
-
-## 3) Build Verification Checklist
-
-Create a spec-aligned checklist to evaluate evidence for:
-
-1) **Task completion**
-2) **Contract correctness**
-3) **Test coverage**
-4) **NFR fulfillment**
-5) **Cross-SPEC alignment**
-6) **Cross-repo reuse correctness**
-7) **UI compliance (if applicable)**
+- Never rewrite spec/tasks/UI JSON in this workflow.
+- This workflow is verification-only.
 
 ---
+## 9) 3) Build Verification Checklist
 
-## 4) Validate Dependency Readiness
+Checklist dimensions:
+
+1. **Task completion**  
+   Are tasks marked complete **and** supported by evidence?
+
+2. **Contract correctness**  
+   Are APIs/models/events implemented per spec + registry?
+
+3. **Test coverage**  
+   Are tests present for critical paths and NFRs?
+
+4. **NFR fulfillment**  
+   Logging/metrics/tracing/security/rate limiting where required.
+
+5. **Cross-SPEC alignment**  
+   Are dependent specs reasonably in-sync?
+
+6. **Cross-repo reuse correctness**  
+   Is reuse vs duplication aligned with registries?
+
+7. **UI compliance (if applicable)**  
+   Is UI correctly aligned with UI JSON and UI component registry?
+
+---
+## 10) 4) Validate Dependency Readiness
 
 If index is available:
 
-- Cross-check spec dependencies.
+- Cross-check declared dependencies of the target spec.
 - Warn if:
-  - a dependency spec is missing critical artifacts
-  - tasks appear to implement dependent features out of order
+  - a dependency spec is missing key artifacts (e.g. tests, tasks).  
+  - tasks attempt to implement dependent features out-of-order.
 
-In `--safety-mode=strict`:
+In `strict` safety-mode:
 
-- Treat major dependency-order violations as errors.
+- Treat major dependency ordering or missing-critical-artifact issues as **errors**.
 
 ---
+## 11) 5) Registry Alignment Checks
 
-## 5) Registry Alignment Checks (Conditional)
+If registries exist:
 
-If registries are available:
-
-- Verify that names referenced in the target spec/tasks (and observed in code when inferable) match the merged registry view:
-  - API names/route prefixes
+- Verify that names referenced in spec/tasks and (where inferable) code align with the merged registry view:
+  - API names / route prefixes
   - model names
   - domain terms
   - critical cross-cutting sections
   - shared patterns
-  - UI component names (if UI registry exists)
+  - UI component names (when UI registry exists)
 
-**v5.6 cross-repo safeguard:**
+Cross-repo safeguard:
 
-- If the same name exists in a supplemental registry with a conflicting meaning, the report must:
-  - mark it as an ownership ambiguity
-  - recommend governance reconciliation
-  - discourage local “new shared name” creation
+- If the same name appears in a supplemental registry with conflicting meaning:
+  - mark as **ownership ambiguity**,
+  - recommend governance reconciliation,
+  - discourage local "new shared name" creation.
+
+Under `strict` safety-mode + `mode=runtime` (if implemented):
+
+- treat unresolved ownership ambiguity as **blocking**.
 
 ---
+## 12) 6) Evidence-Based Progress Evaluation
 
-## 6) Evidence-Based Progress Evaluation
+Distinguish between:
 
-The verification must distinguish between:
+- **Declared progress**: checklist/checkboxes, status markers.
+- **Observed progress**: code/tests/config/evidence.
 
-- **Declared progress** (task checkboxes, status labels)
-- **Observed progress** (code/tests/config changes)
-
-### 6.1 Task Status Signals
+### 12.1 Task Status Signals
 
 - Parse `tasks.md` status markers.
-- Identify blocked, missing, or newly introduced tasks.
+- Highlight:
+  - completed tasks with weak/no evidence,
+  - partially completed tasks,
+  - blocked tasks,
+  - missing tasks for obvious work items.
 
-### 6.2 Code Structure Signals
+### 12.2 Code Structure Signals
 
-Best-effort checks may include:
+Best-effort structural hints (implementation-dependent):
 
-- Modules/services created for major task groups.
-- API/controller presence for declared endpoints.
-- Data model definitions aligned with spec and registries.
-- Shared utility usage when tasks prefer reuse.
+- module/service presence for major feature groups,
+- API/controller endpoints for declared routes,
+- data model definitions for declared models,
+- shared utilities used where registry recommends reuse.
 
-### 6.3 Test Signals
+### 12.3 Test Signals
 
-- Unit tests present for domain logic.
-- Integration/contract tests present for critical flows.
-- Performance tests present when SLAs exist.
+- unit tests for domain logic,
+- integration/contract tests for key flows,
+- performance tests when SLAs exist.
 
-### 6.4 NFR Signals
+### 12.4 NFR Signals
 
-When spec includes NFRs:
+When NFRs are present in spec:
 
-- Verify evidence exists for:
-  - logging
-  - metrics
-  - tracing
-  - security enforcement
-  - rate limiting / auditing as applicable
+- ensure evidence for logging/metrics/tracing,
+- ensure security/rate-limiting/auditing where specified.
 
 ---
+## 13) 7) UI JSON Addendum (v5.7)
 
-## 7) UI JSON Addendum (Conditional)
+Apply when any of:
 
-Apply when **any** of these are true:
+- SPEC_INDEX category for spec is `ui`,
+- `ui.json` exists in the spec folder,
+- spec explicitly mentions Penpot/UI JSON.
 
-- Spec category is `ui` in SPEC_INDEX
-- `ui.json` exists in the spec folder
-- The spec explicitly mentions Penpot/UI JSON workflow
+UI rules:
 
-Rules:
+- UI design source of truth is `ui.json`.
+- `ui.json` is **design-owned** and must not contain business logic.
 
-1) **UI design source of truth is JSON** (`ui.json`).
-2) Treat `ui.json` as design-owned.
-3) Do not embed business logic in UI JSON.
-4) Verify that UI implementation aligns with `ui.json` structure.
+Metadata expectations (when present):
+
+- `meta.source` (e.g. `ai`, `human`, `mixed`),
+- `meta.generator`,
+- `meta.generated_at`,
+- `meta.design_system_version`,
+- `meta.style_preset`,
+- `meta.review_status` (`unreviewed`, `designer_approved`, `overridden`, ...).
 
 Checks:
 
-- If `ui.json` exists:
-  - confirm `tasks.md` includes component mapping and logic separation tasks.
+- UI implementation should align with `ui.json` structure and component naming.
+- `tasks.md` should include items about:
+  - mapping components to UI JSON definitions,
+  - extracting business logic out of UI components.
 
-- If `ui-component-registry.json` exists:
-  - verify that component names used in tasks/implementation match the registry.
+If UI specs are active but `ui.json` is missing:
 
-- If UI specs are active but `ui.json` is missing:
-  - add a high-visibility warning.
+- treat as **high-visibility warning** (portfolio) or **error** (runtime+strict, if applied in CI).
 
----
+Unreviewed AI-generated UI JSON for critical flows:
 
-## 8) Report Schema (Suggested)
-
-A v5.6 report should include:
-
-- Spec ID/title/path
-- Tasks path
-- Index path used (or NONE)
-- Primary registry dir
-- Supplemental registry roots
-- Multi-repo roots or config used
-- Declared vs observed completion summary
-- Dependency readiness
-- Registry alignment status
-- UI compliance (if applicable)
-- Recommended next tasks
+- should elevate risk level under `strict` safety-mode.
 
 ---
+## 14) 8) Report Schema (Suggested)
 
-## 9) Recommended Follow-Ups
+Suggested report fields:
+
+- spec ID/title/path
+- tasks path
+- index path used (or NONE)
+- primary registry dir
+- supplemental registry roots
+- multi-repo roots / repos-config summary
+- declared vs observed completion summary
+- dependency readiness
+- registry alignment status
+- UI compliance status
+- risk level: `LOW | MEDIUM | HIGH | CRITICAL`
+- recommended next tasks
+
+When `--report-format=json` is supported, use a JSON structure mirroring these fields.
+
+---
+## 15) 9) Recommended Follow-Ups
 
 - `/smartspec_fix_errors`
 - `/smartspec_generate_tests`
+- `/smartspec_refactor_code`
 - `/smartspec_sync_spec_tasks`
-- `/smartspec_global_registry_audit` (for large drift)
+- `/smartspec_global_registry_audit` (for large naming drift)
 - `/smartspec_validate_index`
 
 ---
+## 16) Weakness & Risk Check (v5.7.0)
 
-## Notes
+Before treating this workflow spec as stable:
 
-- This workflow is intentionally conservative.
-- It must not mark tasks “done” solely based on checkbox state without any observed evidence.
-- In multi-repo programs, lack of `--registry-roots` should reduce confidence scoring and be recorded explicitly in the report.
+1. Confirm it never mutates spec/tasks/registries/UI JSON.
+2. Confirm `.spec/` is treated as canonical for index & registry.
+3. Confirm safety-mode gates high-risk ambiguity (especially cross-repo naming and missing index/registries).
+4. Confirm UI JSON is always design-owned and logic-free.
+5. Confirm reports clearly distinguish declared vs observed progress.
+6. Confirm multi-repo and multi-registry behavior matches other v5.7 workflows.
+
+---
+## 17) Legacy Flags Inventory
+
+**Kept (legacy):**
+
+- `--index`
+- `--specindex`
+- `--registry-dir`
+- `--registry-roots`
+- `--workspace-roots`
+- `--repos-config`
+- `--spec`
+- `--tasks`
+- `--report-dir`
+- `--report`
+- `--safety-mode`
+- `--strict`
+- `--dry-run`
+
+**Additive (v5.7 suggestion, optional to implement):**
+
+- `--report-format`
+
+No legacy behavior is removed or weakened.
 

@@ -1,6 +1,6 @@
 ---
 description: Generate an implementation prompt for AI coding from SmartSpec v5.6 tasks/specs with multi-repo + multi-registry alignment, UI mode support, and anti-duplication guardrails
-version: 5.6
+version: 5.7.0
 last_updated: 2025-12-08
 ---
 

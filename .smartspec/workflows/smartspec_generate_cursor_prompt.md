@@ -1,303 +1,201 @@
 ---
-description: Generate a Cursor-ready implementation prompt using SmartSpec centralization (.spec) and UI JSON addendum
-version: 5.2
+name: /smartspec_generate_cursor_prompt
+version: 5.7.0
+role: prompt-generation/governance
+write_guard: NO-WRITE
+purpose: Generate a Cursor‑ready implementation prompt aligned with SmartSpec v5.6–v5.7 governance, including multi-repo, multi-registry, UI JSON metadata, and anti-duplication guardrails.
+version_notes:
+  - v5.2: initial Cursor prompt workflow
+  - v5.6.x: upgraded chain (multi-repo, multi-registry, UI JSON addendum)
+  - v5.7.0: full governance alignment; documentation-only update; preserves non-breaking behavior
 ---
 
-# /smartspec_generate_cursor_prompt
+# 1) Summary
+`/smartspec_generate_cursor_prompt` produces a **Cursor‑optimized implementation prompt** using:
+- canonical SmartSpec centralization rules (`.spec/`, SPEC_INDEX, registry precedence),
+- multi-repo + multi-registry resolution,
+- strict reuse-over-rebuild rules,
+- UI JSON metadata + design-system alignment (JSON-first UI governance),
+- anti‑duplication guardrails,
+- optional safety-mode.
 
-Generate a high-quality **Cursor IDE prompt** for implementing a SmartSpec spec with full alignment to:
-- canonical `.spec/SPEC_INDEX.json`
-- shared `.spec/registry/`
-- project-local tasks/specs
-- UI JSON addendum when applicable
-
-This workflow ensures that Cursor receives a complete, conflict-resistant context package so that implementation does not re-invent shared names or contradict other specs.
-
----
-
-## What It Does
-
-- Resolves canonical index and registry locations.
-- Reads the target `spec.md` and `tasks.md`.
-- Collects cross-SPEC context (dependencies, shared terms, models, APIs).
-- Injects UI JSON rules when UI specs exist.
-- Generates a concise but comprehensive prompt optimized for Cursor.
+This workflow is **governance-only** and **NO-WRITE**. It never edits code, specs, tasks, or UI JSON.
 
 ---
+# 2) When to Use
+Use right before implementation inside Cursor IDE:
+- after `spec.md` + `tasks.md` are finalized,
+- after dependencies are clarified,
+- when building in multi-repo systems sharing registries,
+- when UI JSON metadata is present.
 
-## When to Use
-
-- Right before starting implementation in Cursor.
-- After tasks have been generated and reviewed.
-- When working within a multi-repo or large multi-SPEC system.
-
----
-
-## Inputs
-
-- Target spec path (recommended)
-  - Example: `specs/core/spec-core-004-rate-limiting/spec.md`
-
-- Expected adjacent files:
-  - `tasks.md`
-  - (UI specs) `ui.json`
+Not for:
+- generating tasks,
+- validating UI behavior (use `/smartspec_ui_validation`),
+- implementing code (use `/smartspec_implement_tasks`).
 
 ---
+# 3) Inputs / Outputs
+## Inputs (read-only)
+- target `spec.md`
+- adjacent `tasks.md`
+- optional `ui.json` with metadata
+- `.spec/SPEC_INDEX.json` (canonical)
+- `.spec/registry/*.json` (primary)
+- supplemental registries via `--registry-roots`
+- multi-repo mapping via `--repos-config` / `--workspace-roots`
 
 ## Outputs
-
-- A Cursor-ready prompt text.
-- Optional suggested file list / checklist for Cursor.
-
----
-
-## Flags
-
-- `--index` Path to SPEC_INDEX (optional)  
-  default: auto-detect
-
-- `--registry-dir` Registry directory (optional)  
-  default: `.spec/registry`
-
-- `--spec` Explicit spec path (optional)
-
-- `--tasks` Explicit tasks path (optional)
-
-- `--focus` Optional focus hint for Cursor  
-  examples: `api`, `model`, `service`, `ui`, `tests`
-
-- `--strict` Fail when canonical context is missing or conflicts are detected (optional)
+- Cursor‑ready implementation prompt text
+- optional report under `.spec/reports/generate-cursor-prompt/`
 
 ---
+# 4) Flags
+## Index / Registry
+- `--index` / `--specindex`
+- `--registry-dir` (default: `.spec/registry`)
+- `--registry-roots` (read-only supplemental registries)
 
-## 0) Resolve Canonical Index & Registry
+## Multi-Repo
+- `--workspace-roots`
+- `--repos-config` (preferred for repo mapping)
 
-### 0.1 Resolve SPEC_INDEX (Single Source of Truth)
+## Target Selection
+- `--spec`
+- `--tasks`
 
-Detection order:
+## UI Governance
+- `--ui-mode=<auto|json|inline>`
+- `--no-ui-json` (alias for inline)
 
-1) `.spec/SPEC_INDEX.json` (canonical)  
-2) `SPEC_INDEX.json` (legacy root mirror)  
-3) `.smartspec/SPEC_INDEX.json` (deprecated)  
-4) `specs/SPEC_INDEX.json` (older layout)
+## Safety
+- `--safety-mode=<strict|dev>` (default: strict)
+- `--strict` (legacy alias)
 
-```bash
-INDEX_PATH="${FLAGS_index:-}"
-
-if [ -z "$INDEX_PATH" ]; then
-  if [ -f ".spec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".spec/SPEC_INDEX.json"
-  elif [ -f "SPEC_INDEX.json" ]; then
-    INDEX_PATH="SPEC_INDEX.json"
-  elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".smartspec/SPEC_INDEX.json" # deprecated
-  elif [ -f "specs/SPEC_INDEX.json" ]; then
-    INDEX_PATH="specs/SPEC_INDEX.json"
-  fi
-fi
-
-if [ -n "$INDEX_PATH" ] && [ -f "$INDEX_PATH" ]; then
-  echo "✅ Using SPEC_INDEX: $INDEX_PATH"
-else
-  echo "⚠️ SPEC_INDEX not found. Prompt will be generated from local context only."
-  INDEX_PATH=""
-fi
-```
-
-### 0.2 Resolve Registry Directory
-
-```bash
-REGISTRY_DIR="${FLAGS_registry_dir:-.spec/registry}"
-
-if [ ! -d "$REGISTRY_DIR" ]; then
-  echo "⚠️ Registry directory not found at $REGISTRY_DIR"
-fi
-
-FOCUS="${FLAGS_focus:-}"
-```
-
-### 0.3 Expected Registries (if present)
-
-- `api-registry.json`
-- `data-model-registry.json`
-- `glossary.json`
-- `critical-sections-registry.json`
-- `patterns-registry.json` (optional)
-- `ui-component-registry.json` (optional)
-
-Rules:
-- Any shared-name used in the prompt must match registries when available.
-- Any discovered new shared-name must be listed under **"Open Questions / Registry Additions"** in the prompt.
+## Output
+- `--output=<path>`
+- `--report=<summary|detailed>`
 
 ---
+# 5) Canonical Index & Registry Resolution
+1. SPEC_INDEX detection order:
+   1) `.spec/SPEC_INDEX.json` (canonical)
+   2) `SPEC_INDEX.json` at repo root (legacy mirror)
+   3) `.smartspec/SPEC_INDEX.json` (deprecated)
+   4) `specs/SPEC_INDEX.json` (older layout)
 
-## 1) Identify Target Spec/Tasks
+2. Registry precedence:
+   - primary registry is authoritative,
+   - supplemental registries are read-only for collision detection.
 
-Priority:
-1) `--spec` / `--tasks` if provided.
-2) If `INDEX_PATH` exists, select spec by ID.
-3) Otherwise, require a spec path.
-
-Default tasks location:
-- `tasks.md` next to `spec.md`.
-
----
-
-## 2) Read Inputs (Read-Only)
-
-- Read `spec.md`.
-- Read `tasks.md`.
-- If UI spec:
-  - detect and read `ui.json`.
-
-Do not rewrite these files.
+3. Multi-repo roots come from:
+   - `--repos-config` (preferred),
+   - else `--workspace-roots` + current repo.
 
 ---
-
-## 3) Compile Cross-SPEC Context
-
-If `INDEX_PATH` exists:
-- Load dependency IDs for the target spec.
-- For each dependency:
-  - summarize expected shared interfaces and constraints.
-
-If registries exist:
-- Extract only relevant slices of:
-  - APIs
-  - models
-  - domain terms
-  - critical sections
-  - patterns
-
-Keep the prompt concise—do not dump full registry contents.
+# 6) Read Inputs (NO-WRITE)
+- load `spec.md`, `tasks.md`, and optional `ui.json`
+- never modify artifacts
+- detect cross-spec references via SPEC_INDEX & registries
 
 ---
-
-## 4) Consistency Gate (Pre-Prompt)
-
-Validate before generating the final prompt:
-
-- Task dependency order does not conflict with SPEC_INDEX.
-- Names referenced in tasks/spec match registries.
-- No duplicated or conflicting namespace is introduced in the prompt.
-
-In `--strict` mode:
-- stop and list the conflicts.
+# 7) Cross-SPEC & Cross-Repo Context
+- load dependent specs when resolvable via index
+- load shared items from registries:
+  - APIs, models, domain terms,
+  - critical sections,
+  - patterns,
+  - UI component registry (if exists)
+- treat supplemental registry definitions as **external ownership**
 
 ---
+# 8) Pre-Prompt Consistency Gate
+Checks:
+1. dependency order does not contradict SPEC_INDEX
+2. referenced names exist in registry
+3. cross-repo naming collisions
+4. UI mode consistency (JSON-first vs inline)
+5. missing metadata in `ui.json` when UI JSON mode applies
 
-## 5) UI JSON Addendum (Conditional)
-
-Apply when **any** of these are true:
-- Spec category is `ui` in the index.
-- `ui.json` exists in the spec folder.
-- The spec explicitly mentions Penpot/UI JSON workflow.
-
-Prompt rules for Cursor:
-
-1) Treat `ui.json` as **design-owned**.
-2) Do **not** encode business logic in UI JSON.
-3) Separate implementation instructions into:
-   - UI component mapping
-   - UI rendering/state orchestration
-   - Non-UI business logic layers
-4) If `ui-component-registry.json` exists:
-   - require component naming to match registry.
-5) If the project does not use UI JSON:
-   - do not fail
-   - keep UI instructions text-based in `spec.md`.
+Strict mode rules:
+- fail early on ownership ambiguity
+- block introduction of new shared names without governance clarification
+- block missing UI JSON metadata for critical UI specs
 
 ---
+# 9) UI JSON Addendum (v5.7‑aligned)
+Applied when:
+- spec category = `ui`, or
+- `ui.json` exists, or
+- UI JSON workflow is declared.
 
-## 6) Prompt Format (Cursor-Optimized)
+Expectations:
+- UI JSON is **design-owned**, declarative, logic-free
+- required metadata fields:
+  - `source`, `generator`, `generated_at`,
+  - `design_system_version`,
+  - `style_preset`,
+  - `review_status`
+- map UI nodes → components using UI component registry
+- verify naming alignment & separation of business logic
 
-The generated prompt must follow this structure:
-
-1) **Project Context**
-   - repo scope
-   - relevant architecture notes
-
-2) **Target Spec**
-   - ID, title, location
-   - objectives
-
-3) **Dependencies**
-   - required specs to implement/understand first
-
-4) **Canonical Names (Do Not Rename)**
-   - key APIs
-   - key models
-   - key domain terms
-
-5) **Implementation Tasks (Ordered)**
-   - derived from `tasks.md`
-
-6) **Testing Expectations**
-   - unit/integration/contract/perf
-   - UI tests when applicable
-
-7) **UI JSON Rules (if applicable)**
-   - mapping constraints
-   - separation of logic
-
-8) **Open Questions / Registry Additions**
-   - list any missing shared items that require team approval
-
-9) **Definition of Done**
-   - code + tests + consistency checks passed
+If metadata missing → raise risk (strict mode: blocking).
 
 ---
-
-## 7) Example Output Snippet (Template)
-
-Use this template to generate the final Cursor prompt:
-
-```text
-You are implementing SmartSpec: <SPEC_ID> - <TITLE>.
-
-Canonical context:
-- SPEC_INDEX: <INDEX_PATH or NONE>
-- Registry dir: <REGISTRY_DIR or NONE>
-
-Do not invent new shared API/model/term names if registries provide canonical entries.
-If you must introduce a new shared item, list it under "Open Questions / Registry Additions".
-
-Implementation order:
-1) <task group 1>
-2) <task group 2>
-...
-
-Testing:
-- Unit: ...
-- Integration: ...
-- Contract: ...
-- Performance: ... (if SLAs exist)
-
-UI (only if ui.json exists or category=ui):
-- Treat ui.json as design-owned.
-- Map UI nodes to components using registry names when available.
-- Keep business logic outside UI JSON.
-
-Definition of Done:
-- All tasks completed
-- No registry drift introduced
-- Tests green
-```
+# 10) Prompt Structure (Cursor‑Optimized)
+The generator must build a prompt with sections:
+1. **Project Context**
+2. **Target Spec (ID/title/path)**
+3. **Dependencies & required understanding**
+4. **Canonical Names (must not rename)**
+5. **Implementation Tasks (ordered from tasks.md)**
+6. **Testing expectations**
+7. **UI JSON rules** (if applicable)
+8. **Open Questions / Registry Additions**
+9. **Definition of Done**
 
 ---
+# 11) Anti-Duplication Guardrails
+The prompt must instruct Cursor:
+- never re-invent shared APIs/models/terms
+- never create parallel versions of registry-owned items
+- treat supplemental-registry items as externally owned
+- if a new shared name is needed → list under “Open Questions / Registry Additions”
 
-## 8) Recommended Follow-ups
-
-- `/smartspec_generate_implement_prompt`
-- `/smartspec_generate_tests`
-- `/smartspec_verify_tasks_progress`
-- `/smartspec_sync_spec_tasks --mode=additive` (after review)
+Strict mode: introducing a new shared name is discouraged unless explicitly justified.
 
 ---
+# 12) Recommended Cursor Prompt Template (Generated)
+The workflow may emit a structured template including:
+- files to read first (`spec.md`, `tasks.md`, registries, UI JSON)
+- canonical constraints from SPEC_INDEX
+- task-by-task execution order
+- test strategy
+- UI JSON mapping rules
+- open questions + definition of done
 
-## Notes
+No direct patches or code modifications.
 
-- This workflow exists to reduce prompt ambiguity and prevent Cursor from re-deriving shared truths.
-- `.spec/` remains the canonical project-owned source of shared knowledge.
-- Root `SPEC_INDEX.json` is treated as a legacy mirror.
+---
+# 13) Best Practices
+- run after `/smartspec_generate_tasks`
+- pair with `/smartspec_generate_implement_prompt` for tool-agnostic flows
+- keep registries current
+- ensure UI JSON metadata is valid and reviewed when AI-generated
+
+---
+# 14) Flow & Stop Conditions
+1. resolve flags
+2. load index, registries, multi-repo view
+3. read spec/tasks
+4. gather dependencies
+5. consistency gate
+6. assemble prompt sections
+7. write report/prompt (unless `--dry-run`)
+
+Stop when:
+- strict-mode violations occur
+- missing canonical context cannot be recovered
+
+Write guard: NO-WRITE (except emitting prompt/report).
 

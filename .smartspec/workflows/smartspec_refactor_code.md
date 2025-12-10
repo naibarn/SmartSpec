@@ -1,352 +1,256 @@
 ---
-description: Refactor code safely with SmartSpec centralization (.spec) and UI JSON addendum
-version: 5.2
+name: /smartspec_refactor_code
+version: 5.7.0
+role: refactor/governance
+write_guard: NO-WRITE
+purpose: Provide a safe, governance‑aligned refactor workflow under SmartSpec v5.6–v5.7 (multi‑repo, multi‑registry, UI JSON governance, anti‑duplication).
+version_notes:
+  - v5.2: initial refactor workflow
+  - v5.7.0: governance alignment update (documentation‑only, no breaking behavior)
 ---
 
 # /smartspec_refactor_code
 
-Refactor existing code while preserving behavioral correctness and maintaining alignment with SmartSpec canonical knowledge.
+Refactor existing code while preserving behavioral correctness and maintaining alignment with SmartSpec centralized governance.
 
-This workflow enforces SmartSpec centralization:
-- **`.spec/` is the canonical project space** for index + registries.
-- `.smartspec/` is tooling-only.
-- Shared definitions must be aligned via **`.spec/registry/`**.
-- **UI specs use `ui.json` as a design source of truth** for Penpot integration.
+This workflow ensures:
+- `.spec/` is the canonical project‑owned source of truth.
+- `.spec/SPEC_INDEX.json` is the primary index.
+- `.spec/registry/` holds all shared definitions.
+- `.smartspec/` is tooling‑only.
+- UI specs rely on `ui.json` for design‑owned declarative structure.
+- Multi‑repo + multi‑registry rules (v5.6–v5.7) are applied.
 
 ---
-
 ## What It Does
-
-- Resolves canonical `SPEC_INDEX.json`.
-- Loads shared registries.
-- Identifies the target spec(s) and the scope of refactor.
-- Creates a refactor plan that:
-  - avoids cross-SPEC naming drift
-  - preserves public contracts
-  - improves maintainability/performance
-  - separates UI structure from business logic when UI JSON is used
-- Recommends test updates to maintain confidence.
+- Resolves canonical index + registry hierarchy.
+- Applies multi‑repo mapping + supplemental registries.
+- Identifies refactor surface for the target spec.
+- Validates contract stability against registries.
+- Generates safe refactor plan.
+- Highlights ambiguous or risky changes.
+- Ensures separation of UI logic via UI JSON addendum.
+- Enforces anti‑duplication rules for APIs/models/terms.
 
 ---
-
 ## When to Use
-
-- After implementation stabilized and needs cleanup.
-- When multiple specs share patterns that should be consolidated.
-- When UI code accidentally accumulated business logic.
-- Before major releases to reduce technical debt.
+- Reduce technical debt after stabilization.
+- Consolidate patterns across specs.
+- Correct architectural drift.
+- Prepare for major release.
+- Extract UI logic into service/domain layers.
 
 ---
-
 ## Inputs
-
-- Target spec path (recommended) or a set of files/modules to refactor.
-- Optional error/performance reports.
+- Codebase
+- Optional: `--spec`, `--scope`, performance/error reports
 
 Expected adjacent files:
 - `spec.md`
-- `tasks.md` (if present)
-- (UI specs) `ui.json`
+- `tasks.md`
+- `ui.json` (if UI spec)
 
 ---
-
 ## Outputs
-
-- A structured refactor plan.
-- Code change recommendations.
-- Proposed test updates.
-- Registry/index recommendations (non-destructive by default).
+- Refactor plan
+- Change recommendations
+- Test update guidance
+- Registry/index update suggestions (non‑destructive)
+- Risk report
 
 ---
-
 ## Flags
+### Index & Registry
+- `--index`
+- `--registry-dir` (default `.spec/registry`)
+- `--registry-roots` supplemental read‑only registries
 
-- `--index` Path to SPEC_INDEX (optional)  
-  default: auto-detect
+### Multi‑Repo
+- `--workspace-roots`
+- `--repos-config` (preferred)
 
-- `--registry-dir` Registry directory (optional)  
-  default: `.spec/registry`
-
-- `--spec` Explicit spec path (optional)
-
-- `--scope` Optional refactor scope hint  
-  examples: `api`, `domain`, `infra`, `ui`, `tests`, `cross-spec-shared`
-
-- `--mode` `recommend` | `safe-apply`  
-  default: `recommend`
-
-- `--strict` Fail on ambiguity (optional)
+### Refactor Control
+- `--spec`
+- `--scope`
+- `--mode= recommend | safe-apply` (default: recommend)
+- `--dry-run`
+- `--safety-mode=<strict|dev>`
+- `--strict` alias for `--safety-mode=strict`
 
 ---
-
 ## 0) Resolve Canonical Index & Registry
+### 0.1 SPEC_INDEX detection order
+1. `.spec/SPEC_INDEX.json` (canonical)
+2. `SPEC_INDEX.json` (root mirror)
+3. `.smartspec/SPEC_INDEX.json` (deprecated)
+4. `specs/SPEC_INDEX.json` (older layout)
 
-### 0.1 Resolve SPEC_INDEX (Single Source of Truth)
+### 0.2 Registry hierarchy
+- Primary registry: `--registry-dir`
+- Supplemental registries: `--registry-roots` (read‑only)
+- Detect cross‑repo name collisions + ownership ambiguity.
 
-Detection order:
-
-1) `.spec/SPEC_INDEX.json` (canonical)  
-2) `SPEC_INDEX.json` (legacy root mirror)  
-3) `.smartspec/SPEC_INDEX.json` (deprecated)  
-4) `specs/SPEC_INDEX.json` (older layout)
-
-```bash
-INDEX_PATH="${FLAGS_index:-}"
-
-if [ -z "$INDEX_PATH" ]; then
-  if [ -f ".spec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".spec/SPEC_INDEX.json"
-  elif [ -f "SPEC_INDEX.json" ]; then
-    INDEX_PATH="SPEC_INDEX.json"
-  elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".smartspec/SPEC_INDEX.json" # deprecated
-  elif [ -f "specs/SPEC_INDEX.json" ]; then
-    INDEX_PATH="specs/SPEC_INDEX.json"
-  fi
-fi
-
-if [ -n "$INDEX_PATH" ] && [ -f "$INDEX_PATH" ]; then
-  echo "✅ Using SPEC_INDEX: $INDEX_PATH"
-else
-  echo "⚠️ SPEC_INDEX not found. Proceeding with local context only."
-  INDEX_PATH=""
-fi
-```
-
-### 0.2 Resolve Registry Directory
-
-```bash
-REGISTRY_DIR="${FLAGS_registry_dir:-.spec/registry}"
-
-if [ ! -d "$REGISTRY_DIR" ]; then
-  echo "⚠️ Registry directory not found at $REGISTRY_DIR"
-  echo "   Proceeding with best-effort extraction from existing specs."
-fi
-
-MODE="${FLAGS_mode:-recommend}"
-SCOPE="${FLAGS_scope:-}"
-```
-
-### 0.3 Expected Registries (if present)
-
-- `api-registry.json`
-- `data-model-registry.json`
-- `glossary.json`
-- `critical-sections-registry.json`
-- `patterns-registry.json` (optional)
-- `ui-component-registry.json` (optional)
-
-Canonical rules:
-- Prefer refactoring code to match existing registry names.
-- Do not rename shared contracts without a migration plan.
+### 0.3 Multi‑repo resolution
+- Prefer `--repos-config`
+- Else build roots from `--workspace-roots` + current repo
+- Never write into sibling repos unless governance explicitly allows
 
 ---
-
-## 1) Identify Target Spec(s) and Refactor Surface
-
+## 1) Identify Target Spec & Surface
 Priority:
-1) `--spec` if provided.
-2) If `INDEX_PATH` exists, choose by spec ID.
-3) Otherwise, infer from file paths the user provided.
+1. `--spec`
+2. SPEC_INDEX mapping
+3. Path inference
 
-Determine refactor surface:
-- APIs/Controllers
-- Domain Models
-- Services/Use cases
-- Infrastructure
-- Shared libraries/patterns
+Refactor surface types:
+- API / controllers
+- Domain models
+- Services & use cases
+- Infra layers
+- Shared libs
 - UI components
 - Tests
 
 ---
+## 2) Read Inputs (Read‑Only)
+Extract from `spec.md`, `tasks.md`:
+- public contracts
+- cross‑spec dependencies
+- NFRs
+- security requirements
+- patterns
 
-## 2) Read Inputs (Read-Only)
-
-- Read `spec.md` and `tasks.md` if present.
-- Extract:
-  - stable public contracts
-  - NFRs and performance constraints
-  - security requirements
-  - known shared patterns
-
-If UI spec:
-- Detect `ui.json`.
-
-Do not rewrite `spec.md` or `ui.json` in this workflow.
+If UI spec exists:
+- detect `ui.json`
+- load UI metadata (v5.7 rules)
 
 ---
+## 3) Cross‑SPEC Safety Gate
+If index exists:
+- ensure dependencies remain stable
+- detect refactor actions that break contract surfaces
 
-## 3) Cross-SPEC Safety Gate
+If registry exists:
+- ensure no new API/model/term conflicts
 
-If `INDEX_PATH` exists:
-- Verify that the refactor does not break dependency contracts.
-- Identify other specs that depend on the target spec.
-
-If registries exist:
-- Ensure refactor does not introduce:
-  - new API route names
-  - new model names
-  - new domain terms
-  that conflict with canonical entries.
-
-In `--strict` mode:
-- Stop and report any ambiguous rename risk.
+Strict mode:
+- stop when rename risk or cross‑repo ambiguity is detected
 
 ---
+## 4) Refactor Rules
+### 4.1 Always Safe
+- extract duplicated logic
+- improve readability
+- reduce complexity
+- add missing tests
+- non‑breaking performance tuning
 
-## 4) Refactor Goals and Allowed Changes
+### 4.2 Safe With Care
+- internal renames
+- file moves with import corrections
 
-### 4.1 Always Allowed (Safe)
+### 4.3 Requires Migration Plan
+- public API signature changes
+- shared model modifications
+- new shared terms
 
-- Extract duplicated logic into internal helpers.
-- Improve readability and structure.
-- Reduce cyclomatic complexity.
-- Add missing tests.
-- Optimize hot paths **without changing externally observable behavior**.
-
-### 4.2 Allowed With Care
-
-- Rename internal symbols that are not part of shared contracts.
-- Move files/folders while updating imports.
-
-### 4.3 Requires Explicit Migration Plan
-
-- Any change to:
-  - public API signatures
-  - event names
-  - shared model shapes
-  - cross-SPEC interfaces
-
-When needed:
-- Create a phased plan:
-  - compatibility layer
-  - dual support period
-  - deprecation notes
-  - registry update recommendation
+Migration plan includes:
+- compatibility layer
+- deprecation period
+- registry update recommendation
 
 ---
+## 5) Pattern Alignment
+Use:
+- `patterns-registry.json`
+- cross‑spec utilities
+- canonical error/logging/caching patterns
 
-## 5) Recommended Refactor Patterns
-
-Use registries/patterns when available:
-
-- Prefer `patterns-registry.json` / documented patterns rather than creating new architectural styles.
-- Extract common cross-SPEC utilities into shared modules.
-- Align DI, caching, error handling, logging patterns across specs.
-
-If a pattern is missing but clearly repeated:
-- Add a **recommendation** to create a shared pattern document.
+If repeated patterns detected:
+- recommend adding a new pattern to registry (non‑destructive)
 
 ---
-
-## 6) UI JSON Addendum (Conditional)
-
-Apply when:
-- Spec category is `ui`, or
-- `ui.json` exists.
+## 6) UI JSON Addendum
+Apply when spec is UI or `ui.json` exists.
 
 Rules:
-- `ui.json` is design-owned and remains JSON-based for Penpot.
-- UI refactors must focus on:
-  - component structure
-  - props typing
-  - rendering performance
-  - accessibility improvements
+- UI JSON is design‑owned and declarative
+- No business logic allowed
+- UI code refactors must:
+  - remove embedded business logic
+  - extract logic into hooks/services/domain
+  - keep UI tests focused on render/state
+  - avoid creating new shared component names unless recommended
 
-Strict separation:
-- Business logic belongs in:
-  - services
-  - hooks
-  - controllers
-  - domain layer
+If UI JSON missing but UI detected:
+- recommend creating `ui.json`
 
-If UI code currently embeds heavy logic:
-- Propose refactor steps:
-  1) Identify logic blocks.
-  2) Create service/hook abstractions.
-  3) Replace UI logic with calls/orchestration.
-  4) Add unit tests at the logic layer.
-  5) Keep UI tests focused on state/render.
-
-Component naming:
-- If `ui-component-registry.json` exists:
-  - align component names with registry.
-  - do not invent new shared component names without recommendation.
-
-If the project does not use UI JSON:
-- Skip UI JSON checks without failing.
+v5.7 metadata expectation:
+- `source`, `generator`, `generated_at`
+- `design_system_version`
+- `style_preset`
+- `review_status`
 
 ---
-
 ## 7) Test Alignment
-
-Before applying refactors:
-- Ensure baseline tests exist for critical behaviors.
+Before refactor:
+- snapshot critical behavior
 
 During refactor:
-- Update tests to reflect internal restructuring.
-- Keep contract/API tests stable.
+- update unit + integration tests
 
 After refactor:
-- Re-run:
-  - unit tests
-  - integration tests
+- revalidate:
   - contract tests
-  - performance tests if SLAs exist
-
-If new shared names would be required for tests:
-- Flag as registry drift risk.
+  - performance SLAs
+  - UI tests (if applicable)
 
 ---
-
 ## 8) Mode Behavior
+### recommend (default)
+- produce plan only
+- never modify files
 
-### `recommend` (default)
+### safe-apply
+Allowed only when:
+- no registry conflicts
+- no dependency breakage
+- UI JSON governance satisfied
 
-- Provide a refactor plan and prioritized steps.
-- Highlight cross-SPEC risks.
-- Output registry/index recommendations.
-
-### `safe-apply`
-
-Only apply changes when all are true:
-- The refactor is internal-only or backward compatible.
-- No registry conflicts are introduced.
-- No dependency break is detected.
-- UI JSON rules remain satisfied.
-
-Never automatically:
-- rename a registered shared API/model/term
-- delete registry entries
-- rewrite `ui.json`
+Never auto‑modify:
+- shared API/model names
+- registry files
+- `ui.json`
 
 ---
-
-## 9) Output Refactor Report
-
-Include:
-
-- Scope summary
-- Detected shared dependencies
-- Registry alignment status
-- Proposed refactor steps (ordered)
-- Risk assessment
-- Test plan updates
-- UI JSON compliance notes (if applicable)
+## 9) Output Report
+Includes:
+- refactor scope
+- dependencies
+- registry alignment
+- proposed steps
+- risks
+- test plan
+- UI JSON notes
 
 ---
-
-## 10) Recommended Follow-ups
-
-- `/smartspec_generate_tests` (ensure coverage)
+## 10) Follow‑ups
+- `/smartspec_generate_tests`
 - `/smartspec_verify_tasks_progress`
-- `/smartspec_sync_spec_tasks --mode=additive` (after team review)
-- `/smartspec_reindex_specs` (if spec paths or categories changed)
+- `/smartspec_sync_spec_tasks --mode=additive`
+- `/smartspec_reindex_specs`
 
 ---
+## 11) Legacy Flags Inventory
+**Kept:**
+- `--index`, `--registry-dir`, `--spec`, `--scope`, `--mode`, `--strict`
 
-## Notes
+**Additive (v5.7):**
+- `--registry-roots`
+- `--workspace-roots`
+- `--repos-config`
+- `--safety-mode`
+- `--dry-run`
 
-- This workflow is designed to reduce technical debt without reintroducing cross-SPEC conflicts.
-- `.spec/registry/` remains the shared canonical truth when present.
-- Root `SPEC_INDEX.json` is treated as a legacy mirror.
+No legacy behavior removed.
+

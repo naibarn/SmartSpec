@@ -1,6 +1,6 @@
 ---
 name: /smartspec_release_readiness
-version: 5.6.2
+version: 5.7.0
 role: verification/governance
 write_guard: NO-WRITE
 purpose: Generate a spec-driven release checklist and readiness assessment

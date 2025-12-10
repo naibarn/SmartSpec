@@ -1,256 +1,186 @@
-# SmartSpec Validate SPEC_INDEX Workflow
-## Cross-Check Index + Registry Integrity (v5.6 Alignment for Multi-Repo Spec→Tasks Chain)
-
 ---
-description: |
-  Validate SPEC_INDEX.json integrity and system governance health.
-
-  v5.6 alignment goals:
-  - Keep canonical index rules (.spec/SPEC_INDEX.json first)
-  - Validate cross-SPEC dependency graph
-  - Validate registry completeness and detect cross-repo naming collisions
-  - Support multi-repo spec resolution using the same config patterns as:
-      /smartspec_generate_spec v5.6
-      /smartspec_generate_tasks v5.6
-  - Provide a single health gate for the entire chain:
-      validate → generate_spec → generate_tasks
-
-flags:
-  - name: --fix
-    description: Automatically fix safe issues (metadata, dependents, timestamps). Must not alter ownership semantics.
-    type: boolean
-    default: false
-
-  - name: --report
-    description: Report detail level
-    type: enum
-    values: [summary, detailed]
-    default: summary
-
-  - name: --index
-    description: Path to SPEC_INDEX.json file (optional). If omitted, SmartSpec will auto-detect.
-    type: string
-    optional: true
-
-  - name: --specindex
-    description: Legacy alias for --index
-    type: string
-    optional: true
-
-  - name: --registry-dir
-    description: Primary registry directory (authoritative)
-    type: string
-    optional: true
-
-  - name: --registry-roots
-    description: Comma-separated list of supplemental registry directories for read-only cross-repo validation
-    type: string
-    optional: true
-
-  - name: --workspace-roots
-    description: Comma-separated list of additional repository roots to search for referenced specs
-    type: string
-    optional: true
-
-  - name: --repos-config
-    description: JSON config mapping repo IDs to physical roots; takes precedence over --workspace-roots
-    type: string
-    optional: true
-
-  - name: --mode
-    description: Validation mode controlling strictness of runtime vs portfolio checks
-    type: enum
-    values: [runtime, portfolio]
-    default: portfolio
-
-examples:
-  - command: /smartspec_validate_index
-    description: Validate with summary report (auto-detect canonical index)
-
-  - command: /smartspec_validate_index --report=detailed
-    description: Generate detailed report
-
-  - command: /smartspec_validate_index --fix --report=detailed
-    description: Validate and apply safe auto-fixes
-
-  - command: /smartspec_validate_index --workspace-roots="../Repo-A,../Repo-B"
-    description: Validate across multiple sibling repositories (lightweight)
-
-  - command: /smartspec_validate_index --repos-config=.spec/smartspec.repos.json --mode=runtime
-    description: Use structured multi-repo config and enforce stricter runtime rules
-
-  - command: /smartspec_validate_index \
-      --repos-config=.spec/smartspec.repos.json \
-      --registry-dir=.spec/registry \
-      --registry-roots="../Repo-A/.spec/registry,../Repo-B/.spec/registry" \
-      --report=detailed
-    description: Full multi-repo + multi-registry validation prior to spec/tasks generation
-
-version: 5.6.0
-author: SmartSpec Team
+name: /smartspec_validate_index
+version: 5.7.0
+role: validate/governance
+write_guard: NO-WRITE
+purpose: Validate SPEC_INDEX.json and registry/multi-repo governance alignment under SmartSpec v5.6–v5.7.
+version_notes:
+  - v5.6: multi-repo/multi-registry validator introduced
+  - v5.7.0: governance alignment update; expanded safety gates; backward-compatible
 ---
 
-## Overview
+# /smartspec_validate_index (v5.7.0)
 
-This workflow validates SPEC_INDEX.json and its ecosystem so that downstream workflows can safely generate specs and tasks.
+This workflow validates the **SPEC_INDEX.json** ecosystem:
+- canonical index rules
+- multi-repo mapping
+- multi-registry validation
+- cross-SPEC dependency graph
+- registry collision checks
+- UI JSON governance indicators
 
-It is designed to be the **first gate** in the SmartSpec chain:
+It is the **first gate** before:
+1. `/smartspec_generate_spec`
+2. `/smartspec_generate_tasks`
 
-1) `/smartspec_validate_index`
-2) `/smartspec_generate_spec`
-3) `/smartspec_generate_tasks`
+Only **safe auto-fixes** are allowed.
 
 ---
+## 1) Responsibilities
+- Detect canonical SPEC_INDEX
+- Validate index structure + dependency graph
+- Validate repo-mapping correctness (repos-config preferred)
+- Validate registry completeness + collisions across repo roots
+- Validate UI JSON presence/metadata for UI specs
+- Produce readiness assessment
+- Apply safe metadata fixes when `--fix` is set
 
-## 1) Canonical Index Resolution
+---
+## 2) Flags
+### Index / Registry
+- `--index` (alias: `--specindex`)
+- `--registry-dir` (default `.spec/registry`)
+- `--registry-roots` supplemental read-only registries
 
+### Multi-Repo
+- `--workspace-roots`
+- `--repos-config` (preferred)
+
+### Validation Mode
+- `--mode=runtime | portfolio` (default: portfolio)
+  - **runtime**: strict blocking errors
+  - **portfolio**: warnings allowed
+
+### Fix & Reporting
+- `--fix` (safe metadata fixes only)
+- `--report=summary | detailed`
+
+### Safety
+- `--safety-mode=<strict|dev>` (default: strict)
+- `--strict` alias
+- `--dry-run`
+
+---
+## 3) Canonical Index Resolution
 Detection order:
-
 1. `.spec/SPEC_INDEX.json` (canonical)
-2. `SPEC_INDEX.json` (legacy root mirror)
+2. `SPEC_INDEX.json` (root mirror)
 3. `.smartspec/SPEC_INDEX.json` (deprecated)
-4. `specs/SPEC_INDEX.json` (older layout)
+4. `specs/SPEC_INDEX.json` (legacy)
 
-If `--index` or `--specindex` is provided, it overrides detection.
+Canonical output is always the first.
 
----
-
-## 2) Multi-Repo Root Resolution
-
-The validator must construct the repo root search list:
-
-1) Current repo root
-2) `--repos-config` roots (if provided)
-3) `--workspace-roots` (if provided)
-
-### 2.1 Repo Mapping Integrity Check (New)
-
-If `--repos-config` is provided and the index contains `repo:` fields:
-
-- Validate that each `repo` label used by index entries has a corresponding `id` in the config.
-
-Severity:
-- `mode=runtime` → blocking error
-- `mode=portfolio` → high-visibility warning
+If no index:
+- `runtime` → blocking
+- `portfolio` → warning
 
 ---
+## 4) Multi-Repo Resolution
+Order:
+1. current repo
+2. repos-config (preferred)
+3. workspace-roots
 
-## 3) Registry Resolution
+Checks:
+- Index `repo:` fields must match repos-config
+- Missing mappings:
+  - `runtime` → blocking
+  - `portfolio` → warning
 
+---
+## 5) Registry Resolution
 Primary registry:
-- `--registry-dir` if provided, else `.spec/registry` when present.
+- from `--registry-dir` or default
 
 Supplemental registries:
-- `--registry-roots` when provided.
+- from `--registry-roots` (read-only)
 
-### 3.1 Registry Precedence
-
-1) Primary registry is authoritative.
-2) Supplemental registries are read-only validation sources.
-
-### 3.2 Cross-Repo Naming Collision Check (New)
-
-If the same API/model/term/UI component exists in multiple registries with conflicting definitions:
-
-- `mode=runtime` → blocking error
-- `mode=portfolio` → warning + remediation guidance
+Checks:
+- Cross-repo naming collisions (API, models, terms, components)
+- Conflicting definitions:
+  - `runtime` → blocking
+  - `portfolio` → warning
 
 ---
-
-## 4) Index Integrity Checks
-
+## 6) Index Integrity Checks
 Validate:
 - unique spec IDs
-- paths exist
-- status values are valid
-- dependency graph has no cycles
-- dependency IDs exist
+- paths exist (multi-repo aware)
+- valid status values
+- dependencies resolve to real specs
+- no cycles in dependency graph
 
-For each spec path:
-
-- Attempt to resolve the file across multi-repo roots.
-- If unresolved:
-  - `mode=runtime` → blocking error
-  - `mode=portfolio` → warning
+Missing spec files:
+- `runtime` → blocking
+- `portfolio` → warning
 
 ---
+## 7) UI JSON Governance Checks
+For UI specs:
+- `ui.json` existence
+- metadata expectations (v5.7):
+  - `source`, `generator`, `generated_at`
+  - `design_system_version`, `style_preset`, `review_status`
+- do not modify UI JSON
 
-## 5) Cross-Workflow Alignment Checks (v5.6)
-
-This validator should confirm that governance assumptions needed by downstream workflows are present:
-
-### 5.1 Spec→Tasks Chain Readiness
-
-- Index has enough metadata to locate specs and dependency owners.
-- Registry set is sufficient to avoid duplicate shared-name creation.
-
-If not sufficient:
-- The report must explicitly recommend:
-  - initializing missing registries
-  - adopting `--registry-roots` for multi-repo projects
-  - adding or repairing repo mappings
+Missing UI JSON where required:
+- warning (portfolio)
+- blocking (runtime)
 
 ---
+## 8) Cross-Workflow Alignment
+Validator ensures readiness for:
+- generate_spec
+- generate_tasks
 
-## 6) Safe Auto-Fix Rules
+Checks:
+- registry completeness (to avoid name duplication)
+- repo mapping correctness
+- index paths + dependency correctness
 
-When `--fix` is enabled:
-
+---
+## 9) Safe Auto-Fix Rules (`--fix`)
 Allowed:
 - normalize timestamps
-- repair missing optional metadata
-- infer safe dependents lists
+- repair optional metadata
+- infer safe dependents
 
 Forbidden:
-- changing ownership semantics
-- changing dependency meaning
 - renaming spec IDs
-- rewriting registry entries
+- modifying dependency semantics
+- altering registry definitions
+- editing UI JSON
+
+Dry run:
+- show intended fixes only
 
 ---
-
-## 7) Report Output
-
-The report should include:
-
-- Index path used
-- Multi-repo configuration used
-- Registry configuration used
-- Missing spec files
-- Dependency graph issues
-- Cross-repo mapping issues
-- Cross-registry collision findings
-- Summary readiness assessment for:
-  - generate_spec v5.6
-  - generate_tasks v5.6
+## 10) Report Contents
+- index path used
+- multi-repo mapping
+- registry directories
+- missing specs
+- dependency issues
+- repo mapping issues
+- registry collisions
+- UI JSON governance gaps
+- readiness summary for downstream workflows
 
 ---
-
-## 8) Recommended Usage Patterns
-
-### Single Repo
-
-```bash
-/smartspec_validate_index --report=detailed
-```
-
-### Two or More Repos
-
-```bash
-/smartspec_validate_index \
-  --repos-config=.spec/smartspec.repos.json \
-  --registry-dir=.spec/registry \
-  --registry-roots="../Repo-A/.spec/registry,../Repo-B/.spec/registry" \
-  --report=detailed
-```
+## 11) Examples
+- `/smartspec_validate_index`
+- `/smartspec_validate_index --report=detailed`
+- `/smartspec_validate_index --fix --report=detailed`
+- `/smartspec_validate_index --repos-config=.spec/smartspec.repos.json`
+- `/smartspec_validate_index --registry-roots="../RepoA/.spec/registry" --report=detailed`
 
 ---
+## 12) Legacy Flags Inventory
+Kept:
+- `--index`, `--specindex`, `--registry-dir`, `--fix`, `--report`, `--mode`
 
-## Final Notes
+Additive (v5.7):
+- `--registry-roots`, `--workspace-roots`, `--repos-config`, `--safety-mode`, `--dry-run`
 
-- This v5.6 validator is intentionally aligned with:
-  - `/smartspec_generate_spec v5.6`
-  - `/smartspec_generate_tasks v5.6`
-- The three documents should be maintained together to prevent governance drift.
-- Multi-repo and multi-registry flags are optional for single-repo projects but strongly recommended for shared-platform architectures.
+No legacy behavior removed.
 

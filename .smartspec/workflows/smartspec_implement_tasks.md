@@ -1,5 +1,5 @@
 name: /smartspec_implement_tasks
-version: 5.6.4
+version: 5.7.0
 role: implementation/execution
 write_guard: ALLOW-WRITE
 purpose: Implement code changes from `tasks.md` (and `spec.md`/`plan.md`

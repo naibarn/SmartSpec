@@ -1,12 +1,15 @@
 ---
 name: /smartspec_data_migration_governance
-version: 5.6.2
+version: 5.7.0
 role: verification/governance
 write_guard: NO-WRITE
 purpose: Govern and assess data migration plans and executions against
          data model, classification, retention, compliance, residency,
          and safety requirements, without modifying code, configs, or
          running migration jobs.
+version_notes:
+  - v5.6.2: baseline data migration governance workflow
+  - v5.7.0: governance alignment with SmartSpec v5.7 (multi-repo/registry parity, UI metadata signals, clarified safety-mode); backward-compatible; documentation-only update
 ---
 
 ## 1) Summary
@@ -642,6 +645,13 @@ config, feature flags, personalization data):
    - risk of inconsistent UI state between users or segments (e.g.,
      feature flags out-of-sync).
    - data minimization and privacy for UI-related data.
+4. When `ui.json` includes `meta` (v5.7), prefer tracking fields such as:
+   - `source`
+   - `generator`
+   - `generated_at`
+   - `design_system_version`
+   - `style_preset`
+   - `review_status`
 
 (Still governance-only; does not edit UI assets or configs.)
 

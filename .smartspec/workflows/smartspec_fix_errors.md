@@ -1,6 +1,12 @@
 ---
-description: Fix implementation errors with SmartSpec centralization (.spec) and UI JSON addendum
-version: 5.2
+name: /smartspec_fix_errors
+version: 5.7.0
+role: fix/governance
+write_guard: ALLOW-WRITE
+purpose: Analyze implementation errors (build/test/integration/UI) and propose or apply fixes aligned with SmartSpec v5.6–v5.7 centralized governance (multi-repo, multi-registry, UI JSON, anti-duplication).
+version_notes:
+  - v5.2: initial error-fix workflow with SmartSpec centralization
+  - v5.7.0: governance alignment with v5.6–v5.7 (multi-repo, multi-registry, safety-mode); behavior remains backward-compatible; additive-only writes
 ---
 
 # /smartspec_fix_errors
@@ -8,313 +14,422 @@ version: 5.2
 Analyze implementation errors (build failures, test failures, runtime errors, integration issues) and propose or apply fixes aligned with the canonical SmartSpec knowledge layer.
 
 This workflow enforces SmartSpec centralization:
-- **`.spec/` is the canonical project space** for shared truth.
+- `.spec/` is the canonical project space for shared truth.
+- `.spec/SPEC_INDEX.json` is the canonical index.
+- `.spec/registry/` is the source of shared definitions.
 - `.smartspec/` is tooling-only.
-- Shared definitions must be aligned via **`.spec/registry/`**.
-- **UI specs use `ui.json` as the design source of truth** for Penpot integration.
+- UI specs use `ui.json` as the design source of truth for JSON-first / Penpot integrations.
+
+> **Write guard & scope (v5.7.0 clarification)**
+> - Role: **fix/governance**.
+> - Modes:
+>   - `recommend`: NO-WRITE (analysis + plan only).
+>   - `additive-meta`: ALLOW-WRITE for **additive metadata only** in central files if the implementation supports it (never destructive).
+> - This workflow MUST NOT directly edit business logic, tests, or UI components; it only edits governance/metadata where allowed.
 
 ---
 
-## What It Does
+## 1) What It Does
 
-- Resolves canonical `SPEC_INDEX.json`.
-- Loads shared registries.
-- Identifies the relevant spec(s) for the error context.
-- Cross-checks expected behavior against `spec.md` + `tasks.md`.
-- Detects root causes that may be:
+- Resolves canonical SPEC_INDEX.
+- Loads shared registries (primary + supplemental) in a merged view.
+- Identifies relevant spec(s) for the error context.
+- Cross-checks expected behavior against `spec.md` and `tasks.md`.
+- Classifies errors and detects root causes:
   - implementation defects
   - cross-SPEC naming drift
   - contract mismatches
   - missing dependencies
   - incorrect test assumptions
   - UI JSON vs component misalignment
-- Produces a **safe, spec-aligned fix plan**.
+- Produces a **safe, spec-aligned fix plan** with optional additive metadata updates.
 
 ---
 
-## When to Use
+## 2) When to Use
 
 - CI failures after implementing a SPEC.
 - Local build/test failures.
 - Integration regressions across multiple specs.
 - UI mismatches between design and runtime components.
+- After large refactors or dependency updates.
+
+Not for:
+- designing new specs (use `/smartspec_generate_spec`).
+- broad refactor planning (use `/smartspec_refactor_code`).
 
 ---
 
-## Inputs
+## 3) Inputs
 
-- Error logs or failure summaries.
-- Target spec path (recommended).
+- Error logs or failure summaries (e.g., test output, stack traces).
+- Target spec path (recommended) and/or failing file paths.
 
 Expected adjacent files:
 - `spec.md`
 - `tasks.md` (if present)
-- (UI specs) `ui.json`
+- `ui.json` (for UI specs)
+
+Optional governance inputs:
+- `.spec/SPEC_INDEX.json`
+- `.spec/registry/*.json`
+- supplemental registries from sibling repos (via `--registry-roots`).
 
 ---
 
-## Outputs
+## 4) Outputs
 
-- A structured fix plan.
-- Recommended code changes.
-- Recommendations for registry or index updates (non-destructive by default).
-- Suggested follow-up workflows.
+- A structured **fix report**, including:
+  - error summary
+  - root-cause hypothesis
+  - evidence from spec/tasks/index/registries
+  - proposed fixes
+  - risk level
+  - registry/contract alignment notes
+  - UI JSON compliance notes (if applicable)
+- Optional **additive metadata changes** (e.g., tagging tests or specs) when in `additive-meta` mode and allowed by the host implementation.
 
----
-
-## Flags
-
-- `--index` Path to SPEC_INDEX (optional)  
-  default: auto-detect
-
-- `--registry-dir` Registry directory (optional)  
-  default: `.spec/registry`
-
-- `--spec` Explicit spec path (optional)
-
-- `--tasks` Explicit tasks path (optional)
-
-- `--mode` `recommend` | `additive-meta`  
-  default: `recommend`
-
-- `--strict` Fail on ambiguity (optional)
+Reports SHOULD be written under:
+- `.spec/reports/smartspec_fix_errors/`
 
 ---
 
-## 0) Resolve Canonical Index & Registry
+## 5) Flags
 
-### 0.1 Resolve SPEC_INDEX (Single Source of Truth)
+### 5.1 Index / Registry (v5.7-aligned)
+
+- `--index`  
+  Path to SPEC_INDEX (optional). Default: auto-detect via canonical order.
+
+- `--specindex`  
+  Legacy alias for `--index`.
+
+- `--registry-dir`  
+  Primary registry directory (optional). Default: `.spec/registry`.
+
+- `--registry-roots`  
+  Supplemental registry dirs, semicolon- or comma-separated (optional).  
+  All supplemental registries are **read-only** and used to detect cross-repo duplicate naming / ownership ambiguity.
+
+### 5.2 Multi-Repo (v5.7)
+
+- `--workspace-roots`  
+  Semicolon- or comma-separated repo roots to search (optional).
+
+- `--repos-config`  
+  Path to structured repo config (optional).  
+  Takes precedence over `--workspace-roots`. Recommended value: `.spec/smartspec.repos.json`.
+
+### 5.3 Target Selection
+
+- `--spec`  
+  Explicit spec path (optional).
+
+- `--tasks`  
+  Explicit tasks path (optional).
+
+- `--error-log`  
+  Path(s) or glob(s) to error logs (optional; else errors supplied via stdin / prompt).
+
+### 5.4 Mode & Safety
+
+- `--mode`  
+  `recommend` | `additive-meta` (default: `recommend`).
+
+- `--safety-mode`  
+  `strict` | `dev` (default: `strict`).
+
+- `--strict`  
+  Legacy alias for `--safety-mode=strict`.
+
+- `--dry-run`  
+  Simulate any additive changes without writing files; still produce report.
+
+### 5.5 Output
+
+- `--report-dir`  
+  Output report directory (optional). Default: `.spec/reports/smartspec_fix_errors/`.
+
+- `--report-format`  
+  `md` | `json` (default: `md`).
+
+---
+
+## 6) 0) Resolve Canonical Index & Registry
+
+### 6.1 SPEC_INDEX (Single Source of Truth)
 
 Detection order:
 
-1) `.spec/SPEC_INDEX.json` (canonical)  
-2) `SPEC_INDEX.json` (legacy root mirror)  
-3) `.smartspec/SPEC_INDEX.json` (deprecated)  
-4) `specs/SPEC_INDEX.json` (older layout)
+1. `.spec/SPEC_INDEX.json` (canonical)
+2. `SPEC_INDEX.json` (legacy root mirror)
+3. `.smartspec/SPEC_INDEX.json` (deprecated)
+4. `specs/SPEC_INDEX.json` (older layout)
 
-```bash
-INDEX_PATH="${FLAGS_index:-}"
+If none found:
+- continue with local context only; record the gap in the report.
+- under `--safety-mode=strict`, downgrade confidence and highlight as a governance issue.
 
-if [ -z "$INDEX_PATH" ]; then
-  if [ -f ".spec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".spec/SPEC_INDEX.json"
-  elif [ -f "SPEC_INDEX.json" ]; then
-    INDEX_PATH="SPEC_INDEX.json"
-  elif [ -f ".smartspec/SPEC_INDEX.json" ]; then
-    INDEX_PATH=".smartspec/SPEC_INDEX.json" # deprecated
-  elif [ -f "specs/SPEC_INDEX.json" ]; then
-    INDEX_PATH="specs/SPEC_INDEX.json"
-  fi
-fi
+### 6.2 Registry View
 
-if [ -n "$INDEX_PATH" ] && [ -f "$INDEX_PATH" ]; then
-  echo "✅ Using SPEC_INDEX: $INDEX_PATH"
-else
-  echo "⚠️ SPEC_INDEX not found. Proceeding with local context only."
-  INDEX_PATH=""
-fi
-```
-
-### 0.2 Resolve Registry Directory
-
-```bash
-REGISTRY_DIR="${FLAGS_registry_dir:-.spec/registry}"
-
-if [ ! -d "$REGISTRY_DIR" ]; then
-  echo "⚠️ Registry directory not found at $REGISTRY_DIR"
-  echo "   Proceeding with best-effort extraction from existing specs."
-fi
-
-MODE="${FLAGS_mode:-recommend}"
-```
-
-### 0.3 Expected Registries (if present)
-
-- `api-registry.json`
-- `data-model-registry.json`
-- `glossary.json`
-- `critical-sections-registry.json`
-- `patterns-registry.json` (optional)
-- `ui-component-registry.json` (optional)
+1. Load primary registry from `--registry-dir`.
+2. If provided, load `--registry-roots` as read-only.
 
 Rules:
-- Registry names are canonical.
-- Prefer adjusting implementation to match registry over introducing new shared names.
+- primary registry entries are canonical.
+- supplemental registries detect cross-repo naming collisions and ownership ambiguity.
 
 ---
 
-## 1) Identify Target Spec(s)
+## 7) 1) Identify Target Spec(s)
 
 Priority:
-1) `--spec` / `--tasks` if provided.
-2) If `INDEX_PATH` exists, select spec by ID matching the error area.
-3) If ambiguous, resolve by folder context of failing files.
+
+1. Use `--spec` / `--tasks` if provided.
+2. If SPEC_INDEX exists, attempt to select spec by ID matching failing areas.
+3. Otherwise, infer candidate spec(s) from file paths of failing tests/code.
 
 Default tasks location:
-- `tasks.md` next to `spec.md`.
+- `tasks.md` alongside `spec.md`.
+
+Ambiguous mapping:
+- under `dev` safety-mode: list multiple candidate specs with rationale.
+- under `strict` safety-mode: stop and report ambiguity as a blocking issue.
 
 ---
 
-## 2) Read Spec + Tasks (Read-Only Inputs)
+## 8) 2) Read Spec + Tasks (Read-Only)
 
 - Read `spec.md`.
-- Read `tasks.md` if present.
-- Extract:
-  - expected APIs
-  - model definitions
-  - NFRs
+- Read `tasks.md` when present.
+- Extract from spec/tasks:
+  - expected APIs and endpoints
+  - model definitions and contracts
+  - NFRs and performance constraints
   - security requirements
-  - UI rules if applicable
+  - UI rules for visual/behavioral expectations
 
-Do not rewrite these files in this workflow.
-
----
-
-## 3) Error Classification
-
-Classify errors into one or more buckets:
-
-1) **Build/Type Errors**
-2) **Unit Test Failures**
-3) **Integration/Contract Failures**
-4) **Performance Regression**
-5) **Security Enforcement Gaps**
-6) **UI/Component Mismatch**
-7) **Cross-SPEC Naming Drift**
+No modifications are made to these files in this workflow.
 
 ---
 
-## 4) Cross-SPEC Consistency Gate
+## 9) 3) Error Classification
 
-If `INDEX_PATH` exists:
-- Confirm that the failing spec's dependencies are implemented/available.
-- Check whether an upstream spec changed shared contracts.
+Classify each error into one or more buckets:
+
+1. **Build/Type Errors**
+2. **Unit Test Failures**
+3. **Integration/Contract Failures**
+4. **Performance Regression**
+5. **Security Enforcement Gaps**
+6. **UI/Component Mismatch**
+7. **Cross-SPEC Naming Drift**
+8. **Environment/Config Mismatch** (v5.7 addition)
+
+Classification is used to choose appropriate fix strategies.
+
+---
+
+## 10) 4) Cross-SPEC Consistency Gate
+
+If SPEC_INDEX exists:
+- confirm that dependent specs are present and properly implemented.
+- detect if an upstream spec changed shared contracts without coordinated updates.
 
 If registries exist:
-- Compare:
+- compare:
   - endpoints referenced in failing tests/code
   - model names
   - domain terms
+  - critical event names
 
-If mismatch detected:
-- In `--strict` mode: stop and report conflict.
-- Otherwise: provide a **conflict-resolution fix plan**.
+If mismatch is detected:
+- under `--safety-mode=strict` / `--strict`:
+  - treat as a blocking inconsistency; recommend cross-spec reconciliation.
+- under `dev` safety-mode:
+  - propose a fix plan and mark risk as high.
+
+Supplemental registries:
+- use them to spot external/other-repo owners of APIs/models/terms.
+- discourage local re-definitions for externally owned concepts.
 
 ---
 
-## 5) Fix Strategy by Error Type
+## 11) 5) Fix Strategy by Error Type
 
-### 5.1 Build/Type Errors
+### 11.1 Build/Type Errors
 
-- Prefer aligning types/interfaces with canonical models in `data-model-registry.json`.
+- Align types/interfaces with canonical models from `data-model-registry.json`.
 - If local types diverged:
-  - update code to match registry
-  - generate a follow-up recommendation for registry additive updates only when the spec clearly requires new shared types
+  - update the implementation to match registry.
+  - only recommend registry additions when new shared types are clearly required and not duplicates.
 
-### 5.2 Unit Test Failures
+### 11.2 Unit Test Failures
 
-- Verify the test expectation maps to a spec requirement.
-- If the test assumed an unregistered name:
-  - rename test to canonical name.
+- Confirm each test expectation maps to a spec requirement.
+- If a test asserts behavior not described in spec:
+  - either mark test as suspect, or
+  - propose adding explicit spec coverage, not silently changing implementation.
 
-### 5.3 Integration/Contract Failures
+### 11.3 Integration/Contract Failures
 
-- Confirm API route naming matches `api-registry.json` if present.
-- Validate request/response schema expectations.
-- If two specs disagree:
-  - create a blocking reconciliation item.
+- Ensure API routes and semantics match `api-registry.json`.
+- Validate request/response shapes.
+- If two specs disagree on contract:
+  - propose a reconciliation plan (versioning, compatibility layer).
 
-### 5.4 Performance Regression
+### 11.4 Performance Regression
 
-- Compare measured results against spec SLAs.
-- Recommend optimizations aligned with intended architecture/patterns.
-- Do not change SLAs unilaterally.
+- Compare measured metrics to spec SLAs.
+- Recommend targeted optimizations aligned with architectural patterns.
+- Never relax SLAs without explicit spec changes.
 
-### 5.5 Security Enforcement Gaps
+### 11.5 Security Enforcement Gaps
 
-- Ensure auth/authz hooks are applied at the correct layers.
-- Verify permission model aligns with security/core specs.
+- Verify that auth/authz checks exist at appropriate layers.
+- Check that security rules align with security/core specs.
+- Recommend non-invasive fixes (e.g., middleware/hooks) over ad hoc checks.
 
-### 5.6 UI/Component Mismatch
+### 11.6 UI/Component Mismatch
 
-- Check if `ui.json` exists.
-- If yes:
-  - verify component IDs/names used in code match UI JSON.
-  - verify names match `ui-component-registry.json` when available.
-  - prefer updating code to match design.
-- If design and runtime diverge meaningfully:
-  - create a UI-team handoff task.
+- If `ui.json` exists:
+  - ensure component IDs/names match UI JSON and `ui-component-registry.json`.
+  - prefer adjusting runtime code to align with design.
+- If design vs runtime diverge drastically:
+  - suggest explicit designer-engineer reconciliation.
 
-### 5.7 Cross-SPEC Naming Drift
+### 11.7 Cross-SPEC Naming Drift
 
-- Prefer consolidating to the canonical registry term.
-- If a rename/migration is required:
-  - propose a phased migration plan.
-  - recommend running `/smartspec_sync_spec_tasks --mode=additive` after agreement.
+- Prefer converging on the canonical registry term.
+- If migration needed:
+  - design a phased plan (dual support, deprecations).
+  - recommend using `/smartspec_sync_spec_tasks --mode=additive` to propagate tasks.
+
+### 11.8 Env/Config Mismatch (v5.7)
+
+- When failures only occur in certain environments:
+  - check config vs spec assumptions.
+  - propose environment-specific config updates rather than code-only fixes.
 
 ---
 
-## 6) UI JSON Addendum (Conditional)
+## 12) 6) UI JSON Addendum (Conditional)
 
 Apply when:
-- Spec category is `ui`, or
+- spec category is `ui`, or
 - `ui.json` exists.
 
 Rules:
-- `ui.json` is design-owned.
-- Do not move business logic into UI JSON.
-- If logic appears to be encoded at the UI boundary:
-  - refactor logic into service/controller layers
-  - keep UI testing focused on rendering and state orchestration
+- `ui.json` is design-owned and declarative.
+- UI JSON must not contain business logic.
+- Business logic should live in services/hooks/domain layers.
 
-If the project does not use UI JSON:
-- Skip UI checks without failing.
+When fixing errors:
+- do NOT move logic into UI JSON.
+- if UI JSON and code disagree:
+  - treat UI JSON as primary design intent, but confirm with designers when large changes are implied.
 
----
+For v5.7, when `ui.json` includes `meta`:
+- treat fields like `source`, `generator`, `generated_at`, `design_system_version`, `style_preset`, `review_status` as signals of:
+  - AI vs human origin
+  - review status
+  - design-system version alignment
 
-## 7) Mode Behavior
-
-### `recommend` (default)
-
-- Provide code fix suggestions.
-- Output registry/index recommendations.
-- Do not write shared files.
-
-### `additive-meta`
-
-- Allowed safe updates:
-  - add missing non-breaking metadata in central files (when your system supports it)
-- Never delete or rename registry entries automatically.
-- Never rewrite existing `spec.md` contents.
+Unreviewed AI-generated UI JSON for critical flows:
+- should raise risk level, especially under `--safety-mode=strict`.
 
 ---
 
-## 8) Output Fix Report
+## 13) 7) Mode Behavior
 
-Provide a structured report:
+### 13.1 `recommend` (default)
 
-- Error summary
-- Root cause hypothesis
-- Evidence from spec/tasks/index
-- Proposed fixes
-- Risk level
-- Registry alignment notes
-- UI JSON compliance notes (if applicable)
+- Produce a fix plan only.
+- Output registry/index recommendations as **suggestions**, not changes.
+- NEVER write to central files.
+
+### 13.2 `additive-meta`
+
+- May propose and, if host implementation allows, apply **additive** metadata updates, such as:
+  - tagging specs with error-related metadata
+  - adding links to incident/bug IDs
+  - adding non-breaking annotations in registries.
+
+- MUST NOT:
+  - delete or rename registry entries automatically.
+  - alter core `spec.md` behavior descriptions.
+  - change UI JSON beyond metadata, and only if explicitly allowed.
+
+`--dry-run`:
+- simulate `additive-meta` writes but only emit the report, no file changes.
+
+`--safety-mode=strict`:
+- prefer recommendations and require human confirmation even for additive metadata.
 
 ---
 
-## 9) Recommended Follow-ups
+## 14) 8) Output Fix Report
+
+The report SHOULD include:
+
+- error classification summary
+- mapped spec(s) and tasks
+- evidence from index/registries
+- fix strategies per error class
+- risks: `LOW | MEDIUM | HIGH | CRITICAL`
+- notes on:
+  - cross-SPEC impacts
+  - registry alignment
+  - UI JSON / design alignment
+  - environment/config sensitivity
+
+When `--report-format=json`, the JSON schema should mirror these fields to support automation.
+
+---
+
+## 15) 9) Recommended Follow-ups
 
 - `/smartspec_verify_tasks_progress`
 - `/smartspec_generate_tests`
-- `/smartspec_sync_spec_tasks --mode=additive` (after review)
-- `/smartspec_refactor_code` (if structural fixes are needed)
+- `/smartspec_refactor_code`
+- `/smartspec_sync_spec_tasks --mode=additive`
+- `/smartspec_release_readiness` (for pre-release checks)
 
 ---
 
-## Notes
+## 16) Weakness & Risk Check (v5.7.0)
 
-- This workflow is conservative and prioritizes preventing new cross-SPEC conflicts.
-- Canonical shared truth is `.spec/registry/` when present.
-- Root `SPEC_INDEX.json` is treated as a legacy mirror.
+Before treating this workflow as stable in a repo, validate that:
+
+1. It never introduces destructive changes to registry/spec/index/UI JSON.
+2. It respects `.spec/` as canonical and uses mirrors only for compatibility.
+3. It clearly differentiates between `recommend` and `additive-meta` modes.
+4. It uses `--safety-mode` and `--strict` to gate risky operations.
+5. It handles multi-repo and multi-registry correctly (no local forks of external concepts).
+6. It treats AI-generated UI JSON as higher risk when unreviewed.
+7. It logs ambiguity and high-risk findings in the report instead of guessing.
+
+---
+
+## 17) Legacy Flags Inventory
+
+- **Kept (legacy):**
+  - `--index`
+  - `--registry-dir`
+  - `--spec`
+  - `--tasks`
+  - `--mode`
+  - `--strict` (alias for `--safety-mode=strict`)
+
+- **New additive (v5.7.0):**
+  - `--specindex` (alias)
+  - `--registry-roots`
+  - `--workspace-roots`
+  - `--repos-config`
+  - `--safety-mode`
+  - `--dry-run`
+  - `--report-dir`
+  - `--report-format`
+
+No legacy flags are removed or repurposed.
 

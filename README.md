@@ -203,8 +203,8 @@ Each command corresponds to a workflow that you can customize. Click on a comman
 | `/smartspec_implement_tasks.md` | Execute tasks with an autonomous agent. | [**[Details]**](.smartspec-docs/workflows/implement_tasks.md) |
 | `/smartspec_reverse_to_spec.md` | Reverse-engineer code into a SPEC. | [**[Details]**](.smartspec-docs/workflows/reverse_to_spec.md) |
 | `/smartspec_sync_spec_tasks.md` | Sync changes between SPEC and tasks. | [**[Details]**](.smartspec-docs/workflows/sync_spec_tasks.md) |
-| `/smartspec_verify_tasks_progress.md` | Verify task completion and code quality. | [**[Details]**](.smartspec-docs/workflows/verify_tasks_progress.md) |
-
+| `/verify_tasks_progress_strict.md` | Verify task completion and code quality. (New)| [**[Details]**](.smartspec-docs/workflows/verify_tasks_progress_strict.md) |
+| `/smartspec_sync_tasks_checkboxes.md` | Sync task checkboxes from verify report. (New)| [**[Details]**](.smartspec-docs/workflows/smartspec_sync_tasks_checkboxes.md) |
 ---
 
 ## 🔧 Quality Improvement Commands

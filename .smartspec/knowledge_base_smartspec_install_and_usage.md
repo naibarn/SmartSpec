@@ -1,203 +1,255 @@
-# Knowledge Base — SmartSpec Install & Usage Guide (Updated v5.7.2)
+# SmartSpec Knowledge Base V2 (English)
+## Installation, Usage, Governance, and Workflow Definitions
+### Fully Rewritten Version Supporting New Strict Verification System
+---
 
-This is the **updated version** of `knowledge_base_smartspec_install_and_usage.md`, modified to:
-- Reflect the new Kilo best practice: `--kilocode --require-orchestrator`
-- Update installation and workflow-usage guidance
-- Preserve backward compatibility
+# 1. Overview
+SmartSpec is a structured software architecture and development workflow system used across:
+- **Kilo Code**
+- **Claude Code**
+- **Google Antigravity**
 
-All updates are **additive**, and do not break existing workflows.
+SmartSpec provides:
+- A complete lifecycle: **SPEC → PLAN → TASKS → IMPLEMENT**
+- Workflow automation
+- Governance and safety policies
+- Registries and cross-project indexing
+- UI schema and design rules
+
+This Knowledge Base V2 is a **full rewrite**, preserving **all existing functionality**, while adding support for:
+- `/smartspec_verify_tasks_progress_strict` (new canonical verifier)
+- `/smartspec_sync_tasks_checkboxes` (new evidence-driven task sync)
+
+The legacy `/smartspec_verify_tasks_progress` is now deprecated.
 
 ---
 
-# 1. Installation Overview
+# 2. Architecture Summary
+SmartSpec enforces a predictable chain of development artifacts:
 
-SmartSpec supports:
-- Kilo Code
-- Claude Code
-- Google Antigravity
-- CLI environments
-
-Install the SmartSpec extension/plugin according to your IDE.
+```
+SPEC → PLAN → TASKS → IMPLEMENT → DELIVERY
+```
+Each stage is generated, validated, and governed via SmartSpec workflows.
 
 ---
+# 3. Installation
+SmartSpec installs differently depending on platform.
 
-# 2. Running SmartSpec Workflows
-
-Workflows follow the chain:
-
+## 3.1 Kilo Code
+Run installation workflow:
 ```
-/smartspec_generate_spec
-/smartspec_generate_plan
-/smartspec_generate_tasks
-/smartspec_implement_tasks
+/smartspec_install --kilocode
+```
+This installs:
+- command wrappers
+- IDE hooks
+- task verification tools
+
+## 3.2 Claude Code
+```
+/smartspec_install
 ```
 
-General rules:
-- Always run workflows inside the correct spec folder
-- Never modify SPEC_INDEX or registries manually via implement workflows
-- Use `--validate-only` to inspect results before writing
+## 3.3 Google Antigravity
+```
+/smartspec_install --workspace-roots=<paths>
+```
+Multi-repo mode supported.
 
 ---
-
-# 3. Flags & Modes Summary
-
-### Env flags
+# 4. Directory Conventions
 ```
---kilocode
---require-orchestrator
-```
-
-### Safety
-```
---safety-mode=strict | dev
---strict
-```
-
-### Validation
-```
---validate-only
---dry-run
-```
-
-### Multi-repo
-```
---workspace-roots
---repos-config
---registry-dir
---registry-roots
+project/
+  specs/
+    feature/<spec-id>/spec.md
+    feature/<spec-id>/tasks.md
+  .smartspec/
+    workflows/
+    registries/
+    reports/
+  src/
+  tests/
+  docs/
 ```
 
 ---
+# 5. Governance Rules
+## 5.1 Write Guards
+Each workflow declares write permissions:
+- `NO-WRITE` — read-only
+- `TASKS-ONLY` — allowed to modify tasks.md only
+- `REGISTRY-ONLY`, etc.
 
-# 4. Using SmartSpec in Kilo Code
+## 5.2 Registries
+Registries store cross-project metadata.
+- API registry
+- Data model registry
+- Critical sections registry
 
-## 4.1 Kilo Integration
+Workflows must respect:
+- `--registry-roots`
+- `--registry-dir`
 
-SmartSpec supports a special meta-flag:
+## 5.3 SPEC_INDEX
+Maintains dependency structure of specs.
+Used by generate/verify workflows.
 
-```
---kilocode
-```
+## 5.4 UI / Design Rules
+SmartSpec UI governance requires:
+- JSON-first UI definitions
+- Approved App Components only
+- No raw CSS unless allowed
 
-This enables:
-- Orchestrator-per-task execution
-- Kilo-aware code-editing behavior
-- Improved file-change consistency
-
-### (Updated) — Strong Recommendation
-Whenever you run an implementation workflow under Kilo, SmartSpec strongly recommends:
-
-```
---kilocode --require-orchestrator
-```
-
-### Why?
-Because Orchestrator Mode significantly improves:
-- context consistency
-- accuracy of multi-file edits
-- stability of long editing sequences
-- reduction of ambiguous or conflicting patches
-
-Without Orchestrator Mode, Kilo may:
-- lose editing context
-- produce incomplete or conflicting changes
-- misinterpret task boundaries
-
-Thus:
-
-> **If you use `--kilocode`, you should also use `--require-orchestrator` to ensure Kilo is operating at full capability.**
-
-This is a recommendation, not a breaking requirement.
 
 ---
+# 6. Standard Workflows
+All original workflows remain valid.
 
-# 5. Workflow Usage Details
+## 6.1 /smartspec_generate_spec
+Creates initial `spec.md` based on project request.
 
-## 5.1 /smartspec_generate_spec
-Standard rules unchanged.
+## 6.2 /smartspec_generate_plan
+Transforms spec → engineering plan.
 
-## 5.2 /smartspec_generate_plan
-No changes.
+## 6.3 /smartspec_generate_tasks
+Creates `tasks.md` from plan.
 
-## 5.3 /smartspec_generate_tasks
-No changes.
+## 6.4 /smartspec_generate_implement
+Creates scaffolding code from tasks.
 
-## 5.4 /smartspec_implement_tasks (Updated)
+## 6.5 /smartspec_lint, /smartspec_format
+Linting & formatting.
 
-This workflow performs real implementation and must obey safety rules.
+## 6.6 /smartspec_project_copilot
+Guides next actions in project lifecycle.
 
-### Recommended run pattern inside Kilo:
-```
-/smartspec_implement_tasks <tasks.md> \
-    --kilocode --require-orchestrator --safety-mode=strict
-```
+## 6.7 /smartspec_ui_*
+UI creation & validation workflows.
 
-### Behavior summary:
-- `--kilocode` enables Kilo integration
-- `--require-orchestrator` ensures Orchestrator must be active before starting
-- `--safety-mode=strict` ensures the workflow stops early on governance issues
-
-### What happens if Orchestrator is not active?
-- With `--require-orchestrator`:
-  - strict mode → fail immediately with a clear error
-  - dev mode → warn loudly; may fallback or stop
+All of these work unchanged.
 
 ---
-
-# 6. Troubleshooting (Updated)
-
-### Problem: Orchestrator is not active
-Message:
-> "Orchestrator Mode required (`--require-orchestrator`) but not active. Please enable Orchestrator Mode in Kilo and re-run."
-
-Fix:
-- Open Kilo UI
-- Enable Orchestrator Mode
-- Run again with:
+# 7. **Deprecated Workflow (DO NOT USE)**
+### `/smartspec_verify_tasks_progress`
 ```
---kilocode --require-orchestrator
+STATUS: DEPRECATED — NOT RECOMMENDED FOR USE
 ```
+### Reason for Deprecation
+The legacy workflow:
+- Relied on checkbox-first logic
+- Could not reliably detect missing implementation
+- Failed when tasks were improperly mapped
+- Caused verification loops where tasks never resolved properly
 
-### Problem: Kilo edit failed (Edit Unsuccessful)
-- Narrow task scope
-- Reduce file-range
-- Retry task individually
-
-SmartSpec will provide suggestions automatically.
+### Replacement Workflow
+Use **`/smartspec_verify_tasks_progress_strict`** instead.
 
 ---
+# 8. New Strict Workflow (Replaces Legacy Verify)
+# `/smartspec_verify_tasks_progress_strict`
+### Purpose
+A strict, evidence-first verification workflow ensuring tasks are only considered complete when:
+- Implementation exists
+- Tests exist
+- Documentation exists (when required)
+- Deployment artifacts exist (when required)
 
-# 7. Best Practices (Updated)
+### Key Features
+- Built-in evidence scanners (no external script needed)
+- JSON + Markdown report generation
+- Strict verdicts: `complete`, `partial`, `incomplete`, `false_positive`, `unsynced_complete`
+- Anti-loop diagnostics
+- Optional per-spec evidence config
 
-### ⭐ When implementing under Kilo:
+### Example Usage
 ```
---kilocode --require-orchestrator --safety-mode=strict
+/smartspec_verify_tasks_progress_strict \
+  --spec specs/feature/spec-002/spec.md \
+  --report-format=both \
+  --report=detailed
 ```
 
-### ⭐ Use validate-only first on large repos:
+### JSON Report Example
 ```
---validate-only
+/spec/reports/verify-tasks-progress/spec-002.json
 ```
-
-### ⭐ Keep tasks small, precise, and unambiguous
-
-### ⭐ Maintain SPEC_INDEX and registry accuracy
+Contains:
+- task verdicts
+- missing evidence
+- matched evidence
+- progress metrics
 
 ---
+# 9. New Workflow
+# `/smartspec_sync_tasks_checkboxes`
+### Purpose
+Synchronize checkboxes in `tasks.md` based on verified evidence from strict workflow.
 
-# 8. Security & Data Rules
+### Rules
+- Only modifies `tasks.md`
+- Uses JSON report from strict verify
+- Safe & Auto modes available
 
-Unchanged from original:
-- No secrets or PII in prompts or code
-- Treat model inputs/outputs as untrusted
-- Use masking/sanitization rules for sensitive data
+### Example
+```
+/smartspec_sync_tasks_checkboxes \
+  --tasks specs/feature/spec-002/tasks.md \
+  --report .spec/reports/verify-tasks-progress/spec-002.json \
+  --mode=auto
+```
 
 ---
+# 10. Recommended Flow
+```
+# 1. Verify real implementation
+/smartspec_verify_tasks_progress_strict --spec <path> --report-format=json
 
-# 9. Appendix
+# 2. Sync checkboxes based on evidence
+/smartspec_sync_tasks_checkboxes --tasks <path> --report <json>
+```
 
-This updated knowledge base remains backward-compatible.
-`--require-orchestrator` is fully additive.
+---
+# 11. CI/CD Integration Example
+```
+- name: SmartSpec Strict Verification
+  run: |
+    /smartspec_verify_tasks_progress_strict --spec $SPEC --report-format=json > strict.json
+    /smartspec_sync_tasks_checkboxes --tasks $TASKS --report strict.json --mode=auto
+```
 
-# END
+---
+# 12. Multi-Repo Use
+SmartSpec supports multi-workspace verification via:
+```
+--workspace-roots=<paths>
+--repos-config=<file>
+```
 
+This applies equally to strict verification and sync workflows.
+
+---
+# 13. Error Handling & Diagnostics
+The strict verifier reports:
+- Missing evidence per task
+- Wrong file locations
+- Mapping problems
+- Tasks stuck in repeated incomplete state
+
+Sync workflow handles:
+- Missing JSON report
+- Unknown task IDs
+- Dry-run safety mode
+
+---
+# 14. Summary
+SmartSpec Knowledge Base V2 introduces:
+- A fully reliable strict verification system
+- Evidence-driven task syncing
+- Cleaner governance and workflow design
+- Official deprecation of flawed legacy verify system
+
+All original functionality remains intact, but strict verification is now the standard method for progress validation.
+
+---
+End of Knowledge Base V2

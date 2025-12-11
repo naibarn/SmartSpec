@@ -350,7 +350,7 @@ slightly different depending on the repo, but semantics should match):
   - `/smartspec_spec_lifecycle_manager`
 - **Implementation & quality**
   - `/smartspec_implement_tasks`
-  - `/smartspec_fix_errors`
+  - `/smartspec_fix_errors` – focused bug/error fixing, **can ingest implementation reports using `--report=<path>` (for example reports under `.spec/reports/implement-tasks/`) and auto-discover recent implementation reports when `--report` is not provided**.
   - `/smartspec_generate_tests`
   - `/smartspec_ci_quality_gate`
   - `/smartspec_data_migration_governance`

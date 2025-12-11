@@ -1,12 +1,12 @@
----
 name: /smartspec_fix_errors
-version: 5.7.0
+version: 5.7.1
 role: fix/governance
 write_guard: ALLOW-WRITE
 purpose: Analyze implementation errors (build/test/integration/UI) and propose or apply fixes aligned with SmartSpec v5.6–v5.7 centralized governance (multi-repo, multi-registry, UI JSON, anti-duplication).
 version_notes:
   - v5.2: initial error-fix workflow with SmartSpec centralization
   - v5.7.0: governance alignment with v5.6–v5.7 (multi-repo, multi-registry, safety-mode); behavior remains backward-compatible; additive-only writes
+  - v5.7.1: additive support for ingesting implementation reports via `--report` with auto-discovery fallback under `.spec/reports/implement-tasks/`; no legacy flags removed
 ---
 
 # /smartspec_fix_errors
@@ -33,6 +33,7 @@ This workflow enforces SmartSpec centralization:
 
 - Resolves canonical SPEC_INDEX.
 - Loads shared registries (primary + supplemental) in a merged view.
+- Optionally ingests one or more implementation reports as structured error context.
 - Identifies relevant spec(s) for the error context.
 - Cross-checks expected behavior against `spec.md` and `tasks.md`.
 - Classifies errors and detects root causes:
@@ -42,6 +43,7 @@ This workflow enforces SmartSpec centralization:
   - missing dependencies
   - incorrect test assumptions
   - UI JSON vs component misalignment
+  - environment/config mismatches
 - Produces a **safe, spec-aligned fix plan** with optional additive metadata updates.
 
 ---
@@ -53,6 +55,7 @@ This workflow enforces SmartSpec centralization:
 - Integration regressions across multiple specs.
 - UI mismatches between design and runtime components.
 - After large refactors or dependency updates.
+- When an implementation report (for example from `/smartspec_implement_tasks`) exists and you want to base fixes on that report rather than rerunning all checks.
 
 Not for:
 - designing new specs (use `/smartspec_generate_spec`).
@@ -75,6 +78,14 @@ Optional governance inputs:
 - `.spec/registry/*.json`
 - supplemental registries from sibling repos (via `--registry-roots`).
 
+Optional implementation/fix reports (v5.7.1):
+- Implementation reports produced by execution workflows such as `/smartspec_implement_tasks`, typically under:
+  - `.spec/reports/implement-tasks/`
+- Fix-error reports from previous runs of this workflow, typically under:
+  - `.spec/reports/smartspec_fix_errors/`
+
+These reports may be supplied explicitly via `--report` or discovered automatically when `--report` is omitted.
+
 ---
 
 ## 4) Outputs
@@ -87,6 +98,7 @@ Optional governance inputs:
   - risk level
   - registry/contract alignment notes
   - UI JSON compliance notes (if applicable)
+  - references to any reports ingested as input (when applicable)
 - Optional **additive metadata changes** (e.g., tagging tests or specs) when in `additive-meta` mode and allowed by the host implementation.
 
 Reports SHOULD be written under:
@@ -153,6 +165,20 @@ Reports SHOULD be written under:
 - `--report-format`  
   `md` | `json` (default: `md`).
 
+### 5.6 Report Input (v5.7.1)
+
+- `--report`  
+  Optional path to an existing implementation or fix report to ingest as primary structured error context. Typical examples:
+  - `.spec/reports/implement-tasks/<scope>-implementation-report.md`
+  - `.spec/reports/smartspec_fix_errors/<timestamp>-fix-errors-report.md`
+
+  If `--report` is **not** provided, the workflow MUST attempt to auto-discover a relevant implementation report under `.spec/reports/implement-tasks/` using heuristics such as:
+  - matching on spec ID or folder inferred from `--spec` / `--tasks`;
+  - matching on error signatures observed in `--error-log` or stdin;
+  - preferring the most recent report when multiple candidates are found.
+
+  If no suitable report is found, the workflow continues using only logs/stdin and local inspection, and MUST record the absence of a report in the fix report.
+
 ---
 
 ## 6) 0) Resolve Canonical Index & Registry
@@ -215,7 +241,19 @@ No modifications are made to these files in this workflow.
 
 ## 9) 3) Error Classification
 
-Classify each error into one or more buckets:
+Before classification, the workflow SHOULD ingest any available structured error context in this order:
+
+1. If `--report` is provided, attempt to parse and use it as the primary structured error source.
+2. Otherwise, attempt auto-discovery of a relevant implementation report under `.spec/reports/implement-tasks/` as described in Section 5.6.
+3. Merge any findings from reports with:
+   - `--error-log` contents (if provided), and
+   - error output supplied via stdin / prompt.
+
+If multiple reports are found and ambiguity remains, the workflow MUST:
+- under `strict` safety-mode: surface the ambiguity and either ask for clarification (if interactive) or proceed with a conservative subset, clearly documented in the report.
+- under `dev` safety-mode: choose the best candidate with a clear note about possible mismatches.
+
+Then classify each error into one or more buckets:
 
 1. **Build/Type Errors**
 2. **Unit Test Failures**
@@ -382,6 +420,7 @@ The report SHOULD include:
   - registry alignment
   - UI JSON / design alignment
   - environment/config sensitivity
+  - any implementation/fix reports used as input
 
 When `--report-format=json`, the JSON schema should mirror these fields to support automation.
 
@@ -397,7 +436,7 @@ When `--report-format=json`, the JSON schema should mirror these fields to suppo
 
 ---
 
-## 16) Weakness & Risk Check (v5.7.0)
+## 16) Weakness & Risk Check (v5.7.1)
 
 Before treating this workflow as stable in a repo, validate that:
 
@@ -408,6 +447,8 @@ Before treating this workflow as stable in a repo, validate that:
 5. It handles multi-repo and multi-registry correctly (no local forks of external concepts).
 6. It treats AI-generated UI JSON as higher risk when unreviewed.
 7. It logs ambiguity and high-risk findings in the report instead of guessing.
+8. It treats `--report` and auto-discovered reports as **advisory context only** and never overwrites the canonical truth in `spec.md`, `tasks.md`, or registries based solely on report contents.
+9. It records when no suitable report could be found so that downstream workflows and humans understand the reduced context.
 
 ---
 
@@ -421,7 +462,7 @@ Before treating this workflow as stable in a repo, validate that:
   - `--mode`
   - `--strict` (alias for `--safety-mode=strict`)
 
-- **New additive (v5.7.0):**
+- **New additive (v5.7.0+):**
   - `--specindex` (alias)
   - `--registry-roots`
   - `--workspace-roots`
@@ -430,6 +471,7 @@ Before treating this workflow as stable in a repo, validate that:
   - `--dry-run`
   - `--report-dir`
   - `--report-format`
+  - `--report` (v5.7.1)
 
-No legacy flags are removed or repurposed.
+No legacy flags are removed or repurposed; all new flags are additive and optional.
 

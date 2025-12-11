@@ -1,126 +1,104 @@
-# คู่มือ SmartSpec — /smartspec_implement_tasks (ภาษาไทย, ฉบับบังคับใช้ v5.7.2)
+# คู่มือ SmartSpec — /smartspec_implement_tasks (จากไฟล์ที่อัปโหลด, ฉบับพร้อมแก้ไข)
 
-คู่มือนี้เป็นฉบับที่ปรับปรุงตามสเปก **บังคับใช้จริง (enforced version)** ของ workflow `/smartspec_implement_tasks` ซึ่งรวมถึงกฎใหม่ที่สำคัญ:
-
-- `--require-orchestrator` ต้องถูกบังคับใช้อย่างจริงจัง
-- เมื่อใช้คู่กับ `--kilocode` → ระบบต้องตรวจว่า Orchestrator Mode **เปิดอยู่จริง**
-- หากสัญญาณ Orchestrator **ขาด / false / ไม่ทราบสถานะ** → ให้ถือว่า “ไม่เปิด”
-- ในโหมด `strict` → ต้อง **หยุดทำงานทันที (fail fast)** พร้อม error
-- ในโหมด `dev` → ต้องแสดงคำเตือนหนัก และอาจหยุดหรือทำงานแบบลดคุณภาพ
-- ห้าม fallback แบบเงียบโดยเด็ดขาด
-
-คู่มือนี้สอดคล้อง 100% กับ workflow ที่ถูกอัปเดตแล้วในระบบของคุณ
+ด้านล่างนี้คือเนื้อหาจากไฟล์ที่คุณอัปโหลด (`implement_tasks_th.md`) โดยถูกย้ายเข้ามาใน Canvas เพื่อให้สามารถแก้ไขและปรับปรุงได้ตรงไฟล์นี้เท่านั้น (ไม่ยุ่งกับไฟล์อื่น):
 
 ---
+# คู่มือ SmartSpec — /smartspec_implement_tasks (ฉบับเต็ม ภาษาไทย, v5.7.2 บังคับใช้)
 
+> **นี่คือคู่มือฉบับสมบูรณ์** ซึ่งได้รวมเนื้อหาดั้งเดิมทั้งหมดของคู่มือ implement tasks (เวอร์ชันเก่า) เข้ากับกฎใหม่ที่ถูกบังคับใช้ใน v5.7.2 โดยไม่ลบเนื้อหาเก่า และจัดโครงสร้างให้เป็นระเบียบ อ่านง่าย ใช้งานจริงได้ทันที
+
+รวม:
+- ตัวอย่างการใช้งานทุกแบบ (tasks, ranges, phases)
+- การเลือก implement แบบละเอียด
+- Best practices เดิมและใหม่
+- การทำงานร่วมกับ Kilo & Orchestrator Mode
+- Error cases & วิธีแก้
+
+---
 # 1. ภาพรวม
+`/smartspec_implement_tasks` คือ workflow สำหรับ **ลงมือแก้ไขโค้ดจริง** ตามรายการใน `tasks.md` ภายใต้กฎของ SmartSpec เช่น:
+- ขอบเขต SPEC_INDEX
+- multi-repo governance
+- registry rules
+- UI governance (design tokens, App components)
+- web-stack guardrails
+- กฎความปลอดภัยด้านข้อมูล
+- การทำงานร่วมกับ Kilo / Roo / Claude / Antigravity / Gemini
 
-`/smartspec_implement_tasks` ใช้สำหรับ **ลงมือแก้ไขและสร้างโค้ดจริง** ตามรายการงานใน `tasks.md` โดยต้องเคารพกฎสำคัญของ SmartSpec ได้แก่:
-
-- ระเบียบ SPEC_INDEX
-- ขอบเขตเจ้าของงานข้ามรีโป
-- กฎ registry & multi-repo
-- กฎ UI (design tokens, App components, ui.json)
-- กฎเว็บสแตก (React / Next.js / RSC / Node)
-- ความปลอดภัยด้านข้อมูล & AI
-- การทำงานร่วมกับ KiloCode และ Orchestrator Mode
-
-นี่คือเวอร์ชันที่นำกฎทั้งหมดไปบังคับใช้จริง ไม่ใช่แค่คำแนะนำ
+คู่มือนี้ครอบคลุมวิธีใช้งานทุกรูปแบบ ตั้งแต่ task เดี่ยว จนถึง phase-based implementation
 
 ---
-
-# 2. อัปเดตสำคัญใน v5.7.2 (ฉบับบังคับใช้)
-
-## 2.1 การบังคับใช้ `--require-orchestrator`
-เมื่อรันร่วมกับ `--kilocode` กฎต่อไปนี้ต้องถูกบังคับ:
-
-> **หาก Orchestrator Mode ไม่ได้รายงานว่า active อย่างชัดเจน → ต้องถือว่า Orchestrator = ไม่เปิด และต้อง fail ใน strict mode ทันที**
-
-สิ่งที่ถือว่า “active อย่างชัดเจน”
-```
-env.orchestrator_active = true
-```
-หรือ flag ที่มีความหมายเทียบเท่าจาก Kilo
-
-### หากสถานะ Orchestrator เป็น:
-- missing (ไม่มีสัญญาณ)
-- false
-- unknown (ไม่รู้สถานะ)
-
-→ ถือว่า **ปิดอยู่**
-
-### ผลลัพธ์เมื่อ Orchestrator = ปิด
-
-**โหมด strict:**
-- หยุด run ทันที (fail fast)
-- แสดง error ชัดเจน เช่น:
-  > "ต้องการ Orchestrator Mode (`--require-orchestrator`) แต่ไม่พบว่าถูกเปิดใช้งาน กรุณาเปิดใน Kilo UI"
-
-**โหมด dev:**
-- เตือนหนัก
-- เลือกหยุดหรือรันต่อแบบลดคุณภาพได้ แต่ต้องแจ้งชัดเจนว่า “ไม่ได้อยู่ในโหมด Orchestrator”
+# 2. แนวคิดสำคัญ
+- `tasks.md` คือรายการงานที่ต้องทำ
+- checkbox ✓ = ทำเสร็จแล้ว
+- implement workflow = ลงมือแก้ไฟล์จริง
+- flags ใช้เลือก task, phase, range
+- safety mode ควบคุมความเข้มงวดของกฎ
+- Kilo Orchestrator ช่วยปรับปรุงคุณภาพการแก้ไฟล์
 
 ---
+# 3. พฤติกรรมใหม่ใน v5.7.2 (บังคับใช้จริง)
+## 3.1 การบังคับใช้ `--require-orchestrator`
+เมื่อรันร่วมกับ `--kilocode` กฎใหม่คือ:
 
-## 2.2 ไม่รองรับ auto-switch
-Kilo Code **จะไม่สลับเข้าสู่ Orchestrator Mode ให้อัตโนมัติ** ไม่ว่าผู้ใช้จะส่ง flag อะไรก็ตาม
+> **ต้องมีสัญญาณอย่างชัดเจนว่า Orchestrator Mode เปิดอยู่ (`env.orchestrator_active=true`)**
 
-ผู้ใช้ต้องเปิดโหมด Orchestrator ด้วยปุ่มใน UI ก่อนเสมอ
+ถ้าไม่พบสัญญาณ หรือเป็น false / unknown → ถือว่า “ปิด”
 
-Workflow ไม่มีสิทธิ์สั่งให้ IDE เปลี่ยนโหมด
+ผลลัพธ์:
+- **strict → หยุดทันที (fail-fast)**
+- **dev → เตือนหนัก อาจหยุดหรือทำงานแบบลดคุณภาพ**
+
+## 3.2 ไม่ auto-switch
+ไม่ว่าผู้ใช้ใส่ flag อะไรก็ตาม Kilo จะ **ไม่สลับโหมดให้เอง**
+ต้องกดเปิดโหมด Orchestrator จาก UI เท่านั้น
+
+## 3.3 เพิ่มกฎใน Step 1.a
+ก่อนเริ่มทำงาน จะตรวจสถานะ Orchestrator → ถ้าต้องการและไม่เปิด → หยุดทันที
 
 ---
-
-## 2.3 การปรับขั้นตอน Step 1.a
-ตอนนี้ workflow จะตรวจสอบสถานะ Orchestrator **ก่อนเริ่มทำงานใด ๆ**
-
----
-
-# 3. อินพุต / เอาต์พุต
-
+# 4. อินพุต/เอาต์พุต
 ## อินพุต
 - `tasks.md` (จำเป็น)
-- `spec.md` / `plan.md` / `ui.json` (เสริม)
-- SPEC_INDEX, รายการ registry, multi-repo config
+- `spec.md`, `plan.md`, `ui.json` (เสริม)
 
 ## เอาต์พุต
-- โค้ดที่ถูกปรับปรุงใน repo ปัจจุบัน
-- การอัปเดต checkbox / หมายเหตุใน `tasks.md`
-- รายงานการ implement (หากเปิดใช้)
+- โค้ดใหม่/แก้ไขแล้วใน repo ปัจจุบัน
+- อัปเดต checkbox ใน `tasks.md`
+- รายงานสรุป
 
 ---
-
-# 4. รายละเอียด flag (อัปเดต)
-
-### Flags สำหรับ Orchestrator
+# 5. รายละเอียด flags
+## เลือก task
 ```
---kilocode
---require-orchestrator
+--task=T003
+--tasks=T001,T003,T005
+--range=T001-T004
+--from=T006
+--skip-completed
+--resume
 ```
 
-### ความปลอดภัย
+## ความปลอดภัย
 ```
---safety-mode=strict | dev
+--safety-mode=strict
+--safety-mode=dev
 --strict
 ```
 
-### ตรวจสอบผลก่อนแก้จริง
+## ตรวจสอบก่อนแก้จริง
 ```
 --validate-only
 --dry-run
 ```
 
-### เลือก task
+## สำหรับ Kilo
 ```
---task
---tasks
---range
---from
---skip-completed
---resume
+--kilocode
+--require-orchestrator
 ```
 
-### multi-repo
+## multi-repo
 ```
 --workspace-roots
 --repos-config
@@ -129,89 +107,151 @@ Workflow ไม่มีสิทธิ์สั่งให้ IDE เปลี
 ```
 
 ---
+# 6. ตัวอย่างเลือก Task แบบละเอียด
+## 6.1 Task เดี่ยว
+```
+--task=T003
+```
 
-# 5. พฤติกรรมของ Orchestrator (ฉบับบังคับจริง)
+## 6.2 หลาย task
+```
+--tasks=T002,T004,T007
+```
 
-## 5.1 ใช้ `--kilocode` อย่างเดียว
-- Workflow จะพยายามใช้ Orchestrator หากเปิดอยู่
-- ถ้า Orchestrator ไม่เปิด → ใช้ linear mode พร้อมคำเตือน
+## 6.3 range
+### 1) ปิดทั้งสองด้าน
+```
+--range=T003-T007
+```
 
-## 5.2 ใช้ `--kilocode --require-orchestrator`
-นี่คือกฎใหม่แบบบังคับใช้:
+### 2) เปิดด้านท้าย
+```
+--from=T005
+```
 
-หากสัญญาณ Orchestrator Active เป็น:
-- ไม่มี
-- false
-- ไม่รู้สถานะ
+### 3) ผสมหลาย pattern
+```
+--tasks=1,3 --range=5-9
+```
 
-→ ต้องถือว่า Orchestrator = ปิด
+## 6.4 skip
+```
+--skip-completed
+```
 
-### strict mode:
-- หยุด run ทันที
-- แจ้ง error ชัดเจน เช่น:
-  > "ต้องการ Orchestrator Mode แต่ไม่เปิดอยู่ กรุณาเปิดใน Kilo UI แล้วลองใหม่"
-
-### dev mode:
-- เตือนหนักมาก
-- อาจจะรันต่อแบบ non-Orchestrator แต่ต้องแจ้งให้ทราบอย่างชัดเจน
-
-ห้าม fallback แบบเงียบโดยเด็ดขาด
+## 6.5 resume
+```
+--resume
+```
 
 ---
-
-# 6. ตัวอย่างคำสั่ง
-
-### คำสั่งที่แนะนำบน Kilo
+# 7. Implement ตาม Phase
+ใน `tasks.md` อาจมี phase กำกับ เช่น:
 ```
-/smartspec_implement_tasks specs/.../tasks.md \
+## Phase: setup
+## Phase: api
+## Phase: ui
+```
+เลือกเฉพาะ phase:
+```
+--phase=ui
+--phases=api,ui
+```
+หรือผสมกับ range:
+```
+--phase=backend --from=4
+```
+
+---
+# 8. การทำงานร่วมกับ Kilo (เต็มรูปแบบ)
+## 8.1 `--kilocode`
+- เปิดพฤติกรรมแก้ไฟล์แบบรู้บริบทของ Kilo
+- ถ้า Orchestrator ไม่เปิด → ทำงานแบบ linear พร้อมแจ้งเตือน
+
+## 8.2 `--kilocode --require-orchestrator`
+กฎบังคับ:
+- ต้องมี `env.orchestrator_active=true`
+- ถ้าไม่พบ → ถือว่า Orchestrator ปิด
+- strict = หยุดทันที
+- dev = เตือนหนักมาก
+
+## 8.3 ต้องเปิด Orchestrator Mode เอง
+Kilo จะ **ไม่สลับโหมดให้เอง**
+
+---
+# 9. คำสั่งที่แนะนำ
+## แนะนำบน Kilo
+```
+/smartspec_implement_tasks tasks.md \
   --kilocode --require-orchestrator --safety-mode=strict
 ```
 
-### ตรวจสอบก่อนแก้จริง
+## ตรวจสอบก่อนแก้จริง
 ```
-/smartspec_implement_tasks specs/.../tasks.md --validate-only
-```
-
-### เลือก task เดียว
-```
-/smartspec_implement_tasks specs/.../tasks.md --task=3 \
-  --kilocode --require-orchestrator
+--validate-only
 ```
 
 ---
-
-# 7. การแก้ปัญหา
-
-### ❗ Orchestrator ไม่เปิด
-จะเกิด error:
-> "ต้องการ Orchestrator Mode (`--require-orchestrator`) แต่ไม่พบว่าถูกเปิดใช้งาน"
-
-วิธีแก้:
-1. เปิด Kilo UI
-2. กดเลือก Orchestrator Mode
-3. รันคำสั่งอีกครั้ง
-
-### ❗ Kilo แจ้ง Edit Unsuccessful
-- Workflow จะลดขนาด scope
-- แนะนำให้ split task หรือ retry ทีละส่วน
+# 10. ลำดับการทำงาน
+1. โหลด tasks.md
+2. ประมวลผล flags
+3. ตรวจ SPEC_INDEX และ registry
+4. (Kilo) ตรวจ Orchestrator
+5. ลงมือแก้ไฟล์
+6. อัปเดต tasks.md
+7. สรุปผล
 
 ---
-
-# 8. แนวทางที่ดีที่สุด
-
-### ⭐ ผู้ใช้ Kilo ควรใช้เสมอ
+# 11. กรณี Error
+## 11.1 Orchestrator ไม่เปิด (strict)
 ```
---kilocode --require-orchestrator --safety-mode=strict
+ERROR: ต้องการ Orchestrator Mode แต่ไม่เปิด
 ```
 
-### ⭐ ต้องเปิด Orchestrator Mode ก่อนเสมอ
-Kilo จะไม่สลับให้เอง
+## 11.2 แก้ไฟล์ไม่สำเร็จ
+- ลด scope อัตโนมัติ
+- แนะนำให้ split task
 
-### ⭐ แนะนำให้รัน validate-only ก่อนบน repo ใหญ่
+## 11.3 เลือก task ผิดรูปแบบ
+แจ้ง error สำหรับ:
+- range ว่าง
+- ตัวเลขไม่ถูกต้อง
+- ช่วงกลับด้าน
 
-### ⭐ แบ่ง task ให้ชัดเจนและไม่กว้างเกินไป
+## 11.4 SPEC_INDEX ละเมิดขอบเขต
+หยุดทำงานทันที
 
 ---
+# 12. ตัวอย่างขั้นสูง
+## 12.1 ทำเฉพาะ API
+```
+--phase=api --skip-completed
+```
 
-# END OF THAI MANUAL
+## 12.2 ทำเฉพาะ task ใหม่วันนี้
+```
+--from=last
+```
+(หากมี metadata รองรับ)
 
+## 12.3 ผสมหลายรูปแบบ
+```
+--tasks=1,4,9 --range=10-15 --skip-completed
+```
+
+## 12.4 Resume บน Kilo
+```
+--resume --kilocode --require-orchestrator
+```
+ถ้าไม่เปิด Orchestrator → หยุด
+
+---
+# 13. แนวทางที่ดีที่สุด
+- เปิด Orchestrator เมื่อใช้ Kilo
+- ใช้ validate-only กับงานใหญ่
+- แบ่ง task ให้เหมาะสม
+- ใช้ phase เพื่อจัดลำดับ
+- หลีกเลี่ยง task ยาวหรือกำกวม
+
+---
+# END OF FULL THAI MANUAL

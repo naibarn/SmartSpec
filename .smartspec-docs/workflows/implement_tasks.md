@@ -149,19 +149,130 @@ No silent fallback is allowed.
 /smartspec_implement_tasks specs/.../tasks.md --validate-only
 ```
 
-## With limited tasks:
+## With limited tasks (using task IDs like T001/T002):
 ```
-/smartspec_implement_tasks specs/.../tasks.md --task=3 \
+/smartspec_implement_tasks specs/.../tasks.md --task=T003 \
   --kilocode --require-orchestrator
 ```
 
 ---
+# 6.1 Full Use Case Examples (Expanded)
+Below are the **complete patterns** normally included in the full SmartSpec Implement Tasks manual.
 
+## ✔ Use Case 1 — Implement a single task
+```
+--task=T002
+```
+Runs exactly task T002.
+
+## ✔ Use Case 2 — Implement multiple tasks
+```
+--tasks=T001,T004,T009
+```
+Order follows the order in tasks.md.
+
+## ✔ Use Case 3 — Implement a continuous range
+```
+--range=T003-T010
+```
+Runs from task T003 to T010 inclusive.
+
+## ✔ Use Case 4 — Open-ended range
+```
+--from=T005
+```
+Runs T005 through the last task.
+
+## ✔ Use Case 5 — Mixed selection
+```
+--tasks=T002,T007 --range=T010-T015
+```
+Useful when combining related tasks.
+
+## ✔ Use Case 6 — Skip completed tasks
+```
+--skip-completed
+```
+Even if selected, tasks already marked ✓ will be skipped.
+
+## ✔ Use Case 7 — Resume workflow
+```
+--resume
+```
+Continues from the last incomplete task in tasks.md.
+
+---
+# 6.2 Phase-Based Use Cases
+Phases may appear as:
+```
+## Phase: 1 (setup)
+## Phase: 2 (api)
+## Phase: 3 (ui)
+```
+
+## ✔ Use Case 8 — Run a single phase
+```
+--phase="Phase 2"
+```
+Runs all tasks under Phase 2.
+
+## ✔ Use Case 9 — Run multiple phases
+```
+--phases="Phase 1","Phase 3"
+```
+
+## ✔ Use Case 10 — Combine phases + ranges
+```
+--phase="Phase 2" --from=T006
+```
+
+---
+# 6.3 Advanced Kilo Use Cases
+
+## ✔ Use Case 11 — Strict Kilo Orchestrator enforcement
+```
+--kilocode --require-orchestrator --safety-mode=strict
+```
+If Orchestrator Mode is not active → **FAIL immediately**.
+
+## ✔ Use Case 12 — Resume inside Kilo with enforced Orchestrator
+```
+--resume --kilocode --require-orchestrator
+```
+
+## ✔ Use Case 13 — Validate large edit sequences
+```
+--validate-only
+```
+No file changes — useful for previewing multi-file impact.
+
+---
+# 6.4 Special Patterns
+
+## ✔ Use Case 14 — Implement only newly added tasks (metadata-based)
+If tasks.md includes metadata banners:
+```
+--from=Tlast
+```
+
+## ✔ Use Case 15 — Implement by category tags
+If tasks include tags (`[api]`, `[ui]`, etc.):
+```
+--tag=api
+```
+(If supported by your tasks.md variant.)
+
+## ✔ Use Case 16 — Implement only failing tasks from previous run
+```
+--resume --skip-completed
+```
+
+---
 # 7. Troubleshooting
 
 ### ❗ Orchestrator not active
 This workflow will stop (strict mode):
-> "Orchestrator Mode is required (`--require-orchestrator`) but not active."
+> "Orchestrator Mode is required (`--require-orchestrator`) but not active. Please enable Orchestrator Mode in Kilo and re-run."
 
 Fix:
 1. Open Kilo UI

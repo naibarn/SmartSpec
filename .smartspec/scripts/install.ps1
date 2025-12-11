@@ -8,7 +8,7 @@
     - Copies `.smartspec/` and `.smartspec-docs/` into the current project
     - Ensures stable filenames:
         .smartspec/system_prompt_smartspec.md
-        .smartspec/knowledge_base_smartspec.md
+        .smartspec/knowledge_base_smart_spec.md
     - Copies .smartspec/workflows into platform-specific folders if present:
         .kilocode/workflows
         .roo/commands
@@ -163,8 +163,8 @@ if (-not (Test-Path (Join-Path $SmartSpecDir 'system_prompt_smartspec.md'))) {
   Write-Log '⚠️ Warning: .smartspec/system_prompt_smartspec.md not found.'
 }
 
-if (-not (Test-Path (Join-Path $SmartSpecDir 'knowledge_base_smartspec.md'))) {
-  Write-Log '⚠️ Warning: .smartspec/knowledge_base_smartspec.md not found.'
+if (-not (Test-Path (Join-Path $SmartSpecDir 'knowledge_base_smart_spec.md'))) {
+  Write-Log '⚠️ Warning: .smartspec/knowledge_base_smart_spec.md not found.'
 }
 
 ###############################

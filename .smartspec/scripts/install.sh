@@ -8,7 +8,7 @@
 #   - Copies `.smartspec/` and `.smartspec-docs/` into the current project
 #   - Ensures stable filenames:
 #       .smartspec/system_prompt_smartspec.md
-#       .smartspec/knowledge_base_smartspec.md
+#       .smartspec/knowledge_base_smart_spec.md
 #   - Copies .smartspec/workflows into platform-specific folders if present:
 #       .kilocode/workflows
 #       .roo/commands
@@ -162,8 +162,8 @@ if [ ! -f "$SMARTSPEC_DIR/system_prompt_smartspec.md" ]; then
   log "⚠️ Warning: .smartspec/system_prompt_smartspec.md not found."
 fi
 
-if [ ! -f "$SMARTSPEC_DIR/knowledge_base_smartspec.md" ]; then
-  log "⚠️ Warning: .smartspec/knowledge_base_smartspec.md not found."
+if [ ! -f "$SMARTSPEC_DIR/knowledge_base_smart_spec.md" ]; then
+  log "⚠️ Warning: .smartspec/knowledge_base_smart_spec.md not found."
 fi
 
 ###############################

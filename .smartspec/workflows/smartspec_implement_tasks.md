@@ -1,12 +1,11 @@
 name: /smartspec_implement_tasks
-version: 5.7.0
+version: 5.7.1
 role: implementation/execution
 write_guard: ALLOW-WRITE
-purpose: Implement code changes from `tasks.md` (and `spec.md`/`plan.md`
-         when present) with SmartSpec v5.6 centralization, multi-repo
-         and multi-registry alignment, KiloCode Orchestrator support,
-         web-stack (React/Next.js/RSC/Node/npm) guardrails, and
-         AI/data-sensitivity safety.
+purpose: Implement code changes from `tasks.md` (and `spec.md`/`plan.md` when present)
+         with SmartSpec v5.6+ centralization, multi-repo and multi-registry
+         alignment, KiloCode Orchestrator support, web-stack
+         (React/Next.js/RSC/Node/npm) guardrails, and AI/data-sensitivity safety.
 
 ---
 
@@ -300,269 +299,58 @@ These limit the implementation scope to specific phases.
   - override default `.spec/reports/implement-tasks/`.
 
 - `--stdout-summary`
-  - emit a short summary at the end (scope, safety mode, key warnings)
-    to stdout.
+  - print concise per-run summary to stdout (in addition to any
+    report file).
 
 ---
 
 ## 6) Canonical Folders & File Placement
 
-### 6.1 SPEC_INDEX detection
+- Workflow file: `.smartspec/workflows/smartspec_implement_tasks.md`.
+- Manuals: `.smartspec-docs/workflows/smartspec_implement_tasks/`.
+- Reports: `.spec/reports/implement-tasks/` (default, or `--report-dir`).
+- Per-spec artifacts: `specs/<category>/<spec-id>/spec.md|plan.md|tasks.md`.
 
-Detection order:
-
-1. `.spec/SPEC_INDEX.json` (canonical).
-2. `SPEC_INDEX.json` at repo root (legacy mirror).
-3. `.smartspec/SPEC_INDEX.json` (deprecated).
-4. `specs/SPEC_INDEX.json` (older layout).
-
-If `--index`/`--specindex` is provided, it overrides detection.
-
-If no index is found:
-
-- `strict`:
-  - treat as a major gap; prefer `--validate-only` and add governance
-    recommendations rather than unbounded implementation.
-- `dev`:
-  - may continue with local-only assumptions but must emit explicit
-    TODOs to create/validate SPEC_INDEX.
-
-### 6.2 Registries
-
-- primary: `.spec/registry/` or `--registry-dir`.
-- supplemental: `--registry-roots` (read-only).
-
-When `tool-version-registry.json` exists:
-
-- treat as authoritative tool/framework baseline for React/Next/Node;
-- do not downgrade below `min_patch` or outside allowed series;
-- implementation must converge toward allowed baselines where feasible.
-
-If a web stack is detected but `tool-version-registry.json` is missing
-or clearly outdated:
-
-- `strict`:
-  - prefer to block high-risk dependency changes, adding governance
-    recommendations instead of guessing.
-- `dev`:
-  - may implement local changes but must add TODOs to create/refresh
-    the registry under platform/security ownership.
-
-### 6.3 Spec & tasks files
-
-- Spec: `specs/<category>/<spec-id>/spec.md`.
-- Tasks: `specs/<category>/<spec-id>/tasks.md`.
-- Optional plan: `specs/<category>/<spec-id>/plan.md`.
-- Optional `ui.json` for UI specs.
-
-### 6.4 Reports
-
-- default directory: `.spec/reports/implement-tasks/`.
-- suggested file naming:
-  - `<timestamp>_<spec-id>_implement-tasks.{md|json}`.
-
-Reports must include audit metadata:
-
-- workflow name & version;
-- SmartSpec KB version/hash (if available);
-- effective safety-mode;
-- key paths (index, registry-dir, repos-config);
-- detection of web-stack/AI/data-sensitivity;
-- summary of scope and key warnings/blockers.
-
-The workflow must **not** create new top-level directories outside
-`.spec/` or `specs/` by default.
+This workflow must never attempt to write into `.smartspec/` or
+`.smartspec-docs/`.
 
 ---
 
-## 7) Multi-Repo & Multi-Registry Rules
+## 7) Multi-repo & Multi-registry Rules
 
-1. Resolve repos from `--repos-config` first, then `--workspace-roots`.
-2. Treat other repos as **read-only** and **ownership sources**.
-3. When a dependency is owned by another repo:
-   - implement integration/adapter/consumer code only in the current
-     repo;
-   - do not create parallel owners for the same shared concept.
-4. Where registries disagree, treat conflicts as governance issues and
-   avoid creating new shared entities until resolved.
-5. All cross-repo work should be captured as recommendations or tasks,
-   not direct code changes in sibling repos.
+- Use `--workspace-roots` / `--repos-config` to locate related repos.
+- Treat `.spec/registry/` (or `--registry-dir`) as canonical registry.
+- Supplemental registries from `--registry-roots` are read-only.
+- Never write into sibling repos; only scan them for context.
+- Prefer reuse of registry entries over new, duplicate definitions.
 
 ---
 
-## 8) Pre-Implementation Consistency Gate
+## 8) UI Governance Addendum
 
-Before any code changes:
-
-1. Validate that `spec.md`, `tasks.md` (and `plan.md` if present) refer
-   to the same spec ID and scope.
-2. Check SPEC_INDEX and registries for:
-   - name collisions;
-   - mismatched owners;
-   - missing canonical entries for referenced shared entities.
-3. For UI specs, ensure:
-   - `ui.json` (when present) is consistent with spec and tasks;
-   - no instruction implies pushing business logic into `ui.json`.
-
-Under `strict` safety-mode:
-
-- block or fall back to `--validate-only` when:
-  - new shared-name creation is implied without registry confirmation;
-  - registry conflicts or missing baselines would make code unsafe.
+- Respect design-system registries (design tokens, UI components,
+  patterns) when present.
+- Prefer App-level components over raw UI library components for
+  critical flows.
+- `ui.json` may be present for JSON-first flows; business logic must
+  not live in `ui.json`.
 
 ---
 
-## 9) Implementation Strategy & Phasing
+## 9) Web-stack & AI/Data Guardrails
 
-Implement tasks in a dependency-safe order, typically:
+- For React/Next/RSC/Node/npm:
+  - align changes with `tool-version-registry.json`;
+  - avoid unsafe version downgrades or fragmentation;
+  - be careful with RSC/SSR/Edge boundaries and `react-server-dom-*`.
 
-1. Shared contracts/interfaces (only when explicitly required and
-   registry-aligned).
-2. Domain models and core business logic.
-3. Service/use case layer.
-4. API/controllers and integration boundaries.
-5. Persistence/data access.
-6. Observability (logging/metrics/tracing).
-7. Security and access control.
-8. UI components and interactions.
-9. AI/LLM layer glue (if applicable).
+- For AI/LLM features:
+  - treat models as untrusted; defend against prompt-injection;
+  - avoid secrets/PII in prompts, logs, and tests.
 
-When `--focus` is set, adjust emphasis but keep dependencies intact.
-
----
-
-## 10) UI JSON & Design-System Addendum
-
-Apply when any of:
-
-- spec category is `ui` in SPEC_INDEX;
-- `ui.json` exists beside `spec.md`;
-- spec references Penpot/UI JSON flows.
-
-Rules:
-
-- `ui.json` is design-owned source; treat as read-only unless tasks
-  explicitly require engineering changes.
-- never embed business logic or permission rules in `ui.json`.
-- align components with:
-  - `ui-component-registry.json`;
-  - `app-component-registry.json` (prefer App-level wrappers);
-  - `design-tokens-registry.json` (colors/spacing/typography/etc.);
-  - `patterns-registry.json` (layout flows).
-
-Implementation expectations:
-
-- use App-level components like `AppButton`, `AppCard`, etc., instead
-  of raw library components where defined.
-- use standard loading/empty/error components.
-- keep data fetching and domain logic in code, not in UI JSON.
-
----
-
-## 11) Web Stack Guardrails (React/Next.js/RSC/Node/npm)
-
-When implementing for React/Next.js/Node/RSC stacks:
-
-1. Respect `tool-version-registry.json`:
-   - do not downgrade React/Next/Node below `min_patch`;
-   - prefer converging to a single allowed series per runtime boundary;
-   - avoid mixing incompatible versions across microfrontends that
-     share a runtime.
-
-2. Treat RSC/server actions/`react-server-dom-*` as high-risk:
-   - ensure data crossing server/client boundaries is validated and
-     sanitized;
-   - check that secrets and sensitive data never appear in serialized
-     payloads or client bundles;
-   - verify access control around server actions.
-
-3. SSR/Edge:
-   - verify environment variables are not rendered accidentally;
-   - ensure cache headers and revalidation policies do not leak
-     sensitive data;
-   - confirm logging does not dump raw HTTP bodies or secrets.
-
-4. Dependency & CI hygiene:
-   - keep lockfiles present and consistent;
-   - wire up dependency scans (`npm audit`/SCA tools);
-   - ensure CI checks actual runtime tool versions vs registry baselines.
-
----
-
-## 12) AI & Data-Sensitivity Guardrails
-
-When the feature involves AI/LLM:
-
-- implement prompt/context construction following tasks.md guidance;
-- ensure instruction hierarchy and system prompts are centralized,
-  not scattered in code;
-- never embed secrets/PII in prompts or prompt templates;
-- add logging for AI interactions that:
-  - avoids raw user data where possible;
-  - redacts sensitive fields;
-  - is governed by retention policy.
-
-When the feature touches sensitive data (PII/financial/health/trade
-secrets/regulated):
-
-- apply data classification and masking where appropriate;
-- avoid copying production logs or data into code, tests, or examples;
-- integrate with external DLP/secret-scanning tooling as required.
-
----
-
-## 13) Testing Expectations
-
-Implement or update tests aligned with:
-
-- domain and service logic;
-- contracts for shared APIs;
-- integration flows across services;
-- performance/SLA when defined.
-
-Testing must:
-
-- respect ownership (no re-creating cross-repo owners just to make
-  tests pass);
-- avoid using real production data or secrets in fixtures or snapshots.
-
----
-
-## 14) Checkbox Update Rules (`tasks.md`)
-
-A task can be marked as completed only when:
-
-- required code changes are implemented;
-- acceptance criteria in `tasks.md` are met;
-- required tests listed for that task are green.
-
-Partial completion:
-
-- add notes under the task;
-- do **not** check the box.
-
-`--skip-completed` (default) skips already checked tasks.
-`--force-all` can re-run implementation regardless of checkbox state.
-
----
-
-## 15) Required Final Summary & Report
-
-Each run must produce:
-
-- human-readable summary:
-  - tasks attempted/completed;
-  - key files changed or created;
-  - registry alignment and conflicts;
-  - UI JSON/design-system notes (if applicable);
-  - web-stack and AI/data-sensitivity guardrails applied;
-  - open risks/blockers;
-  - suggested follow-up commands or workflows.
-
-- when `--report-dir` is set or defaulting to
-  `.spec/reports/implement-tasks/`:
-  - write an implementation report with the above content plus
-    audit metadata.
+- For sensitive/regulated data:
+  - assume external tools (DLP, secret scanners, SCA) complement this
+    workflow; make these dependencies explicit where relevant.
 
 ---
 
@@ -637,7 +425,7 @@ Before treating this spec as stable, verify:
   - `--architect`
   - `--kilocode`
 
-- **New additive (v5.6.4):**
+- **New additive (v5.6.4+):**
   - `--dry-run` (alias for `--validate-only`)
   - `--report-dir`
   - `--stdout-summary`
@@ -666,6 +454,41 @@ When Orchestrator is unavailable:
 
 - in `dev`:
   - may degrade to a linear flow with a warning in the report.
+
+### 18.1 Failure handling under KiloCode
+
+When running under Kilo with `--kilocode`, this workflow must treat
+single tool/edit failures (for example Kilo messages such as
+"Edit Unsuccessful" / "Kilo Code is having trouble…") as
+**recoverable** events, not automatic hard stops.
+
+If an edit attempt fails while `--kilocode` is active:
+
+1. **Narrow the scope instead of stopping**
+   - prefer retrying with:
+     - fewer tasks in scope (e.g. a smaller `--tasks` range or a single
+       `Txxx`), and/or
+     - a smaller file/line range for the same task.
+   - surface a short note in the per-run summary/report explaining why
+     the larger edit failed (too large, ambiguous, conflicting context).
+
+2. **Ask for user/Orchestrator guidance**
+   - explicitly suggest 1–3 next-step options, such as:
+     - "split this route into two tasks (read vs write)",
+     - "run again with `--tasks=T003` only",
+     - "run once with `--validate-only` to review the planned changes
+        before editing".
+
+3. **Prefer Orchestrator-per-task over giant edits**
+   - when multiple tasks are in scope, keep the Orchestrator loop
+     per top-level task rather than attempting a single monolithic edit
+     across many files.
+   - allow the Orchestrator to re-plan smaller edits after failures,
+     while preserving ownership and registry rules.
+
+Only treat repeated failures on a **narrow, well-specified scope** as a
+hard stop condition, and report these clearly (including which task and
+file/line range failed).
 
 When Kilo is not detected, `--kilocode` is a no-op meta-flag.
 
@@ -747,6 +570,15 @@ but must not invoke them itself.
     `.spec/reports/implement-tasks/`.
 14. If `--stdout-summary` is set, print a concise summary including
     safety-mode and key warnings.
+15. Under KiloCode (when `--kilocode` is present):
+    - if a tool/edit attempt fails mid-run (for example Kilo reports
+      "Edit Unsuccessful" or similar), do **not** end the workflow
+      immediately;
+    - instead, follow the failure-handling rules in Section 18.1:
+      - narrow the scope (fewer tasks, smaller file ranges),
+      - surface a short explanation of the failure,
+      - and propose concrete next steps or task splits for the user or
+        Orchestrator.
 
 ### 21.2 Stop conditions
 

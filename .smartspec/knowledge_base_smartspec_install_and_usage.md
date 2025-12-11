@@ -1,255 +1,207 @@
-# SmartSpec Knowledge Base V2 (English)
-## Installation, Usage, Governance, and Workflow Definitions
-### Fully Rewritten Version Supporting New Strict Verification System
----
+# UPDATED KNOWLEDGE BASE – `knowledge_base_smartspec_install_and_usage.md`
+## Additive Extension for Workflow: `/smartspec_report_implement_prompter`
+### Version: 1.0.2 — Installation & Usage Manual Extension
 
-# 1. Overview
-SmartSpec is a structured software architecture and development workflow system used across:
-- **Kilo Code**
-- **Claude Code**
-- **Google Antigravity**
-
-SmartSpec provides:
-- A complete lifecycle: **SPEC → PLAN → TASKS → IMPLEMENT**
-- Workflow automation
-- Governance and safety policies
-- Registries and cross-project indexing
-- UI schema and design rules
-
-This Knowledge Base V2 is a **full rewrite**, preserving **all existing functionality**, while adding support for:
-- `/smartspec_verify_tasks_progress_strict` (new canonical verifier)
-- `/smartspec_sync_tasks_checkboxes` (new evidence-driven task sync)
-
-The legacy `/smartspec_verify_tasks_progress` is now deprecated.
+> **NOTE:** This update is *additive* and does **not** modify or override existing SmartSpec CLI rules. All original workflow definitions remain valid. This extension introduces the new workflow, usage patterns, flags, and lifecycle integration.
 
 ---
-
-# 2. Architecture Summary
-SmartSpec enforces a predictable chain of development artifacts:
-
-```
-SPEC → PLAN → TASKS → IMPLEMENT → DELIVERY
-```
-Each stage is generated, validated, and governed via SmartSpec workflows.
+# 1. Overview (Unchanged Core)
+*(Original installation and general workflow usage content preserved; new workflow added below.)*
 
 ---
-# 3. Installation
-SmartSpec installs differently depending on platform.
+# 2. NEW WORKFLOW ADDITION
 
-## 3.1 Kilo Code
-Run installation workflow:
-```
-/smartspec_install --kilocode
-```
-This installs:
-- command wrappers
-- IDE hooks
-- task verification tools
+# `/smartspec_report_implement_prompter`
+### Classification
+Evidence-Driven Implementation Prompt Generator (post-strict-verification helper)
 
-## 3.2 Claude Code
-```
-/smartspec_install
-```
-
-## 3.3 Google Antigravity
-```
-/smartspec_install --workspace-roots=<paths>
-```
-Multi-repo mode supported.
-
----
-# 4. Directory Conventions
-```
-project/
-  specs/
-    feature/<spec-id>/spec.md
-    feature/<spec-id>/tasks.md
-  .smartspec/
-    workflows/
-    registries/
-    reports/
-  src/
-  tests/
-  docs/
-```
-
----
-# 5. Governance Rules
-## 5.1 Write Guards
-Each workflow declares write permissions:
-- `NO-WRITE` — read-only
-- `TASKS-ONLY` — allowed to modify tasks.md only
-- `REGISTRY-ONLY`, etc.
-
-## 5.2 Registries
-Registries store cross-project metadata.
-- API registry
-- Data model registry
-- Critical sections registry
-
-Workflows must respect:
-- `--registry-roots`
-- `--registry-dir`
-
-## 5.3 SPEC_INDEX
-Maintains dependency structure of specs.
-Used by generate/verify workflows.
-
-## 5.4 UI / Design Rules
-SmartSpec UI governance requires:
-- JSON-first UI definitions
-- Approved App Components only
-- No raw CSS unless allowed
-
-
----
-# 6. Standard Workflows
-All original workflows remain valid.
-
-## 6.1 /smartspec_generate_spec
-Creates initial `spec.md` based on project request.
-
-## 6.2 /smartspec_generate_plan
-Transforms spec → engineering plan.
-
-## 6.3 /smartspec_generate_tasks
-Creates `tasks.md` from plan.
-
-## 6.4 /smartspec_generate_implement
-Creates scaffolding code from tasks.
-
-## 6.5 /smartspec_lint, /smartspec_format
-Linting & formatting.
-
-## 6.6 /smartspec_project_copilot
-Guides next actions in project lifecycle.
-
-## 6.7 /smartspec_ui_*
-UI creation & validation workflows.
-
-All of these work unchanged.
-
----
-# 7. **Deprecated Workflow (DO NOT USE)**
-### `/smartspec_verify_tasks_progress`
-```
-STATUS: DEPRECATED — NOT RECOMMENDED FOR USE
-```
-### Reason for Deprecation
-The legacy workflow:
-- Relied on checkbox-first logic
-- Could not reliably detect missing implementation
-- Failed when tasks were improperly mapped
-- Caused verification loops where tasks never resolved properly
-
-### Replacement Workflow
-Use **`/smartspec_verify_tasks_progress_strict`** instead.
-
----
-# 8. New Strict Workflow (Replaces Legacy Verify)
-# `/smartspec_verify_tasks_progress_strict`
 ### Purpose
-A strict, evidence-first verification workflow ensuring tasks are only considered complete when:
-- Implementation exists
-- Tests exist
-- Documentation exists (when required)
-- Deployment artifacts exist (when required)
+This workflow reads the JSON output produced by `/smartspec_verify_tasks_progress_strict` and generates:
+- A summarized set of implementation gaps
+- Domain‑clustered implementation prompts (API / Tests / Docs / Deploy)
+- Optional JSON outputs for UI/IDE integrations
 
-### Key Features
-- Built-in evidence scanners (no external script needed)
-- JSON + Markdown report generation
-- Strict verdicts: `complete`, `partial`, `incomplete`, `false_positive`, `unsynced_complete`
-- Anti-loop diagnostics
-- Optional per-spec evidence config
-
-### Example Usage
-```
-/smartspec_verify_tasks_progress_strict \
-  --spec specs/feature/spec-002/spec.md \
-  --report-format=both \
-  --report=detailed
-```
-
-### JSON Report Example
-```
-/spec/reports/verify-tasks-progress/spec-002.json
-```
-Contains:
-- task verdicts
-- missing evidence
-- matched evidence
-- progress metrics
+It exists to reduce repetitive implement‑verify cycles by providing targeted, context‑aware AI‑consumable instructions.
 
 ---
-# 9. New Workflow
-# `/smartspec_sync_tasks_checkboxes`
-### Purpose
-Synchronize checkboxes in `tasks.md` based on verified evidence from strict workflow.
+# 3. Installation & Invocation
+Since this is a first-party SmartSpec workflow, installation requires **no additional setup** beyond regular SmartSpec installation.
 
-### Rules
-- Only modifies `tasks.md`
-- Uses JSON report from strict verify
-- Safe & Auto modes available
-
-### Example
-```
-/smartspec_sync_tasks_checkboxes \
-  --tasks specs/feature/spec-002/tasks.md \
-  --report .spec/reports/verify-tasks-progress/spec-002.json \
-  --mode=auto
+To use the workflow, run:
+```bash
+/smartspec_report_implement_prompter \
+  --spec <path/to/spec.md> \
+  --tasks <path/to/tasks.md> \
+  --report <path/to/strict-report.json> \
+  --output <directory>
 ```
 
 ---
-# 10. Recommended Flow
-```
-# 1. Verify real implementation
-/smartspec_verify_tasks_progress_strict --spec <path> --report-format=json
+# 4. Required & Optional Flags
 
-# 2. Sync checkboxes based on evidence
-/smartspec_sync_tasks_checkboxes --tasks <path> --report <json>
+## 4.1 Required Flags
+| Flag | Description |
+|------|-------------|
+| `--spec` | Path to the SPEC file used during strict verification. |
+| `--tasks` | Path to the corresponding TASKS file. |
+| `--report` | Path to the strict verification JSON report. |
+
+## 4.2 Optional Flags
+| Flag | Purpose |
+|------|---------|
+| `--output` | Directory to write prompt files; optional but recommended. |
+| `--cluster` | Limit generation to `api`, `tests`, `docs`, `deploy`, or `all`. |
+| `--language` | Force output language (`th` or `en`). |
+| `--workspace-roots` | Required for multi-repo resolution. |
+| `--repos-config` | Required for multi-repo workspace graph binding. |
+| `--evidence-config` | Custom evidence mapping for tasks or clusters. |
+| `--dry-run` | Print what would be generated; create no files. |
+| `--format` | Output format: `markdown` (default) or `json`. |
+| `--max-tasks-per-prompt` | Override default limit (15). |
+| `--max-chars-per-prompt` | Override default limit (35,000 chars). |
+
+---
+# 5. Multi‑Repo Usage Guidance
+This workflow requires **the same workspace context** as the strict verifier.
+
+### When working in a multi-repo setup:
+```
+--workspace-roots <paths> \
+--repos-config <path/to/repos-config.json>
+```
+These flags ensure correct resolution of:
+- SPEC path
+- TASKS path
+- Strict report path
+- Evidence config path
+
+If missing while multi-repo mode is detected → workflow must warn.
+
+---
+# 6. Evidence Config Usage
+Some projects have custom evidence rules, e.g.:
+- alternative test directories
+- custom doc-generation locations
+- domain-specific verification requirements
+
+The workflow can read:
+```
+--evidence-config config.json
+```
+Or auto-discover:
+```
+.smartspec/evidence-config/<spec-id>.json
+```
+This affects cluster mapping and prompt instructions.
+
+---
+# 7. Output Directory Structure
+If `--output` is provided, the workflow generates:
+```
+.smartspec/prompts/<spec-id>/
+  ├── README.md
+  ├── api-implementation-prompt.md
+  ├── testing-prompt.md
+  ├── documentation-prompt.md
+  ├── deployment-prompt.md
+```
+When limits exceeded:
+```
+  testing-prompt-1.md
+  testing-prompt-2.md
+```
+When no implementation is required:
+```
+  README.md (summary only)
 ```
 
 ---
-# 11. CI/CD Integration Example
-```
-- name: SmartSpec Strict Verification
-  run: |
-    /smartspec_verify_tasks_progress_strict --spec $SPEC --report-format=json > strict.json
-    /smartspec_sync_tasks_checkboxes --tasks $TASKS --report strict.json --mode=auto
-```
+# 8. Task Classification Rules (Usage Perspective)
+Tasks in the strict report are categorized as:
 
----
-# 12. Multi-Repo Use
-SmartSpec supports multi-workspace verification via:
+### `unsynced_only`
+Evidence complete; only checkbox mismatch.
+Recommend:
 ```
---workspace-roots=<paths>
---repos-config=<file>
+/smartspec_sync_tasks_checkboxes
 ```
 
-This applies equally to strict verification and sync workflows.
+### `simple_not_started`
+Not critical; implementation straightforward.
+Recommend:
+```
+/smartspec_implement_tasks
+```
+
+### `complex_cluster`
+Critical, ambiguous, or multi-file implementation required → Workflow generates prompts.
 
 ---
-# 13. Error Handling & Diagnostics
-The strict verifier reports:
-- Missing evidence per task
-- Wrong file locations
-- Mapping problems
-- Tasks stuck in repeated incomplete state
+# 9. Integration with `/smartspec_project_copilot`
+When the strict verifier shows:
+- Critical missing components
+- Partial phases
+- Large numbers of incomplete tasks
 
-Sync workflow handles:
-- Missing JSON report
-- Unknown task IDs
-- Dry-run safety mode
-
----
-# 14. Summary
-SmartSpec Knowledge Base V2 introduces:
-- A fully reliable strict verification system
-- Evidence-driven task syncing
-- Cleaner governance and workflow design
-- Official deprecation of flawed legacy verify system
-
-All original functionality remains intact, but strict verification is now the standard method for progress validation.
+The project copilot should recommend:
+```
+Run /smartspec_report_implement_prompter to generate IDE-ready implementation prompts.
+```
+This is officially supported UI guidance.
 
 ---
-End of Knowledge Base V2
+# 10. Localization Rules
+Language resolved by:
+1. `--language`
+2. `Language:` header in spec
+3. Spec/Tasks content ratio (>20% Thai → TH)
+4. Platform default (Kilo Code → TH)
+5. Default fallback → EN
+
+---
+# 11. Example Usage Scenarios
+
+## Scene A: API endpoints incomplete
+Strict report shows missing endpoints → Workflow produces `api-implementation-prompt.md`.
+
+## Scene B: Entire testing phase incomplete
+Workflow clusters all test tasks → Produces `testing-prompt.md`.
+
+## Scene C: Deployment not ready
+Missing K8s manifests / monitoring → Produces `deployment-prompt.md`.
+
+## Scene D: All tasks implemented
+Workflow outputs only README.md summarizing no remaining work.
+
+---
+# 12. JSON Output Mode
+If run with:
+```
+--format json
+```
+Workflow emits structured JSON containing:
+- clusters
+- tasks per cluster
+- rendered prompt body
+- metadata
+
+This enables consumption by IDE sidebars or SmartSpec UI modules.
+
+---
+# 13. Error Handling Behavior
+Workflow must:
+- Warn if strict report missing or unreadable
+- Warn if report version > supported
+- Warn if unresolved task IDs
+- Warn if no clusters detected
+- Continue safely with fallback behaviors
+
+---
+# 14. Large Report Handling
+For reports exceeding thresholds:
+- Use streaming parser
+- Limit generation to complex tasks unless overridden by user flags
+
+---
+# END OF KB EXTENSION (`knowledge_base_smartspec_install_and_usage.md`)
+

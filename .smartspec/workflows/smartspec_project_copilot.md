@@ -125,6 +125,12 @@ The copilot must treat the following as **primary evidence** sources, read-only:
   - Optional legacy/mirror locations (e.g., repo-root `SPEC_INDEX.json`,
     `.smartspec/SPEC_INDEX.json`, `specs/SPEC_INDEX.json`) for backward
     compatibility, but `.spec/` is authoritative.
+  - **`.smartspec/WORKFLOW_INDEX.json` (when present) as the canonical index
+    of available SmartSpec workflows (id, role, category, status, write_guard,
+    CLI flags, supported_platforms).**
+    - If missing or unreadable, the copilot must fall back to scanning
+      `.smartspec/workflows/smartspec_*.md` and manuals under
+      `.smartspec-docs/workflows/**` as in v5.7.0 behaviour.
 
 - **Registries** (under `.spec/registry/` and `--registry-roots`)
   - `tool-version-registry.json` (web-stack baselines).
@@ -390,6 +396,13 @@ this layout (section titles may be localised but structure must remain):
      - purpose (one line);
      - 1–3 example CLI commands in a `bash` block that are consistent with the
        workflow’s manual.
+   - When suggesting example commands for workflows that are sensitive to
+     multi-repo context (e.g., `/smartspec_verify_tasks_progress_strict`,
+     `/smartspec_report_implement_prompter`, `/smartspec_reindex_workflows`),
+     the copilot should propagate any detected `--workspace-roots` and
+     `--repos-config` flags consistent with how the strict verifier or index
+     workflows were run.
+
 
 5. **Weakness & Risk Check**
    - Short recap of:
@@ -605,3 +618,44 @@ safely, it must:
 - suggest which SmartSpec workflows or artefacts the user should create/run
   first, before calling `/smartspec_project_copilot` again.
 
+---
+
+## 17) WORKFLOW_INDEX integration (NEW, v5.8.0)
+
+When recommending SmartSpec workflows & commands (Section 9.4 and Section 10),
+`/smartspec_project_copilot` should:
+
+1. **Use WORKFLOW_INDEX.json when available**
+   - Load `.smartspec/WORKFLOW_INDEX.json` as the primary catalogue of workflows.
+   - Filter candidate workflows by:
+     - `status` (prefer `stable`, avoid `deprecated` unless explicitly requested),
+     - `role` / `category` (e.g., `verify/strict`, `support/implement`, `index/governance`),
+     - `supported_platforms` (must include the current platform),
+     - `tags` (e.g., `strict`, `prompt`, `index`).
+
+2. **Confirm details using workflow specs/manuals**
+   - After selecting candidates from WORKFLOW_INDEX, read the corresponding
+     `.smartspec/workflows/smartspec_*.md` and, when present,
+     `.smartspec-docs/workflows/**` to confirm:
+       - CLI name,
+       - required/optional flags,
+       - typical usage.
+   - All command correctness rules from Section 10 still apply.
+
+3. **Integrate with new governance workflows**
+   - When WORKFLOW_INDEX indicates `smartspec_report_implement_prompter`:
+     - After strict verification reports show complex gaps, recommend
+       `/smartspec_report_implement_prompter` as a follow-up to generate
+       IDE-ready implementation prompts.
+   - When WORKFLOW_INDEX indicates `smartspec_reindex_workflows`:
+     - If workflows appear missing or inconsistent, recommend
+       `/smartspec_reindex_workflows` to rebuild the workflow index.
+
+4. **Fallback when WORKFLOW_INDEX is absent**
+   - If `.smartspec/WORKFLOW_INDEX.json` is missing or unreadable:
+     - State explicitly in the Weakness & Risk Check that the copilot is
+       falling back to scanning `.smartspec/workflows/` directly.
+     - Behaviour must remain compatible with v5.7.0.
+
+This section is additive and does not remove any existing behaviour. It only
+defines how to take advantage of WORKFLOW_INDEX.json when present.

@@ -218,6 +218,10 @@ Semantics:
   - when running inside Kilo, the workflow MUST verify that
     Orchestrator Mode is active **before** starting implementation
     when this flag is set.
+  - if the environment does **not explicitly report** that Orchestrator
+    Mode is active (for example, no `env.orchestrator_active = true`
+    or equivalent signal is present), this workflow MUST treat
+    Orchestrator as **not active** and apply the rules below.
   - if Orchestrator Mode is not active or cannot be enabled by the IDE:
     - in `strict` safety mode: the workflow MUST stop early with a
       clear error message explaining that Orchestrator is required but
@@ -332,6 +336,9 @@ These limit the implementation scope to specific phases.
     Kilo Orchestrator Mode.
   - when running inside Kilo, the workflow MUST verify that
     Orchestrator Mode is active **before** starting implementation.
+  - if the environment does **not explicitly report** that Orchestrator
+    Mode is active, the workflow MUST treat Orchestrator as **not
+    active** and apply the Section 18 rules for `--require-orchestrator`.
   - if Orchestrator Mode is not active or cannot be enabled by the IDE,
     the workflow MUST:
     - in `strict` safety mode: fail fast with a clear error message
@@ -501,8 +508,11 @@ When `--kilocode` is present and Kilo is detected:
   enable Orchestrator Mode if it chooses to do so.
 
 When both `--kilocode` and `--require-orchestrator` are present and
-Kilo Orchestrator Mode is **not** active:
+Kilo Orchestrator Mode is **not explicitly reported as active by the
+environment**:
 
+- the workflow MUST assume Orchestrator is **not active** (missing,
+  false, or unknown signals are treated as "not active").
 - in `strict` safety mode, this workflow MUST stop early with a
   configuration error such as:
 
@@ -615,8 +625,14 @@ but must not invoke them itself.
 1.a Under Kilo with `--kilocode` and `--require-orchestrator`:
     - verify that Kilo Orchestrator Mode is active **before**
       proceeding;
-    - if not active, apply the failure/warning rules from Section 18
-      (KiloCode Support) and stop the run early in `strict` mode.
+    - check the environment for an explicit signal that Orchestrator
+      is active (for example `env.orchestrator_active = true` or an
+      equivalent integration flag);
+    - if such a signal is **missing, false, or unknown**, the workflow
+      MUST treat Orchestrator as **not active** and apply the
+      failure/warning rules from Section 18 (KiloCode Support);
+    - in `strict` mode, the run MUST stop early when Orchestrator is
+      treated as not active.
 
 2. Resolve SPEC_INDEX and registry directories using canonical order.
 3. Detect presence/absence of `tool-version-registry.json` and

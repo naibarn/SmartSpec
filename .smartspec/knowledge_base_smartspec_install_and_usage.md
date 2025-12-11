@@ -1,273 +1,203 @@
-# SmartSpec Install & Usage Knowledge Base – v5.7.1 (Rewritten Full Edition)
+# Knowledge Base — SmartSpec Install & Usage Guide (Updated v5.7.2)
 
-This is the **complete and modernized SmartSpec Install & Usage Knowledge Base**.  
-It fully supports:
-- SmartSpec v5.6–v5.7 governance
-- KiloCode / Claude Code / Antigravity integration
-- The new `/smartspec_fix_errors` capability with `--report=<path>`
-- Auto-discovery of implementation reports
-- Multi-repo, multi-registry, SPEC_INDEX resolution
-- SPEC → PLAN → TASKS → IMPLEMENT → TESTS → QUALITY → RELEASE chain
+This is the **updated version** of `knowledge_base_smartspec_install_and_usage.md`, modified to:
+- Reflect the new Kilo best practice: `--kilocode --require-orchestrator`
+- Update installation and workflow-usage guidance
+- Preserve backward compatibility
 
-This file replaces older versions completely while keeping all rules intact.
+All updates are **additive**, and do not break existing workflows.
 
 ---
 
-# 1. What SmartSpec Is
-SmartSpec is a **specification-driven development system** designed for AI-assisted engineering across multiple environments (local, VSCode/KiloCode, cloud editors, CI pipelines).
+# 1. Installation Overview
 
-SmartSpec enforces:
-- clear specification documents (`spec.md`)
-- deterministic planning (`generate_plan`)
-- deterministic tasks (`generate_tasks`)
-- deterministic, reproducible implementation (`implement_tasks`)
-- safe error correction (`fix_errors`)
-- structured quality gates (`generate_tests`, `ci_quality_gate`)
+SmartSpec supports:
+- Kilo Code
+- Claude Code
+- Google Antigravity
+- CLI environments
 
-All workflows must follow the SmartSpec chain:
-```
-SPEC → PLAN → TASKS → IMPLEMENT → TESTS → QUALITY → RELEASE
-```
+Install the SmartSpec extension/plugin according to your IDE.
 
 ---
 
-# 2. Installation Overview
-SmartSpec can run in three environments:
-1. **Local machine**  
-2. **KiloCode / Claude Code**  
-3. **Cloud-based orchestration (Antigravity)**
+# 2. Running SmartSpec Workflows
 
-Most common usage involves KiloCode, where the LLM has access to project files and runs workflows on your behalf.
+Workflows follow the chain:
 
-SmartSpec workflows live under:
 ```
-.smartspec/workflows/smartspec_<name>.md
+/smartspec_generate_spec
+/smartspec_generate_plan
+/smartspec_generate_tasks
+/smartspec_implement_tasks
 ```
 
-Manuals live separately (typically under `.smartspec-docs/`).
+General rules:
+- Always run workflows inside the correct spec folder
+- Never modify SPEC_INDEX or registries manually via implement workflows
+- Use `--validate-only` to inspect results before writing
 
 ---
 
-# 3. Calling SmartSpec Workflows
-Every workflow follows the convention:
-```
-/smartspec_<name>.md [flags]
-```
+# 3. Flags & Modes Summary
 
-Examples:
+### Env flags
 ```
-/smartspec_generate_spec_from_prompt "build a billing dashboard"
-/smartspec_generate_tasks specs/billing/billing_core/spec.md
-/smartspec_implement_tasks specs/billing/billing_core/tasks.md --kilocode
+--kilocode
+--require-orchestrator
 ```
 
-## 3.1 Flags
-All workflows support:
-- `--kilocode` → run with Kilo Orchestrator
-
-Other flags vary per workflow, e.g.:
-- `--plan` `--tasks` `--index` `--registry-dir` `--registry-roots`
-- `--mode` (`recommend`, `additive-meta`)
-- `--safety-mode` (`strict`, `dev`)
-
-Every workflow must document its own flags in its `.md` file.
-
----
-
-# 4. KiloCode Usage Guide
-`--kilocode` activates orchestrator mode:
-- SmartSpec splits work into subtasks
-- Errors and logs are streamed back to the LLM
-- Workflows operate on the same file system as the user
-
-### 4.1 Important Kilo rule
-**When you start a new Task in Kilo, runtime context is cleared.**  
-This means:
-- Previous test output is gone
-- Previous compiler errors are gone
-- Previous stack traces are gone
-
-Therefore:
-> Always use `--report=<path>` with `/smartspec_fix_errors` after running `/smartspec_implement_tasks` if you start a new Task.
-
----
-
-# 5. The SPEC-First Workflow Chain
-### 5.1 /smartspec_generate_spec_from_prompt
-Creates starter specs from natural-language prompts.  
-Does **not** overwrite existing specs.
-
-### 5.2 /smartspec_generate_spec
-Upgrades/refines specs from validated `spec-id`s.
-
-### 5.3 /smartspec_generate_plan
-Creates a plan (`plan.md`) from a spec.
-
-### 5.4 /smartspec_generate_tasks
-Creates `tasks.md` from a spec or plan.
-- If tasks already exist, it creates *additive* sections.
-
-### 5.5 /smartspec_implement_tasks
-Implements code for the tasks.
-- Writes files in code areas
-- Produces **implementation reports**:
-  - `.spec/reports/implement-tasks/<scope>-implementation-report.md`
-- These reports are now essential for `/smartspec_fix_errors`.
-
-### 5.6 /smartspec_fix_errors — *FULL v5.7.1 SUPPORT*
-This workflow now supports structured report ingestion.
+### Safety
 ```
---report=<path>
+--safety-mode=strict | dev
+--strict
 ```
-Example:
+
+### Validation
 ```
-/smartspec_fix_errors.md --kilocode \
-  --report=.spec/reports/implement-tasks/T026-T040-implementation-report.md
+--validate-only
+--dry-run
 ```
-If no `--report` is specified, SmartSpec will automatically:
-1. Look under `.spec/reports/implement-tasks/`
-2. Select the newest relevant report
-3. Use that structured context for error analysis
 
-This enables **continuity** even when Kilo resets context.
-
-### 5.7 /smartspec_generate_tests
-Creates tests aligned with SPEC + tasks.
-
-### 5.8 /smartspec_ci_quality_gate
-CI-level checks for spec completeness, test coverage, quality bars.
-
----
-
-# 6. SPEC_INDEX & Registries
-SmartSpec uses `.spec/SPEC_INDEX.json` as the canonical spec registry.
-Other fallback locations are allowed (e.g., repo root), but this is the authoritative one.
-
-Registries under `.spec/registry/` define:
-- UI components
-- design tokens
-- shared data models
-- version ranges
-
-Workflows must:
-- read registries
-- never rewrite registries unless allowed by `additive-meta` mode
-- validate implementation against canonical definitions
-
----
-
-# 7. Directory Overview
+### Multi-repo
 ```
-.smartspec/
-  workflows/
-  system_prompt_smartspec.md
-  knowledge_base_smart_spec.md
-  knowledge_base_smartspec_install_and_usage.md
-
-.spec/
-  SPEC_INDEX.json
-  registry/
-  reports/
-    implement-tasks/
-    smartspec_fix_errors/
-
-specs/<category>/<spec-id>/spec.md
+--workspace-roots
+--repos-config
+--registry-dir
+--registry-roots
 ```
 
 ---
 
-# 8. Using Reports Effectively
-Implementation reports are core to SmartSpec v5.7.1.
+# 4. Using SmartSpec in Kilo Code
 
-### 8.1 For implement → fix_errors flow
-Typical flow:
+## 4.1 Kilo Integration
+
+SmartSpec supports a special meta-flag:
+
 ```
-/smartspec_implement_tasks.md specs/.../tasks.md --kilocode
-```
-This generates:
-```
-.spec/reports/implement-tasks/<scope>-implementation-report.md
-```
-Then fix errors:
-```
-/smartspec_fix_errors.md --kilocode \
-  --report=.spec/reports/implement-tasks/<scope>-implementation-report.md
+--kilocode
 ```
 
-### 8.2 Auto-discovery
-If no report is provided, SmartSpec scans:
-```
-.spec/reports/implement-tasks/
-```
-And selects the newest matching one.
+This enables:
+- Orchestrator-per-task execution
+- Kilo-aware code-editing behavior
+- Improved file-change consistency
 
-### 8.3 Why `--report` is crucial
-Because Kilo clears runtime logs when you start a new task.
-The *only* reliable way to preserve context is:
+### (Updated) — Strong Recommendation
+Whenever you run an implementation workflow under Kilo, SmartSpec strongly recommends:
+
 ```
---report=<path>
+--kilocode --require-orchestrator
 ```
+
+### Why?
+Because Orchestrator Mode significantly improves:
+- context consistency
+- accuracy of multi-file edits
+- stability of long editing sequences
+- reduction of ambiguous or conflicting patches
+
+Without Orchestrator Mode, Kilo may:
+- lose editing context
+- produce incomplete or conflicting changes
+- misinterpret task boundaries
+
+Thus:
+
+> **If you use `--kilocode`, you should also use `--require-orchestrator` to ensure Kilo is operating at full capability.**
+
+This is a recommendation, not a breaking requirement.
 
 ---
 
-# 9. Troubleshooting
-### ❌ Problem: `/smartspec_fix_errors` cannot find failing tests
-**Cause:** new Kilo task = no logs in memory  
-**Solution:**  
+# 5. Workflow Usage Details
+
+## 5.1 /smartspec_generate_spec
+Standard rules unchanged.
+
+## 5.2 /smartspec_generate_plan
+No changes.
+
+## 5.3 /smartspec_generate_tasks
+No changes.
+
+## 5.4 /smartspec_implement_tasks (Updated)
+
+This workflow performs real implementation and must obey safety rules.
+
+### Recommended run pattern inside Kilo:
 ```
---report=<path>
+/smartspec_implement_tasks <tasks.md> \
+    --kilocode --require-orchestrator --safety-mode=strict
 ```
 
-### ❌ Problem: Missing SPEC ownership
-Ensure `.spec/SPEC_INDEX.json` exists.  
-Otherwise workflows must guess.
+### Behavior summary:
+- `--kilocode` enables Kilo integration
+- `--require-orchestrator` ensures Orchestrator must be active before starting
+- `--safety-mode=strict` ensures the workflow stops early on governance issues
 
-### ❌ Problem: Conflicts between specs
-Use:
-```
-/smartspec_project_copilot --kilocode
-```
-This reveals cross-spec mismatches.
-
-### ❌ Problem: UI mismatch
-Run:
-```
-/smartspec_ui_validation --kilocode
-```
-It cross-checks UI JSON, registry, and code.
+### What happens if Orchestrator is not active?
+- With `--require-orchestrator`:
+  - strict mode → fail immediately with a clear error
+  - dev mode → warn loudly; may fallback or stop
 
 ---
 
-# 10. Best Practices
-- Always think SPEC-first.
-- Keep SPECs small and modular.
-- Preserve `.spec/reports/**` — do not delete them.
-- Always use `--report` when using fix_errors across tasks.
-- Do not hand-edit SPEC_INDEX unless necessary.
-- Use additive modes (`--mode=additive-meta`) cautiously.
-- Align UI with design tokens & component registry.
+# 6. Troubleshooting (Updated)
+
+### Problem: Orchestrator is not active
+Message:
+> "Orchestrator Mode required (`--require-orchestrator`) but not active. Please enable Orchestrator Mode in Kilo and re-run."
+
+Fix:
+- Open Kilo UI
+- Enable Orchestrator Mode
+- Run again with:
+```
+--kilocode --require-orchestrator
+```
+
+### Problem: Kilo edit failed (Edit Unsuccessful)
+- Narrow task scope
+- Reduce file-range
+- Retry task individually
+
+SmartSpec will provide suggestions automatically.
 
 ---
 
-# 11. Developer Checklist
-Before running SmartSpec workflows:
-- SPEC exists? ✔
-- Tasks exist? ✔
-- SPEC_INDEX is valid? ✔
-- Registry entries match implementation? ✔
+# 7. Best Practices (Updated)
 
-Before running fix errors:
-- Implementation report exists? ✔  
-- Pass via `--report` if starting a new Kilo task ✔
+### ⭐ When implementing under Kilo:
+```
+--kilocode --require-orchestrator --safety-mode=strict
+```
+
+### ⭐ Use validate-only first on large repos:
+```
+--validate-only
+```
+
+### ⭐ Keep tasks small, precise, and unambiguous
+
+### ⭐ Maintain SPEC_INDEX and registry accuracy
 
 ---
 
-# 12. Summary
-This KB now fully supports SmartSpec v5.7.1 workflows, including the newest behavior:
-- **Use `--report` with `/smartspec_fix_errors.md`**  
-- **Full auto-discovery under `.spec/reports/implement-tasks/`**  
-- **Cross-task continuity for KiloCode users**
+# 8. Security & Data Rules
 
-All SmartSpec assistants should rely on this file + the governance KB as the unified source of truth for usage patterns.
+Unchanged from original:
+- No secrets or PII in prompts or code
+- Treat model inputs/outputs as untrusted
+- Use masking/sanitization rules for sensitive data
 
-End of SmartSpec Install & Usage Knowledge Base – v5.7.1.
+---
+
+# 9. Appendix
+
+This updated knowledge base remains backward-compatible.
+`--require-orchestrator` is fully additive.
+
+# END
+

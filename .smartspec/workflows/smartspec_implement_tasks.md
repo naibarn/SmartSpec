@@ -1,5 +1,5 @@
 name: /smartspec_implement_tasks
-version: 5.7.1
+version: 5.7.2
 role: implementation/execution
 write_guard: ALLOW-WRITE
 purpose: Implement code changes from `tasks.md` (and `spec.md`/`plan.md` when present)
@@ -18,7 +18,9 @@ reviewed `tasks.md`, while enforcing:
 - multi-repo ownership boundaries;
 - reuse-over-duplicate for shared APIs/models/terms/UI components;
 - UI JSON governance where applicable;
-- KiloCode Orchestrator-per-task execution when enabled.
+- KiloCode Orchestrator-per-task execution when enabled;
+- **(new, additive)** stricter Kilo behaviour for teams that require
+  Orchestrator Mode via `--require-orchestrator`.
 
 It follows after:
 
@@ -57,7 +59,16 @@ It follows after:
     with audit metadata.
   - a best-effort secret/PII sanity check before run completion.
 
-All existing flags and behaviors are preserved; new behavior is additive.
+**v5.7.2 (additive, Kilo-only stricter option)**
+
+- Adds `--require-orchestrator` flag:
+  - lets teams treat `--kilocode` as explicit consent to run under
+    Kilo Orchestrator Mode **and** fail fast when Orchestrator is not
+    active or not available;
+  - behaviour is strictly additive; invocations that do not use
+    `--require-orchestrator` retain legacy semantics.
+
+All existing flags and behaviours are preserved; new behaviour is additive.
 
 ---
 
@@ -189,9 +200,31 @@ Semantics:
 
 - `--kilocode`
   - when running under Kilo:
-    - Orchestrator coordinates per-task execution;
+    - Orchestrator coordinates per-task execution when Orchestrator
+      Mode is active;
     - subtasks and checkpoints are handled per top-level task;
     - this workflow acts as the implementation engine inside that loop.
+  - when Orchestrator Mode is not active, behaviour depends on
+    `--require-orchestrator` and `--safety-mode`:
+    - without `--require-orchestrator`, the workflow MAY degrade to a
+      linear flow, logging a clear note that Orchestrator is not active;
+    - with `--require-orchestrator`, see Section 18 (KiloCode Support).
+
+- `--require-orchestrator` (**new, additive, Kilo-only**)
+  - only meaningful when `--kilocode` is present.
+  - treats `--kilocode` as **explicit consent** to run under Kilo
+    Orchestrator Mode and to fail fast when Orchestrator is not
+    available.
+  - when running inside Kilo, the workflow MUST verify that
+    Orchestrator Mode is active **before** starting implementation
+    when this flag is set.
+  - if Orchestrator Mode is not active or cannot be enabled by the IDE:
+    - in `strict` safety mode: the workflow MUST stop early with a
+      clear error message explaining that Orchestrator is required but
+      not available;
+    - in `dev` safety mode: the workflow MAY either fail fast with the
+      same error or continue with degraded non-Orchestrator behaviour,
+      but MUST emit a prominent warning.
 
 - If `--kilocode` is passed without a Kilo environment:
   - treat as a no-op meta-flag, logging a note in the report.
@@ -293,6 +326,20 @@ These limit the implementation scope to specific phases.
 - `--kilocode`
   - enable KiloCode semantics where running under Kilo.
 
+- `--require-orchestrator` (new, additive)
+  - only meaningful when `--kilocode` is present.
+  - treats `--kilocode` as **explicit consent** to run under
+    Kilo Orchestrator Mode.
+  - when running inside Kilo, the workflow MUST verify that
+    Orchestrator Mode is active **before** starting implementation.
+  - if Orchestrator Mode is not active or cannot be enabled by the IDE,
+    the workflow MUST:
+    - in `strict` safety mode: fail fast with a clear error message
+      explaining that Orchestrator is required but not available;
+    - in `dev` safety mode: it MAY either fail fast or continue with
+      degraded non-Orchestrator behaviour, but MUST emit a prominent
+      warning.
+
 ### 5.8 Reporting & summary (additive)
 
 - `--report-dir=<path>`
@@ -375,8 +422,8 @@ Before treating this spec as stable, verify:
    - business logic is not pushed into `ui.json`.
    - design-system and App-level component rules are followed.
 
-5. **Safety-mode behavior**
-   - strict/dev behavior matches expectations.
+5. **Safety-mode behaviour**
+   - strict/dev behaviour matches expectations.
    - conflicts and missing context are surfaced as warnings or blocks.
 
 6. **Web-stack guardrails**
@@ -388,7 +435,10 @@ Before treating this spec as stable, verify:
    - data classification/masking tasks are present where needed.
 
 8. **KiloCode support**
-   - `--kilocode` behavior and Orchestrator-per-task loop are honored.
+   - `--kilocode` behaviour and Orchestrator-per-task loop are honoured.
+   - where `--require-orchestrator` is used, failure conditions are
+     clearly reported and non-Orchestrator runs are not silently
+     allowed in strict mode.
 
 9. **Secret/PII propagation**
    - best-effort checks are in place.
@@ -425,10 +475,11 @@ Before treating this spec as stable, verify:
   - `--architect`
   - `--kilocode`
 
-- **New additive (v5.6.4+):**
+- **New additive (v5.6.4+ and later):**
   - `--dry-run` (alias for `--validate-only`)
   - `--report-dir`
   - `--stdout-summary`
+  - `--require-orchestrator` (Kilo-only stricter behaviour)
 
 No legacy flag is removed or weakened.
 
@@ -446,14 +497,30 @@ When `--kilocode` is present and Kilo is detected:
     3. Code mode implements the required changes and tests.
     4. Orchestrator validates completion and moves to the next task.
 - subtasks are expected to be ON where task numbering supports it.
+- `--kilocode` is treated as **explicit consent** for the IDE to
+  enable Orchestrator Mode if it chooses to do so.
 
-When Orchestrator is unavailable:
+When both `--kilocode` and `--require-orchestrator` are present and
+Kilo Orchestrator Mode is **not** active:
 
-- in `strict`:
-  - prefer `--validate-only` with a clear infra error.
+- in `strict` safety mode, this workflow MUST stop early with a
+  configuration error such as:
 
-- in `dev`:
-  - may degrade to a linear flow with a warning in the report.
+  > "Kilo Orchestrator Mode is required (`--require-orchestrator`) but
+  > is not active. Please enable Orchestrator Mode in Kilo UI and rerun
+  > this workflow."
+
+- in `dev` safety mode, the workflow MAY either stop with the same
+  error or continue in degraded, non-Orchestrator mode, but MUST emit
+  a prominent warning and clearly label the run as non-Orchestrator.
+
+When Orchestrator is unavailable and `--require-orchestrator` is **not**
+set:
+
+- in `strict` safety mode, this workflow SHOULD prefer
+  `--validate-only` and emit a clear infra/config error;
+- in `dev` safety mode, it may degrade to a linear flow with a warning
+  in the report/summary explaining that Orchestrator was not active.
 
 ### 18.1 Failure handling under KiloCode
 
@@ -500,7 +567,7 @@ This workflow must **not** call other SmartSpec workflows
 programmatically. It may:
 
 - detect Kilo/ClaudeCode/Antigravity environments from context;
-- inspect flags such as `--kilocode`;
+- inspect flags such as `--kilocode` and `--require-orchestrator`;
 - detect web-stack usage by scanning:
   - specs, plans, tasks, and key files for React/Next/Node/RSC,
     `react-server-dom-*`, SSR/Edge hints;
@@ -544,6 +611,13 @@ but must not invoke them itself.
 
 1. Parse all flags and environment, resolving safety-mode, target
    spec/tasks, index, registries, and multi-repo roots.
+
+1.a Under Kilo with `--kilocode` and `--require-orchestrator`:
+    - verify that Kilo Orchestrator Mode is active **before**
+      proceeding;
+    - if not active, apply the failure/warning rules from Section 18
+      (KiloCode Support) and stop the run early in `strict` mode.
+
 2. Resolve SPEC_INDEX and registry directories using canonical order.
 3. Detect presence/absence of `tool-version-registry.json` and
    design-system registries.

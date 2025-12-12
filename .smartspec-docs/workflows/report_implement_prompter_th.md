@@ -1,288 +1,173 @@
-# คู่มือ SmartSpec Workflow
-## `/smartspec_report_implement_prompter`
-### รุ่น 1.0.2 — ฉบับภาษาไทย
+# คู่มือเวิร์กโฟลว์: /smartspec_report_implement_prompter.md
+
+> **สถานะ:** ปรับปรุงแล้ว (สอดคล้อง Governance)
+> **วัตถุประสงค์:** สร้างชุดพรอมต์สำหรับการ implement จาก **strict verification report** โดยเขียนไฟล์ผลลัพธ์เฉพาะใน `.smartspec/prompts/<spec-id>/` และไม่ปะปนกับโค้ดหลักของโปรเจกต์
 
 ---
 
-## 1. ภาพรวม (Overview)
-`/smartspec_report_implement_prompter` คือ Workflow ประเภท Utility ใน SmartSpec ที่ออกแบบมาเพื่อ **แปลง Strict Verification Report ให้เป็นชุดพรอมต์** สำหรับส่งให้ AI Coding Assistant (เช่น Kilo Code, Claude Code, Google Antigravity) ช่วยเขียนโค้ดแก้ไขงานที่ยังไม่สมบูรณ์ให้ตรงจุดที่สุด
+## 1. เจตนาการออกแบบ
+เอกสารนี้ถูกปรับให้ “ชัดเจนเรื่องขอบเขต” เพื่อไม่ให้เกิดความเข้าใจผิดว่าการรัน workflow สร้างขยะในระบบ:
 
-โดย Workflow นี้จะอ่าน:
-- ไฟล์ **strict report (.json)** จาก `/smartspec_verify_tasks_progress_strict`
-- ไฟล์ **spec.md** ของฟีเจอร์
-- ไฟล์ **tasks.md** ของฟีเจอร์
-
-และผลลัพธ์คือ:
-- ไฟล์ **README สรุปงานที่ยังต้องแก้ตาม strict verifier**
-- ไฟล์พรอมต์สำหรับแต่ละโดเมน เช่น:
-  - API
-  - Tests
-  - Documentation
-  - Deployment
-
-ซึ่งสามารถคัดลอกไปใช้กับ AI Coding Assistant โดยตรงได้ทันที
+- **โค้ดของ workflow (engine)** อยู่ใน `scripts/` เท่านั้น (เป็นโค้ดหลัก, มี version control)
+- **ไฟล์ลงทะเบียนของ Kilo Code** อยู่ใน `.kilocode/workflows/` (เป็น cache/registration ลบได้)
+- **ผลลัพธ์ที่ workflow สร้าง** จะเขียน **เฉพาะ** ใน `.smartspec/prompts/<spec-id>/`
 
 ---
 
-## 2. ความสามารถหลัก (Key Features)
-### ✔ อ่าน strict report ได้ครบถ้วน
-รองรับ verdict, evidence, phase, critical task, cluster
+## 2. ขอบเขตการอ่านและการเขียนไฟล์
 
-### ✔ สร้างพรอมต์ที่พร้อมใช้งาน
-เป็นไฟล์ markdown เนื้อหาชัดเจน บอกให้ Kilo Code ทำงานเป็นขั้นตอน
+### 2.1 ไฟล์อินพุต (อ่านอย่างเดียว)
+- `specs/**/spec.md`
+- `specs/**/tasks.md`
+- strict verification report (`*.json`) จาก `/smartspec_verify_tasks_progress_strict`
 
-### ✔ จัดกลุ่มงานอัตโนมัติ (Domain Clustering)
-- API
-- Tests
-- Docs
-- Deploy
-
-### ✔ แยกงานง่าย-ยาก
-- ถ้าเป็นงานง่าย → แนะนำใช้ `/smartspec_implement_tasks`
-- ถ้าเป็นงานซับซ้อน → สร้างพรอมต์ละเอียดให้เลย
-
-### ✔ รองรับ multi-repo
-รวมถึง flags: `--workspace-roots`, `--repos-config`
-
-### ✔ ตรวจจับเทคโนโลยีอัตโนมัติ
-Fastify, NestJS, Spring Boot, FastAPI, Go ฯลฯ
-
-### ✔ รองรับ output ทั้ง Markdown / JSON
-ดีสำหรับ UI และ IDE
-
-### ✔ มี Metadata กำกับเพื่อใช้ Audit
-เช่น Prompt ID, timestamp, report version
-
----
-
-## 3. วิธีใช้งานโดยย่อ (Typical Workflow)
-
-### ขั้นตอนที่ 1 — รัน Strict Verification
-```bash
-/smartspec_verify_tasks_progress_strict \
-  --spec specs/feature/<spec-id>/spec.md \
-  --report-format=json \
-  --report .spec/reports/verify-tasks-progress/<spec-id>-verification-report.json
-```
-
-### ขั้นตอนที่ 2 — สร้างชุดพรอมต์
-```bash
-/smartspec_report_implement_prompter \
-  --spec specs/feature/<spec-id>/spec.md \
-  --tasks specs/feature/<spec-id>/tasks.md \
-  --report .spec/reports/verify-tasks-progress/<spec-id>-verification-report.json \
-  --output .smartspec/prompts/<spec-id>/
-```
-
-### ขั้นตอนที่ 3 — เปิดไฟล์พรอมต์ใน Kilo Code
-ไฟล์ที่สร้างอาจมี:
-- `api-implementation-prompt.md`
-- `testing-prompt.md`
-- `documentation-prompt.md`
-- `deployment-prompt.md`
-
-เพียงคัดลอกเนื้อหาไปวางใน AI Coding Assistant แล้วให้มันเริ่มเขียนโค้ดให้
-
-### ขั้นตอนที่ 4 — รัน Strict Verification อีกครั้ง
-```bash
-/smartspec_verify_tasks_progress_strict --spec specs/feature/<spec-id>/spec.md
-```
-
-### ขั้นตอนที่ 5 — Sync Checkboxes
-```bash
-/smartspec_sync_tasks_checkboxes \
-  --tasks specs/feature/<spec-id>/tasks.md \
-  --report .spec/reports/verify-tasks-progress/<spec-id>-verification-report.json \
-  --mode=auto
-```
-
----
-
-## 4. รายละเอียดคำสั่ง (CLI Reference)
-
-```bash
-/smartspec_report_implement_prompter \
-  --spec <path/to/spec.md> \
-  --tasks <path/to/tasks.md> \
-  --report <path/to/strict-json-report> \
-  [--output <directory>] \
-  [--cluster api|tests|docs|deploy|all] \
-  [--workspace-roots <paths>] \
-  [--repos-config <path>] \
-  [--evidence-config <path>] \
-  [--language th|en] \
-  [--dry-run] \
-  [--format markdown|json] \
-  [--max-tasks-per-prompt N] \
-  [--max-chars-per-prompt N]
-```
-
-### ค่า Mandatory
-| Flag | ความหมาย |
-|------|-----------|
-| `--spec` | ไฟล์ SPEC ของฟีเจอร์ |
-| `--tasks` | ไฟล์ TASKS ของฟีเจอร์ |
-| `--report` | strict JSON report จาก strict verifier |
-
-### ค่า Optional
-| Flag | ใช้ทำอะไร |
-|------|------------|
-| `--output` | โฟลเดอร์ปลายทางสำหรับไฟล์ prompt |
-| `--cluster` | Gen เฉพาะโดเมนที่ต้องการ |
-| `--workspace-roots`, `--repos-config` | ใช้กับ multi-repo |
-| `--evidence-config` | Override evidence rules |
-| `--language` | ตั้งภาษา output |
-| `--dry-run` | แสดงผลลัพธ์จำลองโดยไม่เขียนไฟล์ |
-| `--format` | เลือก output เป็น Markdown หรือ JSON |
-| `--max-tasks-per-prompt` | จำกัดจำนวน task ต่อไฟล์ |
-| `--max-chars-per-prompt` | จำกัดความยาวไฟล์ |
-
----
-
-## 5. โครงสร้างไฟล์ Output (Prompt Structure)
-เมื่อใช้ `--output` จะได้โฟลเดอร์เช่น:
+### 2.2 โฟลเดอร์ที่อนุญาตให้เขียน (เขียนได้ “ที่เดียว”)
 ```
 .smartspec/prompts/<spec-id>/
-  ├── README.md
-  ├── api-implementation-prompt.md
-  ├── testing-prompt.md
-  ├── documentation-prompt.md
-  ├── deployment-prompt.md
 ```
 
-ถ้ามีงานจำนวนมาก อาจถูก split อัตโนมัติ:
-```
-  testing-prompt-1.md
-  testing-prompt-2.md
+### 2.3 โฟลเดอร์ต้องห้าม (ห้ามเขียนโดยเด็ดขาด)
+- `scripts/`
+- `specs/`
+- `.spec/`
+- `.kilocode/workflows/`
+
+> หากพบว่ามีการเขียนไฟล์นอก `.smartspec/prompts/` ในช่วง runtime ให้ถือว่าเป็น **บั๊ก**
+
+---
+
+## 3. การกำหนดโฟลเดอร์ Output
+
+### 3.1 ลำดับการเลือกโฟลเดอร์
+1. ค่า `--output` ที่ผู้ใช้ระบุ
+2. ค่าเริ่มต้น: `.smartspec/prompts/<spec-id>`
+
+### 3.2 Guardrail (บังคับ)
+หาก output path ที่ resolve แล้ว:
+- มีคำว่า `/scripts`
+- ชี้ไปที่ project root
+- อยู่นอก `.smartspec/prompts`
+
+→ ต้อง **ยกเลิกการทำงานพร้อม error**
+
+---
+
+## 4. ตัวอย่างการใช้งาน (CLI / ไม่ใช้ Kilo Code)
+> ใช้กรณีรันจาก terminal ปกติ, CI, หรือ environment ที่ **ไม่ใช่ Kilo Code**
+
+### 4.1 ตัวอย่าง: ใช้งานแบบมาตรฐาน (แนะนำ)
+```bash
+/smartspec_report_implement_prompter \
+  --spec specs/feature/spec-002-user-management/spec.md \
+  --tasks specs/feature/spec-002-user-management/tasks.md \
+  --report .spec/reports/verify-tasks-progress/spec-002-user-management-strict.json \
+  --output .smartspec/prompts/spec-002-user-management
 ```
 
-ถ้าไม่มีงานต้องทำ:
+ผลลัพธ์:
+- สร้างไฟล์ prompt เฉพาะใน `.smartspec/prompts/spec-002-user-management/`
+- ไม่สร้าง/ไม่แก้ไขไฟล์ใน `scripts/`, `specs/`, `.spec/`, `.kilocode/`
+
+### 4.2 ตัวอย่าง: ไม่ระบุ `--output`
+```bash
+/smartspec_report_implement_prompter \
+  --spec specs/feature/spec-002-user-management/spec.md \
+  --tasks specs/feature/spec-002-user-management/tasks.md \
+  --report .spec/reports/verify-tasks-progress/spec-002-user-management-strict.json
 ```
-  README.md (สรุปว่าไม่มี task ค้าง)
+
+ผลลัพธ์:
+- ใช้ค่าเริ่มต้น: `.smartspec/prompts/spec-002-user-management`
+
+---
+
+## 5. ตัวอย่างการใช้งาน (Kilo Code)
+> ใช้เมื่อรันผ่าน **Kilo Code** เท่านั้น
+
+**กฎบังคับ:**
+- ต้องใช้ชื่อ workflow ลงท้ายด้วย `.md`
+- ต้องใส่ `--kilocode`
+
+### 5.1 ตัวอย่าง: Kilo Code (มาตรฐาน)
+```bash
+/smartspec_report_implement_prompter.md \
+  --spec specs/feature/spec-002-user-management/spec.md \
+  --tasks specs/feature/spec-002-user-management/tasks.md \
+  --report .spec/reports/verify-tasks-progress/spec-002-user-management-strict.json \
+  --output .smartspec/prompts/spec-002-user-management \
+  --kilocode
+```
+
+หมายเหตุ:
+- Kilo Code อาจแสดงขั้นตอน `chmod +x` และ `ln -sf` ภายใต้ `.kilocode/workflows/`
+- นี่คือ **registration cache** ไม่ใช่ output ของ workflow และลบได้ตลอด
+
+---
+
+## 6. โครงสร้างไฟล์ผลลัพธ์ที่สร้าง
+```
+.smartspec/prompts/<spec-id>/
+  README.md
+  api-cluster.md
+  tests-cluster.md
+  docs-cluster.md
+  deploy-cluster.md
+```
+
+> Workflow นี้จะไม่สร้างไฟล์ผลลัพธ์ในตำแหน่งอื่น
+
+---
+
+## 7. การจัดประเภทงาน
+- **unsynced** → งานเสร็จแล้ว แต่ checkbox ยังไม่ตรง → ให้ใช้ `/smartspec_sync_tasks_checkboxes`
+- **simple** → งานง่าย → ให้ implement โดยตรง (หรือใช้ workflow ที่ทีมกำหนด)
+- **complex** → งานซับซ้อน/critical → จัดกลุ่มเป็นโดเมน (API / Tests / Docs / Deploy) แล้วสร้าง prompt ให้
+
+---
+
+## 8. รันซ้ำและการล้างของชั่วคราว
+- รันซ้ำจะ **เขียนทับ** ไฟล์ prompt สำหรับ `<spec-id>` เดิม
+- ลบได้อย่างปลอดภัย:
+  - `.kilocode/workflows/smartspec_*`
+  - `.smartspec/prompts/<spec-id>`
+- ห้ามลบ:
+  - `scripts/` (เป็นโค้ดหลักของ workflow engine)
+
+---
+
+## 9. สิ่งที่ workflow นี้ “ไม่ทำ”
+Workflow นี้ **ไม่**:
+- แก้ไข `spec.md` หรือ `tasks.md`
+- ทำ verification แทน strict verifier
+- sync checkbox ให้เอง
+
+ให้ใช้ workflow ต่อไปนี้:
+- `/smartspec_verify_tasks_progress_strict`
+- `/smartspec_sync_tasks_checkboxes`
+
+---
+
+## 10. ลำดับการใช้งานที่แนะนำ (Canonical Flow)
+```
+STRICT VERIFY
+  ↓
+REPORT IMPLEMENT PROMPTER (workflow นี้)
+  ↓
+CODE CHANGES
+  ↓
+STRICT VERIFY
+  ↓
+SYNC CHECKBOXES
 ```
 
 ---
 
-## 6. การจัดประเภทของงาน (Task Classification)
-ระบบจะจัดงานออกเป็น 3 ประเภท:
-
-### ✔ `unsynced_only`
-งานเสร็จแล้ว แค่ checkbox ไม่ตรง → ใช้ `/smartspec_sync_tasks_checkboxes`
-
-### ✔ `simple_not_started`
-งานง่าย ยังไม่เริ่ม ไม่ critical → ใช้ `/smartspec_implement_tasks`
-
-### ✔ `complex_cluster`
-งานซับซ้อน / critical → **สร้างพรอมต์ให้** เช่น API, tests, docs, deploy
+## 11. เช็คลิสต์ความสอดคล้อง (Compliance Checklist)
+- [x] แยก engine / cache / output ชัดเจน
+- [x] เขียนไฟล์เฉพาะ `.smartspec/prompts/`
+- [x] รองรับ CLI และ Kilo Code
+- [x] ลดความสับสนเรื่องไฟล์ตกค้าง
 
 ---
 
-## 7. Domain Cluster
-แต่ละงานจะถูกจัดไปอยู่ในหนึ่งในกลุ่มต่อไปนี้:
-
-| Cluster | ความหมาย |
-|---------|-----------|
-| **api** | route/endpoint/controller เป็นต้น |
-| **tests** | unit/integration/performance tests |
-| **docs** | OpenAPI, Swagger, technical docs |
-| **deploy** | K8s, manifests, monitoring, CI/CD |
-
-ผู้ใช้สามารถ override mapping ได้โดยสร้างไฟล์:
-```
-.smartspec/prompts/cluster-overrides.json
-```
-
----
-
-## 8. ระบบเลือกภาษา (Locale Handling)
-ลำดับความสำคัญ:
-1. ค่า `--language`
-2. Header ใน spec.md
-3. ตรวจภาษาจาก spec/tasks (>20% เป็นไทย → ใช้ไทย)
-4. Platform (เช่น Kilo Code → ค่าเริ่มต้นเป็นไทย)
-5. Fallback → อังกฤษ
-
----
-
-## 9. ตรวจจับเทคโนโลยี (Tech Stack Detection)
-Workflow จะตรวจจากไฟล์โปรเจกต์ เช่น:
-- Fastify → พบใน `package.json`
-- NestJS → พบ `@nestjs/common`
-- Spring Boot → พบ `src/main/java`
-- FastAPI → พบ `fastapi.FastAPI`
-- Go → พบ routing library ตาม `go.mod`
-
-แล้วจะปรับข้อความในพรอมต์ให้เข้ากับ stack นั้นโดยอัตโนมัติ
-
----
-
-## 10. Metadata ของพรอมต์ (Prompt Metadata)
-ทุกไฟล์พรอมต์จะมีข้อมูลกำกับ เช่น:
-```
-<!--
-Prompt-Generation-ID: <uuid>
-Spec-ID: <spec-id>
-Report-Version: <strict-report-version>
-Generated-At: <timestamp>
--->
-```
-ช่วยเรื่อง traceability
-
----
-
-## 11. ตัวอย่างพรอมต์ (Example)
-```markdown
-# API Implementation Prompt — Phone Verification (T047–T048)
-
-## บริบท
-Spec: specs/feature/spec-002-user-management/spec.md
-Tasks: specs/feature/spec-002-user-management/tasks.md
-Report: .spec/reports/verify-tasks-progress/spec-002-user-management-verification-report.json
-Tech Stack: Fastify + Prisma
-
-## สรุปปัญหา
-- ขาด endpoint: POST /auth/phone/send-otp
-- ขาด endpoint: POST /auth/phone/verify-otp
-- Service มีอยู่แล้ว แต่ route ยังไม่เชื่อม
-
-## สิ่งที่ต้องให้ Kilo Code ทำ
-1. เปิดดูโครงสร้าง route ใน `src/routes/`
-2. เพิ่ม 2 endpoint ลงใน `users.routes.ts`
-3. เรียกใช้งาน phoneVerificationService
-4. อัปเดต model ของ user ว่า verified แล้ว
-5. เพิ่ม integration test แบบง่าย
-
-## หลังจากทำเสร็จ
-- รัน test
-- รัน strict verifier อีกครั้ง
-```
-
----
-
-## 12. Error Handling
-Workflow จัดการสิ่งต่อไปนี้:
-- ไม่มีไฟล์ report
-- เวอร์ชัน report สูงเกินที่รองรับ
-- task ไม่ตรงกับ tasks.md
-- ไม่พบ acceptance criteria
-- cluster ไม่มีงานต้องทำ
-
-ระบบจะแสดงคำเตือนพร้อมคำแนะนำแก้ไข
-
----
-
-## 13. กรณีแนะนำ (Use Cases)
-### ใช้เมื่อ:
-- strict verifier แจ้ง incomplete จำนวนมาก
-- งานซับซ้อน แก้ยาก
-- มีหลายโดเมนต้องแก้พร้อมกัน
-
-### ไม่จำเป็นเมื่อ:
-- งานครบหมดแล้ว
-- เหลือแค่ sync checkbox
-
----
-
-## 14. บทสรุป
-`/smartspec
-
+**จบคู่มือเวิร์กโฟลว์**

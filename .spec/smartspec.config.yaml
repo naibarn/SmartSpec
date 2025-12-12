@@ -1,0 +1,256 @@
+version: 1
+
+# SmartSpec v6 configuration (full)
+# Single place for environment wiring + defaults.
+# CLI flags override these values temporarily.
+
+# -----------------------------------------------------------------------------
+# Defaults
+# -----------------------------------------------------------------------------
+lang: en            # th | en
+platform: cli       # cli | kilo | ci | other
+
+# If true, workflows should default to producing both human + JSON summaries
+default_json_summary: true
+
+# -----------------------------------------------------------------------------
+# Workspace / repos
+# -----------------------------------------------------------------------------
+workspace:
+  # Repo roots used for searches and path validation.
+  roots:
+    - .
+
+multi_repo:
+  enabled: false
+  # Each repo entry may be used by advanced setups.
+  repos: []
+
+# -----------------------------------------------------------------------------
+# Canonical registries
+# -----------------------------------------------------------------------------
+registries:
+  spec_index: .spec/SPEC_INDEX.json
+  workflow_index: .spec/WORKFLOWS_INDEX.yaml
+
+  # Registry roots (read-only inputs)
+  registry_roots:
+    - .spec/registry
+
+# -----------------------------------------------------------------------------
+# Output roots
+# -----------------------------------------------------------------------------
+output:
+  # Safe outputs: allowed to write without --apply
+  reports_root: .spec/reports
+  prompts_root: .smartspec/prompts
+
+  # Any helper scripts produced by workflows MUST go here.
+  # Never mix generated scripts into application source trees.
+  generated_scripts_root: .smartspec/generated-scripts
+
+  # Optional caches/logs
+  cache_root: .smartspec/cache
+  logs_root: .smartspec/logs
+
+# -----------------------------------------------------------------------------
+# Safety & governance
+# -----------------------------------------------------------------------------
+safety:
+  # Default behavior:
+  # - Safe outputs (reports/prompts/generated scripts) may be written without --apply.
+  # - Governed artifacts (specs/** and registry files) require --apply.
+  require_apply_for_governed_artifacts: true
+
+  # Enforce a minimum workflow doc contract version.
+  # Validators (e.g., smartspec_validate_index) should fail if any workflow header version is lower.
+  workflow_version_min: "6.0.0"
+
+  # Allowlist of roots where ANY writes may occur.
+  # If a path resolves outside this allowlist, the workflow must refuse to write.
+  allow_writes_only_under:
+    - specs
+    - .spec
+    - .spec/reports
+    - .smartspec/prompts
+    - .smartspec/generated-scripts
+    - .smartspec/cache
+    - .smartspec/logs
+
+  # Treat symlinks as untrusted for writes (recommended true).
+  disallow_symlink_writes: true
+
+  # Reject path traversal and invalid IDs.
+  spec_id_regex: "^[a-z0-9_\-]{3,64}$"
+
+  # If true, redact obvious secrets (tokens/keys) before writing specs/prompts/reports.
+  redact_secrets: true
+
+  # If true, avoid echoing full user prompts in outputs/logs.
+  redact_prompt_echo: true
+
+  # Default network policy for all workflows.
+  # Workflows must not fetch external URLs or call external APIs unless explicitly allowed.
+  # (Most SmartSpec workflows should remain offline for safety/determinism.)
+  network_policy:
+    default: deny
+    allowlist_domains: []
+
+  # Content and scan limits to prevent runaway runs and accidental leakage.
+  content_limits:
+    # Maximum bytes ingested from any single context/log file (sample + summarize if exceeded)
+    max_context_bytes: 5242880   # 5 MB
+
+    # Maximum characters allowed for any excerpt embedded into outputs
+    max_excerpt_chars: 2000
+
+    # Maximum total files scanned by broad audits (scoped runs may scan more if explicitly allowed)
+    max_files_scanned: 20000
+
+    # Maximum per-file size scanned in bytes (skip/metadata-only if exceeded)
+    $1
+  # Redaction policy (production)
+  redaction:
+    # If true, redact secrets found in inputs before writing outputs.
+    enabled: true
+
+    # Files that commonly contain secrets; workflows should avoid embedding contents and should flag them.
+    secret_file_globs:
+      - "**/.env"
+      - "**/.env.*"
+      - "**/*secret*"
+      - "**/*token*"
+      - "**/*key*"
+      - "**/*.pem"
+      - "**/*.p12"
+      - "**/*.pfx"
+      - "**/id_rsa"
+      - "**/id_ed25519"
+      - "**/credentials*"
+
+    # Common secret patterns; workflows should redact matches in reports/prompts.
+    # Keep these generic; projects may extend for org-specific formats.
+    patterns:
+      - name: "AWS Access Key ID"
+        regex: "(?i)(AKIA|ASIA)[0-9A-Z]{16}"
+      - name: "AWS Secret Access Key"
+        regex: "(?i)aws_secret_access_key *[:=] *['\"]?[A-Za-z0-9/+=]{40}['\"]?"
+      - name: "GitHub Token"
+        regex: "gh[pousr]_[A-Za-z0-9]{20,}"
+      - name: "Slack Token"
+        regex: "xox[baprs]-[A-Za-z0-9-]{10,}"
+      - name: "Generic Bearer Token"
+        regex: "(?i)Bearer +[A-Za-z0-9._-]{20,}"
+      - name: "Private key header"
+        regex: "-----BEGIN (RSA|EC|OPENSSH|PRIVATE) KEY-----"
+
+  # Output collision policy (prevents accidental overwrite of prior runs) (prevents accidental overwrite of prior runs)
+  output_collision:
+    # If the intended output directory already exists, refuse to overwrite.
+    refuse_overwrite_existing: true
+
+    # If refuse_overwrite_existing is true and collision is detected:
+    # - new_run_id: generate a new run-id and write to a different folder
+    # - fail: hard fail (exit code 2)
+    on_collision: new_run_id
+
+  # Registry update safety
+  registry_updates:
+    # Use a lock next to the file.
+    lock_enabled: true
+    lock_suffix: ".lock"
+
+    # Atomic write strategy: temp file in same directory + rename.
+    atomic_write: true
+    temp_suffix: ".tmp"
+
+    # If lock/atomic cannot be guaranteed, do not write registry.
+    # Instead: print JSON/YAML snippets for manual merge.
+    fallback_to_snippets_on_failure: true
+
+# -----------------------------------------------------------------------------
+# Spec quality policies (used by spec generators)
+# -----------------------------------------------------------------------------
+spec_policies:
+  # Duplicate prevention / reuse policy
+  reuse:
+    enabled: true
+
+    # Similarity thresholds (0..1). These are heuristics used to classify overlap.
+    # - strong_match: do NOT create overlapping spec; create delta/extension and reference existing.
+    # - medium_match: allow new spec but require explicit reuse directives and references.
+    similarity_thresholds:
+      strong_match: 0.78
+      medium_match: 0.55
+
+    # Fields considered for similarity scoring.
+    fields:
+      - title
+      - summary
+      - tags
+      - integrations
+      - components
+
+  # Reference / research policy
+  references:
+    require_reference_appendix_when_refs_exist: true
+    require_api_research_sufficiency: true
+
+    id_prefixes:
+      ux: "REF-UX-"
+      ui: "REF-UI-"
+      api: "REF-API-"
+      spec: "REF-SPEC-"
+
+    # No-cloning policy: treat brand sites / dribbble shots as inspiration only.
+    no_cloning: true
+
+  # UI/UX baseline policy
+  ux_baseline:
+    require_for_product_facing_specs: true
+    require_states: true              # loading/empty/error/success
+    require_accessibility_baseline: true
+    require_responsive_notes: true
+    require_microcopy_guidance: true
+
+  # Decision log policy
+  decision_log:
+    require_for_key_decisions: true
+    file: "references/decisions.md"
+
+# -----------------------------------------------------------------------------
+# Platform options
+# -----------------------------------------------------------------------------
+platform_options:
+  # In v6 we remove the legacy `--kilocode` flag.
+  # Kilo is detected via `.md` workflow invocation or `--platform kilo`.
+  kilo_requires_legacy_flag: false
+
+  # If true, printed next-step commands should include both CLI + Kilo examples.
+  print_dual_examples: true
+
+# -----------------------------------------------------------------------------
+# Reporting defaults
+# -----------------------------------------------------------------------------
+reporting:
+  verify_report_format: both   # both | json | md
+  verify_reports_subdir: "verify-tasks-progress"
+
+# -----------------------------------------------------------------------------
+# Script generation policy
+# -----------------------------------------------------------------------------
+script_generation:
+  enabled: true
+
+  # Force all workflow-generated helper scripts into generated_scripts_root.
+  enforce_generated_scripts_root: true
+
+  # Never write helper scripts into app runtime source trees.
+  runtime_source_dirs_blocklist:
+    - src
+    - app
+    - server
+    - packages
+    - services
+
+# End of config

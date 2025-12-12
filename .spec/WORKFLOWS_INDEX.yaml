@@ -1,0 +1,353 @@
+version: 1
+
+# SmartSpec Workflow Registry (v6.0)
+# Canonical list of workflows, their write scopes, and platform support.
+# v6 is a breaking-change cleanup: duplicated workflows removed and consolidated.
+
+release_line: 6.0.7
+
+registry:
+  canonical_config: .spec/smartspec.config.yaml
+  canonical_spec_index: .spec/SPEC_INDEX.json
+  canonical_workflow_index: .spec/WORKFLOWS_INDEX.yaml
+
+universal_flags: [--config, --lang, --platform, --apply, --out, --json, --quiet]
+
+write_scopes:
+  # none: no writes
+  # reports: safe outputs under .spec/reports/**
+  # prompts: safe outputs under .smartspec/prompts/**
+  # scripts: safe outputs under .smartspec/generated-scripts/**
+  # specs: governed artifacts under specs/** (requires --apply)
+  # spec-index: governed artifact .spec/SPEC_INDEX.json (requires --apply)
+  # workflow-index: governed artifact .spec/WORKFLOWS_INDEX.yaml (requires --apply)
+  # tasks-checkboxes: governed artifact tasks.md checkbox-only (requires --apply)
+  allowed: [none, reports, prompts, scripts, specs, spec-index, workflow-index, tasks-checkboxes]
+
+removed_workflows:
+  # Removed to eliminate duplication and confusion (breaking change)
+  - /smartspec_generate_implement_prompt
+  - /smartspec_generate_cursor_prompt
+  - /smartspec_ci_quality_gate
+  - /smartspec_release_readiness
+  - /smartspec_ui_consistency_audit
+  - /smartspec_global_registry_audit
+  - /smartspec_check_kilo_mode
+  - /smartspec_implement_tasks
+  - /smartspec_fix_errors
+  - /smartspec_refactor_code
+
+workflows:
+  # ---------------------------------------------------------------------------
+  # Core chain (canonical)
+  # ---------------------------------------------------------------------------
+  - name: /smartspec_generate_spec
+    aliases: [/smartspec_generate_spec.md]
+    purpose: Refine spec.md (SPEC-first) with deterministic preview/diff + completeness/reuse checks.
+    category: core
+    positional_args: [spec_or_spec_ids]
+    extra_flags: [--spec, --spec-ids]
+    reads: [specs/**/spec.md, .spec/SPEC_INDEX.json, .spec/registry/**]
+    writes: [specs/**/spec.md, .spec/SPEC_INDEX.json, .spec/reports/generate-spec/**]
+    write_scope: [specs, spec-index, reports]
+    apply_required_for: [specs, spec-index]
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_generate_plan
+    aliases: [/smartspec_generate_plan.md]
+    purpose: Convert spec.md → plan.md (preview-first; dependency-aware; reuse-first; governed apply).
+    category: core
+    positional_args: [spec_md]
+    extra_flags: [--ui-mode, --safety-mode, --plan-layout, --run-label]
+    reads: [specs/**/spec.md, .spec/SPEC_INDEX.json, .spec/registry/**]
+    writes: [specs/**/plan.md, .spec/reports/generate-plan/**]
+    write_scope: [specs, reports]
+    apply_required_for: [specs]
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_generate_tasks
+    aliases: [/smartspec_generate_tasks.md]
+    purpose: Convert spec.md (or plan.md) → tasks.md (verification-ready; preserves IDs/checkboxes; reports always written).
+    category: core
+    positional_args: [spec_or_plan_md]
+    extra_flags: []
+    reads: [specs/**/spec.md, specs/**/plan.md]
+    writes: [specs/**/tasks.md, .spec/reports/generate-tasks/**]
+    write_scope: [specs, reports]
+    apply_required_for: [specs]
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_verify_tasks_progress_strict
+    aliases:
+      - /smartspec_verify_tasks_progress_strict.md
+      - /smartspec_verify_tasks_progress
+      - /smartspec_verify_tasks_progress.md
+    purpose: Strict evidence-only verification using parseable evidence hooks (evidence: type key=value...).
+    category: verify
+    positional_args: [tasks_md]
+    extra_flags: [--report-format]
+    reads: [specs/**/tasks.md, codebase-evidence]
+    writes: [.spec/reports/verify-tasks-progress/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_report_implement_prompter
+    aliases: [/smartspec_report_implement_prompter.md]
+    purpose: Generate implementation prompt packs from spec + tasks + optional strict verify report.
+    category: prompter
+    positional_args: []
+    extra_flags: [--spec, --tasks, --verify-report, --target, --strict]
+    reads:
+      - specs/**/spec.md
+      - specs/**/tasks.md
+      - .spec/reports/verify-tasks-progress/**
+      - .spec/registry/**
+    writes: [.smartspec/prompts/<spec-id>/**]
+    write_scope: [prompts]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_sync_tasks_checkboxes
+    aliases: [/smartspec_sync_tasks_checkboxes.md]
+    purpose: Sync checkbox states in tasks.md using a strict verifier summary.json (checkbox-only governed write; preview-first).
+    category: utility
+    positional_args: [tasks_md]
+    extra_flags: [--verify-report, --manual-policy, --recompute-parents, --report-format]
+    reads:
+      - specs/**/tasks.md
+      - .spec/reports/verify-tasks-progress/**
+    writes:
+      - specs/**/tasks.md
+      - .spec/reports/sync-tasks-checkboxes/**
+    write_scope: [tasks-checkboxes, reports]
+    apply_required_for: [tasks-checkboxes]
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_project_copilot
+    aliases: [/smartspec_project_copilot.md]
+    purpose: Read-only project copilot that summarizes status and routes users to correct SmartSpec workflows (never edits files).
+    category: utility
+    positional_args: [question]
+    extra_flags: [--domain, --spec-id, --spec-path, --aspect, --report, --format, --short, --repos-config, --workspace-roots, --registry-roots, --nosubtasks]
+    reads: [.spec/SPEC_INDEX.json, .spec/WORKFLOWS_INDEX.yaml, .spec/registry/**, specs/**/spec.md, .spec/reports/**, .smartspec/workflows/**]
+    writes: []
+    write_scope: [none]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  # ---------------------------------------------------------------------------
+  # Spec bootstrap / reverse / lifecycle
+  # ---------------------------------------------------------------------------
+  - name: /smartspec_generate_spec_from_prompt
+    aliases: [/smartspec_generate_spec_from_prompt.md]
+    purpose: Bootstrap starter specs from a natural-language prompt (reuse-first; reference-pack aware; no-network).
+    category: spec-gen
+    positional_args: [prompt]
+    extra_flags: [--spec-category, --max-specs, --refs, --update-index, --dry-run]
+    reads: [.spec/SPEC_INDEX.json, specs/**/spec.md, .spec/registry/**]
+    writes: [specs/<category>/<spec-id>/**, .spec/SPEC_INDEX.json]
+    write_scope: [specs, spec-index]
+    apply_required_for: [specs, spec-index]
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_reverse_to_spec
+    aliases: [/smartspec_reverse_to_spec.md]
+    purpose: Reverse-engineer a spec from existing implementation.
+    category: spec-gen
+    positional_args: []
+    extra_flags: []
+    reads: [codebase]
+    writes: [specs/<category>/<spec-id>/**]
+    write_scope: [specs]
+    apply_required_for: [specs]
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_spec_lifecycle_manager
+    aliases: [/smartspec_spec_lifecycle_manager.md]
+    purpose: Manage spec lifecycle fields and index links.
+    category: governance
+    positional_args: []
+    extra_flags: []
+    reads: [.spec/SPEC_INDEX.json, specs/**]
+    writes: [.spec/SPEC_INDEX.json]
+    write_scope: [spec-index]
+    apply_required_for: [spec-index]
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_sync_spec_tasks
+    aliases: [/smartspec_sync_spec_tasks.md]
+    purpose: Keep spec/plan/tasks metadata aligned.
+    category: governance
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**/spec.md, specs/**/plan.md, specs/**/tasks.md]
+    writes: [specs/**/spec.md, specs/**/tasks.md]
+    write_scope: [specs, tasks-checkboxes]
+    apply_required_for: [specs, tasks-checkboxes]
+    platform_support: [cli, kilo]
+
+  # ---------------------------------------------------------------------------
+  # Index / registry maintenance
+  # ---------------------------------------------------------------------------
+  - name: /smartspec_reindex_specs
+    aliases: [/smartspec_reindex_specs.md]
+    purpose: Rebuild/refresh SPEC_INDEX.json from specs/** (non-destructive; reports always written).
+    category: index
+    positional_args: []
+    extra_flags: []
+    reads: [.spec/smartspec.config.yaml, .spec/SPEC_INDEX.json, specs/**/spec.md]
+    writes: [.spec/SPEC_INDEX.json, .spec/reports/reindex-specs/**]
+    write_scope: [spec-index, reports]
+    apply_required_for: [spec-index]
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_reindex_workflows
+    aliases: [/smartspec_reindex_workflows.md]
+    purpose: Rebuild/refresh WORKFLOWS_INDEX.yaml from .smartspec/workflows/** (non-destructive; reports always written).
+    category: index
+    positional_args: []
+    extra_flags: []
+    reads: [.spec/smartspec.config.yaml, .spec/WORKFLOWS_INDEX.yaml, .smartspec/workflows/**]
+    writes: [.spec/WORKFLOWS_INDEX.yaml, .spec/reports/reindex-workflows/**]
+    write_scope: [workflow-index, reports]
+    apply_required_for: [workflow-index]
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_validate_index
+    aliases: [/smartspec_validate_index.md]
+    purpose: Validate SPEC_INDEX and WORKFLOWS_INDEX integrity.
+    category: index
+    positional_args: []
+    extra_flags: [--strict]
+    reads: [.spec/smartspec.config.yaml, .spec/SPEC_INDEX.json, .spec/WORKFLOWS_INDEX.yaml, .smartspec/workflows/**]
+    writes: [.spec/reports/index-validation/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  # ---------------------------------------------------------------------------
+  # Consolidated workflows (v6)
+  # ---------------------------------------------------------------------------
+  - name: /smartspec_quality_gate
+    aliases: [/smartspec_quality_gate.md]
+    purpose: Consolidated quality gate (replaces ci_quality_gate + release_readiness).
+    category: quality
+    positional_args: []
+    extra_flags: [--profile, --spec, --spec-id, --strict]
+    reads: [specs/**, codebase, .spec/SPEC_INDEX.json]
+    writes: [.spec/reports/quality-gate/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_ui_validation
+    aliases: [/smartspec_ui_validation.md]
+    purpose: UI audit/validation (includes consistency mode).
+    category: audit
+    positional_args: []
+    extra_flags: [--mode, --spec, --spec-id, --scope, --strict]
+    reads: [specs/**, codebase, .spec/registry/**]
+    writes: [.spec/reports/ui-validation/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_code_assistant
+    aliases: [/smartspec_code_assistant.md]
+    purpose: Consolidated implementation helper (implement/fix/refactor) producing reports/prompts/scripts only.
+    category: implement
+    positional_args: []
+    extra_flags: [--mode, --spec, --tasks, --context]
+    reads: [codebase, specs/**]
+    writes: [.spec/reports/code-assistant/**, .smartspec/prompts/**, .smartspec/generated-scripts/**]
+    write_scope: [reports, prompts, scripts]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  # ---------------------------------------------------------------------------
+  # Kept (non-duplicated)
+  # ---------------------------------------------------------------------------
+  - name: /smartspec_security_evidence_audit
+    aliases: [/smartspec_security_evidence_audit.md]
+    purpose: Audit security evidence and controls (reports).
+    category: audit
+    positional_args: []
+    extra_flags: []
+    reads: [codebase, specs/**]
+    writes: [.spec/reports/security-evidence-audit/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_generate_tests
+    aliases: [/smartspec_generate_tests.md]
+    purpose: Generate test artifacts/suggestions (prompts/scripts/reports).
+    category: quality
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**/spec.md, specs/**/tasks.md]
+    writes: [.smartspec/prompts/**, .smartspec/generated-scripts/**, .spec/reports/tests/**]
+    write_scope: [prompts, scripts, reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_nfr_perf_planner
+    aliases: [/smartspec_nfr_perf_planner.md]
+    purpose: Produce NFR/performance plan from spec (reports).
+    category: nfr
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**/spec.md]
+    writes: [.spec/reports/nfr-perf-planner/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_nfr_perf_verifier
+    aliases: [/smartspec_nfr_perf_verifier.md]
+    purpose: Verify NFR/performance evidence (reports).
+    category: nfr
+    positional_args: []
+    extra_flags: []
+    reads: [codebase, perf-metrics]
+    writes: [.spec/reports/nfr-perf-verifier/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_observability_runbook_generator
+    aliases: [/smartspec_observability_runbook_generator.md]
+    purpose: Generate observability/runbook artifacts (scripts + reports).
+    category: ops
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.smartspec/generated-scripts/**, .spec/reports/runbooks/**]
+    write_scope: [scripts, reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_data_migration_governance
+    aliases: [/smartspec_data_migration_governance.md]
+    purpose: Define migration governance and produce helper artifacts (reports/scripts).
+    category: governance
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, data-schemas]
+    writes: [.spec/reports/data-migration/**, .smartspec/generated-scripts/**]
+    write_scope: [reports, scripts]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_portfolio_planner
+    aliases: [/smartspec_portfolio_planner.md]
+    purpose: Portfolio-level planning across multiple specs (reports).
+    category: planning
+    positional_args: []
+    extra_flags: []
+    reads: [.spec/SPEC_INDEX.json, specs/**]
+    writes: [.spec/reports/portfolio/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]

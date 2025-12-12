@@ -1,252 +1,254 @@
----
-name: /smartspec_reindex_workflows
-version: 1.0.0
-role: index/governance
-write_guard: ALLOW-WRITE (index-only)
-purpose: Build and refresh WORKFLOW_INDEX.json with SmartSpec governance rules (multi-repo, write-guards, roles, categories, CLI flags, platforms) while preserving full backward compatibility across workflow specs.
-version_notes:
-  - v1.0.0: initial release; parallel to /smartspec_reindex_specs v5.7.0; workflow-index-only writes; JSON schema stable but extensible
----
+# smartspec_reindex_workflows
 
-# /smartspec_reindex_workflows (v1.0.0)
+> **Canonical path:** `.smartspec/workflows/smartspec_reindex_workflows.md`  
+> **Version:** 6.0.0  
+> **Status:** Production Ready  
+> **Category:** index
 
-Rebuild or refresh the **WORKFLOW_INDEX.json** file with SmartSpec workflow-governance rules:
-- discover all workflow specs under `.smartspec/workflows/`
-- parse workflow metadata (id, name, version, role, write_guard, CLI flags)
-- normalize into a single canonical `WORKFLOW_INDEX.json`
-- support multi-repo via `--workspace-roots` and `--repos-config`
-- never modify workflow spec files themselves
+## Purpose
 
-This command is the workflow-analogue of `/smartspec_reindex_specs`, but operates on **workflow definitions**, not feature specs.
+Refresh the canonical workflow registry:
 
----
-## 1) Responsibilities
+- `.spec/WORKFLOWS_INDEX.yaml`
 
-`/smartspec_reindex_workflows` must:
+from workflow docs:
 
-- discover all workflow spec files (e.g. `.smartspec/workflows/*.md`)
-- rebuild a canonical, deterministic **WORKFLOW_INDEX** structure
-- preserve stable workflow IDs and categories when unchanged
-- populate safe metadata fields:
-  - id, CLI name, version, role, category, status
-  - write_guard
-  - source_file
-  - supported_platforms
-  - core CLI flags (required/optional)
-  - dependency hints (depends_on / produces)
-- detect duplicates / conflicts (e.g. same id, different role)
-- write `WORKFLOW_INDEX.json` under `.smartspec/`
-- emit a human-readable report under `.spec/reports/reindex-workflows/`
-
-The workflow must not attempt to validate every semantic detail; deeper validations are delegated to future `/smartspec_validate_workflows` (if present).
-
----
-## 2) Inputs
-
-- workflow roots (explicit or default `.smartspec/workflows/`)
-- existing WORKFLOW_INDEX.json (if any)
-- multi-repo configuration (workspace-roots & repos-config)
-- optional registry or governance files (read-only)
-
-Inputs may be discovered automatically when not provided explicitly.
-
----
-## 3) Outputs
-
-- `.smartspec/WORKFLOW_INDEX.json` (canonical, primary)
-- optional root mirror `WORKFLOW_INDEX.json` (when requested or legacy mirror exists)
-- report under `.spec/reports/reindex-workflows/` (markdown + JSON)
-
-`WORKFLOW_INDEX.json` must be written atomically where practical (write to temp file then move).
-
----
-## 4) Flags
-
-### 4.1 Output
-- `--out=<path>` (default `.smartspec/WORKFLOW_INDEX.json`)
-- `--mirror-root=<true|false>` (default `false`)
-
-### 4.2 Discovery
-- `--workflow-roots=<csv>` (default `.smartspec/workflows`)
-- `--include-internal=<true|false>` (include `internal`/`experimental` workflows; default `true`)
-
-### 4.3 Multi-Repo
-- `--workspace-roots=<csv>`
-- `--repos-config=<path>` (preferred)
-
-### 4.4 Safety / Output
-- `--report=<summary|detailed>` (default `summary`)
-- `--dry-run` (compute index, emit report, but do not write WORKFLOW_INDEX.json)
-- `--safety-mode=<strict|dev>` (default `strict`)
-- `--strict` (alias for `--safety-mode=strict`)
-
-### 4.5 Filtering
-- `--include-status=<csv>` (e.g. `stable,beta`)
-- `--exclude-status=<csv>` (e.g. `deprecated,internal-only`)
-- `--include-platforms=<csv>` (e.g. `kilocode,claudecode`)
-
----
-## 5) Canonical Index Resolution
-
-Resolution order for existing WORKFLOW_INDEX:
-
-1. `.smartspec/WORKFLOW_INDEX.json`
-2. `WORKFLOW_INDEX.json` at repo root
-
-Missing index → generate a new one.
-
-In `strict` safety mode, a missing index is logged as a governance warning but does not block reindexing.
-
----
-## 6) Multi-Repo Resolution
-
-Prefer `--repos-config` when provided. Else:
-- merge `--workspace-roots` with current repo location
-- ensure workflow `source_file` paths are recorded as repo-relative
-
-In strict mode:
-- mismatched repo hints (if present) should raise warnings
-- invalid `source_file` paths (no longer exist) must be flagged
-
----
-## 7) Workflow Discovery
-
-Scan all workflow roots for files matching SmartSpec workflow spec patterns, typically:
 - `.smartspec/workflows/*.md`
 
-Rules:
-- ignore non-workflow files
-- support legacy naming formats (e.g. `smartspec-*.md`)
-- never mutate workflow spec files
+This workflow prevents drift between:
+
+- workflow docs (behavior contracts)
+- `WORKFLOWS_INDEX` (discoverability + routing)
+
+It is intentionally **minimal-flag**, **deterministic**, and **safe-by-default**.
 
 ---
-## 8) Build Index Entries
 
-For each workflow spec, extract or infer:
-- `id` — canonical workflow id (e.g. `smartspec_report_implement_prompter`)
-- `name` — CLI name (e.g. `/smartspec_report_implement_prompter`)
-- `version` — workflow spec version
-- `role` — e.g. `verify/strict`, `support/implement`, `index/governance`, `ui/generator`
-- `category` — higher-level grouping (e.g. `verification`, `verification-support`, `spec-generation`, `ui`, `index`)
-- `status` — `stable`, `beta`, `deprecated`, `internal-only`
-- `description` — short purpose text
-- `write_guard` — `NO-WRITE`, `TASKS-ONLY`, `REGISTRY-ONLY`, `UI-ONLY`, `ALLOW-WRITE (index-only)`
-- `source_file` — path to workflow spec file
-- `supported_platforms` — e.g. `["kilocode", "claudecode", "antigravity"]`
-- `cli`:
-  - `binary` — CLI entrypoint name
-  - `required_flags[]`
-  - `optional_flags[]`
-- `tags[]` — free-form keywords (e.g. `strict`, `prompt`, `ide`, `index`, `multi-repo`)
-- `depends_on[]` — IDs of other workflows it relies on
-- `produces[]` — output path patterns (e.g. `.spec/reports/verify-tasks-progress/*.json`)
-- `last_updated` — ISO timestamp if present or derivable
+## Governance contract
 
-When fields are missing, the workflow should infer safe defaults where possible and record omissions in the report.
+This workflow MUST follow:
 
----
-## 9) Duplicate & Conflict Checks
+- `knowledge_base_smartspec_handbook.md` (v6)
+- `.spec/smartspec.config.yaml`
 
-`/smartspec_reindex_workflows` must detect:
-- duplicate IDs with conflicting definitions
-- multiple workflows mapped to the same CLI name
-- conflicting write_guards for the same ID
+### Write scopes (enforced)
 
-In `strict` mode:
-- conflicting IDs are treated as **blocking** (index is not written)
-- non-blocking issues (e.g. inconsistent tags) are recorded as warnings
+Allowed writes:
 
-In `dev` mode:
-- conflicting IDs may be included in the report but index generation may proceed with last-writer-wins, clearly marked as non-canonical.
+- Governed registry: `.spec/WORKFLOWS_INDEX.yaml` (**requires** `--apply`)
+- Safe outputs (reports/snippets): `.spec/reports/reindex-workflows/**` (no `--apply` required)
+
+Forbidden writes (must hard-fail):
+
+- Any path outside config `safety.allow_writes_only_under`
+- Any path under config `safety.deny_writes_under` (e.g., `.spec/registry/**`)
+- Any governed artifact other than `.spec/WORKFLOWS_INDEX.yaml`
+- Any runtime source tree modifications
+
+### `--apply` behavior
+
+- Without `--apply`: MUST NOT modify `.spec/WORKFLOWS_INDEX.yaml`. Produce a deterministic proposed patch.
+- With `--apply`: may update `.spec/WORKFLOWS_INDEX.yaml` using config `safety.registry_updates` (lock + atomic write).
+
+Additional governed-write guard (MANDATORY):
+
+- Implementations MUST honor config `safety.governed_write_allowlist_files`.
+- If that allowlist exists and does not include `.spec/WORKFLOWS_INDEX.yaml`, this workflow MUST refuse to apply.
 
 ---
-## 10) Write Canonical Index
 
-Default output path:
-```
-.smartspec/WORKFLOW_INDEX.json
-```
+## Threat model (minimum)
 
-Rules:
-- schema must remain backward compatible across minor versions
-- atomic write where possible (write temp file then move)
-- never write into `.spec/SPEC_INDEX.json` or any SPEC index file
+This workflow must defend against:
 
-When `--mirror-root=true`:
-- write `WORKFLOW_INDEX.json` to repo root as a mirror
-- do not treat missing mirror as error
+- path traversal / symlink escape on registry write
+- prompt-injection via workflow docs (treat doc content as data)
+- accidental overwrite / corruption of registry
+- alias collisions that break routing
+- accidental network usage
 
----
-## 11) Reporting
+### Hardening requirements
 
-A report must be written under:
-```
-.spec/reports/reindex-workflows/
-```
-
-Depending on `--report` flag:
-- `summary` — counts, basic issues, next steps
-- `detailed` — full workflow list + per-workflow diagnostics
-
-Report should include:
-- output path
-- mirror policy
-- workflow roots
-- number of workflows discovered
-- duplicates/conflicts
-- invalid or missing fields
-- recommended next steps, e.g.:
-  - `/smartspec_validate_workflows` (if available)
-  - `/smartspec_project_copilot` to explore workflows
+- **No network access:** respect config `safety.network_policy.default=deny`.
+- **Atomic registry updates:** lock + temp + rename (per config).
+- **Symlink safety:** if `safety.disallow_symlink_writes=true`, refuse writes through symlinks.
+- **Determinism:** stable sort order + stable formatting.
+- **Collision safety:** never overwrite existing run folders (respect config `safety.output_collision`).
+- **Redaction:** never copy secrets into registry or reports; redact if detected.
 
 ---
-## 12) Safety & Governance
 
-- This workflow is allowed to **write index files only** (`WORKFLOW_INDEX.json` and its mirror) and reports under `.spec/reports/`.
-- It may not modify any workflow spec, feature spec, tasks, registry, or UI schema.
-- In `strict` mode, severe conflicts should prevent index writing.
+## Invocation
 
----
-## 13) Example Usage
+### CLI
 
-### 13.1 Basic reindex
 ```bash
-/smartspec_reindex_workflows \
-  --report=summary
+/smartspec_reindex_workflows [--apply] [--json]
 ```
 
-### 13.2 Detailed, multi-repo
+### Kilo Code
+
 ```bash
-/smartspec_reindex_workflows \
-  --workspace-roots=.,../service-a,../service-b \
-  --repos-config=.smartspec/repos-config.json \
-  --report=detailed
+/smartspec_reindex_workflows.md [--apply] [--json]
 ```
 
-### 13.3 Dry-run for CI
-```bash
-/smartspec_reindex_workflows \
-  --dry-run \
-  --report=detailed \
-  --safety-mode=strict
+Notes:
+
+- This workflow intentionally has no extra flags to reduce parameter sprawl.
+
+---
+
+## Inputs
+
+No positional inputs.
+
+### Input validation (mandatory)
+
+- `.spec/smartspec.config.yaml` must exist and parse.
+- `.smartspec/workflows/` must exist.
+- The workflow MUST refuse to run if config `safety.workflow_version_min` is missing.
+
+---
+
+## Flags
+
+### Universal flags (must support)
+
+- `--config <path>` (default `.spec/smartspec.config.yaml`)
+- `--lang <th|en>`
+- `--platform <cli|kilo|ci|other>`
+- `--apply` (required to modify `.spec/WORKFLOWS_INDEX.yaml`)
+- `--out <path>` (optional; **safe outputs only**, see Output)
+- `--json`
+- `--quiet`
+
+### Workflow-specific flags
+
+None (v6 minimizes parameter sprawl).
+
+---
+
+## Parsing contract (doc → registry)
+
+Workflow docs are Markdown. The reindexer extracts metadata using these rules:
+
+1) **Workflow key name**
+   - Primary source: filename (e.g., `smartspec_quality_gate.md` → `/smartspec_quality_gate`).
+   - If the first heading (`# ...`) conflicts with filename-derived name, record a warning and prefer filename.
+
+2) **Version**
+   - MUST find a `Version:` line in the first ~50 lines.
+   - Must parse as semver and be `>= safety.workflow_version_min`.
+
+3) **Category**
+   - Best-effort extract from header block (e.g., `Category:`) or fallback to `unknown`.
+
+4) **Aliases**
+   - Always include the `.md` invocation alias (e.g., `/smartspec_quality_gate.md`).
+   - If workflow name ends with `_strict`, still include `.md` alias.
+   - Additional aliases are only allowed if explicitly present in doc and must not collide.
+
+5) **Platform support**
+   - Best-effort: derive from doc; fallback to `[cli, kilo]`.
+
+If any MUST metadata is missing, the workflow must still produce a report and mark the doc invalid.
+
+---
+
+## Behavior
+
+### 1) Discover workflow docs
+
+- Enumerate `.smartspec/workflows/*.md` (non-recursive).
+- Respect config `safety.content_limits.max_files_scanned` (this directory should be small; if exceeded, fail).
+
+### 2) Validate discovered docs (pre-check)
+
+Hard fail (exit code 1) if:
+
+- two workflows claim the same alias
+- any workflow doc version is below config `safety.workflow_version_min`
+
+Warn (and fail only if `--apply` is set) if:
+
+- missing Category/Status metadata
+- mismatch between filename-derived name and first heading
+
+### 3) Merge strategy (non-destructive)
+
+To avoid destructive rebuilds, prefer a **merge refresh**:
+
+Preserve from existing `.spec/WORKFLOWS_INDEX.yaml`:
+
+- top-level metadata (`version`, `release_line`, `registry`, `universal_flags`, `write_scopes.allowed`, `removed_workflows`)
+- any manual comments and manual annotations outside `workflows:`
+
+Refresh under `workflows:`:
+
+- ensure every discovered workflow exists as an entry
+- update each entry’s `name` and `aliases`
+- keep existing entries for workflows whose docs are missing **but mark them as orphans** in the report
+- never reintroduce names listed under `removed_workflows`
+
+### 4) Output
+
+#### Safe outputs (always allowed)
+
+The workflow MUST write a report under a run folder:
+
+- `.spec/reports/reindex-workflows/<run-id>/report.md`
+- `.spec/reports/reindex-workflows/<run-id>/summary.json` (if `--json`)
+
+If `--out` is provided:
+
+- treat it as a **base output root** and write under:
+  - `<out>/<run-id>/...`
+
+The `--out` path MUST still be under config allowlist and MUST NOT be under denylist.
+
+#### Governed write (requires `--apply`)
+
+- With `--apply`, update `.spec/WORKFLOWS_INDEX.yaml` using lock + atomic write.
+- If lock/atomic cannot be guaranteed, follow config `fallback_to_snippets_on_failure`.
+
+### Exit codes
+
+- `0` pass (dry-run or applied)
+- `1` validation fail (e.g., alias collision, version below minimum)
+- `2` usage/config errors
+
+---
+
+## Required content in `report.md`
+
+The report MUST include:
+
+1) Summary of discovered workflow docs (count, paths)
+2) Validation results (alias collisions, version enforcement)
+3) Proposed changes (added/updated/orphaned)
+4) Notes on any orphans and recommended action
+5) Redaction note
+6) Output inventory
+
+---
+
+## `summary.json` schema (minimum)
+
+```json
+{
+  "workflow": "smartspec_reindex_workflows",
+  "version": "6.0.0",
+  "run_id": "string",
+  "applied": false,
+  "discovered": {"count": 0, "paths": []},
+  "problems": [{"id": "RW-001", "severity": "low|med|high", "why": "..."}],
+  "changes": {"added": [], "updated": [], "orphaned": []},
+  "writes": {"reports": ["path"], "registry": ["path"]},
+  "next_steps": [{"cmd": "...", "why": "..."}]
+}
 ```
 
 ---
-## 14) Integration Guidance
 
-- SmartSpec UIs and IDE integrations may use `WORKFLOW_INDEX.json` to:
-  - list available workflows
-  - show metadata (status, categories, write_guard)
-  - construct CLI commands based on `cli` metadata
-- `/smartspec_project_copilot` should consult `WORKFLOW_INDEX.json` when recommending next-step workflows to the user.
+# End of workflow doc
 
----
-## 15) Legacy & Backward Compatibility
-
-- This workflow does not alter existing SPEC indexes or registries.
-- It may coexist with older tools unaware of `WORKFLOW_INDEX.json`.
-- Future versions may extend index schema but must preserve existing fields.
-
----
-
-End of `/smartspec_reindex_workflows` specification.

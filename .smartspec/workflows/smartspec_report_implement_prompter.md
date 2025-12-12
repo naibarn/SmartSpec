@@ -1,28 +1,33 @@
-# `/smartspec_report_implement_prompter` Workflow
+# `/smartspec_report_implement_prompter` Workflow (Updated for Kilo Code `.md` + `--kilocode`)
+
+> **Version:** 1.0.3  
+> **Status:** Stable (paired with strict verifier)  
+> **Scope of this update:** Clarify Kilo Code usage and require that any commands rendered into prompts **respect `.md` suffix + `--kilocode`** when the workflow itself is invoked with `--kilocode`.
+
+---
 
 ## 1. Metadata & Governance
 
 | Field              | Value                                      |
 |--------------------|--------------------------------------------|
 | Workflow ID        | smartspec_report_implement_prompter        |
-| Version            | 1.0.0                                      |
-| Category           | Utility / Verification Companion           |
+| Version            | 1.0.3                                      |
+| Category           | Evidence-Driven Implementation Support     |
 | Status             | Stable (paired with strict verifier)       |
 | Write Guard        | NO-WRITE (spec/tasks/registries/UI)        |
 | Primary Consumer   | Kilo Code / IDE assistants                 |
 | Required KB        | SmartSpec KB V2                            |
 
-> **Note on write guard**  
-> This workflow MUST NOT modify `spec.md`, `tasks.md`, registries, or UI schema files.  
-> Implementations MAY optionally write **prompt files only** under a non-critical directory (e.g. `.smartspec/prompts/<spec-id>/`) as an auxiliary artifact. This does not violate the NO-WRITE guard for core governed artifacts.
+> **Write Guard**  
+> This workflow MUST NOT modify `spec.md`, `tasks.md`, registries, UI schema files, or any source/test/docs/deploy artifacts. It MAY write **prompt files only** under a non-critical directory (e.g. `.smartspec/prompts/<spec-id>/`).
 
 ---
 
 ## 2. Purpose
 
-This workflow acts as a **bridge between strict verification reports and implementation tools (e.g., Kilo Code)**.
+This workflow acts as a **bridge between strict verification reports and implementation tools (e.g., Kilo Code, IDE AIs)**.
 
-Instead of repeatedly calling generic implement workflows (e.g. `/smartspec_implement_tasks`) and hoping they guess the right fixes, this workflow:
+It:
 
 1. Reads the **strict verification JSON report** produced by:
    - `/smartspec_verify_tasks_progress_strict`
@@ -32,24 +37,24 @@ Instead of repeatedly calling generic implement workflows (e.g. `/smartspec_impl
 3. Identifies:
    - Tasks that are incomplete, partial, false-positive, or unsynced
    - Critical missing components (API, tests, docs, deployment, etc.)
-4. Generates **implementation-focused prompt files** (Markdown) for IDE AIs / Kilo Code to use as highly targeted instructions.
-
-This keeps strict verification as the **source of truth for progress**, while making it much easier to implement the missing pieces "ตรงจุด" แทนที่จะวนรัน `/smartspec_implement_tasks` แบบกว้าง ๆ หลายรอบแล้วไม่ตรงปัญหา
+4. Generates **implementation-focused prompt files** (Markdown or JSON) for IDE AIs / Kilo Code to use as highly targeted instructions.
 
 ---
 
 ## 3. Typical Usage
 
-1. Run strict verification:
+### 3.1 CLI / Shell usage
+
+1. **Run strict verification** (CLI example):
 
 ```bash
 /smartspec_verify_tasks_progress_strict \
-  --spec specs/feature/<spec-id>/spec.md \
+  --tasks specs/feature/<spec-id>/tasks.md \
   --report-format=json \
   --report .spec/reports/verify-tasks-progress/<spec-id>-verification-report.json
 ```
 
-2. Generate implementation prompts from the report:
+2. **Generate implementation prompts from the report**:
 
 ```bash
 /smartspec_report_implement_prompter \
@@ -59,18 +64,53 @@ This keeps strict verification as the **source of truth for progress**, while ma
   --output .smartspec/prompts/<spec-id>/
 ```
 
-3. Open the generated prompt files (e.g. in Kilo Code) and use them as **input prompts** for AI-assisted implementation.
+3. Open the generated prompt files and use them as **input prompts** for AI-assisted implementation.
 
 4. After implementing changes, rerun strict verifier and optionally sync checkboxes:
 
 ```bash
-/smartspec_verify_tasks_progress_strict --spec specs/feature/<spec-id>/spec.md --report-format=both --report=detailed
+/smartspec_verify_tasks_progress_strict \
+  --tasks specs/feature/<spec-id>/tasks.md \
+  --report-format=both
 
 /smartspec_sync_tasks_checkboxes \
   --tasks specs/feature/<spec-id>/tasks.md \
   --report .spec/reports/verify-tasks-progress/<spec-id>-verification-report.json \
   --mode=auto
 ```
+
+### 3.2 Kilo Code usage (CRITICAL UPDATE)
+
+When invoked from **Kilo Code**, orchestrated workflows MUST use the **`.md`-suffixed command + `--kilocode` flag**. This applies both to:
+
+- The command that launches this workflow, and
+- Any SmartSpec commands that this workflow writes into generated prompts.
+
+**Kilo Code invocation example:**
+
+```bash
+/smartspec_report_implement_prompter.md \
+  --spec specs/feature/<spec-id>/spec.md \
+  --tasks specs/feature/<spec-id>/tasks.md \
+  --report .spec/reports/verify-tasks-progress/<spec-id>-verification-report.json \
+  --output .smartspec/prompts/<spec-id>/ \
+  --kilocode
+```
+
+If `--kilocode` is present, **all commands rendered into prompts MUST use Kilo-style syntax**:
+
+```bash
+/smartspec_verify_tasks_progress_strict.md \
+  specs/feature/<spec-id>/tasks.md \
+  --kilocode \
+  --report-format=both
+
+/smartspec_sync_tasks_checkboxes.md \
+  specs/feature/<spec-id>/tasks.md \
+  --kilocode
+```
+
+If `--kilocode` is **not** provided, rendered commands MUST use standard CLI syntax (no `.md` and no `--kilocode`).
 
 ---
 
@@ -85,664 +125,291 @@ This keeps strict verification as the **source of truth for progress**, while ma
   --report <path/to/strict-json-report> \
   [--output <dir>] \
   [--cluster <cluster-name-or-all>] \
-  [--language <th|en>]
+  [--language <th|en>] \
+  [--workspace-roots <paths>] \
+  [--repos-config <path>] \
+  [--evidence-config <path>] \
+  [--dry-run] \
+  [--format markdown|json] \
+  [--max-tasks-per-prompt <int>] \
+  [--max-chars-per-prompt <int>] \
+  [--kilocode]
 ```
 
-### 4.2 Flags
+### 4.2 Kilo Code Command (orchestrated)
 
-- `--spec` (required)
-  - Path to the feature `spec.md`.
-- `--tasks` (required)
-  - Path to `tasks.md` for the same spec.
-- `--report` (required)
-  - Path to the JSON report generated by `/smartspec_verify_tasks_progress_strict`.
-- `--output` (optional)
-  - Directory where prompt `.md` files will be written.
-  - If omitted, prompts MAY be printed to stdout or returned through the host environment; implementations SHOULD support both.
-- `--cluster` (optional)
-  - One of: `api`, `tests`, `docs`, `deploy`, `all` (default: `all`).
-  - Filters which domain clusters to generate prompts for.
-- `--language` (optional)
-  - `th` (Thai) or `en` (English). Default MAY follow project locale or be `th` in Kilo Code environments.
+Kilo Code will typically invoke the **`.md` variant**:
+
+```bash
+/smartspec_report_implement_prompter.md \
+  --spec <path/to/spec.md> \
+  --tasks <path/to/tasks.md> \
+  --report <path/to/strict-json-report> \
+  --output <dir> \
+  --kilocode
+```
+
+### 4.3 Flags (summary)
+
+- `--spec` (required)  
+  Path to the feature `spec.md`.
+
+- `--tasks` (required)  
+  Path to `tasks.md` for the same spec.
+
+- `--report` (required)  
+  Path to the JSON report generated by `/smartspec_verify_tasks_progress_strict`.
+
+- `--output` (optional)  
+  Directory where prompt `.md` files will be written. If omitted, prompts MAY be printed to stdout or returned through the host environment; implementations SHOULD support both.
+
+- `--cluster` (optional)  
+  One of: `api`, `tests`, `docs`, `deploy`, `all` (default: `all`). Filters which domain clusters to generate prompts for.
+
+- `--language` (optional)  
+  `th` (Thai) or `en` (English). Default follows locale rules in Section 18/24.
+
+- `--workspace-roots`, `--repos-config` (optional)  
+  Required for multi-repo resolution; must mirror strict verifier configuration.
+
+- `--evidence-config` (optional)  
+  Path to evidence-config JSON that refines cluster/evidence mapping.
+
+- `--dry-run` (optional)  
+  When present, **no files are written**. Instead, a summary of what *would* be generated is printed.
+
+- `--format` (optional)  
+  `markdown` (default) or `json`. In `json` mode, structured output suitable for IDE sidebars / UI.
+
+- `--max-tasks-per-prompt`, `--max-chars-per-prompt` (optional)  
+  Override defaults (15 tasks, 35,000 chars).
+
+- `--kilocode` (optional but IMPORTANT)  
+  Indicates that the workflow is being run under Kilo Code. When set, **all commands embedded in prompts must use `.md` + `--kilocode` syntax**.
 
 ---
 
 ## 5. Inputs & Data Sources
 
-The workflow must read and interpret three main artifacts:
+*(Same as previous version, retained for completeness; focus of this update is on Kilo Code command rendering and does not change core behavior.)*
 
-1. **Strict JSON Report** (required)
-   - Must conform to `/smartspec_verify_tasks_progress_strict` JSON format.
-   - Key fields typically include (non-exhaustive):
-     - `summary.total_tasks`
-     - `summary.complete`, `summary.incomplete`, `summary.partial`, etc.
-     - `phases[*].id`, `phases[*].name`, `phases[*].status`
-     - `phases[*].tasks[*].id`, `description`, `verdict`, `missing_evidence`, `observed_evidence`
-     - `critical_missing_components[*].name`, `tasks[*]`
+1. **Strict JSON Report** (required)  
+   - Produced by `/smartspec_verify_tasks_progress_strict`.
+   - Contains summary, per-task verdicts, and evidence details.
 
-2. **`spec.md`** (required)
-   - Used to provide higher-level context in prompts:
-     - feature name
-     - architecture overview
-     - domain language
-     - non-functional requirements that influence implementation (e.g., security, performance)
+2. **`spec.md`** (required)  
+   - Provides feature context, architecture, and domain language.
 
-3. **`tasks.md`** (required)
-   - Used to retrieve the **task descriptions and acceptance criteria** per task ID.
-   - The workflow must parse `tasks.md` to map:
-     - `task_id -> {title, description, acceptance_criteria, phase, tags}`
-
-Implementation detail for parsing `tasks.md` is left to the engine but MUST support the standard SmartSpec TASKS format.
+3. **`tasks.md`** (required)  
+   - Provides task titles, descriptions, phases, and acceptance criteria.
 
 ---
 
-## 6. Core Behavior & Algorithm
+## 6. Core Behavior & Algorithm (excerpted)
 
-### 6.1 High-Level Flow
-
-1. Load and parse the JSON `--report`.
-2. Load and parse `--spec` and `--tasks`.
-3. Build an internal map of tasks:
-   - `TaskMeta = { id, phase, title, description, acceptance, verdict, is_critical, domain_cluster }`.
-4. Classify each task into one of three **action categories**:
-   - **`simple_not_started`** → recommend `/smartspec_implement_tasks`.
-   - **`complex_cluster`** → generate detailed implementation prompts.
-   - **`unsynced_only`** → no implementation needed, just mention `/smartspec_sync_tasks_checkboxes`.
-5. Group `complex_cluster` tasks by **domain cluster**:
-   - `api`
-   - `tests`
-   - `docs`
-   - `deploy`
-6. For each requested cluster (per `--cluster` flag), generate a Markdown prompt file.
-
-### 6.2 Task Classification Rules
-
-**Terminology**: exact field names may vary slightly with report versions; the workflow should be robust and driven by semantics, not fragile on field naming.
-
-#### 6.2.1 Identify Critical Tasks
-
-- A task is `is_critical = true` if **any** of the following holds:
-  - The task ID appears under `critical_missing_components[*].tasks[*]` in the JSON report.
-  - Its `missing_evidence` includes key domains such as:
-    - API routes/endpoints/controllers
-    - Tests (unit/integration/performance)
-    - API docs (OpenAPI/Swagger)
-    - Deployment / K8s / monitoring
-
-#### 6.2.2 Action Category
-
-For each task:
-
-- **`unsynced_only`**
-  - `verdict == "unsynced_complete"`
-  - There is sufficient implementation evidence; only checkbox state or metadata is out of sync.
-
-- **`simple_not_started`**
-  - `verdict == "incomplete"` and phase status is `NOT_STARTED` (or equivalent) AND
-  - `is_critical == false`
-  - No partial implementation found; the entire area is clearly untouched and simple enough to be handled by `/smartspec_implement_tasks`.
-
-- **`complex_cluster`**
-  - Any of the following:
-    - Task ID is `is_critical == true`.
-    - Phase is in a `PARTIAL` or `MIXED` state with both completed and incomplete tasks.
-    - `missing_evidence` or diagnostics indicate nuanced gaps (e.g., "route exists but not wired", "service exists but endpoint missing", "tests missing for security-sensitive flows").
-
-### 6.3 Domain Cluster Mapping
-
-Each `complex_cluster` task must be assigned a `domain_cluster` based on:
-
-- Task metadata from `tasks.md` (tags, titles, phase names)
-- Report diagnostics (e.g., mentions of `endpoint`, `test`, `OpenAPI`, `deployment`)
-
-Suggested heuristic:
-
-- `domain_cluster = "api"` if:
-  - Task title/description includes `endpoint`, `API`, `route`, `controller`, `handler`, etc.
-  - JSON missing evidence refers to URLs, HTTP methods, routers.
-
-- `domain_cluster = "tests"` if:
-  - Task mention: `unit test`, `integration test`, `performance test`, `QA`.
-  - Diagnostics mention `no tests found`, `coverage`, `test suite`.
-
-- `domain_cluster = "docs"` if:
-  - Task mention: `documentation`, `OpenAPI`, `Swagger`, `API docs`.
-
-- `domain_cluster = "deploy"` if:
-  - Task mention: `deployment`, `Kubernetes`, `K8s`, `Helm`, `CI/CD`, `monitoring`, `metrics`.
-
-Tasks with ambiguous signals may either:
-
-- Be attached to multiple clusters (rare; avoid where possible), or
-- Default to the dominant domain inferred from `tasks.md`.
+1. Parse CLI args (including `--kilocode`).
+2. Load strict report JSON, `spec.md`, and `tasks.md`.
+3. Classify tasks into `unsynced_only`, `simple_not_started`, and `complex_cluster` according to governance.
+4. Group complex tasks into domain clusters (`api`, `tests`, `docs`, `deploy`).
+5. For each cluster, build prompt content using official templates.
+6. When constructing any **embedded SmartSpec commands** (strict verify, sync, re-run prompter), use the **`Command Rendering Rules`** below.
+7. Emit prompts either as Markdown files under `.smartspec/prompts/<spec-id>/` or as JSON (when `--format json`).
 
 ---
 
-## 7. Prompt File Generation
+## 7. Command Rendering Rules (NEW + IMPORTANT)
 
-### 7.1 Output Structure
+### 7.1 Overview
 
-If `--output` is provided, the workflow SHOULD create:
+This workflow frequently emits **"what to run next"** commands inside prompts, for example:
 
-- `<output>/README.md`
-- `<output>/api-implementation-prompt.md` (if `api` cluster exists and requested)
-- `<output>/testing-prompt.md` (if `tests` cluster exists and requested)
-- `<output>/documentation-prompt.md` (if `docs` cluster exists and requested)
-- `<output>/deployment-prompt.md` (if `deploy` cluster exists and requested)
+- Rerun strict verifier
+- Sync checkboxes
+- Re-run this workflow with narrowed clusters
 
-If `--output` is omitted, the workflow MAY:
+These commands MUST respect the environment:
 
-- Print all prompts concatenated with clear separators to stdout, or
-- Return them via its host integration.
+- Standard CLI → no `.md`, no `--kilocode`  
+- Kilo Code (`--kilocode` provided) → **`.md` suffix + `--kilocode` required**
 
-### 7.2 README.md Content (High-Level Summary)
+### 7.2 Environment Detection
 
-`README.md` SHOULD contain:
+- If CLI args include `--kilocode` → set `env.kilocode = true`.
+- Else → `env.kilocode = false`.
 
-- Paths of the input artifacts (`spec`, `tasks`, `report`).
-- Summary counts:
-  - total tasks
-  - counts by verdict
-  - number of tasks per action category (`unsynced_only`, `simple_not_started`, `complex_cluster`).
-- A **table per cluster** listing task IDs and short titles.
-- concrete next-step recommendations, for example:
-  - "Use `/smartspec_implement_tasks` for simple not-started groups: T0xx–T0yy"
-  - "Use `api-implementation-prompt.md` with Kilo Code to fix critical API gaps (T047–T048)."
+No other auto-detection is required; **the presence of `--kilocode` is the single source of truth**.
 
-### 7.3 Cluster Prompt Structure
+### 7.3 Render Strict Verify Command
 
-Each cluster prompt file MUST be written as a **Kilo Code–friendly instruction** to an implementation copilot.
+Given:
 
-Recommended structure:
+- `tasks_path` (required)
 
-1. **Header**
-   - Cluster name and target tasks (IDs + titles).
+The rendered command MUST be:
 
-2. **Context Block**
-   - Spec path, tasks path, report path.
-   - Short description of the service and relevant tech stack (deduced from typical source paths like `src/`, `tests/`).
+- **Standard CLI** (`env.kilocode = false`):
 
-3. **Problem Summary Block**
-   - Paraphrase strict report findings for this cluster: what is missing and why strict verifier marks these tasks incomplete.
+  ```bash
+  /smartspec_verify_tasks_progress_strict \
+    --tasks ${tasks_path} \
+    --report-format=both
+  ```
 
-4. **Task Details**
-   - For each task in the cluster:
-     - Task ID and title
-     - Description and acceptance criteria extracted from `tasks.md`
-     - Any important diagnostics from the JSON report (e.g., missing endpoints, missing test files).
+- **Kilo Code** (`env.kilocode = true`):
 
-5. **Action Plan / Instructions**
-   - A numbered list of concrete steps the implementation copilot should perform, such as:
-     - Read specific files and directories to infer patterns.
-     - Create or modify specific files (routes, services, tests, docs, manifests).
-     - Follow existing conventions (e.g., Fastify routes, NestJS modules, Spring controllers).
-   - Instructions must be **imperative and explicit** (e.g., "สร้าง endpoint POST /auth/phone/send-otp ในไฟล์ X ด้วย pattern เดียวกับ Y").
+  ```bash
+  /smartspec_verify_tasks_progress_strict.md \
+    ${tasks_path} \
+    --kilocode \
+    --report-format=both
+  ```
 
-6. **Post-Implementation Checklist**
-   - Which test commands to run.
-   - How to rerun strict verifier.
-   - Optional reminder to run `/smartspec_sync_tasks_checkboxes` if all relevant tasks become `complete`.
+### 7.4 Render Sync Checkboxes Command
 
-### 7.4 Language Handling
+Given:
 
-- If `--language=th`, prompts SHOULD be primarily in Thai with technical terms in English where conventional.
-- If `--language=en`, prompts SHOULD be written entirely in English.
-- Implementations MAY auto-detect project locale from spec/tasks content if flag is not provided.
+- `tasks_path` (required)
 
----
+The rendered command MUST be:
 
-## 8. Behavior for Non-Complex Tasks
+- **Standard CLI**:
 
-The workflow MUST NOT attempt to over-engineer simple cases.
+  ```bash
+  /smartspec_sync_tasks_checkboxes \
+    --tasks ${tasks_path}
+  ```
 
-### 8.1 `simple_not_started`
+- **Kilo Code**:
 
-For tasks classified as `simple_not_started`, the workflow SHOULD:
+  ```bash
+  /smartspec_sync_tasks_checkboxes.md \
+    ${tasks_path} \
+    --kilocode
+  ```
 
-- Not generate a dedicated detailed prompt.
-- Instead, list these tasks in `README.md` with a recommendation similar to:
+### 7.5 Render This Workflow (Re-run Prompter)
 
-> "Tasks T064–T073 (Testing & QA) are incomplete and show no implementation evidence. They appear to be straightforward and non-critical. For these, use `/smartspec_implement_tasks` with an appropriate range or filter."
+When a prompt suggests re-running this workflow (e.g., with different clusters), it MUST render:
 
-Optionally, the workflow may suggest example CLI calls, but must not claim that prompt generation is necessary.
+- **Standard CLI**:
 
-### 8.2 `unsynced_only`
+  ```bash
+  /smartspec_report_implement_prompter \
+    --spec ${spec_path} \
+    --tasks ${tasks_path} \
+    --report ${report_path} \
+    --cluster ${cluster}
+  ```
 
-For `unsynced_only` tasks, the workflow SHOULD clearly state in `README.md` that:
+- **Kilo Code**:
 
-- Implementation evidence exists.
-- Remaining work is to sync checkbox state via `/smartspec_sync_tasks_checkboxes`.
-- No implementation prompt is needed.
+  ```bash
+  /smartspec_report_implement_prompter.md \
+    --spec ${spec_path} \
+    --tasks ${tasks_path} \
+    --report ${report_path} \
+    --cluster ${cluster} \
+    --kilocode
+  ```
 
----
+### 7.6 Template Integration
 
-## 9. Error Handling
-
-The workflow MUST handle the following gracefully:
-
-1. **Missing or unreadable report file**
-   - Emit a clear error:
-     - e.g., "strict JSON report not found; please run `/smartspec_verify_tasks_progress_strict` first."
-
-2. **Report not in strict format**
-   - Detect missing required fields.
-   - Emit error suggesting rerun of the strict verifier with `--report-format=json`.
-
-3. **Task ID mismatch between report and tasks.md**
-   - Log/emit a warning listing task IDs present in report but not in `tasks.md`.
-   - Skip such tasks for cluster prompt generation.
-
-4. **Empty clusters**
-   - If a requested cluster has no `complex_cluster` tasks, the corresponding prompt file may be omitted or replaced with a short stub noting "No complex tasks detected for this cluster."
-
----
-
-## 10. Integration Notes
-
-- This workflow is designed to be **paired** with `/smartspec_verify_tasks_progress_strict` and does **not** replace it.
-- CI/CD pipelines **do not need** to invoke this workflow; it is primarily for developer/IDE usage.
-- IDE integrations (Kilo Code, Claude Code, Google Antigravity) MAY:
-  - Expose a UI action like "Generate Implementation Prompts from Strict Report".
-  - Open the generated prompt file directly in an AI chat or coding session.
-
----
-
-## 11. Future Extensions (Non-Blocking)
-
-These enhancements are optional and MUST NOT break backward compatibility:
-
-1. `--cluster` accepting multiple comma-separated values.
-2. `--format=json` to output machine-readable prompt definitions for richer IDE integrations.
-3. Per-task prompt generation (e.g., `--task-id T047`).
-4. Localized prompt templates per organization (e.g., different tone/style for different teams).
-
----
-
-## 12. Multi‑Repo Governance Compliance (NEW)
-To comply fully with SmartSpec KB V2 multi-repo rules, this workflow MUST support the same workspace resolution flags used by the strict verifier:
-
-### 12.1 Additional Required Flags
-```
---workspace-roots <paths>
---repos-config <path>
-```
-Rules:
-- If the strict verifier was invoked with these flags, they MUST be passed through to this workflow.
-- Path resolution for spec, tasks, and report MUST occur within the resolved workspace graph.
-- Missing these flags in multi-repo mode MUST generate a warning.
-
----
-
-## 13. Write Guard Clarification (UPDATED)
-`write_guard: NO-WRITE (core artifacts)` means:
-
-### 13.1 Forbidden Writes
-The workflow MUST NOT modify:
-- `spec.md`
-- `tasks.md`
-- Any registry under `.smartspec/registries`
-- Any UI schema files
-- Source code (`src/`)
-- Tests (`tests/`)
-- Docs (`docs/`)
-- Deployment infrastructure
-
-### 13.2 Allowed Auxiliary Writes
-The workflow MAY create prompt files **only** under:
-```
-.smartspec/prompts/<spec-id>/
-```
-This directory is explicitly classified as **non-governed auxiliary output**, therefore safe.
-
----
-
-## 14. Improved Logic for Task Classification (UPDATED)
-
-### 14.1 Enhanced Detection of Complex Tasks
-A task MUST be classified as `complex_cluster` if:
-- It appears in `critical_missing_components`, OR
-- It has missing evidence tied to:
-  - API endpoints / routing / controllers
-  - Authentication / authorization flows
-  - Test suites (unit/integration/performance)
-  - OpenAPI / documentation
-  - Deployment / K8s / monitoring
-- OR its description contains advanced concepts:
-  - `Kubernetes`, `monitoring`, `multi-tenant`, `encryption`, `SLA`, `SLO`, `role-based access`, `performance`, etc.
-- OR it belongs to phases titled:
-  - `Security`, `Payment`, `Integration`, `Critical`, `Deployment`
-
-### 14.2 Enhanced Simple Task Recognition
-A task SHOULD be considered `simple_not_started` only if:
-- Phase status is `NOT_STARTED`, AND
-- Task is not critical, AND
-- Description is NOT matched by any complexity keywords above.
-
-If ambiguous → classify as **complex** (fail-safe behavior).
-
----
-
-## 15. JSON Schema Resilience (NEW)
-Report schema may evolve. The workflow MUST:
-- Not rely on exact field names when semantics can be inferred.
-- Accept renamed or expanded fields.
-- Use safe fallback behavior:
-  - If `critical_missing_components` missing → assume empty list.
-  - If task verdict missing → treat as `incomplete`.
-  - If phases missing → group tasks by verdict only.
-
-This prevents brittleness across SmartSpec versions.
-
----
-
-## 16. Prompt Size Controls (NEW)
-To avoid excessively large prompts:
-
-### 16.1 Hard Limits
-- Default max tasks per prompt: **15**
-- Default max characters per prompt file: **35,000 chars**
-
-### 16.2 Auto-Splitting
-If a cluster exceeds limits:
-- Create multiple files:
-  - `testing-prompt-1.md`
-  - `testing-prompt-2.md`
-- Each file MUST contain its own context + checklist.
-
-### 16.3 CLI Overrides
-```
---max-tasks-per-prompt <int>
---max-chars-per-prompt <int>
-```
-
----
-
-## 17. Prompt Template Appendix (NEW)
-To standardize output, this workflow MUST include built‑in templates.
-
-### 17.1 API Prompt Template (excerpt)
-```
-# Kilo Code Implementation Prompt — API Cluster
-
-## Tasks Covered
-{{task_list}}
-
-## Context
-Spec: {{spec_path}}
-Tasks: {{tasks_path}}
-Report: {{report_path}}
-Tech stack: {{stack_detected}}
-
-## Strict Report Summary
-{{cluster_diagnostics}}
-
-## Required Implementations
-1. Read these files to infer existing patterns:
-   {{related_source_files}}
-2. Implement / fix the following endpoints:
-   {{endpoint_list}}
-3. Follow these rules:
-   - Use existing middleware patterns
-   - Reuse domain services
-   - Follow same error model
-
-## After Implementation
-- Run tests: {{test_command}}
-- Re-run verifier: {{verify_command}}
-```
-
-### 17.2 Testing Prompt Template (excerpt)
-```
-# Kilo Code Implementation Prompt — Testing Cluster
-
-## Test Tasks
-{{task_list}}
-
-## Evidence Gaps
-{{missing_test_evidence}}
-
-## Actions
-- Create unit tests under {{unit_test_path}}
-- Create integration tests under {{integration_test_path}}
-- Include positive + negative cases
-```
-
-(Full templates live inside workflow, not reproduced here.)
-
----
-
-## 18. Locale Resolution Rules (UPDATED)
-Locale is resolved as follows:
-1. If `--language` provided → use it.
-2. Else if `spec.md` header contains `Language: th|en` → honor it.
-3. Else if platform = Kilo Code → default to `th`.
-4. Else default to `en`.
-
----
-
-## 19. Integration with `/smartspec_project_copilot` (NEW)
-The project copilot MUST surface this workflow when:
-- A strict JSON report exists **and**
-- At least one task is in:
-  - `critical_missing_components`, OR
-  - `partial` phases, OR
-  - tasks with domain complexity (API/docs/tests/deploy)
-
-Recommended UI message:
-> "Strict verifier found implementation gaps. Generate IDE prompts using `/smartspec_report_implement_prompter`?"
-
----
-
-## 20. Additional Edge Case Handling (NEW)
-
-### 20.1 All Tasks Complete
-If every task is `complete` or `unsynced_complete`:
-- Do NOT create cluster prompts.
-- Create only:
-```
-<output>/README.md
-```
-Containing:
-- Summary: "No remaining implementation work detected."
-- Suggest running `/smartspec_sync_tasks_checkboxes` if needed.
-
-### 20.2 Severe Task ID Mismatch
-If many tasks in report do not appear in `tasks.md`:
-- Emit a consolidated warning:
-> "The report references task IDs not found in tasks.md. Regenerate tasks or align spec/tasks before continuing."
-
----
-
-## 21. Strict Report Version Handling (NEW)
-
-### 21.1 Version Field Requirement
-- The strict JSON report SHOULD expose a top-level or metadata field indicating its version, e.g. `report.version` or `meta.strict_report_version`.
-- This workflow MUST:
-  - Read the version if present.
-  - Treat missing version as `v1` (compatibility mode).
-  - Emit a warning if the version is greater than the highest version it understands.
-
-### 21.2 Behavior by Version
-- **v1** (default, missing version):
-  - Use current heuristics as described in this spec.
-- **vFuture (unknown)**:
-  - Proceed with best-effort parsing.
-  - Log a warning recommending SmartSpec toolchain upgrade or workflow upgrade.
-
----
-
-## 22. Evidence Config Awareness (NEW)
-
-Strict verifier may be configured with per-spec evidence rules (e.g. custom test locations, docs requirements).
-
-### 22.1 Evidence Config Inputs
-
-The workflow MUST attempt to locate evidence configuration in the following order:
-
-1. Explicit flag:
-   ```
-   --evidence-config <path/to/evidence-config.json>
-   ```
-2. Conventional location (if flag not provided):
-   ```
-   .smartspec/evidence-config/<spec-id>.json
-   ```
-
-If an evidence config is found, the workflow MUST:
-- Use it to:
-  - Refine domain cluster mapping (e.g. additional test/doc/deploy evidence types).
-  - Adjust prompt instructions (e.g. custom test directories, special doc formats).
-
-If not found, the workflow proceeds with default heuristics.
-
----
-
-## 23. Cluster Overrides (NEW)
-
-### 23.1 Override Mechanism
-
-Projects MAY define an override file to force domain cluster assignments:
-
-```json
-// .smartspec/prompts/cluster-overrides.json
-{
-  "T047": "api",
-  "T064": "tests",
-  "T074": "docs",
-  "T076": "deploy"
-}
-```
-
-Rules:
-- If an override exists for a task ID, it MUST take precedence over heuristic-based cluster mapping.
-- Unknown cluster names MUST be ignored with a warning.
-
----
-
-## 24. Improved Locale Detection (UPDATED)
-
-### 24.1 Extended Locale Heuristic
-
-Locale resolution (from Section 18) is enhanced as follows:
-
-1. If `--language` provided → use it.
-2. Else if `spec.md` header contains `Language: th|en` → honor header.
-3. Else, inspect `spec.md` and `tasks.md` body:
-   - If Thai characters ratio > 20% → default `th`.
-   - Else → default `en`.
-4. Platform fallback:
-   - If running under Kilo Code and no strong signal → `th`.
-5. Final fallback → `en`.
-
-This reduces misclassification in mixed-language environments.
-
----
-
-## 25. Tech Stack Detection (NEW)
-
-The workflow SHOULD detect the dominant tech stack to better tailor prompt instructions.
-
-### 25.1 Detection Heuristics
-
-Examples (non-exhaustive):
-
-- **Node.js / Fastify**:
-  - `package.json` contains `fastify` dependency.
-- **Node.js / NestJS**:
-  - `package.json` + imports containing `@nestjs/common`.
-- **Java / Spring Boot**:
-  - Presence of `src/main/java` and `@SpringBootApplication`.
-- **Python / FastAPI**:
-  - `.py` files with `fastapi.FastAPI` imports.
-- **Go / Fiber/Chi/Gin**:
-  - `go.mod` modules and routing libraries.
-
-### 25.2 Prompt Tailoring
-
-Detected stack SHOULD be reflected in prompt templates, for example:
-
-- Use "controller" + "service" language for Nest/Spring.
-- Use "route handler" for Fastify/FastAPI.
-- Suggest file locations that match framework conventions.
-
-If stack cannot be confidently detected, prompts MUST stay framework-neutral.
-
----
-
-## 26. Acceptance Criteria Fallback (NEW)
-
-If a task in `tasks.md` lacks explicit acceptance criteria:
-
-- The workflow MUST:
-  - Attempt to infer criteria from `spec.md` (search by task title or related section).
-  - If still missing, add a note in the prompt:
-    > "This task has no explicit acceptance criteria in tasks.md; please derive behavior from spec.md section X/Y."
-
-This prevents silent under-specification in generated prompts.
-
----
-
-## 27. Large Report Handling (NEW)
-
-For very large strict reports:
-
-- If total tasks > 200 OR report file size > 2MB:
-  - The workflow MUST:
-    - Use streaming or chunked parsing where possible.
-    - Prefer generating prompts only for critical or complex tasks by default.
-    - Encourage using `--cluster` and `--max-tasks-per-prompt` to narrow scope.
-
----
-
-## 28. Dry-Run Mode & Output Format (NEW)
-
-### 28.1 Dry-Run
-
-Flag:
-```bash
---dry-run
-```
-
-Behavior:
-- No files are written.
-- Instead, a summary is printed:
-  - Detected clusters.
-  - Task counts per category.
-  - Which prompt files *would* be generated.
-
-### 28.2 Output Format
-
-Flag:
-```bash
---format markdown|json
-```
-
-- `markdown` (default): behaves as currently specified.
-- `json`: emit structured JSON describing:
-  - clusters
-  - tasks
-  - prompt bodies
-
-This allows direct IDE or UI integration without reading files.
-
----
-
-## 29. Prompt Execution Metadata (NEW)
-
-Each generated prompt file SHOULD include a small metadata header, for example:
+Prompt templates MUST NOT hard-code commands. Instead, they MUST use placeholders:
 
 ```markdown
+## After Implementation
+
+- Run strict verifier:
+
+  ```bash
+  {{verify_command}}
+  ```
+
+- If all tasks in this prompt are complete, sync checkboxes:
+
+  ```bash
+  {{sync_command}}
+  ```
+```
+
+During rendering, the implementation MUST compute `verify_command` and `sync_command` using the rules above and inject them into the template.
+
+---
+
+## 8. Prompt Templates (Excerpted)
+
+### 8.1 API Cluster Template (excerpt)
+
+```markdown
+# Kilo Code Implementation Prompt — API Cluster
+
 <!--
 Prompt-Generation-ID: {{uuid}}
 Spec-ID: {{spec_id}}
 Report-Version: {{strict_report_version}}
 Generated-At: {{timestamp_iso8601}}
 -->
+
+## Tasks Covered
+{{task_list}}
+
+## Context
+- Spec: {{spec_path}}
+- Tasks: {{tasks_path}}
+- Report: {{report_path}}
+- Tech stack: {{stack_detected}}
+
+## Strict Report Summary
+{{cluster_diagnostics}}
+
+## Required Implementations
+1. Review these existing files:
+   {{related_source_files}}
+2. Implement / fix the following endpoints:
+   {{endpoint_list}}
+3. Follow these rules:
+   - Use existing middleware patterns
+   - Reuse domain services
+   - Follow the existing error model
+
+## After Implementation
+- Run tests: {{test_command}}
+- Re-run strict verifier:
+
+  ```bash
+  {{verify_command}}
+  ```
+
+- If everything in this prompt is complete, sync tasks:
+
+  ```bash
+  {{sync_command}}
+  ```
 ```
 
-This supports traceability and audit.
+> **Kilo Code Note:** When `--kilocode` is provided to this workflow, `verify_command` and `sync_command` MUST be rendered using the `.md` + `--kilocode` form.
 
 ---
 
-**End of `/smartspec_report_implement_prompter` workflow specification (v1.0.2).**
+## 9. Locale Resolution (Reminder)
+
+Locale resolution is unchanged: `--language` > spec header > body-language ratio > platform default (Kilo Code → `th`) > fallback `en`.
+
+Prompts may therefore contain Thai or English text, but **embedded commands must still follow the environment-specific rules in Section 7**.
+
+---
+
+## 10. Backward Compatibility
+
+- Existing behavior for non-Kilo environments is preserved.  
+- Existing paths, flags, and governance remain valid.  
+- This update is **additive** and only:
+  - Adds `--kilocode` as an input flag, and
+  - Specifies how **rendered commands** must adapt to this flag.
+
+No changes are required for pipelines that call `/smartspec_report_implement_prompter` without `--kilocode`.
+
+---
+
+**End of `/smartspec_report_implement_prompter` workflow specification (v1.0.3, Kilo Code aware).**
 

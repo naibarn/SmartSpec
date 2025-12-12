@@ -1,207 +1,260 @@
-# UPDATED KNOWLEDGE BASE – `knowledge_base_smart_spec.md`
-## Governance Additive Extension (Includes `/smartspec_report_implement_prompter`)
+# Knowledge Base — SmartSpec Governance (Updated With Kilo Code Dual-Command Rules)
 
-> **NOTE:** This update is *additive* and maintains full backward compatibility. No original rules are altered or removed. New workflow, governance rules, and chain integration are appended according to KB policy.
-
----
-# 1. SmartSpec Governance Overview (Unchanged)
-*(Original content preserved; omitted here for brevity. Sections below extend the KB.)*
-
----
-# 2. NEW WORKFLOW CLASSIFICATION
-## `/smartspec_report_implement_prompter`
-**Category:** Evidence-Driven Implementation Support Workflow (Post-Strict-Verification Layer)
-
-### Purpose
-This workflow converts strict verification reports into actionable implementation prompts, designed for IDE-based AI copilots. It supports domain clustering, multi-repo environments, evidence configuration, and stack detection.
-
-### Position in SmartSpec Lifecycle
-This workflow executes **after strict verification** and before sync:
-```
-SPEC → PLAN → TASKS → IMPLEMENT → VERIFY (strict)
-        ↓
-   OPTIONAL: /smartspec_report_implement_prompter
-        ↓
-SYNC → DELIVERY
-```
-
-### Key Capabilities
-- Reads strict JSON report (version-aware)
-- Performs domain clustering (API / Tests / Docs / Deploy)
-- Identifies simple vs complex implementation gaps
-- Generates prompts per cluster
-- Supports multi-repo flags & evidence-config
-- Supports localization (EN/TH)
-- Supports stack detection (Fastify, NestJS, Spring Boot, FastAPI, Go, etc.)
+> **Version:** 2.3.0  
+> **Status:** Stable  
+> **Scope of Update:**  
+> - Add *dual-command guidance* (CLI + Kilo Code) for every SmartSpec workflow example.  
+> - Enforce rule: **When `--kilocode` is present → workflows MUST use `.md` suffix.**
 
 ---
-# 3. GOVERNANCE RULES FOR `/smartspec_report_implement_prompter`
 
-## 3.1 Write Guard Classification
-```
-write_guard: NO-WRITE (core artifacts)
-```
-### Forbidden Writes
-The workflow **must not modify**:
-- `spec.md`
-- `tasks.md`
-- registry directories under `.smartspec/registries`
-- UI schemas
-- Source code (src/)
-- Test suites (tests/)
-- Documentation (docs/)
-- Deployment manifests / infra files
+# 1. Purpose of SmartSpec
+SmartSpec provides a structured, auditable, multi-phase system for:
 
-### Allowed Writes
-This workflow may write **only auxiliary prompt files**:
+- Specification design (SPEC)
+- Task planning (PLAN → TASKS)
+- Implementation (IMPLEMENT)
+- Evidence-driven verification (VERIFY)
+- Prompted refinement (PROMPTER)
+
+SmartSpec ensures each artifact is:
+- Deterministic
+- Traceable
+- Evidence-first
+- AI-tooling-compatible (Kilo Code, Antigravity, Claude Code, etc.)
+
+---
+
+# 2. SmartSpec File System Governance
+SmartSpec files must follow the structure:
+```
+specs/
+  feature/
+    <spec-id>/
+      spec.md
+      tasks.md
+      design/
+      testplan/
+.spec/
+  reports/
+    verify-tasks-progress/
+```  
+
+Write guards apply:
+- **NO-WRITE** to spec.md, tasks.md, design files, registries unless workflows explicitly allow modification.
+- Prompt-only workflows (like implement-prompter) may write only under:
 ```
 .smartspec/prompts/<spec-id>/
 ```
-This directory is explicitly **outside governed artifacts**.
 
 ---
-# 4. MULTI-REPO GOVERNANCE SUPPORT
-This workflow must accept and honor the same path-resolution context as strict verifier:
-```
---workspace-roots <paths>
---repos-config <path>
-```
-Failure to provide these flags in multi-repo mode must emit a warning.
 
-The workflow must resolve:
-- spec path
-- tasks path
-- strict report path
-…using the workspace graph defined by SmartSpec.
+# 3. Core Workflows Index
+SmartSpec workflows include:
 
----
-# 5. STRICT REPORT VERSIONING GOVERNANCE
-Strict report may evolve. Workflow must:
-- Read `report.version` if present.
-- If missing → treat as Version 1.
-- If version > supported → issue warning.
-- Parse evidence fields in a schema-tolerant manner.
+| Workflow | Purpose |
+|----------|---------|
+| `/smartspec_generate_spec` | Create SPEC from user intent |
+| `/smartspec_generate_plan` | Convert SPEC → PLAN |
+| `/smartspec_generate_tasks` | Convert PLAN → TASKS |
+| `/smartspec_verify_tasks_progress` | Evidence-based verification |
+| `/smartspec_verify_tasks_progress_strict` | **Strict** verification (canonical) |
+| `/smartspec_report_implement_prompter` | Generate implementation prompts |
+| `/smartspec_sync_tasks_checkboxes` | Sync TASKS checkboxes based on evidence |
+| `/smartspec_project_copilot` | High-level guidance engine |
+
+Every workflow must now include **two command variants**:  
+1) **CLI Standard**  
+2) **Kilo Code (`.md` + `--kilocode`)**
 
 ---
-# 6. EVIDENCE CONFIG GOVERNANCE
-Workflow must detect evidence configuration:
+
+# 4. Dual-Command Rule (NEW — Required Everywhere)
+SmartSpec now enforces the following:
+
+## 4.1 CLI Standard Mode
+- Workflow commands are used **as-is** (no `.md`).
+- No `--kilocode` flag.
+
+Example:
+```bash
+/smartspec_verify_tasks_progress_strict --tasks specs/feature/abc/tasks.md
 ```
---evidence-config <file>
+
+## 4.2 Kilo Code Mode
+If the user runs **ANY** workflow with `--kilocode`:
+- The workflow name **must end with `.md`**
+- The command arguments rendered by the workflow **must also use the `.md` variant**
+- The workflow must propagate `--kilocode`
+
+Example:
+```bash
+/smartspec_verify_tasks_progress_strict.md specs/feature/abc/tasks.md --kilocode
 ```
-or
-```
-.smartspec/evidence-config/<spec-id>.json
-```
-Rules:
-- Evidence rules override default clustering.
-- Evidence rules may define custom test/doc/deploy directories.
+
+This rule applies to:
+- strict verifier
+- sync checkboxes
+- implement-prompter
+- any re-run suggestions printed inside prompts or workflow output
+
+> **This prevents users from copying CLI commands that fail inside Kilo Code.**
 
 ---
-# 7. CLUSTER OVERRIDE SYSTEM
-Projects may override cluster assignments.
-```
-.smartspec/prompts/cluster-overrides.json
-```
-Overrides take highest precedence.
-Invalid cluster names must issue warnings.
+
+# 5. Detailed Workflow Descriptions (With Dual-Command Examples)
 
 ---
-# 8. TASK CLASSIFICATION GOVERNANCE
-Tasks must be classified into:
 
-### 8.1 `unsynced_only`
-- Evidence complete but checkbox unsynced.
-- Must recommend `/smartspec_sync_tasks_checkboxes`.
+# 5.1 `/smartspec_verify_tasks_progress_strict`
+**Purpose:** Perform strict, evidence-only verification of all tasks.
 
-### 8.2 `simple_not_started`
-- Phase NOT_STARTED
-- Not critical
-- Not containing complexity indicators
-- Recommend `/smartspec_implement_tasks`
-
-### 8.3 `complex_cluster`
-Includes tasks that:
-- Appear in strict report `critical_missing_components`, or
-- Lack core evidence (API, tests, docs, deploy), or
-- Contain complexity keywords, or
-- Belong to complex domain phases (Security, Payment, Integration, Deployment)
-
-=> Must generate a dedicated prompt.
-
----
-# 9. PROMPT GENERATION GOVERNANCE
-Prompt output must:
-- Use official SmartSpec prompt templates
-- Include metadata:
+### CLI Example
+```bash
+/smartspec_verify_tasks_progress_strict \
+  --tasks specs/feature/spec-001-user/tasks.md \
+  --report-format=both \
+  --report .spec/reports/verify-tasks-progress/spec-001.json
 ```
-Prompt-Generation-ID
-Spec-ID
-Report-Version
-Generated-At
-```
-- Support markdown or JSON output
-- Support automatic splitting when exceeding limits
 
-Limits:
-```
-max_tasks_per_prompt = 15
-max_chars_per_prompt = 35000
+### Kilo Code Example
+```bash
+/smartspec_verify_tasks_progress_strict.md \
+  specs/feature/spec-001-user/tasks.md \
+  --kilocode \
+  --report-format=both \
+  --report .spec/reports/verify-tasks-progress/spec-001.json
 ```
 
 ---
-# 10. LOCALE GOVERNANCE
-Locale resolution must follow priority:
-1. `--language`
-2. `Language:` header in spec
-3. Body-language ratio (Thai > 20% → TH)
-4. Platform default (Kilo Code → TH)
-5. Default fallback → EN
 
----
-# 11. TECH STACK DETECTION GOVERNANCE
-Workflow should detect stack using project files:
-- Fastify via `package.json`
-- NestJS via import patterns
-- Spring Boot via Java entrypoints
-- FastAPI via Python imports
-- Go frameworks via `go.mod`
+# 5.2 `/smartspec_sync_tasks_checkboxes`
+**Purpose:** After strict verification, sync checkbox states in tasks.md.
 
-Prompt wording must adapt to framework.
-
----
-# 12. PROJECT COPILOT INTEGRATION
-`/smartspec_project_copilot` must recommend this workflow when:
-- strict verifier reports critical missing components
-- phases are partial
-- complex gaps detected
-
-UI recommendation:
+### CLI Example
+```bash
+/smartspec_sync_tasks_checkboxes --tasks specs/feature/spec-001-user/tasks.md
 ```
-"Strict verification found complex gaps. Generate IDE prompts using /smartspec_report_implement_prompter?"
+
+### Kilo Code Example
+```bash
+/smartspec_sync_tasks_checkboxes.md \
+  specs/feature/spec-001-user/tasks.md \
+  --kilocode
 ```
 
 ---
-# 13. ERROR HANDLING GOVERNANCE
-Workflow must handle safely:
-- Missing strict report
-- Unsupported report version
-- Task ID mismatch (warn, not fail)
-- Missing acceptance criteria (warn)
-- Empty clusters (skip generation)
 
----
-# 14. EDGE CASES
-## 14.1 All Tasks Complete
-Create only:
-```
-README.md (summary: no remaining tasks)
+# 5.3 `/smartspec_report_implement_prompter` (Updated — Must Output Dual Commands)
+**Purpose:** Generate implementation prompts based on strict verification.
+
+### CLI Example
+```bash
+/smartspec_report_implement_prompter \
+  --spec specs/feature/spec-002-user-management/spec.md \
+  --tasks specs/feature/spec-002-user-management/tasks.md \
+  --report user-management-progress-report-strict.json \
+  --output .smartspec/prompts/spec-002-user-management
 ```
 
-## 14.2 Large Reports (>200 tasks or >2MB)
-Workflow must:
-- Use streaming parser
-- Limit prompt generation to complex tasks unless explicitly overridden
+### Kilo Code Example
+```bash
+/smartspec_report_implement_prompter.md \
+  --spec specs/feature/spec-002-user-management/spec.md \
+  --tasks specs/feature/spec-002-user-management/tasks.md \
+  --report user-management-progress-report-strict.json \
+  --output .smartspec/prompts/spec-002-user-management \
+  --kilocode
+```
+
+### REQUIRED (NEW):  
+When invoked with `--kilocode`, all commands embedded in generated prompts must also use:
+- workflow name ending in `.md`
+- `--kilocode`
+
+Example inside generated prompt:
+```bash
+/smartspec_verify_tasks_progress_strict.md specs/feature/spec-002-user-management/tasks.md --kilocode --report-format=both
+```
 
 ---
-# END OF KB EXTENSION (knowledge_base_smart_spec.md)
+
+# 6. Project Copilot Workflow
+
+### CLI Example
+```bash
+/smartspec_project_copilot --spec specs/feature/spec-900/system/spec.md
+```
+
+### Kilo Code Example
+```bash
+/smartspec_project_copilot.md \
+  --spec specs/feature/spec-900/system/spec.md \
+  --kilocode
+```
+
+---
+
+# 7. Language / Locale Resolution
+Language selection follows:
+1. Explicit `--language <th|en>`
+2. `language:` in SPEC header
+3. Body ratio auto-detect
+4. Platform default (Kilo Code = Thai)
+
+---
+
+# 8. Write Guards
+Workflows may *read* but never *modify*:
+- spec.md
+- tasks.md
+- design/
+- ui/
+- schema/
+- registries
+
+Except for:
+- `/smartspec_sync_tasks_checkboxes` which may modify checkboxes only
+
+---
+
+# 9. Evidence Governance Summary
+Strict verifier expects evidence from:
+- Routes
+- Controllers
+- Services
+- Tests
+- Deploy manifests / CI scripts
+- Documentation
+
+Prompter must classify tasks:
+- unsynced
+- simple
+- complex (clustered: api/tests/docs/deploy)
+
+---
+
+# 10. Mandatory Rule for Documentation & Examples
+Every SmartSpec example **MUST** follow this pattern:
+
+```
+# CLI Example
+<command>
+
+# Kilo Code Example
+<command.md ... --kilocode>
+```
+
+Users consistently make mistakes when copying examples from the docs.  
+This rule ensures both environments are always represented.
+
+---
+
+# 11. Backward Compatibility
+Existing CLI usage is preserved.  
+No change to semantics — only **documentation correctness + command rendering rules** updated.
+
+---
+
+# End of SmartSpec Governance KB (Updated v2.3.0)
 

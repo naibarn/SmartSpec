@@ -130,7 +130,7 @@ Both approaches are designed to complement each other.
 When verification becomes repetitive or ambiguous, SmartSpec offers two powerful tools:
 
 1. **`/smartspec_report_implement_prompter`** — Converts strict verification reports into domain-specific, accurate implementation prompts.
-2. **SmartSpec Copilot (CustomGPT)** — Accepts reports or problem descriptions and generates refined repair prompts or explanations.
+2. **SmartSpec Copilot (CustomGPT)** [**[Links]**](https://chatgpt.com/g/g-6936ffad015c81918e006a9ee2077074-smartspec-copilot) — Accepts reports or problem descriptions and generates refined repair prompts or explanations.
 
 Both methods allow developers to feed precise instructions into AI-powered IDEs like **Kilo Code**, **Antigravity**, and **Claude Code**, enabling deep, accurate code repairs and significantly reducing verification loops.
 

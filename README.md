@@ -19,26 +19,121 @@ SmartSpec V5 supports your favorite AI coding platforms with a single-command in
 ---
 ## 🚀 New Feature: SmartSpec Copilot — Your Dedicated SmartSpec Help Assistant
 
-SmartSpec 5.6 introduces SmartSpec Copilot, an always-on interactive assistant built using OpenAI CustomGPT:
+# SmartSpec Copilot — Extended Overview
 
-👉 https://chatgpt.com/g/g-6936ffad015c81918e006a9ee2077074-smartspec-copilot
+**SmartSpec version >5.6** introduces **SmartSpec Copilot**, an always-available interactive assistant built using OpenAI CustomGPT. It allows users to interact with SmartSpec in natural language to understand workflows, debug issues, and navigate the full SmartSpec lifecycle with far less friction.
 
+Copilot responds in English or any language you prefer, including English,Thai,Any language.
+It is now the official support channel for learning and using SmartSpec.  [**[Links]**](https://chatgpt.com/g/g-6936ffad015c81918e006a9ee2077074-smartspec-copilot)
+---
 
-What SmartSpec Copilot provides
+## What SmartSpec Copilot Helps You Do
 
-You can now ask any SmartSpec-related question in natural language:
+SmartSpec Copilot can support nearly all SmartSpec-related workflows, including:
 
-Installation issues
+* Installation and environment setup issues
+* Understanding SmartSpec governance, lifecycle, and workflow semantics
+* How to correctly perform **SPEC → PLAN → TASKS → IMPLEMENT**
+* Running SmartSpec workflows in **Kilo Code**, **Claude Code**, **Google Antigravity**, or via CLI
+* Fixing workflow errors, missing SPEC/TASKS files, and index problems
+* Understanding design philosophy, vibe coding, and correct workflow ordering
+* Choosing the correct next workflow when you're stuck
 
-Understanding SmartSpec concepts & workflows
+---
 
-How to run SPEC → PLAN → TASKS → IMPLEMENT
+# Handling Repetitive Verification Loops
 
-How to use any workflow correctly in Kilo, Claude, Antigravity, or CLI
+In real-world development, it’s common to get stuck in repeated cycles:
 
-Troubleshooting errors, missing files, index problems
+1. Implement tasks
+2. Verify tasks
+3. Verification fails
+4. Re-implement
+5. Verify again
+6. Fail again
 
-Understanding vibe coding, design philosophy, or workflow order
+To break out of this cycle, SmartSpec provides a deeper troubleshooting method through the workflow:
+
+## `/smartspec_report_implement_prompter`
+
+This workflow analyzes the strict verification JSON report and produces **clear, structured implementation prompts**.
+
+It creates:
+
+* Summaries of all missing or incomplete implementation evidence
+* Domain-clustered prompts (API, tests, docs, deployment, etc.)
+* Highly detailed instructions optimized for AI coding assistants
+* Output that can be pasted directly into **Kilo Code**, **Antigravity**, or **Claude Code**
+
+This allows developers to resolve deep or ambiguous implementation gaps with precision.
+
+---
+
+# Using Generated Prompts in IDEs
+
+After running `/smartspec_report_implement_prompter`, you can:
+
+1. Open any generated prompt (API, testing, documentation, deployment)
+2. Copy the instructions
+3. Paste them into:
+
+   * **Kilo Code**
+   * **Google Antigravity**
+   * **Claude Code**
+
+These AI-based IDE copilots then perform detailed, file-level fixes that are often more accurate than relying solely on workflow automation.
+
+Because the prompt is generated directly from strict-verification evidence, the IDE receives:
+
+* Fully contextual problem descriptions
+* Framework-aware guidance
+* Exact details about missing or incomplete implementation
+
+This dramatically reduces repeat verification failures.
+
+---
+
+# Alternative Method: Using SmartSpec Copilot Directly
+
+Instead of running the implement-prompter workflow, users may also:
+
+1. Provide SmartSpec Copilot with the strict verification report **or** describe the issue in detail.
+2. Ask it to **generate an implementation-fix prompt** suitable for Kilo Code, Antigravity, or Claude Code.
+
+SmartSpec Copilot will then:
+
+* Interpret the report
+* Identify missing evidence and unresolved tasks
+* Create a polished, IDE-ready repair prompt
+* Tailor instructions to detected tech stack and SmartSpec governance
+
+This is ideal when you want a single consolidated prompt or an explanation of root causes.
+
+---
+
+# When to Use Which Approach?
+
+| Situation                                     | Recommended Tool                          |
+| --------------------------------------------- | ----------------------------------------- |
+| Repeated strict verification failure          | `/smartspec_report_implement_prompter`    |
+| Want highly structured prompts per domain     | implement-prompter                        |
+| Want a combined or conversational explanation | SmartSpec Copilot                         |
+| Want the deepest automated code changes       | Paste prompt into Kilo/Claude/Antigravity |
+
+Both approaches are designed to complement each other.
+
+---
+
+# Final Summary
+
+**SmartSpec Copilot** provides a natural-language interface to the entire SmartSpec workflow system.
+When verification becomes repetitive or ambiguous, SmartSpec offers two powerful tools:
+
+1. **`/smartspec_report_implement_prompter`** — Converts strict verification reports into domain-specific, accurate implementation prompts.
+2. **SmartSpec Copilot (CustomGPT)** — Accepts reports or problem descriptions and generates refined repair prompts or explanations.
+
+Both methods allow developers to feed precise instructions into AI-powered IDEs like **Kilo Code**, **Antigravity**, and **Claude Code**, enabling deep, accurate code repairs and significantly reducing verification loops.
+
 
 Copilot responds in English or any language you prefer, including Thai.
 It is now the official support channel for learning and using SmartSpec.  [**[Links]**](https://chatgpt.com/g/g-6936ffad015c81918e006a9ee2077074-smartspec-copilot)
@@ -203,8 +298,10 @@ Each command corresponds to a workflow that you can customize. Click on a comman
 | `/smartspec_implement_tasks.md` | Execute tasks with an autonomous agent. | [**[Details]**](.smartspec-docs/workflows/implement_tasks.md) |
 | `/smartspec_reverse_to_spec.md` | Reverse-engineer code into a SPEC. | [**[Details]**](.smartspec-docs/workflows/reverse_to_spec.md) |
 | `/smartspec_sync_spec_tasks.md` | Sync changes between SPEC and tasks. | [**[Details]**](.smartspec-docs/workflows/sync_spec_tasks.md) |
-| `/verify_tasks_progress_strict.md` | Verify task completion and code quality. (New)| [**[Details]**](.smartspec-docs/workflows/verify_tasks_progress_strict.md) |
+| `/smartspec_verify_tasks_progress_strict.md` | Verify task completion and code quality. (New)| [**[Details]**](.smartspec-docs/workflows/verify_tasks_progress_strict.md) |
 | `/smartspec_sync_tasks_checkboxes.md` | Sync task checkboxes from verify report. (New)| [**[Details]**](.smartspec-docs/workflows/sync_tasks_checkboxes.md) |
+| `/smartspec_report_implement_prompter.md` | Converts strict verification reports into domain-specific, accurate implementation prompts.. (New)| [**[Details]**](.smartspec-docs/workflows/report_implement_prompter.md) |
+
 ---
 
 ## 🔧 Quality Improvement Commands

@@ -357,3 +357,172 @@ Index validators should fail if any workflow header version is below the minimum
 
 # End of Canonical Handbook
 
+
+---
+
+## 15) Complete Workflow Reference
+
+SmartSpec v6 includes **56 workflows** organized into categories. For detailed usage of each workflow, see the corresponding manual in `.smartspec-docs/workflows/`.
+
+### 15.1 Core Workflows
+
+*Essential workflows for SPEC → PLAN → TASKS chain*
+
+| Workflow | Purpose | Platforms |
+|----------|---------|-----------|
+| `/smartspec_generate_spec` | Refine spec.md (SPEC-first) with deterministic preview/diff + completeness/reuse checks | cli, kilo, ci |
+| `/smartspec_generate_plan` | Convert spec.md → plan.md (preview-first; dependency-aware; reuse-first; governed apply) | cli, kilo, ci |
+| `/smartspec_generate_tasks` | Convert spec.md (or plan.md) → tasks.md (verification-ready; preserves IDs/checkboxes; reports always written) | cli, kilo, ci |
+| `/smartspec_generate_cursor_prompt` | Generate prompts for Cursor IDE | cli, kilo |
+| `/smartspec_generate_implement_prompt` | Generate implementation prompts | cli, kilo |
+
+### 15.2 Verification Workflows
+
+*Task progress and evidence verification*
+
+| Workflow | Purpose | Platforms |
+|----------|---------|-----------|
+| `/smartspec_verify_tasks_progress_strict` | Strict evidence-only verification using parseable evidence hooks (evidence: type key=value...) | cli, kilo, ci |
+| `/smartspec_verify_tasks_progress` | Task progress verification | cli, kilo |
+
+### 15.3 Implementation Workflows
+
+*Code implementation and fixes*
+
+| Workflow | Purpose | Platforms |
+|----------|---------|-----------|
+| `/smartspec_implement_tasks` | Implement code changes strictly from tasks.md with SmartSpec v6 governance | cli |
+| `/smartspec_code_assistant` | Consolidated implementation helper (implement/fix/refactor) producing reports/prompts | cli, kilo |
+| `/smartspec_fix_errors` | Fix errors in codebase | cli, kilo |
+| `/smartspec_refactor_code` | Refactor code following best practices | cli, kilo |
+
+### 15.4 Prompter Workflows
+
+*Generate implementation prompts*
+
+| Workflow | Purpose | Platforms |
+|----------|---------|-----------|
+| `/smartspec_report_implement_prompter` | Generate implementation prompt packs from spec + tasks + optional strict verify report | cli, kilo |
+
+### 15.5 Spec Generation
+
+*Bootstrap and reverse-engineer specs*
+
+| Workflow | Purpose | Platforms |
+|----------|---------|-----------|
+| `/smartspec_generate_spec_from_prompt` | Bootstrap starter specs from a natural-language prompt (reuse-first; reference-pack aware; no-network) | cli, kilo |
+| `/smartspec_reverse_to_spec` | Reverse-engineer a spec from existing implementation | cli, kilo |
+
+### 15.6 Governance Workflows
+
+*Spec lifecycle and metadata management*
+
+| Workflow | Purpose | Platforms |
+|----------|---------|-----------|
+| `/smartspec_spec_lifecycle_manager` | Manage spec lifecycle fields and index links | cli, kilo |
+| `/smartspec_sync_spec_tasks` | Keep spec/plan/tasks metadata aligned | cli, kilo |
+| `/smartspec_data_migration_governance` | Define migration governance and produce helper artifacts (reports/scripts) | cli, kilo, ci |
+
+### 15.7 Index Maintenance
+
+*Registry and index operations*
+
+| Workflow | Purpose | Platforms |
+|----------|---------|-----------|
+| `/smartspec_reindex_specs` | Rebuild/refresh SPEC_INDEX.json from specs/** (non-destructive; reports always written) | cli, kilo, ci |
+| `/smartspec_reindex_workflows` | Rebuild/refresh WORKFLOWS_INDEX.yaml from .smartspec/workflows/** (non-destructive; reports always written) | cli, kilo, ci |
+| `/smartspec_validate_index` | Validate SPEC_INDEX and WORKFLOWS_INDEX integrity | cli, kilo, ci |
+| `/smartspec_global_registry_audit` | Audit global registry for consistency | cli, kilo |
+| `/smartspec_smartspec_reindex_workflows` | Reindex SmartSpec workflows | cli, kilo |
+
+### 15.8 Quality Assurance
+
+*Quality gates and testing*
+
+| Workflow | Purpose | Platforms |
+|----------|---------|-----------|
+| `/smartspec_quality_gate` | Consolidated quality gate (replaces ci_quality_gate + release_readiness) | cli, kilo, ci |
+| `/smartspec_ci_quality_gate` | CI/CD quality gate checks | cli, kilo, ci |
+| `/smartspec_generate_tests` | Generate test artifacts/suggestions (prompts/scripts/reports) | cli, kilo |
+| `/smartspec_test_suite_runner` | Run test suites and generate reports | cli, kilo, ci |
+| `/smartspec_test_report_analyzer` | Analyze test reports and generate insights | cli, kilo, ci |
+
+### 15.9 Security Workflows
+
+*Security analysis and audits*
+
+| Workflow | Purpose | Platforms |
+|----------|---------|-----------|
+| `/smartspec_security_threat_modeler` | Model security threats and generate mitigation strategies | cli, kilo, ci |
+| `/smartspec_security_audit_reporter` | Generate security audit reports | cli, kilo, ci |
+| `/smartspec_security_evidence_audit` | Audit security evidence and controls (reports) | cli, kilo, ci |
+
+### 15.10 Audit Workflows
+
+*Component and system audits*
+
+| Workflow | Purpose | Platforms |
+|----------|---------|-----------|
+| `/smartspec_api_contract_validator` | Validate API contracts and OpenAPI specifications | cli, kilo, ci |
+| `/smartspec_data_model_validator` | Validate data models and database schemas | cli, kilo, ci |
+| `/smartspec_ui_component_audit` | Audit UI components for consistency and best practices | cli, kilo, ci |
+| `/smartspec_ui_validation` | UI audit/validation (includes consistency mode) | cli, kilo, ci |
+| `/smartspec_ui_consistency_audit_manual` | UI consistency audit manual | cli, kilo |
+| `/smartspec_ui_validation_manual` | UI validation manual | cli, kilo |
+
+### 15.11 Deployment & Operations
+
+*Release, deployment, and operational workflows*
+
+| Workflow | Purpose | Platforms |
+|----------|---------|-----------|
+| `/smartspec_deployment_planner` | Plan deployment strategies and generate deployment artifacts | cli, kilo, ci |
+| `/smartspec_hotfix_assistant` | Assist in creating and managing hotfixes | cli, kilo, ci |
+| `/smartspec_release_tagger` | Tag releases and manage version control | cli, kilo, ci |
+| `/smartspec_data_migration_generator` | Generate data migration scripts and plans | cli, kilo, ci |
+| `/smartspec_release_readiness` | Check release readiness | cli, kilo |
+| `/smartspec_nfr_perf_planner` | Plan non-functional requirements for performance | cli, kilo, ci |
+| `/smartspec_nfr_perf_verifier` | Verify performance non-functional requirements | cli, kilo, ci |
+| `/smartspec_observability_configurator` | Configure observability and monitoring | cli, kilo, ci |
+| `/smartspec_observability_runbook_generator` | Generate operational runbooks | cli, kilo, ci |
+| `/smartspec_portfolio_planner` | Plan and manage project portfolios | cli, kilo |
+
+### 15.12 Documentation Workflows
+
+*Documentation generation and publishing*
+
+| Workflow | Purpose | Platforms |
+|----------|---------|-----------|
+| `/smartspec_docs_generator` | Generate documentation from specs | cli, kilo, ci |
+| `/smartspec_docs_publisher` | Publish documentation to various platforms | cli, kilo, ci |
+| `/smartspec_project_copilot` | Read-only project copilot that summarizes status and routes users to correct SmartSpec workflows | cli, kilo |
+| `/smartspec_project_copilot_manual` | Project copilot manual | cli, kilo |
+| `/smartspec_smart_spec_install_manual` | SmartSpec installation manual | cli, kilo |
+| `/smartspec_smart_spec_manuals_aligned_workflows` | Align manuals with workflows | cli, kilo |
+
+### 15.13 Utility Workflows
+
+*Helper and support workflows*
+
+| Workflow | Purpose | Platforms |
+|----------|---------|-----------|
+| `/smartspec_sync_tasks_checkboxes` | Sync checkbox states in tasks.md using a strict verifier summary.json (checkbox-only governed write; preview-first) | cli, kilo |
+| `/smartspec_tasks_checkboxes` | Manage task checkboxes | cli, kilo |
+| `/smartspec_design_system_migration_assistant` | Assist in migrating between design systems (e.g., MUI to Ant Design) | cli, kilo, ci |
+| `/smartspec_smartspec_workflow_overview_guide` | Overview guide for SmartSpec workflows | cli, kilo |
+
+---
+
+### 15.14 Workflow Discovery
+
+To find the right workflow for your task:
+
+1. **Check WORKFLOWS_INDEX.yaml**: `.spec/WORKFLOWS_INDEX.yaml` contains the complete registry with categories, purposes, and platform support
+2. **Use project copilot**: `/smartspec_project_copilot "your question"` can recommend the appropriate workflow
+3. **Browse by category**: Workflows are organized by category (core, verify, implement, quality, security, etc.)
+4. **Read manuals**: Each workflow has a detailed manual in `.smartspec-docs/workflows/<workflow_name>.md`
+
+---
+
+# End of Canonical Handbook
+

@@ -115,6 +115,19 @@ workflows:
     apply_required_for: []
     platform_support: [cli, kilo]
 
+  - name: /smartspec_implement_tasks
+    aliases: [/smartspec_implement_tasks.md]
+    purpose: Implement code changes strictly from tasks.md with SmartSpec v6 governance.
+    category: implement
+    positional_args: []
+    extra_flags: [--spec, --tasks, --kilocode, --apply]
+    reads:
+      - specs/**/tasks.md
+      - specs/**/spec.md
+      - specs/**/plan.md
+    writes:
+      - .spec/reports/implement/**
+      - project source files (with --apply)
   - name: /smartspec_sync_tasks_checkboxes
     aliases: [/smartspec_sync_tasks_checkboxes.md]
     purpose: Sync checkbox states in tasks.md using a strict verifier summary.json (checkbox-only governed write; preview-first).

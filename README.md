@@ -297,6 +297,7 @@ SmartSpec V6 consolidates its powerful features into a streamlined set of workfl
 | `/smartspec_verify_tasks_progress_strict` | Verify progress for a given `tasks.md` using **evidence-only checks**. |
 | `/smartspec_sync_tasks_checkboxes` | Synchronize `tasks.md` checkbox markers (`[x]` / `[ ]`) to match the **latest strict verification report**. |
 | `/smartspec_report_implement_prompter` | Generate **implementation prompt packs** from a spec and tasks, optionally augmented by strict verification reports. |
+| `/smartspec_implement_tasks` | Implement code changes strictly from tasks.md with SmartSpec v6 governance. |
 
 ### Project Management
 

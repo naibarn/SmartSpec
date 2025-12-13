@@ -36,6 +36,13 @@ removed_workflows:
   - /smartspec_implement_tasks
   - /smartspec_fix_errors
   - /smartspec_refactor_code
+  - /smartspec_data_migration_governance
+  - /smartspec_observability_runbook_generator
+  - /smartspec_portfolio_planner
+  - /smartspec_reverse_to_spec
+  - /smartspec_security_evidence_audit
+  - /smartspec_spec_lifecycle_manager
+  - /smartspec_sync_spec_tasks
 
 workflows:
   # ---------------------------------------------------------------------------
@@ -351,3 +358,187 @@ workflows:
     write_scope: [reports]
     apply_required_for: []
     platform_support: [cli, kilo, ci]
+
+  # ---------------------------------------------------------------------------
+  # Additional workflows
+  # ---------------------------------------------------------------------------
+  - name: /smartspec_api_contract_validator
+    aliases: [/smartspec_api_contract_validator.md]
+    purpose: Validate API contracts and OpenAPI specifications.
+    category: audit
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/api_contract_validator/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_data_migration_generator
+    aliases: [/smartspec_data_migration_generator.md]
+    purpose: Generate data migration scripts and documentation.
+    category: ops
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/data_migration_generator/**]
+    write_scope: [scripts, reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_data_model_validator
+    aliases: [/smartspec_data_model_validator.md]
+    purpose: Validate data models and database schemas.
+    category: audit
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/data_model_validator/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_deployment_planner
+    aliases: [/smartspec_deployment_planner.md]
+    purpose: Generate deployment plans and checklists.
+    category: ops
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/deployment_planner/**]
+    write_scope: [reports, scripts]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_design_system_migration_assistant
+    aliases: [/smartspec_design_system_migration_assistant.md]
+    purpose: Assist in migrating between design systems (e.g., MUI to Ant Design).
+    category: utility
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/design_system_migration_assistant/**]
+    write_scope: [reports, prompts]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_docs_generator
+    aliases: [/smartspec_docs_generator.md]
+    purpose: Generate technical documentation from specs and code.
+    category: docs
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/docs_generator/**]
+    write_scope: [reports, scripts]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_docs_publisher
+    aliases: [/smartspec_docs_publisher.md]
+    purpose: Publish documentation to various platforms.
+    category: docs
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/docs_publisher/**]
+    write_scope: [reports, scripts]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_hotfix_assistant
+    aliases: [/smartspec_hotfix_assistant.md]
+    purpose: Assist in creating and managing hotfixes.
+    category: ops
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/hotfix_assistant/**]
+    write_scope: [reports, prompts]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_observability_configurator
+    aliases: [/smartspec_observability_configurator.md]
+    purpose: Configure observability tools (logging, metrics, tracing).
+    category: ops
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/observability_configurator/**]
+    write_scope: [scripts, reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_release_tagger
+    aliases: [/smartspec_release_tagger.md]
+    purpose: Manage release tags and versioning.
+    category: ops
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/release_tagger/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_security_audit_reporter
+    aliases: [/smartspec_security_audit_reporter.md]
+    purpose: Generate security audit reports.
+    category: audit
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/security_audit_reporter/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_security_threat_modeler
+    aliases: [/smartspec_security_threat_modeler.md]
+    purpose: Model security threats and generate mitigation strategies.
+    category: audit
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/security_threat_modeler/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_test_report_analyzer
+    aliases: [/smartspec_test_report_analyzer.md]
+    purpose: Analyze test reports and generate insights.
+    category: quality
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/test_report_analyzer/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_test_suite_runner
+    aliases: [/smartspec_test_suite_runner.md]
+    purpose: Run test suites and generate reports.
+    category: quality
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/test_suite_runner/**]
+    write_scope: [reports, scripts]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_ui_component_audit
+    aliases: [/smartspec_ui_component_audit.md]
+    purpose: Audit UI components for consistency and best practices.
+    category: audit
+    positional_args: []
+    extra_flags: []
+    reads: [specs/**, codebase]
+    writes: [.spec/reports/ui_component_audit/**]
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+

@@ -8,7 +8,7 @@
 
 ## ✨ Supported Platforms
 
-SmartSpec V5 supports your favorite AI coding platforms with a single-command installation:
+SmartSpec V6 supports your favorite AI coding platforms with a single-command installation:
 
 - **Kilo Code** - For autonomous AI agent-driven development.
 - **Claude Code** - For deep analysis with sub-agents.
@@ -21,7 +21,7 @@ SmartSpec V5 supports your favorite AI coding platforms with a single-command in
 
 # SmartSpec Copilot — Extended Overview
 
-**SmartSpec version >5.6** introduces **SmartSpec Copilot**, an always-available interactive assistant built using OpenAI CustomGPT. It allows users to interact with SmartSpec in natural language to understand workflows, debug issues, and navigate the full SmartSpec lifecycle with far less friction.
+**SmartSpec version >6.0** introduces **SmartSpec Copilot**, an always-available interactive assistant built using OpenAI CustomGPT. It allows users to interact with SmartSpec in natural language to understand workflows, debug issues, and navigate the full SmartSpec lifecycle with far less friction.
 
 Copilot responds in English or any language you prefer, including English,Thai,Any language.
 It is now the official support channel for learning and using SmartSpec.  [**[Links]**](https://chatgpt.com/g/g-6936ffad015c81918e006a9ee2077074-smartspec-copilot)
@@ -282,110 +282,86 @@ See the detailed documentation in:
 
 ---
 
-## 📖 Core Commands
+## 🗂️ Core Workflows & Commands
 
-Each command corresponds to a workflow that you can customize. Click on a command to see its detailed documentation.
+SmartSpec V6 consolidates its powerful features into a streamlined set of workflows, organized by function. These commands form the backbone of the **SPEC → PLAN → TASKS → IMPLEMENT** lifecycle.
 
-| Command | Description | Full Docs |
-| :--- | :--- | :--- |
-| `/smartspec_project_copilot.md` | this copilot acts as a **project-level navigator** Understand the current project state. | [**[Details]**](.smartspec-docs/workflows/project_copilot_manual.md) |
-| `/smartspec_generate_spec_from_prompt.md` | Bootstrap one or more starter SPEC files directly from a natural language prompt. | [**[Details]**](.smartspec-docs/workflows/generate_spec_from_prompt.md) |
-| `/smartspec_generate_spec.md` | Create a structured SPEC from an idea. | [**[Details]**](.smartspec-docs/workflows/generate_spec.md) |
-| `/smartspec_generate_plan.md` | Generate a high-level implementation plan. | [**[Details]**](.smartspec-docs/workflows/generate_plan.md) |
-| `/smartspec_generate_tasks.md` | Break the plan into granular tasks. | [**[Details]**](.smartspec-docs/workflows/generate_tasks.md) |
-| `/smartspec_generate_implement_prompt.md` | Create context-rich prompts for AI assistants. | [**[Details]**](.smartspec-docs/workflows/generate_implement_prompt.md) |
-| `/smartspec_generate_cursor_prompt.md` | Generate user-friendly prompts for Cursor/Antigravity. | [**[Details]**](.smartspec-docs/workflows/generate_cursor_prompt.md) |
-| `/smartspec_implement_tasks.md` | Execute tasks with an autonomous agent. | [**[Details]**](.smartspec-docs/workflows/implement_tasks.md) |
-| `/smartspec_reverse_to_spec.md` | Reverse-engineer code into a SPEC. | [**[Details]**](.smartspec-docs/workflows/reverse_to_spec.md) |
-| `/smartspec_sync_spec_tasks.md` | Sync changes between SPEC and tasks. | [**[Details]**](.smartspec-docs/workflows/sync_spec_tasks.md) |
-| `/smartspec_verify_tasks_progress_strict.md` | Verify task completion and code quality. (New)| [**[Details]**](.smartspec-docs/workflows/verify_tasks_progress_strict.md) |
-| `/smartspec_sync_tasks_checkboxes.md` | Sync task checkboxes from verify report. (New)| [**[Details]**](.smartspec-docs/workflows/sync_tasks_checkboxes.md) |
-| `/smartspec_report_implement_prompter.md` | Converts strict verification reports into domain-specific, accurate implementation prompts.. (New)| [**[Details]**](.smartspec-docs/workflows/report_implement_prompter.md) |
+### Core Workflows
 
----
+| Command | Description |
+| :--- | :--- |
+| `/smartspec_generate_spec` | Create or refine a `spec.md` using **SPEC-first** governance. |
+| `/smartspec_generate_spec_from_prompt` | Generate **one or more starter specs** from a natural-language requirement prompt **with reuse-first intelligence**. |
+| `/smartspec_generate_plan` | Generate or refine `plan.md` from `spec.md` in a **dependency-aware**, **reuse-first**, **safe-by-default** way. |
+| `/smartspec_generate_tasks` | Generate or refine `tasks.md` from `spec.md` (or `plan.md`) in a **verification-ready** format. |
+| `/smartspec_verify_tasks_progress_strict` | Verify progress for a given `tasks.md` using **evidence-only checks**. |
+| `/smartspec_sync_tasks_checkboxes` | Synchronize `tasks.md` checkbox markers (`[x]` / `[ ]`) to match the **latest strict verification report**. |
+| `/smartspec_report_implement_prompter` | Generate **implementation prompt packs** from a spec and tasks, optionally augmented by strict verification reports. |
 
-## 🔧 Quality Improvement Commands
+### Project Management
 
-These workflows help maintain and improve code quality on a spec-scoped basis:
+| Command | Description |
+| :--- | :--- |
+| `/smartspec_project_copilot` | `/smartspec_project_copilot` is the **read-only front door** into a SmartSpec-enabled repo. |
+| `/smartspec_code_assistant` | A single, consolidated helper workflow that replaces the legacy trio: |
 
-| Command | Description | Full Docs |
-| :--- | :--- | :--- |
-| `/smartspec_fix_errors.md` | Auto-fix compilation, type, and runtime errors. | [**[Details]**](.smartspec-docs/workflows/fix_errors.md) |
-| `/smartspec_generate_tests.md` | Generate unit, integration, and e2e tests. | [**[Details]**](.smartspec-docs/workflows/generate_tests.md) |
-| `/smartspec_refactor_code.md` | Refactor code to improve quality and reduce complexity. | [**[Details]**](.smartspec-docs/workflows/refactor_code.md) |
-| `/smartspec_reindex_specs.md` | Re-index SPEC_INDEX.json to keep it accurate. | [**[Details]**](.smartspec-docs/workflows/reindex_specs.md) |
-| `/smartspec_validate_index.md` | Validate SPEC_INDEX.json integrity and health. | [**[Details]**](.smartspec-docs/workflows/validate_index.md) |
-| `/smartspec_portfolio_planner.md` | Portfolio Planner. | [**[Details]**](.smartspec-docs/workflows/portfolio_planner.md) |
-| `/smartspec_spec_lifecycle_manager.md` | Spec Lifecycle Manager. | [**[Details]**](.smartspec-docs/workflows/spec_lifecycle_manager.md) |
-| `/smartspec_global_registry_audit.md` | Global registry audit. | [**[Details]**](.smartspec-docs/workflows/global_registry_audit.md) |
+### Quality & Testing
 
+| Command | Description |
+| :--- | :--- |
+| `/smartspec_generate_tests` | Generate test artifacts/suggestions (prompts/scripts/reports). |
+| `/smartspec_quality_gate` | A consolidated quality gate workflow that replaces the legacy pair: |
+| `/smartspec_test_report_analyzer` | Analyze test results produced by `smartspec_test_suite_runner` and produce a higher-level diagnostic report: |
+| `/smartspec_test_suite_runner` | Execute a project's test suite (e.g., Jest, Vitest, Cypress) and generate a standardized SmartSpec report. |
 
+### Security & Audit
 
----
+| Command | Description |
+| :--- | :--- |
+| `/smartspec_security_audit_reporter` | Generate a security audit report by correlating identified threats in `threats.md` with mitigation evidence in `tasks.md`, **validated against stri... |
+| `/smartspec_security_threat_modeler` | To automatically generate a preliminary threat model and a `threats.md` artifact by analyzing `spec.md` and `plan.md`. This workflow helps identify... |
+| `/smartspec_api_contract_validator` | Validate an API implementation against its defined contract (**OpenAPI v3 primary; GraphQL schema supported in limited mode—see Contract parsing ru... |
+| `/smartspec_data_model_validator` | Validate that an application's data model (ORM models / schema files / migrations) is consistent with the data model described in a SmartSpec `spec... |
+| `/smartspec_ui_component_audit` | Audit frontend source code against a defined Design System, focusing on: |
 
-## 🛡️ Governance & Release Commands
+### Documentation
 
-These workflows provide governance, security, and release-readiness checks at a spec or service level.
+| Command | Description |
+| :--- | :--- |
+| `/smartspec_docs_generator` | Generate technical documentation from specs and code. |
+| `/smartspec_docs_publisher` | Publish documentation to various platforms. |
 
-| Command | Description | Full Docs |
-| :--- | :--- | :--- |
-| `/smartspec_ci_quality_gate.md` | Aggregate CI quality signals (tests, coverage, lint, type-checks, security scans) and decide pass/fail per spec/service. | [**[Details]**](.smartspec-docs/workflows/ci_quality_gate.md) |
-| `/smartspec_release_readiness.md` | Combine signals from UI, tests, NFR/perf, security, and CI to decide if a service/release is ready to ship. | [**[Details]**](.smartspec-docs/workflows/release_readiness.md) |
-| `/smartspec_security_evidence_audit.md` | Collect and summarize security evidence (SCA reports, threat models, hardening, mitigations) for a spec or service. | [**[Details]**](.smartspec-docs/workflows/security_evidence_audit.md) |
-| `/smartspec_data_migration_governance.md` | Plan and govern data migrations with safety, rollback, and audit requirements. | [**[Details]**](.smartspec-docs/workflows/data_migration_governance.md) |
+### Operations & Deployment
 
----
-## 📈 NFR, Observability & UI Governance Commands
+| Command | Description |
+| :--- | :--- |
+| `/smartspec_deployment_planner` | Generate deployment plans and checklists. |
+| `/smartspec_hotfix_assistant` | Assist in creating and managing hotfixes. |
+| `/smartspec_release_tagger` | Manage release tags and versioning. |
+| `/smartspec_data_migration_generator` | To automate the creation of draft Data Migration scripts based on the discrepancies identified by `/smartspec_data_model_validator`. This workflow ... |
+| `/smartspec_observability_configurator` | Configure observability tools (logging, metrics, tracing). |
 
-These workflows help you govern non-functional requirements, observability, and UI quality.
+### NFR & Performance
 
-| Command | Description | Full Docs |
-| :--- | :--- | :--- |
-| `/smartspec_nfr_perf_planner.md` | Plan performance and other NFR work (scenarios, SLOs, benchmarks) from specs and expected load. | [**[Details]**](.smartspec-docs/workflows/nfr_perf_planner.md) |
-| `/smartspec_nfr_perf_verifier.md` | Verify performance/NFR results against SLOs using perf test reports and metrics. | [**[Details]**](.smartspec-docs/workflows/nfr_perf_verifier.md) |
-| `/smartspec_observability_runbook_generator.md` | Generate observability and incident runbooks (alerts, dashboards, traces, response steps) from specs and SLO/SLI info. | [**[Details]**](.smartspec-docs/workflows/observability_runbook_generator.md) |
-| `/smartspec_ui_validation.md` | Governance-focused UI validation: connect UI specs/UI JSON, tests, a11y, i18n, visual regression, and security evidence into one report. | [**[Details]**](.smartspec-docs/workflows/ui_validation_manual.md) |
-| `/smartspec_ui_consistency_audit.md` | Audit UI consistency with design tokens, component registries, and layout/state patterns. | [**[Details]**](.smartspec-docs/workflows/ui_consistency_audit_manual.md) |
+| Command | Description |
+| :--- | :--- |
+| `/smartspec_nfr_perf_planner` | Produce NFR/performance plan from spec (reports). |
+| `/smartspec_nfr_perf_verifier` | Verify NFR/performance evidence (reports). |
 
+### UI & Design
 
----
-**Note:** All quality workflows operate on a **spec-scoped basis** for optimal performance in large projects. See [SPEC_SCOPED_WORKFLOWS.md](.smartspec-docs/guides/SPEC_SCOPED_WORKFLOWS.md) for details.
+| Command | Description |
+| :--- | :--- |
+| `/smartspec_ui_validation` | A single UI audit workflow that supports two modes: |
+| `/smartspec_design_system_migration_assistant` | Assist a controlled migration from one UI component library / design token system to another by generating **deterministic patches** and **risk-sco... |
 
-![The SmartSpec Workflow](.smartspec-assets/images/SmartSpec-Pict5.png)
+### Index Management
 
-**Troubleshooting:** 
-- If workflows don't mark task checkboxes automatically, see [MANUAL_UPDATE_CHECKBOXES.md](.smartspec-docs/guides/MANUAL_UPDATE_CHECKBOXES.md) for manual update methods.
-- To resume implementation from a specific task to the end, see [START_FROM_GUIDE.md](.smartspec-docs/guides/START_FROM_GUIDE.md) for `--start-from` parameter usage.
-
-![The SmartSpec Workflow](.smartspec-assets/images/SmartSpec-Pict8.png)
-
-**Kilo Code Modes:**
-- **[Kilo Code Complete Guide](.smartspec-docs/guides/KILO_CODE_COMPLETE_GUIDE.md)** - Complete guide for all 5 Kilo Code modes (Ask, Architect, Code, Debug, Orchestrator) and `--kilocode` flag usage.
-- **[Ask Mode Guide](.smartspec-docs/guides/ASK_MODE_GUIDE.md)** - Analyze and understand before making decisions.
-- **[Architect Mode Guide](.smartspec-docs/guides/ARCHITECT_MODE_GUIDE.md)** - Design system architecture and create implementation plans.
-- **[Debug Mode Guide](.smartspec-docs/guides/DEBUG_MODE_GUIDE.md)** - Systematically diagnose and fix bugs and errors.
-- **[Kilo Code Sub-Task Mode Guide](.smartspec-docs/guides/KILOCODE_MODE_GUIDE.md)** - Use Orchestrator Mode to break complex tasks into sub-tasks.
-
-
----
-
-### Choosing the Right Prompt Generation Workflow
-
-SmartSpec offers two distinct commands for generating prompts, each tailored for a different execution model. Understanding the difference is key to a smooth workflow.
-
-| Feature | `/generate_implement_prompt` | `/generate_cursor_prompt` |
-| :--- | :--- | :--- |
-| **Target Platform** | **Kilo Code, Roo Code, Claude Code** | **Cursor, Google Antigravity** |
-| **Execution Model** | 🤖 **Automated Execution** | 🧑‍💻 **Manual Copy/Paste** |
-| **User Action** | Run `kilocode execute "<file>"` or `roo run "<file>"` | Copy each prompt section and paste it into the AI assistant. |
-| **Output Format** | **One continuous document** with all context. | **One file with multiple, distinct prompt sections.** |
-| **Prompt Philosophy** | Written for an **AI Agent** to execute autonomously. | Written for a **Human Developer** to guide an AI assistant. |
-| **Best Use Case** | Implementing a sequence of related tasks in a single, powerful session. | Implementing tasks one-by-one in an interactive, "vibe coding" session. |
-| **Analogy** | Giving a detailed project brief to a senior developer. | Writing a clear to-do list for a junior developer. |
-
-**In short:** Use `generate_implement_prompt` for automated platforms and `generate_cursor_prompt` for interactive, manual coding.
-
----
+| Command | Description |
+| :--- | :--- |
+| `/smartspec_reindex_specs` | Refresh the canonical spec registry: |
+| `/smartspec_reindex_workflows` | Refresh the canonical workflow registry: |
+| `/smartspec_validate_index` | Validate SmartSpec registries and contracts: |
 
 ## 🎨 UI Design (Penpot JSON-First in roadmap)
 
@@ -457,8 +433,9 @@ For common issues and solutions, see the **[Troubleshooting Guide](.smartspec-do
 
 Detailed changes for each version are tracked in:
 
-- **[v5.2 Release Notes](.smartspec-docs/release-notes/RELEASE_NOTES_v5.2.md)**
-- **[v5.6 Release Notes](.smartspec-docs/release-notes/smartspec_v_56_release_notes_en.md)**
+- **[v6.0 Release Notes](.smartspec-docs/release-notes/RELEASE_NOTES_v6.0.md)** (New)
 - **[v5.7 Release Notes](.smartspec-docs/release-notes/smart_spec_release_notes_v_5_7.md)**
+- **[v5.6 Release Notes](.smartspec-docs/release-notes/smartspec_v_56_release_notes_en.md)**
+- **[v5.2 Release Notes](.smartspec-docs/release-notes/RELEASE_NOTES_v5.2.md)**
 
-Future releases should add new files under `.smartspec-docs/release-notes/` and link them here.
+Future releases should add new files under `.smartspec-docs/release-notes/` and link them here. under `.smartspec-docs/release-notes/` and link them here. under `.smartspec-docs/release-notes/` and link them here.

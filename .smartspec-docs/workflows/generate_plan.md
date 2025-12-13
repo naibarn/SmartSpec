@@ -1,410 +1,153 @@
----
-manual_name: /smartspec_generate_plan Manual (EN)
-manual_version: 5.6
-compatible_workflow: /smartspec_generate_plan
-compatible_workflow_versions: 5.6.2 – 5.6.x
-role: user/operator manual (architect, tech lead, PM, platform, spec owner)
----
+# /smartspec_generate_plan Manual (v6.0, English)
 
-# /smartspec_generate_plan Manual (v5.6, English)
+## Overview
 
-## 1. Overview
+The `/smartspec_generate_plan` workflow (v6.0.5) is a core component of the SmartSpec toolchain responsible for converting a detailed specification (`spec.md`) into an actionable implementation plan (`plan.md`).
 
-This manual explains how to use the workflow:
+This workflow operates in a **preview-first**, **dependency-aware**, and **reuse-first** manner, ensuring safety and governance before applying any changes. It is designed to generate a structured, phase-based plan that aligns with specified UI governance modes and adheres strictly to the SmartSpec governance contract and hardening requirements.
 
-> `/smartspec_generate_plan v5.6.x` (e.g., v5.6.2)
+**Purpose:** Convert `spec.md` → `plan.md` (preview-first; dependency-aware; reuse-first; governed apply).
+**Version:** 6.0.5
 
-This workflow is the **planning layer** in the SmartSpec chain. It
-creates/updates high-level implementation plans (`plan.md`) that are
-ordered by dependencies and ready to be used by task-generation
-workflows.
+## Usage
 
-The typical v5.6 chain:
+### CLI Usage
 
-1. `/smartspec_validate_index`
-2. `/smartspec_generate_spec`
-3. `/smartspec_generate_plan`
-4. `/smartspec_generate_tasks`
-5. `/smartspec_sync_spec_tasks`
-
-The goals of `/smartspec_generate_plan` are to:
-
-- produce plans that are **task-ready** and safe inputs to
-  `/smartspec_generate_tasks`
-- avoid cross-SPEC and cross-repo drift for shared entities
-- respect **UI mode** (JSON-first vs inline) so UI work aligns with
-  specs and UI workflows
-- behave in a **governance-aware** way: do not silently invent new
-  requirements
-- handle multi-repo / multi-registry safely
-- support KiloCode (`--kilocode`) and the Orchestrator-per-task rule
-
-> **v5.6.2 note**
-> - Introduces `safety_status = SAFE | UNSAFE | DEV-ONLY` in both plans
->   and reports.
-> - Adds `--run-label` and `--plan-layout` for better traceability and
->   deterministic output.
-> - Strengthens guidance for AI UI JSON signals and multi-spec Kilo
->   orchestration.
-> - No existing flags or behaviors are removed; all changes are
->   additive.
-
----
-
-## 2. When to Use
-
-Use `/smartspec_generate_plan` when you:
-
-- start a new feature/program involving multiple specs
-- want a clear phase-structured plan before breaking work into tasks
-- prepare to run `/smartspec_generate_tasks` on several specs
-- need to re-plan after significant refactors, reindexing, or ownership
-  changes
-- coordinate work across **multiple repos** that share registries or
-  contracts
-
-Do **not** use this workflow when:
-
-- you only need tasks for a single, well-scoped spec →
-  `/smartspec_generate_tasks` alone may be enough
-- you want to mass-edit `spec.md` or `tasks.md` → use the appropriate
-  spec/task workflows instead
-- your process requires fully manual planning for audit reasons
-
----
-
-## 3. Core Concepts
-
-### 3.1 SPEC_INDEX and registries
-
-- `SPEC_INDEX` is the central map of all specs in the system.
-- `registries` are catalogs of shared entities that must be reused, not
-  redefined, such as:
-  - API registry
-  - data model registry
-  - glossary
-  - critical sections
-  - UI component registry
-
-`/smartspec_generate_plan` uses the index and registries to:
-
-- understand dependency structure between specs
-- identify which entities must be treated as shared contracts rather
-  than re-created
-
-### 3.2 Safety mode and safety_status
-
-- `--safety-mode=strict` (default)
-  - strict about ownership and duplication
-  - if ambiguity or conflicts could lead to duplicated or conflicting
-    shared entities, the plan must be marked as
-    `safety_status=UNSAFE` (or the run must fail)
-- `--safety-mode=dev`
-  - relaxed mode for sandbox/PoC/exploratory planning
-  - allows incomplete index/registries, but the plan is marked as
-    `safety_status=DEV-ONLY`
-
-Every generated plan must include a header with at least:
-
-- spec IDs in scope
-- SPEC_INDEX path used
-- run-label (if any)
-- timestamp
-- `safety_status = SAFE | UNSAFE | DEV-ONLY`
-
-### 3.3 Alignment between spec ↔ plan ↔ tasks
-
-- `spec.md` is the source-of-truth for requirements.
-- Plans **must not silently introduce new requirements**.
-- If specs are unclear or conflicting, the plan should:
-  - add explicit items like “clarify requirement X in spec”, rather than
-    guessing the requirement.
-- `/smartspec_generate_tasks` is expected to use both spec and plan;
-  the two must remain aligned.
-
-### 3.4 UI mode and AI UI JSON
-
-- UI mode is controlled by `--ui-mode=auto|json|inline`.
-- `json` → JSON-first UI: `ui.json` is a primary design artifact.
-- `inline` → UI is specified inside `spec.md`; no `ui.json` is required.
-
-When UI is in scope, the plan should:
-
-- schedule steps for authoring/reviewing `ui.json` when JSON-first
-- use signals from UI-related workflows when available, such as:
-  - `ui_spec_origin`, `ui_spec_review_status`,
-    `ui_json_quality_status`
-- treat AI-generated UI JSON as **draft** until reviewed and aligned
-  with the design system
-
----
-
-## 4. Inputs / Outputs
-
-### 4.1 Inputs (artifacts)
-
-- SPEC_INDEX (if present)
-- registries (primary + supplemental)
-- target specs: `specs/<category>/<spec-id>/spec.md`
-- existing `plan.md` (if any)
-- existing `tasks.md` or other reports (read-only context)
-- optional UI governance reports from UI workflows
-
-### 4.2 Inputs (key flags)
-
-- Scope
-  - `--spec=<path>`
-  - `--spec-ids=<id1,id2,...>`
-- Index & registries
-  - `--index`, `--specindex`
-  - `--registry-dir`, `--registry-roots`
-- Multi-repo
-  - `--workspace-roots`
-  - `--repos-config`
-- Identity & layout
-  - `--run-label=<id>`
-  - `--plan-layout=per-spec|consolidated`
-  - `--output=<path>`
-- Safety & UI
-  - `--safety-mode=strict|dev`, `--strict`, `--dry-run`
-  - `--ui-mode=auto|json|inline`
-- Reporting & Kilo
-  - `--report-dir`, `--stdout-summary`
-  - `--kilocode`, `--nosubtasks`
-
-### 4.3 Outputs
-
-- `plan.md` (or the path specified by `--output`) with a header
-  containing `safety_status` and run metadata
-- a planning report under `.spec/reports/generate-plan/` (or
-  `--report-dir`), including:
-  - index/registry context
-  - scope, safety mode, safety_status
-  - dependency graph summary
-  - multi-repo, reuse-not-rebuild, and drift notes
-
----
-
-## 5. Quick Start Examples
-
-### 5.1 Single spec, strict mode
+The workflow is invoked via the command line, requiring the path to the target `spec.md` file as a positional argument.
 
 ```bash
-smartspec_generate_plan \
-  --spec=specs/payments/spec-pay-001-checkout/spec.md \
-  --index=.spec/SPEC_INDEX.json \
-  --registry-dir=.spec/registry \
-  --safety-mode=strict \
-  --run-label=checkout-v2-planning \
-  --stdout-summary
+/smartspec_generate_plan <spec_md> [--apply] [--ui-mode auto|json|inline] [--safety-mode strict|dev] [--plan-layout per-spec|consolidated] [--run-label "..."] [--json]
 ```
 
-Result:
-
-- `plan.md` next to `spec.md` with header and `safety_status`.
-- planning report in `.spec/reports/generate-plan/`.
-
-### 5.2 Multiple specs, per-spec plans
-
+**Example (Preview Mode):**
+To generate a plan preview for a specific specification in strict mode:
 ```bash
-smartspec_generate_plan \
-  --spec-ids=payments.checkout,identity.login \
-  --index=.spec/SPEC_INDEX.json \
-  --registry-dir=.spec/registry \
-  --plan-layout=per-spec \
-  --safety-mode=strict \
-  --run-label=release-2024Q4 \
-  --stdout-summary
+/smartspec_generate_plan specs/feature/user-auth/spec.md --ui-mode auto --safety-mode strict
 ```
 
-Each spec gets its own `plan.md`, ordered according to the dependency
-graph from the index.
-
-### 5.3 Consolidated plan for multiple specs
-
+**Example (Apply Mode):**
+To generate and immediately write the plan, using the `dev` safety mode:
 ```bash
-smartspec_generate_plan \
-  --spec-ids=payments.checkout,identity.login \
-  --index=.spec/SPEC_INDEX.json \
-  --registry-dir=.spec/registry \
-  --plan-layout=consolidated \
-  --output=plans/release-2024Q4-plan.md \
-  --run-label=release-2024Q4 \
-  --safety-mode=strict \
-  --stdout-summary
+/smartspec_generate_plan specs/feature/user-auth/spec.md --apply --safety-mode dev
 ```
 
----
+### Kilo Code Usage
 
-## 6. Multi-repo / Multi-registry Examples
-
-### 6.1 Monorepo with multiple services
+For integration within SmartSpec's internal scripting environment (Kilo Code), the workflow is invoked using a specific syntax.
 
 ```bash
-smartspec_generate_plan \
-  --spec-ids=billing.invoice,notifications.email \
-  --index=.spec/SPEC_INDEX.json \
-  --registry-dir=.spec/registry \
-  --workspace-roots="." \
-  --plan-layout=per-spec \
-  --safety-mode=strict \
-  --stdout-summary
-```
-
-### 6.2 Multi-repo, shared platform registry
-
-```bash
-smartspec_generate_plan \
-  --spec-ids=teamA.web_portal,teamB.mobile_app \
-  --specindex=../platform/.spec/SPEC_INDEX.json \
-  --registry-dir=.spec/registry \
-  --registry-roots="../platform/.spec/registry" \
-  --workspace-roots="../platform,../teamA,../teamB" \
-  --repos-config=.spec/smartspec.repos.json \
-  --plan-layout=consolidated \
-  --output=.spec/plans/cross-team-2024Q4.md \
-  --safety-mode=strict \
-  --stdout-summary
-```
-
-External specs and shared entities are treated as **external
-dependencies** with explicit reuse-not-rebuild notes.
-
----
-
-## 7. UI JSON vs Inline UI Examples
-
-### 7.1 JSON-first UI with AI-generated UI JSON
-
-```bash
-smartspec_generate_plan \
-  --spec=specs/web/spec-web-001-dashboard/spec.md \
-  --index=.spec/SPEC_INDEX.json \
-  --registry-dir=.spec/registry \
-  --ui-mode=json \
-  --run-label=dashboard-ui-v3 \
-  --safety-mode=strict \
-  --stdout-summary
-```
-
-The resulting plan should include phases for:
-
-- authoring/updating `ui.json` aligned with the design system and UI
-  registries
-- reviewing AI-generated UI JSON when `meta.source=ai` and
-  `meta.review_status=unreviewed`
-- separating layout from business logic
-
-### 7.2 Legacy UI (inline only)
-
-```bash
-smartspec_generate_plan \
-  --spec=specs/legacy/spec-legacy-ui-001/spec.md \
-  --index=.spec/SPEC_INDEX.json \
-  --registry-dir=.spec/registry \
-  --ui-mode=inline \
-  --safety-mode=dev \
-  --run-label=legacy-ui-cleanup \
-  --stdout-summary
-```
-
-Here the plan focuses on refactoring UI according to inline spec
-requirements, without requiring `ui.json`, while optionally suggesting a
-future move to JSON-first.
-
----
-
-## 8. KiloCode Usage Examples
-
-### 8.1 Kilo, multiple specs, per-spec plans
-
-```bash
-smartspec_generate_plan \
-  --spec-ids=payments.checkout,identity.login \
-  --index=.spec/SPEC_INDEX.json \
-  --registry-dir=.spec/registry \
+/smartspec_generate_plan.md \
+  specs/<category>/<spec-id>/spec.md \
   --kilocode \
-  --plan-layout=per-spec \
-  --run-label=release-2024Q4 \
-  --safety-mode=strict \
-  --stdout-summary
+  [--apply] [--ui-mode auto|json|inline] [--safety-mode strict|dev] [--plan-layout per-spec|consolidated] [--run-label "..."] [--json]
 ```
 
-On Kilo:
-
-- Orchestrator breaks work into subtasks per spec, ordered by
-  dependencies from SPEC_INDEX.
-- Code mode reads specs/index/registries and generates plans.
-- If any scope is `UNSAFE`, the overall run is considered `UNSAFE`.
-
-### 8.2 Disable subtasks for a small scope
-
-```bash
-smartspec_generate_plan \
-  --spec=specs/tools/spec-tools-001-linter/spec.md \
-  --index=.spec/SPEC_INDEX.json \
-  --registry-dir=.spec/registry \
+**Example (Kilo Code):**
+```kilocode
+# Generate plan for the search feature, ensuring consolidated layout
+/smartspec_generate_plan.md specs/core/search-engine/spec.md \
   --kilocode \
-  --nosubtasks \
-  --run-label=tools-linter-plan \
-  --stdout-summary
+  --plan-layout consolidated \
+  --ui-mode json
 ```
 
----
+## Use Cases
 
-## 9. Best Practices
+### Use Case 1: Generating a New Plan (Preview)
 
-- Use `--safety-mode=strict` by default for production-bound work.
-- Run with `--dry-run` the first time in a new repo or configuration.
-- Keep `.spec/SPEC_INDEX.json` and `.spec/registry/` up to date and
-  plan remediation work when they fall behind reality.
-- Socialize the meaning of `safety_status`:
-  - SAFE → may be used for downstream automation after appropriate
-    review.
-  - UNSAFE → requires resolution of conflicts/ambiguities first.
-  - DEV-ONLY → for sandbox/PoC; not a release plan.
-- Maintain spec ↔ plan alignment; if they drift, fix the spec first and
-  regenerate the plan.
+**Scenario:** A developer has just finished writing a new specification for a "Notification Service" and wants to review the generated implementation plan before committing to it. They require the default strict safety checks.
 
----
+**CLI Command:**
+```bash
+/smartspec_generate_plan specs/service/notification-service/spec.md --ui-mode auto --run-label "Initial Review"
+```
 
-## 10. Risks if you don’t use (or misuse) this workflow
+**Expected Result:**
+1.  No changes are made to `specs/service/notification-service/plan.md`.
+2.  A new report folder is created, e.g., `.spec/reports/generate-plan/<run-id>/`.
+3.  The folder contains:
+    *   `preview/notification-service/plan.md` (the proposed plan).
+    *   `report.md` detailing the inputs, safety status (`SAFE` or `UNSAFE`), and reuse summary.
+    *   If the plan is marked `UNSAFE`, `report.md` will list blockers and Phase 0 remediation steps.
 
-- The spec → plan → tasks chain becomes inconsistent, causing teams to
-  implement different interpretations of the same feature.
-- Shared entities (APIs/models/terms) are duplicated across repos
-  without a clear view of drift.
-- AI-generated UI JSON reaches production with no explicit review
-  phases.
-- Multi-repo programs evolve with reimplementation instead of reuse,
-  leading to long-term maintenance issues.
+**Kilo Code Command:**
+```kilocode
+/smartspec_generate_plan.md specs/service/notification-service/spec.md \
+  --kilocode \
+  --ui-mode auto \
+  --run-label "Initial Review"
+```
 
----
+### Use Case 2: Applying a Plan with Developer Override
 
-## 11. FAQ / Troubleshooting
+**Scenario:** The plan generated in the preview was marked `UNSAFE` because of ambiguous registry references. The developer, understanding the risk, chooses to proceed in `dev` mode to allow the plan to be written with explicit TODOs for the ambiguities.
 
-**Q1: Can I use this without SPEC_INDEX?**  
-Yes. The workflow operates in local-spec-only mode and the plan should
-include a Phase 0 recommending index/registry initialization before
-production use.
+**CLI Command:**
+```bash
+/smartspec_generate_plan specs/service/notification-service/spec.md --apply --safety-mode dev
+```
 
-**Q2: What if we don’t want UI JSON / AI UI yet?**  
-Use `--ui-mode=inline` and keep UI requirements in `spec.md`. The plan
-can still suggest a future migration path to JSON-first.
+**Expected Result:**
+1.  The workflow proceeds, marking the plan internally as `safety_status=DEV-ONLY`.
+2.  The file `specs/service/notification-service/plan.md` is updated atomically.
+3.  The generated `plan.md` includes the header block with `safety_status: DEV-ONLY`.
+4.  Ambiguous items are replaced with explicit TODOs within the plan phases.
+5.  A summary report is still generated in the reports directory.
 
-**Q3: How much should we trust `safety_status`?**  
-Treat `safety_status` as a strong signal for CI and release boards,
-especially SAFE vs UNSAFE in strict mode. Human review is still
-recommended for major initiatives.
+**Kilo Code Command:**
+```kilocode
+/smartspec_generate_plan.md specs/service/notification-service/spec.md \
+  --kilocode \
+  --apply \
+  --safety-mode dev
+```
 
-**Q4: Does this workflow modify specs or tasks?**  
-No. It only creates/updates plans and planning reports. Specs and tasks
-are managed by other workflows in the SmartSpec chain.
+### Use Case 3: Redrafting an Existing Plan (Non-Destructive Merge)
 
----
+**Scenario:** The original `plan.md` for the "Payment Gateway" feature contains manual notes added by the team. The underlying `spec.md` was slightly modified. The team needs to regenerate the plan while preserving their manual notes.
 
-End of `/smartspec_generate_plan v5.6.2 – 5.6.x` manual (English).
-If future versions significantly change safety-mode, plan-layout, UI
-mode, or multi-repo behavior, create a new manual (e.g., v5.7) and
-clearly state the compatible workflow versions.
+**CLI Command:**
+```bash
+/smartspec_generate_plan specs/finance/payment-gateway/spec.md --apply --safety-mode strict
+```
 
+**Expected Result:**
+1.  The workflow reads the existing `plan.md`.
+2.  The new plan is generated, attempting to merge changes non-destructively.
+3.  User-authored sections and notes are preserved where possible.
+4.  If a phase is no longer relevant due to spec changes, it is marked as `Deprecated` in the updated `plan.md`, not silently deleted.
+5.  The updated `plan.md` is written to disk.
+
+## Parameters
+
+The following parameters (flags) control the behavior and output of the `/smartspec_generate_plan` workflow.
+
+| Flag | Category | Description | Default | Values | Required |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **spec\_md** | Positional Input | Path to the `spec.md` file under `specs/**`. | N/A | File path | Yes |
+| **--apply** | Universal | If present, the generated plan is written to `specs/**/plan.md`. Otherwise, only a safe preview is generated. | (Absent) | Boolean | No |
+| **--ui-mode** | Workflow Specific | Governs how the plan handles UI components and review sequencing. | `auto` | `auto`, `json`, `inline` | No |
+| **--safety-mode** | Workflow Specific | Controls the strictness of checks against registries and dependencies. | `strict` | `strict`, `dev` | No |
+| **--plan-layout** | Workflow Specific | Defines how the plan structure is organized (relevant for multi-spec projects). | `per-spec` | `per-spec`, `consolidated` | No |
+| **--run-label** | Workflow Specific | An optional string label to identify the current run in reports. | (None) | String | No |
+| **--json** | Universal | If present, outputs the run summary as a JSON object to stdout and generates `summary.json`. | (Absent) | Boolean | No |
+| **--config** | Universal | Path to the SmartSpec configuration file. | `.spec/smartspec.config.yaml` | File path | No |
+| **--lang** | Universal | Language setting for outputs (e.g., reports). | (System default) | `th`, `en` | No |
+| **--platform** | Universal | Contextual platform identifier for the run. | `cli` | `cli`, `kilo`, `ci`, `other` | No |
+| **--out** | Universal | Base directory for safe report outputs. | `.spec/reports/generate-plan/` | Directory path | No |
+| **--quiet** | Universal | Suppress non-critical output to stdout. | (Absent) | Boolean | No |
+
+## Output
+
+The workflow produces safe preview bundles regardless of the `--apply` flag, and conditionally writes the governed artifact.
+
+### Safe Preview Bundle (Always)
+
+All safe outputs are written under a unique run folder, typically located at `.spec/reports/generate-plan/<run-id>/`.
+
+| Artifact | Location | Description |
+| :--- | :--- | :--- |
+| **Preview Plan** | `<run-id>/preview/<spec-id>/plan.md` | The full, proposed `plan.md` content. |
+| **Diff Patch** | `<run-id>/diff/<spec-id>.patch` | A best-effort patch file showing changes against the existing `plan.md`. |
+| **Report** | `<run-id>/report.md` | A human-readable report detailing inputs, modes, safety status, reuse summary, blockers, and next steps. |
+| **Summary JSON** | `<run-id>/summary.json` |

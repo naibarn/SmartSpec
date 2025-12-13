@@ -1,354 +1,194 @@
-# `/smartspec_generate_tests`
+# /smartspec_generate_tests Manual (v6.0, English)
 
-**Automatically generate comprehensive test suites for a specific spec, ensuring coverage targets are met while maintaining test quality and consistency.**
+## Overview
 
----
+The `/smartspec_generate_tests` workflow (v6.1.1) is a core component of SmartSpec's test planning and governance suite.
 
-## v5.2 Alignment Notes
+**Purpose:** To generate a comprehensive, SmartSpec-governed test plan (including test matrix, acceptance criteria, and required evidence) based on a primary specification (`spec.md`) and adjacent files (`tasks.md`, `ui.json`).
 
-This manual preserves the original behavior of `/smartspec_generate_tests` and adds clarifications for SmartSpec **v5.2 centralization**.
+**Key Features:**
 
-- **Project-owned canonical space:** `.spec/`
-- **Canonical index (preferred):** `.spec/SPEC_INDEX.json`
-- **Shared registries (optional):** `.spec/registry/`
-- **Legacy mirror (optional):** `SPEC_INDEX.json` at repo root
-- **Deprecated tooling index:** `.smartspec/SPEC_INDEX.json`
+1.  **Governance Alignment:** Ensures the resulting test plan adheres to SmartSpec v6 governance standards, including strict security hardening and write scope enforcement.
+2.  **Preview-First:** By default, it operates in a safe, reports-only mode, generating a detailed **Change Plan**. Application (writing the governed test plan) requires the `--apply` flag.
+3.  **Comprehensive Scope:** Generates tests covering functional behavior, contracts, security, NFR/performance, observability, and UI components.
+4.  **De-duplication:** Leverages registries and the `SPEC_INDEX` to avoid redundant tests and align with canonical definitions.
 
-The generate-tests workflow is **spec-scoped**. When it needs the list of files for a spec, it should resolve the index in this order unless `--index` is provided:
+**Version:** 6.1.1
 
-1) `.spec/SPEC_INDEX.json`  
-2) `SPEC_INDEX.json` (root legacy mirror)  
-3) `.smartspec/SPEC_INDEX.json` (deprecated fallback)  
-4) `specs/SPEC_INDEX.json` (older layout)
+## Usage
 
-### UI JSON Addendum (optional)
+This workflow supports both Command Line Interface (CLI) and Kilo Code execution. The primary input is the path to the `spec.md` file.
 
-If the target spec is a UI spec and your project adopts Penpot JSON-first UI:
+### CLI Usage
 
-- `ui.json` remains the **design source of truth**.
-- This workflow should generate tests for **engineering-owned code**, not rewrite `ui.json`.
-- UI logic should be tested via component bindings and state/interaction tests defined in tasks.
+The workflow is invoked directly, passing the required positional argument first.
 
-Projects that do not use UI JSON are not affected.
-
----
-
-## 1. Summary
-
-This workflow automatically generates a comprehensive test suite for a specific spec. It analyzes your current implementation, test coverage, and expected behavior defined in the spec and tasks. It then produces or expands tests across unit, integration, and end-to-end levels.
-
-The workflow is designed to be **non-destructive**. It **appends** new tests instead of overwriting, preventing test duplication and preserving existing test logic.
-
-### ✅ Primary Use Cases
-
-- Automatically achieve a coverage target (e.g., 80%, 90%)
-- Generate missing unit or integration tests
-- Detect uncovered areas from spec-scoped implementation
-- Improve test quality while maintaining spec alignment
-
----
-
-## 2. Usage
+**Syntax:**
 
 ```bash
-/smartspec_generate_tests <spec_directory> [options...]
+/smartspec_generate_tests <spec_md> [flags]
 ```
 
----
-
-## 3. Parameters & Options
-
-### **Primary Argument**
-
-| Name | Type | Required? | Description | Example |
-| :--- | :--- | :--- | :--- | :--- |
-| `spec_directory` | `string` | ✅ Yes | Path to the spec folder | `specs/feature/spec-004-financial-system` |
-
-### **Coverage Options**
-
-| Option | Type | Default | Description | Example |
-| :--- | :--- | :--- | :--- | :--- |
-| `--target` | `number` | `80` | Target coverage percentage | `--target 90` |
-| `--baseline` | `number` | Auto detect | Treat coverage below this as priority | `--baseline 60` |
-
-### **Filtering Options**
-
-| Option | Type | Default | Description | Example |
-| :--- | :--- | :--- | :--- | :--- |
-| `--file` | `string` | All files | Generate tests only for a specific file | `--file src/services/payment.service.ts` |
-| `--type` | `string` | `all` | Test type: `unit`, `integration`, `e2e` | `--type unit` |
-| `--only-uncovered` | `flag` | `false` | Focus only on uncovered code | `--only-uncovered` |
-
-### **Execution Options**
-
-| Option | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `--append` | `flag` | `true` | Append new tests instead of overwriting |
-| `--dry-run` | `flag` | `false` | Preview test generation without writing files |
-| `--strict` | `flag` | `false` | Fail if coverage target cannot be reached |
-
-### **Index Options (v5.2 compatible)**
-
-| Option | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `--index` | `string` | auto-detect | Override SPEC_INDEX path |
-| `--specindex` | `string` | alias | Legacy-compatible alias for `--index` |
-
----
-
-## 4. Examples
-
-### Generate Tests to Reach 80% Coverage
+**Example (Reports Only):**
 
 ```bash
-/smartspec_generate_tests specs/feature/spec-004-financial-system
+/smartspec_generate_tests specs/user-management/auth-service/spec.md \
+  --mode strict \
+  --plan-format both \
+  --out .spec/reports/auth-test-run-1
 ```
 
-### Generate Tests to Reach 90% Coverage
+**Example (Applying the Test Plan):**
 
 ```bash
-/smartspec_generate_tests specs/feature/spec-004-financial-system --target 90
+/smartspec_generate_tests specs/user-management/auth-service/spec.md \
+  --apply \
+  --target-path specs/user-management/auth-service/testplan/v6_tests.md
 ```
 
-### Generate Tests for Specific File
+### Kilo Code Usage
+
+Kilo Code execution requires appending the `--kilocode` flag, which signals the environment to handle execution and output formatting appropriately.
+
+**Syntax:**
 
 ```bash
-/smartspec_generate_tests specs/feature/spec-004-financial-system --file src/services/payment.service.ts
+/smartspec_generate_tests.md <spec_md> [flags] --kilocode
 ```
 
-### Generate Only Unit Tests
+**Example (Reports Only):**
 
 ```bash
-/smartspec_generate_tests specs/feature/spec-004-financial-system --type unit
+/smartspec_generate_tests.md specs/payment/checkout-flow/spec.md \
+  --include-dependencies \
+  --json \
+  --kilocode
 ```
 
-### Focus on Uncovered Code Only
+**Example (Applying the Test Plan):**
 
 ```bash
-/smartspec_generate_tests specs/feature/spec-004-financial-system --only-uncovered
+/smartspec_generate_tests.md specs/payment/checkout-flow/spec.md \
+  --apply \
+  --kilocode
 ```
 
-### Dry Run (Preview Tests)
+---
+
+## Use Cases
+
+### Use Case 1: Generating a Test Plan for a New Feature (Reports Only)
+
+**Scenario:** A new feature specification (`specs/api/v2/new-endpoint/spec.md`) has been written, along with detailed implementation tasks (`tasks.md`). The user wants to review the generated test plan and coverage gaps before committing the plan to the repository.
+
+| Component | Detail |
+| :--- | :--- |
+| **Input Spec** | `specs/api/v2/new-endpoint/spec.md` |
+| **Goal** | Generate a comprehensive preview in strict mode, including dependency checks. |
+
+**CLI Command:**
 
 ```bash
-/smartspec_generate_tests specs/feature/spec-004-financial-system --dry-run
+/smartspec_generate_tests specs/api/v2/new-endpoint/spec.md \
+  --strict \
+  --include-dependencies \
+  --plan-format both
 ```
 
----
+**Expected Result:**
 
-## 5. How It Works
+1.  Exit code `0` (unless strict mode blocks on a critical governance failure).
+2.  A new report directory is created (e.g., `.spec/reports/generate-tests/<run-id>/`).
+3.  The directory contains:
+    *   `report.md` (detailed checks and summary).
+    *   `change_plan.md` (stating that no files were written to governed paths).
+    *   `tests.preview.md` and `tests.preview.json` (the full generated test matrix).
+4.  The `report.md` includes a section detailing any **GT-201 Coverage Gaps** found.
 
-### Phase 1: Analyze Current Coverage (Spec-Scoped)
+### Use Case 2: Applying a Governed Test Plan
 
-**1. Load SPEC_INDEX.json**
+**Scenario:** The test plan for the Authentication Service (`specs/user-management/auth-service/spec.md`) has been reviewed and approved. The user needs to apply this plan, writing the final `tests.md` file into the designated `testplan` folder, ensuring the write operation is atomic and governed.
 
-_v5.2 note:_ When `--index` is not provided, prefer the canonical index at `.spec/SPEC_INDEX.json`, then fall back to the root mirror, then deprecated tooling locations.
+| Component | Detail |
+| :--- | :--- |
+| **Input Spec** | `specs/user-management/auth-service/spec.md` |
+| **Goal** | Write the generated test plan to the governed path. |
 
-```json
-{
-  "specs": {
-    "spec-004-financial-system": {
-      "files": [
-        "src/services/credit.service.ts",
-        "src/services/payment.service.ts",
-        "src/models/transaction.model.ts"
-      ]
-    }
-  }
-}
-```
-
-**2. Extract Spec-Scoped Files**
-
-The workflow uses this list to limit test generation to only files relevant to the current spec.
-
-**3. Run Coverage Tooling**
-
-Example (TypeScript + Jest):
+**Kilo Code Command:**
 
 ```bash
-npm test -- --coverage --collectCoverageFrom=\
-  src/services/credit.service.ts,\
-  src/services/payment.service.ts,\
-  src/models/transaction.model.ts
+/smartspec_generate_tests.md specs/user-management/auth-service/spec.md \
+  --apply \
+  --target-path testplan/auth_tests.md \
+  --kilocode
 ```
 
----
+**Expected Result:**
 
-### Phase 2: Identify Missing Test Scenarios
+1.  The workflow performs preflight checks and generates the Change Plan.
+2.  Since `--apply` is present, the Change Plan is executed.
+3.  The file `specs/user-management/auth-service/testplan/auth_tests.md` is created atomically.
+4.  The `summary.json` output confirms the governed write operation under the `writes.governed` array.
 
-The workflow analyzes:
+### Use Case 3: Generating a Plan with Overridden Input Paths
 
-- Missing unit tests for functions/methods
-- Missing integration tests across services
-- Missing edge-case coverage
-- Missing tests matching acceptance criteria
+**Scenario:** A development team stores their UI specification (`ui_config.json`) and tasks (`dev_tasks.md`) in non-standard locations relative to the spec file.
 
----
+| Component | Detail |
+| :--- | :--- |
+| **Input Spec** | `specs/frontend/dashboard/spec.md` |
+| **Goal** | Generate a plan using specific paths for tasks and UI configuration. |
 
-### Phase 3: Generate Tests (Append-Only)
-
-The workflow generates tests in a style consistent with your project’s conventions.
-
-Key behavior:
-
-- **Appends** new tests to existing files
-- Avoids duplicating previously tested cases
-- Groups tests by feature and scenario
-
----
-
-### Phase 4: Verify Coverage Improvement
-
-After generation:
-
-1. Re-run coverage
-2. Compare against target
-3. Summarize outcomes
-
----
-
-## 6. Test Structure Strategy
-
-The workflow attempts to generate tests in this priority order:
-
-1) Unit tests for pure logic
-2) Service integration tests
-3) API-level tests
-4) UI interaction tests (only when relevant)
-
----
-
-## 7. Quality & Non-Destructive Rules
-
-### Append-Only Safety
-
-This workflow is designed to **append** new tests instead of overwriting existing test code.
-
-Why this matters:
-
-- Prevents losing handcrafted test logic
-- Reduces merge conflicts
-- Preserves historical test intent
-
-### Duplicate Prevention
-
-Before writing new tests:
-
-- Scan existing test names and describe blocks
-- Compare scenario signatures
-- Skip duplicates
-
----
-
-## 8. Coverage Growth Strategy
-
-Recommended incremental approach:
+**CLI Command:**
 
 ```bash
-# Start from 70%
-/smartspec_generate_tests specs/feature/spec-004 --target 70
-
-# Increase to 80%
-/smartspec_generate_tests specs/feature/spec-004 --target 80
-
-# Finally aim for 90%
-/smartspec_generate_tests specs/feature/spec-004 --target 90
+/smartspec_generate_tests specs/frontend/dashboard/spec.md \
+  --tasks ../../dev_tasks.md \
+  --ui-json ./ui_config.json
 ```
 
----
+**Expected Result:**
 
-## 9. Best Practices
-
-### 1. Generate Tests After a Verified Implementation Slice
-
-```bash
-# Implement a safe chunk
-/smartspec_implement_tasks specs/feature/spec-004/tasks.md --range=1-6 --skip-completed
-
-# Verify progress
-/smartspec_verify_tasks_progress specs/feature/spec-004/spec.md
-
-# Generate tests
-/smartspec_generate_tests specs/feature/spec-004 --target 80
-```
-
-### 2. Review Generated Tests
-
-```bash
-# Generate tests
-/smartspec_generate_tests specs/feature/spec-004
-
-# Review
-/git diff
-
-# Adjust edge cases manually
-# Then run tests
-npm test
-```
-
-### 3. Verify Coverage
-
-```bash
-# Generate tests
-/smartspec_generate_tests specs/feature/spec-004 --target 90
-
-# Run tests with coverage
-npm test -- --coverage
-
-# Verify target reached
-```
+1.  The workflow successfully loads the specified `dev_tasks.md` and `ui_config.json`.
+2.  The generated test matrix includes UI component tests derived from the provided `ui_config.json`.
+3.  The `summary.json` confirms the non-default paths used in the `scope` object.
 
 ---
 
-## 10. Troubleshooting
+## Parameters
 
-### Issue: Tests not appending correctly
+The `/smartspec_generate_tests` workflow accepts one required positional input and several optional flags.
 
-**Cause:** Test file structure or naming conventions differ from expected patterns.
+### Positional Argument (Required)
 
-**Fix:**
+| Parameter | Description |
+| :--- | :--- |
+| `<spec_md>` | The path to the primary specification file (e.g., `specs/<category>/<spec-id>/spec.md`). |
 
-- Ensure the workflow is run with `--append` (default).
-- Review generated output in `--dry-run` first.
+### Universal Flags (Governance and Environment)
 
----
+| Flag | Description |
+| :--- | :--- |
+| `--config <path>` | Specifies the path to the SmartSpec configuration file. |
+| `--lang <th|en>` | Sets the language for reports and generated content. |
+| `--platform <cli|kilo|ci|other>` | Specifies the execution environment. |
+| `--apply` | **MANDATORY for governed writes.** Executes the Change Plan, writing the test plan to the target path. |
+| `--out <path>` | Overrides the default report output root (`.spec/reports/generate-tests/`). Must resolve under the configuration allowlist. |
+| `--json` | Outputs the main report and change plan in JSON format in addition to Markdown. |
+| `--quiet` | Suppresses non-critical console output. |
 
-### Issue: Coverage not increasing
+### Workflow-Specific Flags
 
-**Cause:** The uncovered code may require integration-level scenarios that unit tests cannot reach.
+| Flag | Description |
+| :--- | :--- |
+| `--tasks <path>` | Override the auto-discovered path for the adjacent `tasks.md` file (read-only). |
+| `--ui-json <path>` | Override the auto-discovered path for the adjacent `ui.json` file (read-only). |
+| `--mode <normal|strict>` | Sets the generation mode. Default is `normal`. |
+| `--strict` | Alias for `--mode=strict`. In strict mode, missing required evidence hooks or registry misalignments result in a blocking failure (Exit Code 1). |
+| `--plan-format <md|json|both>` | Specifies the format for the generated test plan preview files. Default is `md`. |
+| `--target-path <path>` | Specifies the governed output path for the final `tests.md`. Only used with `--apply`. Default is `testplan/tests.md` under the spec folder. |
+| `--include-dependencies`| Instructs the workflow to generate tests that specifically validate integration points with dependency specifications referenced in the `spec.md`. |
+| `--max-tests <int>` | Caps the total number of generated test items (bounded output, defense against runaway scans). |
 
-**Fix:**
-
-- Use `--type integration`.
-- Expand the spec acceptance criteria if needed.
-
----
-
-### Issue: Duplicate tests generated
-
-**Cause:** Existing tests may not follow consistent naming conventions.
-
-**Fix:**
-
-- Normalize naming.
-- Regenerate using `--only-uncovered`.
-
----
-
-## 11. Related Workflows
-
-- `/smartspec_generate_tasks`
-- `/smartspec_implement_tasks`
-- `/smartspec_verify_tasks_progress`
-- `/smartspec_fix_errors`
-- `/smartspec_refactor_code`
-
----
-
-## 12. Summary
-
-`/smartspec_generate_tests` is a spec-scoped, append-only test generator that helps your teams quickly reach meaningful coverage targets without destroying existing test suites.
-
-In SmartSpec v5.2, it respects canonical index resolution, optional shared registries, and the UI JSON addendum when your project adopts Penpot-driven UI workflows.
+### Input Overrides (Read-Only)
 

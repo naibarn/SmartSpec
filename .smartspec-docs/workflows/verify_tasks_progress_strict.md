@@ -1,258 +1,194 @@
-# SmartSpec Strict Verification Workflow Manual
-## `/smartspec_verify_tasks_progress_strict` — Evidence-First, Strict Enforcement Verification
-**English Version** — Dedicated Manual for the Strict Workflow
+# /smartspec_verify_tasks_progress_strict Manual (v6.0, English)
 
----
-# 1. Purpose
-`/smartspec_verify_tasks_progress_strict` is a **next-generation, strict, evidence-first verification workflow** designed to replace the legacy verification system where necessary.
+## Overview
 
-This workflow enforces:
-- **Zero trust in checkboxes** inside `tasks.md`
-- **100% evidence-required validation** (code + tests + docs + deploy artifacts)
-- **Spec-agnostic but accurate heuristics** using built-in evidence providers
-- **Optional per-spec evidence configs** for high precision
-- **Strict scoring, clear failure reasons, and anti-loop diagnostics**
+The `/smartspec_verify_tasks_progress_strict` workflow is a critical tool for ensuring that tasks defined in a `tasks.md` file are genuinely complete based on verifiable evidence within the codebase, rather than relying solely on manually checked checkboxes.
 
-This workflow is **read-only** and writes only verification reports.
+**Purpose:** Verify progress for a given `tasks.md` using **strict, evidence-only checks**.
 
-Use this workflow when accuracy, reliability, and audit-grade progress reports are required.
+**Key Features:**
+*   Treats checkboxes as **non-authoritative**.
+*   Verifies tasks via explicit evidence hooks (code, test, ui, docs).
+*   Produces auditable reports under `.spec/reports/verify-tasks-progress/`.
+*   Operates in a **safe-by-default** mode, performing reports-only writes.
 
----
-# 2. Key Features
-### ✔ 2.1 Evidence-First Verification
-Progress is calculated strictly from observed evidence:
-- Implementation files
-- Test files (unit / integration / performance)
-- API route definitions
-- Documentation (API / deployment)
-- Deployment & CI/CD files
+**Version:** 6.0.3
 
-Checkboxes do not determine completion — they only appear in the report.
+## Usage
 
----
-### ✔ 2.2 Strict Verdict System
-Each task receives one of the following verdicts:
+This workflow is designed to be invoked via the command line (CLI) or through Kilo Code environments.
 
-| Verdict | Meaning |
-|--------|---------|
-| **complete** | All required evidence exists and is consistent |
-| **unsynced_complete** | Evidence exists but checkbox was unchecked |
-| **false_positive** | Checkbox checked but no evidence exists |
-| **partial** | Some evidence exists but incomplete |
-| **incomplete** | No evidence found |
+### CLI Usage
 
-Strict mode ensures no task can be accidentally marked complete.
+The primary input is the path to the `tasks.md` file you wish to verify.
 
----
-### ✔ 2.3 Built-In Evidence Providers (No Script Required)
-Includes automatic detection of:
-- HTTP routes
-- Service methods
-- Test files & categories
-- Docs (API, deployment, architecture)
-- Deployment files (K8s, CI/CD)
-
-Works out-of-the-box with zero configuration.
-
----
-### ✔ 2.4 Optional Evidence Config
-A spec may include a config file to fine-tune expected evidence:
-
-Example: `specs/.../evidence.yaml`
-```yaml
-tasks:
-  T047:
-    endpoints:
-      - path: /api/v1/users/me/phone
-        method: POST
-    tests:
-      - tests/integration/users.phone.test.ts
-```
-Supports:
-- endpoint mapping
-- service method mapping
-- required tests
-- required docs
-- required deployment artifacts
-
----
-### ✔ 2.5 Anti-Loop Diagnostics
-If a task consistently shows no evidence across runs, the report includes warnings:
-```
-WARNING: T047 has no detectable evidence after repeated verification cycles.
-This indicates mapping issues or missing implementation in non-standard locations.
-```
-Prevents infinite loops of verify → implement → verify.
-
----
-# 3. Inputs & Flags
-## 3.1 Required Inputs
-```
---spec=<path>
---tasks=<path>       # Optional; auto-detected if omitted
-```
-
-## 3.2 Optional Inputs
-### Evidence config
-```
---evidence-config=<path>
-```
-
-### Reporting
-```
---report-dir=<path>
---report=<summary|detailed>
---report-format=<md|json|both>
---dry-run
-```
-
-### Strictness
-```
---safety-mode=<strict|dev>
---strict    # alias for strict mode
-```
-
----
-# 4. Evidence Providers (Built-in)
-The strict workflow includes analyzer modules that search for evidence:
-
-### 4.1 Route Detector
-Searches common directories:
-- `src/routes/**/*`
-- `src/http/**/*`
-
-Recognizes HTTP method + path via heuristics.
-
-### 4.2 Service Detector
-Searches:
-- `src/services/**/*`
-- `src/modules/**/services/**/*`
-
-Extracts class/function names and matches keywords.
-
-### 4.3 Test Detector
-Searches:
-- `tests/unit/**/*`
-- `tests/integration/**/*`
-- `tests/performance/**/*`
-- `__tests__/**/*`
-
-Categorizes tests by task-relevant keywords.
-
-### 4.4 Documentation Detector
-Searches `docs/**/*` for:
-- API docs (OpenAPI, Swagger)
-- Deployment docs
-
-### 4.5 Deployment Detector
-Searches:
-- `k8s/**/*`
-- `deploy/**/*`
-- `.github/workflows/**/*`
-
-Matches tasks requiring deployment, monitoring, or CI/CD artifacts.
-
----
-# 5. Evaluation Flow
-### Step 1 — Resolve Spec & Tasks
-Identify the appropriate files.
-
-### Step 2 — Load Optional Evidence Config
-If present, it overrides or extends heuristics.
-
-### Step 3 — Parse Tasks
-Convert `tasks.md` into structured nodes.
-
-### Step 4 — Collect Evidence per Task
-Search for endpoints, service methods, tests, docs, deploy files.
-
-### Step 5 — Compute Verdicts
-Apply strict evidence rules:
-
-- Missing test → **partial**
-- Missing implementation → **incomplete**
-- Checked but no code → **false_positive**
-- Evidence found but unchecked → **unsynced_complete**
-
-### Step 6 — Generate Reports
-Output markdown, JSON, or both.
-
----
-# 6. JSON Report Format
-Example:
-```json
-{
-  "spec_path": "specs/.../spec.md",
-  "tasks_path": "specs/.../tasks.md",
-  "summary": {
-    "total": 78,
-    "complete": 45,
-    "unsynced_complete": 3,
-    "false_positive": 4,
-    "partial": 16,
-    "incomplete": 10,
-    "progress_percent": 61.5,
-    "risk": "HIGH"
-  }
-}
-```
-
-Each task entry contains:
-- expected evidence
-- missing evidence
-- matched evidence
-- verdict
-
----
-# 7. Example Usage
-## Minimal
 ```bash
-/smartspec_verify_tasks_progress_strict \
-  --spec specs/.../spec.md
+/smartspec_verify_tasks_progress_strict <path/to/tasks.md> [--report-format <md|json|both>] [--json]
 ```
 
-## With JSON Output
+**Example:**
+
 ```bash
-/smartspec_verify_tasks_progress_strict \
-  --spec specs/.../spec.md \
-  --report-format=json
+# Verify the tasks for the 'feature-orders' specification
+/smartspec_verify_tasks_progress_strict specs/feature-orders/tasks.md --report-format both
 ```
 
-## With Evidence Config
+### Kilo Code Usage
+
+In environments supporting Kilo Code execution, the invocation is similar, using the `.md` extension for the workflow file.
+
 ```bash
-/smartspec_verify_tasks_progress_strict \
-  --spec specs/.../spec.md \
-  --evidence-config specs/.../evidence.yaml
+/smartspec_verify_tasks_progress_strict.md <path/to/tasks.md> [--report-format <md|json|both>] [--json]
 ```
 
-## Detailed Report
+**Example:**
+
 ```bash
-/smartspec_verify_tasks_progress_strict \
-  --spec specs/.../spec.md \
-  --report=detailed --report-format=both
+# Verify tasks and output the report exclusively in JSON format
+/smartspec_verify_tasks_progress_strict.md specs/v6/tasks.md --report-format json
 ```
 
----
-# 8. Governance
-The workflow:
-- **Must not modify**: spec.md, tasks.md, code, registries, SPEC_INDEX, UI JSON
-- Writes only: markdown/JSON reports
-- Is intentionally **not backward-compatible** with the legacy verify workflow
-- Provides maximum safety and correctness
+## Use Cases
 
----
-# 9. When to Use This Workflow
-Use when you need:
-- Reliable progress reports grounded in code, not checkboxes
-- CI/CD verification for readiness
-- Governance/audit-grade reporting
-- Automatic detection of incomplete tasks
-- No chance of false completion
+### Use Case 1: Standard Verification and Report Generation
 
----
-# 10. Thai Version
-A Thai-language manual can be created in a separate Canvas.
-Say: **“สร้างคู่มือภาษาไทย”**
+**Scenario:** A developer needs to verify the completion status of tasks for a new API feature (`api-v2.md`) and generate both a human-readable markdown report and a machine-readable JSON summary.
 
----
-End of Manual 🚀
+| Detail | Value |
+| :--- | :--- |
+| **Tasks File** | `specs/api-v2/tasks.md` |
+| **Goal** | Generate full verification report. |
+
+**Command (CLI):**
+
+```bash
+/smartspec_verify_tasks_progress_strict specs/api-v2/tasks.md --report-format both
+```
+
+**Expected Result:**
+
+1.  Exit code `0`.
+2.  A new run folder is created, e.g., `.spec/reports/verify-tasks-progress/20240101-123456/`.
+3.  The following files are generated:
+    *   `report.md`: Detailed markdown report showing per-task status, confidence, and remediation suggestions.
+    *   `summary.json`: JSON file containing structured data on totals and results.
+4.  The report highlights tasks lacking evidence hooks or those with evidence pointing to non-existent files.
+
+### Use Case 2: Verification of Specific Documentation Tasks
+
+**Scenario:** A technical writer wants to ensure all documentation tasks in their specification are complete, specifically checking for the existence of files and headings defined in the `docs` evidence hooks. They only need the JSON output for integration with a CI pipeline.
+
+| Detail | Value |
+| :--- | :--- |
+| **Tasks File** | `specs/docs-migration/tasks.md` |
+| **Goal** | Verify documentation progress, output JSON only. |
+
+**Command (Kilo Code):**
+
+```bash
+/smartspec_verify_tasks_progress_strict.md specs/docs-migration/tasks.md --report-format json --quiet
+```
+
+**Expected Result:**
+
+1.  Exit code `0`.
+2.  A run folder is created containing only `summary.json`.
+3.  The `summary.json` includes entries where `type: docs` evidence hooks were checked against the file system. Tasks where the specified `path` and `heading` were found are marked `verified: true` with `confidence: high`.
+4.  The console output is minimal due to the `--quiet` flag.
+
+### Use Case 3: Handling Invalid Scope and Redaction
+
+**Scenario:** A developer attempts to verify a `tasks.md` file that contains an evidence hook pointing to a file outside the allowed workspace root (e.g., using an absolute path or path traversal `../..`). The system must enforce safety policies.
+
+| Detail | Value |
+| :--- | :--- |
+| **Tasks File** | `specs/security-audit/tasks.md` |
+| **Evidence Hook** | `evidence: code path=../../secrets/config.yaml` |
+| **Goal** | Verify safety and report invalid scope. |
+
+**Command (CLI):**
+
+```bash
+/smartspec_verify_tasks_progress_strict specs/security-audit/tasks.md
+```
+
+**Expected Result:**
+
+1.  Exit code `0` (if other tasks are valid, otherwise `1` if validation fails early).
+2.  The report is generated.
+3.  The task containing the malicious hook is marked with `status: invalid_scope`.
+4.  The report explicitly states that the evidence read was blocked due to path traversal/scope violation, ensuring the workflow adheres to the **Governance contract** and **Evidence read scope** rules.
+
+## Parameters
+
+The workflow accepts the following positional argument and flags:
+
+### Positional Input
+
+| Parameter | Required | Description | Validation |
+| :--- | :--- | :--- | :--- |
+| `tasks_md` | Yes | Path to the `tasks.md` file to be verified. | Must exist, resolve under `specs/**`, and not escape via symlink. |
+
+### Universal Flags (Standard SmartSpec Flags)
+
+| Flag | Default | Description |
+| :--- | :--- | :--- |
+| `--config <path>` | `.spec/smartspec.config.yaml` | Path to the SmartSpec configuration file. |
+| `--lang <th|en>` | (System default) | Specifies the language for output messages. |
+| `--platform <cli|kilo|ci|other>` | (Inferred) | Specifies the execution platform. |
+| `--out <path>` | (Internal report path) | Specifies an alternative output directory for reports. Must be within the allowed write scope. |
+| `--json` | (None) | Alias for `--report-format json`. Enables JSON output for summary data. |
+| `--quiet` | (None) | Suppresses non-essential output to the console. |
+
+### Workflow-Specific Flags
+
+| Flag | Default | Description |
+| :--- | :--- | :--- |
+| `--report-format <md|json|both>` | `both` | Specifies the format(s) for the generated report files. |
+
+## Output
+
+The workflow is designed to produce auditable reports detailing the verification process and results.
+
+### Output Artifacts
+
+All reports are written under a unique run folder, typically located at:
+`.spec/reports/verify-tasks-progress/<run-id>/`
+
+If the `--out <path>` flag is used, reports are written under:
+`<out>/<run-id>/`
+
+| File Name | Format | Condition | Description |
+| :--- | :--- | :--- | :--- |
+| `report.md` | Markdown | When `--report-format` includes `md` or `both`. | A detailed, human-readable report including per-task status, confidence levels, and remediation suggestions. |
+| `summary.json` | JSON | When `--report-format` includes `json` or `both`, or when `--json` is used. | A structured, machine-readable summary of the verification results, following the defined schema. |
+
+### Required Content in `report.md`
+
+The markdown report must include:
+
+1.  Target file path and resolved specification ID (`spec-id`).
+2.  Summary totals (Verified Done, Not Verified, Missing Hooks, etc.).
+3.  Per-task results (ID, title, status, confidence, evidence pointers).
+4.  Evidence gaps list with concrete **remediation suggestions** (templates for missing hooks).
+5.  Redaction note (if applicable, based on configuration).
+6.  Output inventory (list of generated files).
+7.  Recommended next steps (e.g., how to sync checkboxes).
+
+## Notes & Related Workflows
+
+### Non-Destructive Operation
+
+This workflow is strictly non-destructive. It **MUST NOT** modify the `tasks.md` file or any source code. It only generates reports.
+
+### Checkbox Synchronization
+
+This workflow verifies *progress* based on evidence. It does not update the checkboxes in `tasks.md`.
+
+To update the checkboxes based on the verification results, use the related workflow:
+
+*   **`/smartspec_sync_tasks_checkboxes`**: Used to safely update the checkbox states in `tasks.md` based on the latest verification status.
+
+**Recommended Next Step:**
+
+If the verification report shows tasks are

@@ -1,258 +1,154 @@
-| manual_name | manual_version | compatible_workflow | compatible_workflow_versions | role |
-| --- | --- | --- | --- | --- |
-| /smartspec_generate_spec_from_prompt Manual (EN) | 5.6 | /smartspec_generate_spec_from_prompt | 5.6.x | developer/operator manual (feature bootstrap, product, frontend, backend) |
+# /smartspec_generate_spec_from_prompt Manual (v6.0, English)
 
-# /smartspec_generate_spec_from_prompt Manual (v5.6, English)
+## Overview
 
-## 1. Overview
+The `/smartspec_generate_spec_from_prompt` workflow (Version 6.0.1) is a core SmartSpec utility designed to generate **one or more starter specification documents** from a natural-language requirement prompt.
 
-This manual explains how to use the workflow:
+**Purpose:** To accelerate the specification process by applying reuse-first intelligence. The workflow automatically checks against existing specifications (`.spec/SPEC_INDEX.json`) to detect overlaps, preferring **reuse and referencing** over creating duplicates. It ensures generated specs meet high quality standards (UX/UI-ready, states, a11y, responsive design) and rigorously captures external references and sources in an auditable manner.
 
-> `/smartspec_generate_spec_from_prompt v5.6.x`
-
-The workflow creates **starter `spec.md` files directly from a natural language prompt**, using your existing SmartSpec project structure as context. It is designed for:
-
-- teams that have an idea or feature description but **no spec yet**, and
-- users who want a **simple, one-command way** to bootstrap specs before refining them.
-
-Key properties:
-
-- role: Execution (writes new `spec.md` files)
-- write_guard: ALLOW-WRITE, but **limited to `specs/**` and optional SPEC_INDEX updates**
-- safety-mode: normal, with **no destructive edits to existing specs**
-
-Typical flow:
-
-1. You describe the feature in a single prompt.
-2. The workflow analyses the prompt and project context and decides:
-   - which category to use (e.g. `ecommerce`, `miniapp`, `admin`),
-   - how many specs are needed (1–3 by default, up to 5 with a flag),
-   - unique `spec-id`s for each spec.
-3. It creates one or more folders under `specs/<category>/<spec-id>/spec.md`.
-4. You then run `/smartspec_generate_spec --spec-ids=<id>` to refine each spec.
-
-> **Important:** This workflow is a **bootstrap step only**. For ongoing work,
-> `/smartspec_generate_spec` remains the primary spec refinement workflow.
+**Category:** `spec-gen`
+**Status:** Production Ready
 
 ---
 
-## 2. What’s New in v5.6
+## Usage
 
-`/smartspec_generate_spec_from_prompt` is a **new workflow in the 5.6 line**. It does not replace any existing workflow.
+### CLI
 
-### 2.1 Prompt → multi-spec bootstrap
-
-- Takes a single prompt and can generate **1–5 specs** for a feature.
-- Auto-splits big features (e.g. ecommerce shop) into logical specs like:
-  - `ecommerce_shop_front`
-  - `ecommerce_checkout_flow`
-  - `ecommerce_order_billing`
-
-### 2.2 Safe write scope
-
-- Writes only under `specs/**`.
-- Never overwrites an existing `spec.md`.
-- If a `spec-id` already exists, a suffixed id (e.g. `_v2`) is used and called out in the summary.
-
-### 2.3 Explicit SPEC_INDEX updates
-
-- SPEC_INDEX is **never modified automatically**.
-- Only when `--update-index` is provided and `.spec/SPEC_INDEX.json` is found and writable will the workflow append entries.
-- Otherwise, it prints JSON snippets for manual insertion into the index.
-
-### 2.4 SPEC-first content
-
-The generated specs follow the **SPEC-first rules from the governance knowledge base**, including:
-
-- context and goals,
-- user roles and journeys,
-- screens and flows,
-- external integrations (payments, auth, AI, etc.),
-- data models and persistence hints,
-- non-functional requirements (SEO, performance, security, observability),
-- v2+ enhancement ideas.
-
----
-
-## 3. Backward Compatibility Notes
-
-- New in v5.6; no legacy behaviour to preserve.
-- No flags or behaviours are removed from other workflows.
-- Follows the same semantics for:
-  - `--workspace-roots`, `--repos-config`,
-  - `--registry-dir`, `--registry-roots`,
-  - `--specindex`, `--kilocode`,
-  as other SmartSpec workflows.
-
----
-
-## 4. Core Concepts
-
-### 4.1 Starter specs vs refined specs
-
-- **Starter spec** (this workflow):
-  - Created from a prompt plus light project context.
-  - Detailed enough to plan tasks and discuss with stakeholders.
-  - Not yet fully aligned with all project-wide constraints.
-
-- **Refined spec** (`/smartspec_generate_spec`):
-  - Uses more project files, registries, and prior specs.
-  - Ensures consistency and governance across the portfolio.
-
-### 4.2 Categories & `spec-id`s
-
-The workflow tries to infer a suitable category and `spec-id` from:
-
-- existing entries in `.spec/SPEC_INDEX.json`,
-- existing `specs/<category>/<spec-id>/` patterns,
-- keywords in your prompt.
-
-If nothing matches, it falls back to a safe default category (e.g. `feature`) and a slugged `spec-id` built from your prompt.
-
-### 4.3 Auto-splitting features
-
-By default (`--max-specs=3`), a large feature may be split into multiple specs. Example splits:
-
-- `*_front` vs `*_checkout` vs `*_billing`
-- `*_user_app` vs `*_admin_console`
-- `*_core_flow` vs `*_advanced_features`
-
-This keeps each spec focused and easier to implement.
-
----
-
-## 5. Quick Start Examples
-
-### 5.1 First-time ecommerce website spec (single repo)
+The command-line interface (CLI) is the primary method for invoking the workflow.
 
 ```bash
 /smartspec_generate_spec_from_prompt \
-  "Create a modern ecommerce website with strong SEO, showing featured products and product images on the home page, allowing users to add items to a cart, proceed to checkout, place an order, and receive an invoice with payment instructions."
+  "<your requirement prompt>" \
+  [--spec-category <category>] \
+  [--max-specs <n>] \
+  [--refs <dir>] \
+  [--update-index] \
+  [--dry-run] \
+  [--json] \
+  [--apply]
 ```
 
-Typical result (summary):
+### Kilo Code
 
-- Created:
-  - `specs/ecommerce/ecommerce_shop_front/spec.md`
-  - `specs/ecommerce/ecommerce_checkout_flow/spec.md`
-  - `specs/ecommerce/ecommerce_order_billing/spec.md`
-- Recommended follow-up commands:
-  - `/smartspec_generate_spec --spec-ids=ecommerce_shop_front`
-  - `/smartspec_generate_spec --spec-ids=ecommerce_checkout_flow`
-  - `/smartspec_generate_spec --spec-ids=ecommerce_order_billing`
-
-### 5.2 Single-spec mode
-
-If you prefer a single spec for the whole feature:
-
-```bash
-/smartspec_generate_spec_from_prompt \
-  "Create a single, end-to-end ecommerce website specification that covers product catalog, search, cart, checkout, order management, and invoice generation in one cohesive spec." \
-  --max-specs=1
-```
-
-Result:
-
-- Created: `specs/ecommerce/ecommerce_shop_full/spec.md`
-- Next: `/smartspec_generate_spec --spec-ids=ecommerce_shop_full`
-
-### 5.3 Miniapp with AI integration (e.g. Kie.ai)
-
-```bash
-/smartspec_generate_spec_from_prompt \
-  "Create a miniapp where users can upload up to 5 images and type a short English description. The backend should convert the description into a detailed prompt for Google Nano Banana Pro via Kie.ai, generate an image, and show the results in a gallery with history and filters."
-```
-
-Result (example split):
-
-- `specs/miniapp/miniapp_nano_banana_core/spec.md`
-- `specs/miniapp/miniapp_nano_banana_gallery/spec.md`
-
-Next steps:
-
-- `/smartspec_generate_spec --spec-ids=miniapp_nano_banana_core`
-- `/smartspec_generate_spec --spec-ids=miniapp_nano_banana_gallery`
-
-### 5.4 Kilo usage (project-wide context)
+For execution within the SmartSpec Kilo Code environment or scripting:
 
 ```bash
 /smartspec_generate_spec_from_prompt.md \
-  "Create a cross-platform membership application for web and mobile, including sign-up, sign-in, profile management, and a points-based loyalty system." \
-  --kilocode
+  "<your requirement prompt>" \
+  [--spec-category <category>] \
+  [--max-specs <n>] \
+  [--refs <dir>] \
+  [--update-index] \
+  [--dry-run] \
+  [--json] \
+  [--apply]
 ```
 
-On Kilo:
+---
 
-- Orchestrator can split work by spec-id if multiple specs are required.
-- Code mode writes only under `specs/**`.
+## Use Cases
+
+### Use Case 1: Generating a New Feature Spec (Preview Mode)
+
+**Scenario:** A product manager needs a detailed specification for a new "Dark Mode Toggle" feature, but wants to review the proposal and reuse analysis before committing the files. They provide a reference directory containing design mockups.
+
+**CLI Command:**
+
+```bash
+/smartspec_generate_spec_from_prompt \
+  "Implement a user-configurable Dark Mode toggle with system preference detection and persistence across sessions." \
+  --spec-category "settings" \
+  --refs "./design_assets/dark_mode_v1" \
+  --dry-run
+```
+
+**Expected Result:**
+1. **Output:** A deterministic preview bundle is written to `.spec/reports/spec-from-prompt/<run-id>/`.
+2. **Reuse Analysis:** The `report.md` shows the similarity check against existing specs. If no strong match is found, it proposes a new spec ID (e.g., `dark-mode-toggle`).
+3. **Artifacts:** A draft `spec.md` (including states, a11y, and microcopy guidance) and `references/REFERENCE_INDEX.yaml` (citing assets from `./design_assets/dark_mode_v1`) are created in the preview directory.
+4. **Governed Writes:** No files are written to the `specs/` directory or `.spec/SPEC_INDEX.json` because `--dry-run` was used.
+
+### Use Case 2: Extending an Existing Spec (Reuse Proposal)
+
+**Scenario:** A developer attempts to generate a spec for "User Profile Avatar Upload," unaware that a strong match exists for "User Profile Management." The workflow should detect the overlap and recommend extension.
+
+**Kilo Code Command:**
+
+```bash
+/smartspec_generate_spec_from_prompt.md \
+  "Allow users to upload and crop a custom avatar image for their profile, storing it in S3." \
+  --spec-category "user-mgmt"
+```
+
+**Expected Result:**
+1. **Reuse Analysis:** The workflow identifies a strong match (e.g., `user-profile-v1`) in the index.
+2. **Output:** The workflow **MUST NOT** create a new spec folder.
+3. **Report:** The `report.md` (written to reports/ directory) contains a **Reuse Proposal**, stating:
+    *   **Decision:** Reuse `user-profile-v1`.
+    *   **Delta:** The current spec lacks avatar upload/cropping requirements.
+    *   **Next Step Recommendation:** `/smartspec_generate_spec --spec-ids=user-profile-v1 --extension-prompt="Add avatar upload and cropping..." --apply`
+
+### Use Case 3: Applying and Indexing a New Spec
+
+**Scenario:** A new, complex feature ("Real-time Notification Center") requires a dedicated spec, and the user is ready to commit the final specification files and update the central index.
+
+**CLI Command:**
+
+```bash
+/smartspec_generate_spec_from_prompt \
+  "Design a real-time notification center with unread counts, filtering by type, and a 'mark all read' action, using the internal WebSocket API." \
+  --spec-category "platform" \
+  --apply \
+  --update-index
+```
+
+**Expected Result:**
+1. **Governed Writes:** A new spec folder is created: `specs/platform/real-time-notifications/`.
+2. **Artifacts:** `spec.md`, `references/REFERENCE_INDEX.yaml`, and `references/decisions.md` are written to the new spec folder.
+3. **Indexing:** If `.spec/SPEC_INDEX.json` is allowlisted, it is updated with the metadata for the new `real-time-notifications` spec ID.
+4. **Report:** A final `report.md` confirms the successful application and paths of the governed artifacts.
 
 ---
 
-## 6. CLI / Flags Cheat Sheet
+## Parameters
 
-- **Core**
-  - positional prompt (required)
-  - `--spec-category=<category>`
-  - `--max-specs=<n>` (default: 3, range 1–5)
-  - `--output-dir=<path>` (default: `specs`)
-- **Index & multi-repo**
-  - `--update-index` (append to `.spec/SPEC_INDEX.json` when safe)
-  - `--specindex=<path>`
-  - `--workspace-roots=<paths>`
-  - `--repos-config=<path>`
-- **Registries (read-only)**
-  - `--registry-dir=<path>`
-  - `--registry-roots=<paths>`
-- **Safety & Kilo**
-  - `--dry-run`
-  - `--kilocode`
-
-Remember: leaving out all flags is valid and recommended for first-time users.
+| Type | Parameter/Flag | Description | Default | Required |
+| :--- | :--- | :--- | :--- | :--- |
+| Positional | `<your requirement prompt>` | The natural-language requirement text used to generate the spec. | N/A | Yes |
+| Flag | `--spec-category <category>` | The category under which the spec folder will be created (e.g., `settings`, `platform`). | `miniapp` (or project default) | No |
+| Flag | `--max-specs <n>` | Maximum number of specs to generate from the prompt. | `1` (Max `5`) | No |
+| Flag | `--refs <dir>` | Read-only directory containing reference materials (screenshots, docs, notes) for research. | N/A | No |
+| Flag | `--update-index` | If used with `--apply`, updates the `.spec/SPEC_INDEX.json` with the new spec entry. | N/A | No |
+| Flag | `--dry-run` | Executes the workflow but only writes safe previews to the reports directory. Ignores `--apply`. | N/A | No |
+| Flag | `--json` | Outputs the final report summary in JSON format (`summary.json`) in addition to Markdown. | N/A | No |
+| Flag | `--apply` | Enables governed write operations (creating spec folders and updating the index). | N/A | No |
+| Universal | `--config <path>` | Path to the SmartSpec configuration file. | `.spec/smartspec.config.yaml` | No |
+| Universal | `--lang <th|en>` | Language for generated output. | N/A | No |
+| Universal | `--platform <cli|kilo|ci|other>` | Execution platform metadata. | N/A | No |
+| Universal | `--out <path>` | Base path for safe reports/previews (never for governed spec placement). | N/A | No |
+| Universal | `--quiet` | Suppress standard output logs. | N/A | No |
 
 ---
 
-## 7. Best Practices
+## Output
 
-1. **Write a rich prompt**
-   - Describe:
-     - target users,
-     - key flows/screens,
-     - integrations (payments, AI, auth),
-     - SEO/performance expectations.
+The workflow produces two types of output, depending on the use of the `--apply` and `--dry-run` flags.
 
-2. **Use `--dry-run` when unsure**
-   - See planned categories/spec-ids before creating files.
+### 1. Safe Preview Bundle (Always generated, or when `--dry-run`)
 
-3. **Review each generated spec once**
-   - Check that splits make sense.
-   - Adjust naming if needed.
+This bundle is written to a unique run folder under the reports path:
 
-4. **Always follow up with `/smartspec_generate_spec`**
-   - This aligns the starter specs with the rest of the project.
+*   `.spec/reports/spec-from-prompt/<run-id>/report.md`: Detailed execution summary, reuse analysis, and next steps.
+*   `.spec/reports/spec-from-prompt/<run-id>/summary.json` (if `--json`): Structured metadata about the run and proposed specs.
+*   `.spec/reports/spec-from-prompt/<run-id>/preview/<spec-id>/spec.md`: The generated specification draft.
+*   `.spec/reports/spec-from-prompt/<run-id>/preview/<spec-id>/references/REFERENCE_INDEX.yaml`: Draft reference index.
 
-5. **Combine with project copilot**
-   - After generating specs, use `/smartspec_project_copilot` to see how
-     they fit into the overall roadmap and which workflows to run next.
+### 2. Governed Output (Only with `--apply` and not `--dry-run`)
 
----
+These artifacts are written to the governed source tree:
 
-## 8. FAQ / Troubleshooting
-
-**Q1: It created too many specs. What should I do?**  
-Use `--max-specs=1` or `2` to limit splits. You can also merge scopes manually in the generated specs.
-
-**Q2: It says SPEC_INDEX was not updated. Is that a problem?**  
-No; your specs still exist under `specs/**`. You can either:
-
-- re-run with `--update-index`, or
-- copy the printed JSON snippets into `.spec/SPEC_INDEX.json` manually.
-
-**Q3: Can I overwrite an existing spec?**  
-This workflow intentionally **never overwrites** existing `spec.md`. If you really need to, edit the file manually or use a different workflow under controlled conditions.
-
-**Q4: How detailed are the generated specs?**  
-They aim to be detailed enough to drive planning and implementation, but you should expect to refine them using `generate_spec` and normal review processes.
-
----
-
-End of `/smartspec_generate_spec_from_prompt v5.6.x` manual (English).
+*   `specs/<category>/<spec-id>/spec.md`: Final, committed specification document.
+*   `specs/<category>/<spec-id>/references/REFERENCE_INDEX.yaml`: Structured index of external and internal references.
+*   `specs/<category>/<spec-id>/references/decisions.md`: Log of key design and reuse decisions.
+*   `.spec/SPEC_INDEX.json` (If `--update-index` is used and allowed

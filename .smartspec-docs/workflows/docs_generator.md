@@ -1,81 +1,169 @@
-# SmartSpec Workflow: Docs Generator
+# /smartspec_docs_generator Manual (v6.0, English)
 
-**Workflow:** `/smartspec_docs_generator`  
-**Version:** 6.1.1
+## Overview
 
-## 1. Overview
+The `/smartspec_docs_generator` workflow (v6.1.1) is designed to generate comprehensive project documentation bundles, including API documentation, user guides, and architecture diagrams, by leveraging signals from specifications, registries, and code sources.
 
-The Docs Generator is a versatile workflow that automates the creation of project documentation. It can generate various types of documents by pulling information from your `spec.md`, project structure, and source code.
+**Purpose:** Generate project documentation bundles (API docs, user guide, architecture diagrams) from spec/registry/code signals.
 
-This workflow is **preview-first**. By default, it only writes reports. To write documentation into your project, you must use the `--apply` and `--write-docs` flags.
+**Key Features:**
 
-## 2. Key Features
+1.  **Preview-First:** By default, the workflow operates in preview mode, writing reports only to `.spec/reports/docs-generator/**`.
+2.  **Governed Writes:** Writing documentation files directly into the repository (e.g., `docs/`) requires explicit opt-in using the `--apply` and `--write-docs` flags, ensuring compliance with the defined governance contract.
+3.  **Security Hardening:** Includes mandatory path normalization, no symlink escape, output root safety, atomic writes, and strict network/external tool policies.
 
-- **Multiple Modes:** Supports different documentation types:
-    -   `api-docs`: Generates API reference documentation.
-    -   `user-guide`: Creates a user guide for your application.
-    -   `architecture-diagram`: Generates diagram source files (e.g., Mermaid, PlantUML).
-- **Source-Driven:** Uses your `spec.md` and code as the single source of truth.
-- **Governed Writes:** Ensures that documentation is only written to approved directories when explicitly requested.
-- **Template-Based:** Can use custom templates to standardize documentation.
+**Supported Modes:**
+*   `api-docs`: Generates API reference documentation.
+*   `user-guide`: Generates flows, setup, and troubleshooting guides.
+*   `architecture-diagram`: Generates diagram source files and rendered outputs (best-effort).
 
-## 3. How It Works
+**Version Notes (v6.1.1):** Adds v6 hardening (path normalization, output safety, atomic writes), replaces full previews with change plans/diffs, introduces explicit `--write-docs` gate, and enforces network/external tool policies.
 
-1.  **Selects Mode:** Operates based on the specified `--mode`.
-2.  **Gathers Information:** Reads the `spec.md`, source code, and other project files.
-3.  **Generates Content:** Creates the documentation content based on the selected mode and gathered information.
-4.  **Renders Output:** Produces the final documentation files (e.g., Markdown, diagram source files).
-5.  **Writes Output:** By default, writes a preview to the reports directory. With `--apply` and `--write-docs`, it writes the final documentation to the specified target directory.
+## Usage
 
-## 4. Usage
+### CLI Usage
 
-### Generate API Docs (Preview)
+The CLI is the primary interface for invoking the workflow.
+
+#### Preview Mode (Reports Only)
+
+This is the default safe mode. It generates all documentation artifacts into a preview bundle within the report directory and creates a detailed change plan, but does not modify the source documentation directory.
 
 ```bash
 /smartspec_docs_generator \
   --mode api-docs \
-  --spec specs/my-api/spec.md \
-  --schema-source path/to/openapi.yaml
+  --spec specs/api/auth-service/spec.md \
+  --out .spec/reports/docs-generator/api-doc-run-1 \
+  --json
 ```
 
-### Generate and Apply a User Guide
+#### Apply Mode (Governed Writes)
+
+To write generated documentation files to the target repository directory (e.g., `docs/`), you must explicitly enable the governance gates: `--apply` and `--write-docs`.
 
 ```bash
 /smartspec_docs_generator \
   --mode user-guide \
-  --spec specs/my-app/spec.md \
-  --target-dir docs/guide \
+  --spec specs/user/onboarding/spec.md \
+  --target-dir docs/guides \
+  --write-docs \
   --apply \
-  --write-docs
+  --out .spec/reports/docs-generator/user-guide-apply-run \
+  --config .spec/smartspec.config.yaml
 ```
 
-## 5. Input and Flags
+### Kilo Code Usage
 
-- **`--mode <type>` (Required):** The type of documentation to generate (`api-docs`, `user-guide`, `architecture-diagram`).
-- **`--spec <path>` (Required):** Path to the `spec.md` file.
-- **`--target-dir <path>` (Required for apply):** The destination directory for the generated documentation.
-- **`--apply` and `--write-docs` (Required for apply):** Flags to enable writing to the target directory.
-- **`--schema-source <path|url>` (Optional):** Path or URL to an API schema file (for `api-docs` mode).
-- **`--template <path>` (Optional):** Path to a custom documentation template.
+Kilo Code allows invoking the workflow within a controlled, declarative environment.
 
-## 6. Output: Documentation Files
-
-The output depends on the mode. It can be a set of Markdown files for a user guide, an API reference page, or source files for diagrams.
-
-### Example Output for `architecture-diagram`
-
-**File:** `docs/architecture/system.mmd`
-
-```mermaid
-graph TD
-    A[Client] --> B{Load Balancer}
-    B --> C[API Gateway]
-    C --> D[Auth Service]
-    C --> E[User Service]
+```python
+# In a Kilo Code file (.kilocode)
+/smartspec_docs_generator.md \
+  --mode architecture-diagram \
+  --spec specs/arch/data-pipeline/spec.md \
+  --out .spec/reports/docs-generator/arch-diagram-preview \
+  --json \
+  --kilocode
 ```
 
-## 7. Use Cases
+## Use Cases
 
-- **Living Documentation:** Keep your documentation synchronized with your project's evolution.
-- **Automate API Docs:** Automatically generate and update your API reference every time your OpenAPI schema changes.
-- **Visualize Architecture:** Create architecture diagrams directly from your `spec.md` to ensure they are always up-to-date.
+### Use Case 1: Generating API Documentation (Preview)
+
+**Scenario:** A developer needs to review the generated OpenAPI reference documentation for a new microservice specification before committing the output to the main documentation branch.
+
+**Goal:** Generate `api-docs` preview bundle and change plan without writing to the `docs/` directory.
+
+**CLI Command:**
+
+```bash
+/smartspec_docs_generator \
+  --mode api-docs \
+  --spec specs/services/payment-gateway/spec.md \
+  --schema-source http://internal.schema.svc/payment-api.json \
+  --allow-network \
+  --out .spec/reports/docs-generator/payment-api-preview \
+  --json
+```
+
+**Expected Result:**
+
+1.  A new report folder is created: `.spec/reports/docs-generator/payment-api-preview/`.
+2.  The report contains `summary.json`, `report.md`, and `change_plan.md`.
+3.  The `bundle.preview/` directory contains the generated API documentation files (e.g., `api-reference.md`).
+4.  The `summary.json` shows `mode: preview` and `status: ok`.
+5.  Check **DOC-002 Network Gate** passes (due to `--allow-network`).
+
+### Use Case 2: Applying a Generated User Guide
+
+**Scenario:** The SmartSpec team has finalized the user onboarding flow specification and needs to commit the generated user guide directly to the `docs/` folder in the repository.
+
+**Goal:** Generate and atomically write the `user-guide` documentation to `docs/user-guides/`.
+
+**CLI Command:**
+
+```bash
+/smartspec_docs_generator \
+  --mode user-guide \
+  --spec specs/flows/onboarding/spec.md \
+  --target-dir docs/user-guides \
+  --write-docs \
+  --apply \
+  --out .spec/reports/docs-generator/onboarding-apply
+```
+
+**Expected Result:**
+
+1.  The workflow validates that `--apply` and `--write-docs` are set, enabling governed writes.
+2.  The workflow validates that `docs/user-guides` is an allowed target directory.
+3.  The generated user guide files are written atomically (temp+rename) into `docs/user-guides/`.
+4.  The `summary.json` reports `mode: apply`, `files_to_write: N`, and checks **DOC-001 Apply Gate** and **DOC-202 Atomic Writes** pass.
+
+### Use Case 3: Generating Architecture Diagrams (Kilo Code)
+
+**Scenario:** A CI pipeline step, defined in Kilo Code, needs to generate architecture diagram source files based on a specification, enforcing strict quality limits.
+
+**Goal:** Generate `architecture-diagram` preview, enforcing a maximum output size limit.
+
+**Kilo Code Invocation:**
+
+```python
+# Invoked via CI system
+/smartspec_docs_generator.md \
+  --mode architecture-diagram \
+  --spec specs/arch/microservices/spec.md \
+  --max-bytes 524288 \
+  --strict \
+  --out .spec/reports/docs-generator/microservices-arch \
+  --kilocode
+```
+
+**Expected Result:**
+
+1.  The architecture diagram source and rendered output preview are generated in the report directory.
+2.  If the generated output exceeds 524288 bytes (512 KB), the workflow emits check **DOC-204 Reduced Coverage** (limits hit) and potentially exits with code 1 if the `--strict` mode deems the reduced coverage a failure.
+3.  The report confirms that external tool policies (DOC-203) were followed for diagram rendering.
+
+## Parameters
+
+The following parameters (flags) control the behavior and inputs of the `/smartspec_docs_generator` workflow.
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `--mode` | `<api-docs\|user-guide\|architecture-diagram>` | Yes | Defines the type of documentation to generate. |
+| `--spec` | `<path>` | No | Path to the primary specification file (e.g., `specs/<category>/<spec-id>/spec.md`). |
+| `--tasks` | `<path>` | No | Optional tasks context (read-only). |
+| `--registry-roots` | `<csv>` | No | Optional override for registry root paths. |
+| `--index` | `<path>` | No | Optional index override path. |
+| `--template` | `<path>` | No | Optional docs template path (md/yaml/json). |
+| `--schema-source` | `<path\|url>` | No | Optional source for OpenAPI/GraphQL schema. |
+| `--allow-network` | `(flag)` | No | Required if `--schema-source` is a URL, enables network access for fetching remote schemas. |
+| `--target-dir` | `<path>` | No (Required for apply) | Destination directory for docs when applying (e.g., `docs/`). Canonical name. |
+| `--write-docs` | `(flag)` | No (Required for apply) | **Governed gate.** Enables writes to `--target-dir` (requires `--apply`). |
+| `--max-pages` | `<int>` | No | Bounding limit: maximum number of output pages/files. |
+| `--max-bytes` | `<int>` | No | Bounding limit: maximum total size of generated output. |
+| `--max-seconds` | `<int>` | No | Bounding limit: maximum time allowed for generation. |
+| `--mode` | `<normal\|strict>` | No | Content quality mode (default `normal`). |
+| `--strict` | `(flag)` | No | Alias for `--mode strict`. |
+| `--config` | `<path>` | No | Path to the SmartSpec configuration file. |
+| `--lang` | `<th\|en>` | No | Language for generated content/

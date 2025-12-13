@@ -1,104 +1,195 @@
-# SmartSpec Workflow: Security Threat Modeler
+# /smartspec_security_threat_modeler Manual (v6.0, English)
 
-**Workflow:** `/smartspec_security_threat_modeler`  
+## Overview
+
+The `/smartspec_security_threat_modeler` workflow is a quality assurance tool designed to automatically generate a preliminary security threat model by analyzing the content of a SmartSpec (`spec.md`) and its corresponding plan (`plan.md`).
+
+**Purpose:** To identify and document potential security risks early in the development lifecycle, producing a structured `threats.md` artifact using standard methodologies like STRIDE or DREAD.
+
 **Version:** 6.1.0
+**Category:** Quality
+**Governance:** This is a **governed write** workflow, requiring the `--apply` flag to modify the project’s specification directory by creating or updating `threats.md`.
 
-## 1. Overview
+---
 
-The Security Threat Modeler is an automated workflow that generates a preliminary threat model by analyzing your project's `spec.md` and `plan.md`. It helps identify and document potential security risks early in the development lifecycle, using standard methodologies like STRIDE.
+## Usage
 
-This process creates a `threats.md` artifact, providing a structured overview of potential vulnerabilities before any code is written.
+### CLI (Command Line Interface)
 
-## 2. Key Features
-
-- **Automated Analysis:** Parses specification documents to identify assets, trust boundaries, and potential threats.
-- **STRIDE Framework:** Applies the STRIDE methodology (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege) to categorize threats.
-- **Governed Writes:** Safely creates or updates the `threats.md` file only when the `--apply` flag is used.
-- **Non-Destructive:** Merges new findings into an existing `threats.md` without overwriting manual entries.
-- **Secure by Design:** Operates without network access and redacts sensitive information from all outputs.
-
-## 3. How It Works
-
-The workflow performs the following steps:
-
-1.  **Parses Inputs:** Reads the `spec.md` and `plan.md` to understand the system's components, data flows, and user roles.
-2.  **Identifies Assets:** Defines what needs protection, such as user data, authentication services, and APIs.
-3.  **Applies STRIDE Analysis:**
-    -   **Spoofing:** Checks for weak authentication.
-    -   **Tampering:** Looks for data flows lacking integrity checks (e.g., no HTTPS).
-    -   **Repudiation:** Identifies actions that lack a clear audit trail.
-    -   **Information Disclosure:** Pinpoints sensitive data and checks for encryption.
-    -   **Denial of Service:** Checks for rate limiting and resource management.
-    -   **Elevation of Privilege:** Analyzes user roles for potential escalation paths.
-4.  **Generates `threats.md`:** Creates a structured Markdown file detailing each identified threat, its category, assets at risk, and suggested mitigations.
-
-## 4. Usage
-
-### Command Line
-
-To generate a preview of the threat model:
+The CLI invocation is used for direct execution within the project environment.
 
 ```bash
-/smartspec_security_threat_modeler specs/my-feature/spec.md
-```
-
-To create or update the `threats.md` file:
-
-```bash
-/smartspec_security_threat_modeler specs/my-feature/spec.md --apply
+/smartspec_security_threat_modeler \
+  <path/to/spec.md> \
+  [--framework <STRIDE|DREAD>] \
+  [--apply] \
+  [--json]
 ```
 
 ### Kilo Code
 
+Kilo Code usage is typically embedded within other SmartSpec workflows or CI/CD pipelines.
+
 ```bash
-/smartspec_security_threat_modeler.md specs/my-feature/spec.md --apply
+/smartspec_security_threat_modeler.md \
+  specs/<category>/<spec-id>/spec.md \
+  [--framework <STRIDE>] \
+  [--apply] \
+  [--json]
 ```
-
-## 5. Input and Flags
-
-- **`spec_md` (Required):** Path to the `spec.md` file.
-- **`--apply` (Optional):** Applies the changes and writes to `threats.md`.
-- **`--framework <STRIDE|DREAD>` (Optional):** Specifies the threat modeling framework. Defaults to `STRIDE`.
-- **`--json` (Optional):** Outputs the report in JSON format.
-
-## 6. Output Artifact: `threats.md`
-
-The primary output is a `threats.md` file with the following structure:
-
-```markdown
-# Threat Model for <Spec Title>
-
-**Spec ID:** my-feature
-**Framework:** STRIDE
-
-## Summary
-
-| Threat Category        | Threats Identified |
-| ---------------------- | ------------------ |
-| Spoofing               | 2                  |
-| Information Disclosure | 4                  |
 
 ---
 
-## Identified Threats
+## Use Cases
 
-### T-001: [Spoofing] User Impersonation
+### Use Case 1: Generating a Preliminary Threat Model (Preview Mode)
 
-- **Description**: An attacker could potentially impersonate another user due to weak session management.
-- **Asset at Risk**: User Account, User Data
-- **Affected Component**: Authentication Service
-- **Suggested Mitigation**: Implement secure session management with short-lived tokens.
+**Scenario:** A developer wants to see the initial security threat analysis for a new authentication service specification (`specs/auth/auth-v1/spec.md`) before committing to the findings.
 
-### T-002: [Information Disclosure] Sensitive Data in Logs
+**Goal:** Generate the threat model report without modifying the project files.
 
-- **Description**: The specification does not explicitly forbid logging of sensitive user data.
-- **Asset at Risk**: User PII
-- **Affected Component**: Logging Subsystem
-- **Suggested Mitigation**: Implement redaction of sensitive fields in all logs.
+**CLI Command:**
+```bash
+/smartspec_security_threat_modeler specs/auth/auth-v1/spec.md --framework STRIDE --json
 ```
 
-## 7. Use Cases
+**Expected Result:**
+1.  The workflow reads `specs/auth/auth-v1/spec.md` (and `plan.md` if present).
+2.  A detailed report, including a preview of the generated `threats.md`, is written to `.spec/reports/security-threat-model/<run-id>/report.json`.
+3.  A summary JSON output is printed to stdout.
+4.  The file `specs/auth/auth-v1/threats.md` is **not** created or modified.
 
-- **Proactive Security:** Identify and mitigate security risks before development begins.
-- **Security Reviews:** Provide a baseline document for manual security reviews.
-- **Compliance:** Generate auditable evidence of security considerations.
+**Kilo Code:**
+```kilo
+# Preview the threat model for the authentication service using STRIDE
+/smartspec_security_threat_modeler.md specs/auth/auth-v1/spec.md --framework STRIDE
+```
+
+### Use Case 2: Applying the Threat Model Artifact
+
+**Scenario:** The threat model preview has been reviewed and approved. The security team now wants to commit the findings to the specification directory.
+
+**Goal:** Create the `threats.md` artifact in the specification folder.
+
+**CLI Command:**
+```bash
+/smartspec_security_threat_modeler specs/auth/auth-v1/spec.md --framework STRIDE --apply
+```
+
+**Expected Result:**
+1.  The workflow performs the analysis.
+2.  The file `specs/auth/auth-v1/threats.md` is created or updated atomically with the structured threat model content.
+3.  The exit code is `0` (Success).
+
+**Kilo Code:**
+```kilo
+# Apply the threat model, creating the threats.md file
+/smartspec_security_threat_modeler.md specs/auth/auth-v1/spec.md --apply
+```
+
+### Use Case 3: Using an Alternative Framework
+
+**Scenario:** The project requires the use of the DREAD framework for risk assessment instead of the default STRIDE.
+
+**Goal:** Generate the threat model using the DREAD framework.
+
+**CLI Command:**
+```bash
+/smartspec_security_threat_modeler specs/data/storage-v2/spec.md --framework DREAD --apply
+```
+
+**Expected Result:**
+1.  The workflow analyzes the spec using the DREAD methodology (Damage, Reproducibility, Exploitability, Affected Users, Discoverability).
+2.  `specs/data/storage-v2/threats.md` is created, detailing threats categorized and assessed by DREAD criteria.
+
+---
+
+## Parameters
+
+### Positional Arguments (Inputs)
+
+| Parameter | Required | Description |
+| :--- | :--- | :--- |
+| `spec_md` | Yes | Path to the primary `spec.md` file to be analyzed. Must reside under `specs/**`. |
+| `plan.md` | No | If present in the same directory as `spec.md`, it is automatically used as additional context for the analysis. |
+
+### Flags (Parameters)
+
+| Flag | Category | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `--framework <STRIDE\|DREAD>` | Workflow-Specific | `STRIDE` | Specifies the threat modeling framework to use for analysis and reporting. |
+| `--apply` | Universal | None | **Required** to perform governed writes (create/update `threats.md`). Without this, the workflow runs in preview mode. |
+| `--json` | Universal | None | Outputs the summary results in machine-readable JSON format to stdout. |
+| `--config <path>` | Universal | Default config path | Specifies a custom configuration file path. |
+| `--lang <th\|en>` | Universal | `en` | Specifies the language for output messages and generated text. |
+| `--platform <cli\|kilo\|ci\|other>` | Universal | Derived | Specifies the execution environment. |
+| `--out <path>` | Universal | `.spec/reports/...` | Specifies an alternative output path for reports and previews. |
+| `--quiet` | Universal | None | Suppresses non-critical output messages. |
+
+---
+
+## Output
+
+### Governed Artifact (Requires `--apply`)
+
+*   **File:** `specs/<category>/<spec-id>/threats.md`
+*   **Description:** A structured Markdown file containing the preliminary threat model, including a summary table and detailed entries for each identified threat (e.g., T-001, T-002). The structure adheres to the defined format, including Threat Category, Description, Asset at Risk, Affected Component, and Suggested Mitigation.
+
+### Report and Preview Artifacts (Always Generated)
+
+*   **Location:** `.spec/reports/security-threat-model/<run-id>/`
+*   **Contents:**
+    *   **Report:** Detailed logs, analysis findings, and the full content of the proposed `threats.md` file (preview).
+    *   **Summary JSON:** A `summary.json` file detailing the run status, threat counts by category, and recommended next steps.
+
+### `summary.json` Schema Excerpt
+
+The output JSON includes a summary of the threats identified:
+
+```json
+{
+  "status": "success",
+  "applied": true,
+  "scope": { ... },
+  "summary": {
+    "threat_counts": {
+      "spoofing": 2,
+      "tampering": 1,
+      "repudiation": 3,
+      "information_disclosure": 4,
+      "denial_of_service": 1,
+      "elevation_of_privilege": 2
+    }
+  },
+  "writes": { ... },
+  "next_steps": [
+    {
+      "cmd": "/smartspec_generate_tasks --spec <spec.md> --context <threats.md>",
+      "why": "Generate security tasks based on the identified threats."
+    }
+  ]
+}
+```
+
+---
+
+## Notes & Related Workflows
+
+### Non-Destructive Merge
+
+If `threats.md` already exists, the workflow is designed to perform a non-destructive merge. It will attempt to integrate new findings while preserving existing, manually-edited entries within the file, respecting the defined structure.
+
+### Hardening Requirements
+
+This workflow adheres to strict security hardening requirements, including:
+*   No external network access (`safety.network_policy.default=deny`).
+*   Redaction of sensitive data based on configuration patterns.
+*   Strict enforcement of read and write scopes to prevent path traversal.
+
+### Related Workflows
+
+*   `/smartspec_generate_tasks`: Use this workflow *after* generating `threats.md` to automatically convert the identified security threats into actionable development tasks.
+*   `/smartspec_analyze_compliance`: Used for checking the generated `threats.md` against organizational security policies or regulatory standards.
+
+---
+*Last updated: SmartSpec v6.0*

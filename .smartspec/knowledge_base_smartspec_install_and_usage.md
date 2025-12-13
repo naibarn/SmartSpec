@@ -1,6 +1,8 @@
-# SmartSpec Installation & Usage (Thin Wrapper)
+# knowledge_base_smartspec_install_and_usage.md
 
-> **Version:** 4.0.0  
+# SmartSpec Installation & Usage
+
+> **Version:** 6.1.1  
 > **Status:** Production Ready  
 > **This document is a thin wrapper.**  
 > Canonical governance lives in: `knowledge_base_smartspec_handbook.md`.
@@ -12,13 +14,15 @@
 Read the Canonical Handbook for:
 
 - governance rules, write model, and security
-- universal flag contract (minimal)
+- universal flag contract
+- privileged operation policy (no-shell, allowlist, allow-network gate)
+- Change Plan requirement
 - SPEC_INDEX reuse/de-dup policy
 - reference/research requirements
 - UI/UX minimum standard
 - workflow registry rules
 
-This wrapper focuses only on installation, standard execution sequence, and short quickstart commands.
+This wrapper focuses on installation, standard execution sequence, and short quickstart commands.
 
 ---
 
@@ -66,10 +70,11 @@ Notes:
 - **Governed artifacts** (anything under `specs/**` and registry files) require `--apply`.
 - **Safe outputs** (reports/prompts/scripts) may be written without `--apply`.
 - Workflow-generated helper scripts must be placed under **`.smartspec/generated-scripts/**`**.
+- Some governed writes additionally require an explicit opt-in (examples: `--write-docs`, `--write-runtime-config`, `--write-ci-workflow`).
 
 ---
 
-## 4) Quickstart (positional-first)
+## 4) Quickstart (positional-first + dual command examples)
 
 > Replace paths with your own spec folder.
 
@@ -88,7 +93,8 @@ Notes:
 ```bash
 /smartspec_generate_spec.md \
   --spec specs/feature/spec-002-user-management/spec.md \
-  --apply
+  --apply \
+  --kilocode
 ```
 
 ### 4.2 Generate PLAN (governed → needs apply)
@@ -106,7 +112,8 @@ Notes:
 ```bash
 /smartspec_generate_plan.md \
   specs/feature/spec-002-user-management/spec.md \
-  --apply
+  --apply \
+  --kilocode
 ```
 
 ### 4.3 Generate TASKS (governed → needs apply)
@@ -124,7 +131,8 @@ Notes:
 ```bash
 /smartspec_generate_tasks.md \
   specs/feature/spec-002-user-management/spec.md \
-  --apply
+  --apply \
+  --kilocode
 ```
 
 ### 4.4 Strict verify (safe output → no apply)
@@ -144,7 +152,8 @@ Notes:
 /smartspec_verify_tasks_progress_strict.md \
   specs/feature/spec-002-user-management/tasks.md \
   --out .spec/reports/verify-tasks-progress/spec-002 \
-  --json
+  --json \
+  --kilocode
 ```
 
 ### 4.5 Implementation prompter (safe output → no apply)
@@ -166,7 +175,8 @@ Notes:
   --spec specs/feature/spec-002-user-management/spec.md \
   --tasks specs/feature/spec-002-user-management/tasks.md \
   --out .smartspec/prompts/spec-002-user-management \
-  --json
+  --json \
+  --kilocode
 ```
 
 ### 4.6 Sync tasks checkboxes (governed → needs apply)
@@ -184,12 +194,85 @@ Notes:
 ```bash
 /smartspec_sync_tasks_checkboxes.md \
   specs/feature/spec-002-user-management/tasks.md \
-  --apply
+  --apply \
+  --kilocode
 ```
 
 ---
 
-## 5) Universal flags (quick reference)
+## 5) Common patterns for newer workflows (v6.1.x)
+
+This section does not list every workflow (see `.spec/WORKFLOWS_INDEX.yaml`). It documents **common contracts** used by newer workflows.
+
+### 5.1 Platform flag collision avoidance
+
+- `--platform` is universal and reserved for `cli|kilo|ci|other`.
+- Workflow-specific platforms must use namespaced flags:
+  - `--obs-platform` (observability)
+  - `--publish-platform` (docs publishing)
+
+### 5.2 Network gating for publish/tag flows
+
+- Any workflow that fetches/pushes/publishes typically requires `--allow-network`.
+- If your environment cannot enforce deny-by-default, expect a warning in reports.
+
+### 5.3 Runtime tree writes require an extra opt-in gate
+
+- Writing into `docs/` or other runtime trees requires BOTH:
+  - `--apply`
+  - an explicit opt-in such as `--write-docs` / `--write-runtime-config`
+
+### 5.4 Docs generation → publishing (example chain)
+
+Generate docs (preview bundle) and then publish from that bundle.
+
+#### CLI
+
+```bash
+/smartspec_docs_generator \
+  --mode user-guide \
+  --spec specs/<category>/<spec-id>/spec.md \
+  --out .spec/reports/docs-generator \
+  --json
+
+/smartspec_docs_publisher \
+  --docs-dir .spec/reports/docs-generator/<run-id>/bundle.preview \
+  --publish-platform github-pages \
+  --version v1.2.3 \
+  --remote origin \
+  --github-branch gh-pages \
+  --allow-network \
+  --apply \
+  --out .spec/reports/docs-publisher \
+  --json
+```
+
+#### Kilo Code
+
+```bash
+/smartspec_docs_generator.md \
+  --mode user-guide \
+  --spec specs/<category>/<spec-id>/spec.md \
+  --out .spec/reports/docs-generator \
+  --json \
+  --kilocode
+
+/smartspec_docs_publisher.md \
+  --docs-dir .spec/reports/docs-generator/<run-id>/bundle.preview \
+  --publish-platform github-pages \
+  --version v1.2.3 \
+  --remote origin \
+  --github-branch gh-pages \
+  --allow-network \
+  --apply \
+  --out .spec/reports/docs-publisher \
+  --json \
+  --kilocode
+```
+
+---
+
+## 6) Universal flags (quick reference)
 
 All workflows share:
 

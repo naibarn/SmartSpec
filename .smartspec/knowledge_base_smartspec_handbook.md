@@ -1,6 +1,6 @@
-# SmartSpec Canonical Handbook
+# knowledge_base_smartspec_handbook.md
 
-> **Version:** 6.0.0 (Canonical)  
+> **Version:** 6.1.1 (Canonical)  
 > **Status:** Production Ready  
 > **Single source of truth:** This file defines governance, security, and command contracts.
 >
@@ -83,7 +83,7 @@ Rules:
 
 ---
 
-## 3) Write model (safe outputs vs governed artifacts)
+## 3) Write model
 
 ### 3.1 Definitions
 
@@ -96,6 +96,7 @@ Rules:
   - anything under `specs/**`
   - `.spec/SPEC_INDEX.json`
   - `.spec/WORKFLOWS_INDEX.yaml`
+  - any runtime source tree changes (see §3.5)
 
 ### 3.2 Rules
 
@@ -117,13 +118,48 @@ Rules:
 
 ### 3.4 Security hardening (mandatory)
 
-Workflows that write must enforce:
+Workflows that read or write filesystem paths MUST enforce:
 
-- **Path normalization**: reject traversal (`..`), absolute paths, control chars.
-- **No symlink escape**: do not write through symlinks that resolve outside allowed scopes.
-- **Spec-id constraints**: `[a-z0-9_\-]{3,64}`.
+- **Path normalization**: reject traversal (`..`), absolute paths, and control characters.
+- **No symlink escape**: do not read/write through symlinks that resolve outside allowed scopes.
+- **Output root safety**: any user-provided `--out` (and any governed target dir) MUST:
+  - resolve under config allowlist (e.g., `safety.allow_writes_only_under`)
+  - NOT fall under config denylist (e.g., `safety.deny_writes_under`)
+  - hard-fail when invalid
+- **Spec-id constraints**: `^[a-z0-9_\-]{3,64}$`.
 - **No secrets**: redact tokens/keys; use placeholders.
-- **Atomic registry updates**: governed registries must be lock + atomic (temp + rename). If not possible, do not write.
+- **Excerpt policy**: reports MUST NOT dump full configs/logs/docs; prefer diffs + short excerpts + hashes.
+- **Bounded scanning**: enforce config limits (max files/bytes/time); record reduced coverage when limits are hit.
+
+Workflows that write governed files MUST additionally enforce:
+
+- **Atomic writes**: write via temp+rename (and lock when configured) to avoid partial updates.
+- **Output collision**: do not overwrite existing run folders unless explicitly configured.
+
+### 3.5 No source pollution + explicit runtime-tree opt-in
+
+Default rule: SmartSpec workflows MUST NOT modify application runtime source trees.
+
+If a workflow *must* write to a runtime tree (examples: `docs/`, `.github/workflows/`, deployment/runtime configs), it MUST require **two gates**:
+
+1) `--apply` (governed)
+2) a workflow-specific explicit opt-in flag (examples):
+   - `--write-docs`
+   - `--write-ci-workflow`
+   - `--write-runtime-config`
+
+Both gates MUST be documented and enforced.
+
+### 3.6 Temporary workspace allowance (for privileged workflows)
+
+Some privileged workflows (e.g., publish/tag flows) may require a temporary workspace (clone/worktree/copy).
+
+Allowed workspace rule:
+
+- Workspace is allowed **only** under the run folder:
+  - `.spec/reports/<workflow>/<run-id>/workspace/**`
+- Workspace paths MUST still obey §3.4 hardening.
+- Workspace contents MUST NOT be treated as governed artifacts.
 
 ---
 
@@ -139,7 +175,7 @@ The config file is the single place for environment wiring:
 - registry roots
 - language and platform defaults
 - output roots
-- safety settings
+- safety settings (allow/deny roots, redaction, limits, network policy)
 
 ### 4.2 CLI flags are overrides only
 
@@ -161,6 +197,9 @@ Every workflow MUST support these flags (same names, same behavior):
 
 Rules:
 
+- **Reserved names:** workflow-specific flags MUST NOT reuse a universal flag name with a different meaning.
+  - Example: do NOT use `--platform` to mean "datadog" or "github-pages".
+  - Use a namespaced flag such as `--obs-platform` or `--publish-platform`.
 - **No new global flags** may be introduced without updating this Handbook.
 - Breaking changes are allowed in v6; do not keep legacy flags unless absolutely required.
 
@@ -178,7 +217,49 @@ Examples:
 
 ---
 
-## 7) SPEC_INDEX governance (reuse + de-dup)
+## 7) Privileged operations: execution + network policy
+
+### 7.1 No-shell + allowlist + timeouts
+
+Any workflow that executes external commands MUST:
+
+- spawn without a shell (no `sh -c`, no command-string concatenation)
+- use an allowlist of binaries (and subcommands where applicable)
+- enforce timeouts for every command
+- redact captured stdout/stderr using configured redaction
+
+### 7.2 Network deny-by-default + allow-network gate
+
+Default: network access is denied.
+
+If a workflow needs network (fetch/push/publish/webhook), it MUST:
+
+- require an explicit workflow-specific gate flag (recommended name: `--allow-network`)
+- record in the report whether network was used
+- if the runtime cannot enforce deny-by-default, the workflow MUST emit a warning in its summary/report
+
+### 7.3 Secret handling for privileged workflows
+
+- Secrets MUST NOT be accepted as raw CLI flags.
+- Prefer environment variables or secret references (e.g., `env:NAME`).
+- Reports MUST NOT print secret values; only redaction counts and safe placeholders.
+
+---
+
+## 8) Change Plan requirement (governed writes)
+
+Any workflow that can write governed artifacts MUST produce a Change Plan *before apply*.
+
+Minimum Change Plan contents:
+
+- list of files to be created/modified
+- diff summary (or patch files), with redaction
+- rationale and safety notes
+- hashes of final intended file contents (optional but recommended)
+
+---
+
+## 9) SPEC_INDEX governance (reuse + de-dup)
 
 Any workflow that creates a new spec MUST:
 
@@ -190,7 +271,7 @@ If a strong match exists, **do not create a new overlapping spec**.
 
 ---
 
-## 8) Reference system and research requirements
+## 10) Reference system and research requirements
 
 - Reference types: UX benchmark, UI inspiration, API docs, Internal spec reuse
 - Reference IDs: `REF-UX-###`, `REF-UI-###`, `REF-API-###`, `REF-SPEC-###`
@@ -200,7 +281,7 @@ If a strong match exists, **do not create a new overlapping spec**.
 
 ---
 
-## 9) UI/UX minimum standard
+## 11) UI/UX minimum standard
 
 Every product-facing spec must include:
 
@@ -214,14 +295,14 @@ Every product-facing spec must include:
 
 ---
 
-## 10) Workflow registry (single source for listing)
+## 12) Workflow registry (single source)
 
 Only `.spec/WORKFLOWS_INDEX.yaml` lists **all** workflows.
-KB docs must not copy full lists.
+This Handbook defines the contracts; it does not duplicate the entire registry.
 
 ---
 
-## 11) Workflow semantics (core chain)
+## 13) Workflow semantics (core chain)
 
 - `/smartspec_generate_spec`
 - `/smartspec_generate_plan`
@@ -231,26 +312,25 @@ KB docs must not copy full lists.
 - `/smartspec_sync_tasks_checkboxes`
 - `/smartspec_project_copilot`
 
-### 11.1 Platform rendering
+### 13.1 Dual-command rule
 
 - CLI: `/workflow_name ...`
-- Kilo Code: `/workflow_name.md ...`
+- Kilo Code: `/workflow_name.md ... --kilocode`
 
 ---
 
-## 12) Versioning policy
+## 14) Versioning policy
 
-### 12.1 Minimum workflow version
+### 14.1 Minimum workflow version
 
 - All workflow docs under `.smartspec/workflows/*.md` MUST use **version `6.0.0` or higher**.
-- Rationale: the legacy line already used `5.x.y`; `6.0.0` is the next major line.
 
-### 12.2 What version means
+### 14.2 What version means
 
-- Workflow doc `Version:` is the **behavior contract version** (human-facing).
-- YAML `version: 1` fields (e.g., config/index schemas) are **schema versions** and may remain `1` while contracts move to `6.x.y`.
+- Workflow doc `version:` is the **behavior contract version**.
+- YAML `version: 1` fields (e.g., config/index schemas) are **schema versions**.
 
-### 12.3 Optional enforcement (recommended)
+### 14.3 Optional enforcement (recommended)
 
 Add to `.spec/smartspec.config.yaml`:
 
@@ -259,7 +339,7 @@ safety:
   workflow_version_min: "6.0.0"
 ```
 
-Validators (e.g., `smartspec_validate_index`) should fail if any workflow header version is below the minimum.
+Index validators should fail if any workflow header version is below the minimum.
 
 ---
 

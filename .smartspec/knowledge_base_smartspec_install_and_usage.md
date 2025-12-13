@@ -2,7 +2,7 @@
 
 # SmartSpec Installation & Usage
 
-> **Version:** 6.1.2  
+> **Version:** 6.1.3  
 > **Status:** Production Ready  
 > **This document is a thin wrapper.**  
 > Canonical governance lives in: `knowledge_base_smartspec_handbook.md`.
@@ -42,14 +42,20 @@ After installation, verify these directories exist:
 ### 2.1 Canonical chain (most-used)
 
 ```text
-/smartspec_generate_spec
-/smartspec_generate_plan
-/smartspec_generate_tasks
-/smartspec_implement_tasks
-/smartspec_verify_tasks_progress_strict
-/smartspec_sync_tasks_checkboxes
-/smartspec_project_copilot
+SPEC → PLAN → TASKS → implement → STRICT VERIFY → SYNC CHECKBOXES
 ```
+
+Workflows typically used:
+
+- SPEC stage (two-step when starting from an idea):
+  - `/smartspec_generate_spec_from_prompt` (draft first spec)
+  - human edit (mandatory)
+  - `/smartspec_generate_spec` (refine/normalize)
+- PLAN: `/smartspec_generate_plan`
+- TASKS: `/smartspec_generate_tasks`
+- implement: `/smartspec_implement_tasks`
+- STRICT VERIFY: `/smartspec_verify_tasks_progress_strict`
+- SYNC CHECKBOXES: `/smartspec_sync_tasks_checkboxes`
 
 ### 2.2 Full listing
 
@@ -71,6 +77,9 @@ Notes:
 - **Safe outputs** (reports/prompts/scripts) may be written without `--apply`.
 - Workflow-generated helper scripts must be placed under **`.smartspec/generated-scripts/**`**.
 - Some runtime-tree writes require an additional explicit opt-in gate (examples: `--write-code`, `--write-docs`, `--write-runtime-config`, `--write-ci-workflow`).
+- SPEC can be either:
+  - **draft + refine**: `generate_spec_from_prompt` → human edit → `generate_spec`
+  - **refine only**: if `spec.md` already exists
 
 ---
 
@@ -78,7 +87,36 @@ Notes:
 
 > Replace paths with your own spec folder.
 
-### 4.1 Generate / refine SPEC (governed → needs apply)
+### 4.1 Draft SPEC from prompt (first draft)
+
+Use this when you **do not have `spec.md` yet**.
+
+> Use `.spec/WORKFLOWS_INDEX.yaml` as the source of truth for the exact arguments supported by this workflow.
+
+#### CLI
+
+```bash
+/smartspec_generate_spec_from_prompt \
+  "<your feature/product prompt>" \
+  --out .spec/reports/generate-spec-from-prompt \
+  --json
+```
+
+#### Kilo Code
+
+```bash
+/smartspec_generate_spec_from_prompt.md \
+  "<your feature/product prompt>" \
+  --out .spec/reports/generate-spec-from-prompt \
+  --json \
+  --kilocode
+```
+
+Next: **human edit** the draft spec to confirm scope, assumptions, constraints, NFRs, and acceptance criteria.
+
+### 4.2 Refine / normalize SPEC (governed → needs apply)
+
+Use this after the human-edited draft, or when you already have a `spec.md`.
 
 #### CLI
 
@@ -97,7 +135,7 @@ Notes:
   --kilocode
 ```
 
-### 4.2 Generate PLAN (governed → needs apply)
+### 4.3 Generate PLAN (governed → needs apply)
 
 #### CLI
 
@@ -116,7 +154,7 @@ Notes:
   --kilocode
 ```
 
-### 4.3 Generate TASKS (governed → needs apply)
+### 4.4 Generate TASKS (governed → needs apply)
 
 #### CLI
 
@@ -135,7 +173,7 @@ Notes:
   --kilocode
 ```
 
-### 4.4 Implement from TASKS
+### 4.5 Implement from TASKS
 
 `/smartspec_implement_tasks` is **tasks-first** and refuses to expand scope beyond selected tasks.
 
@@ -177,7 +215,7 @@ Notes:
   --kilocode
 ```
 
-### 4.5 Strict verify (safe output → no apply)
+### 4.6 Strict verify (safe output → no apply)
 
 #### CLI
 
@@ -198,7 +236,7 @@ Notes:
   --kilocode
 ```
 
-### 4.6 (Optional) Implementation prompter (safe output → no apply)
+### 4.7 (Optional) Implementation prompter (safe output → no apply)
 
 Recommended before implement for large/complex changes.
 
@@ -223,7 +261,7 @@ Recommended before implement for large/complex changes.
   --kilocode
 ```
 
-### 4.7 Sync tasks checkboxes (governed → needs apply)
+### 4.8 Sync tasks checkboxes (governed → needs apply)
 
 #### CLI
 

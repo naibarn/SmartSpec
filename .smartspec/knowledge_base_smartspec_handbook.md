@@ -1,6 +1,6 @@
 # knowledge_base_smartspec_handbook.md
 
-> **Version:** 6.1.1 (Canonical)  
+> **Version:** 6.1.2 (Canonical)  
 > **Status:** Production Ready  
 > **Single source of truth:** This file defines governance, security, and command contracts.
 >
@@ -24,6 +24,7 @@ SmartSpec is a structured, auditable, multi-phase system for:
 
 - SPEC design
 - PLAN and TASKS derivation
+- Tasks-driven implementation
 - Evidence-driven verification
 - Prompted implementation refinement
 - Quality gates and audits (reports-first)
@@ -140,10 +141,11 @@ Workflows that write governed files MUST additionally enforce:
 
 Default rule: SmartSpec workflows MUST NOT modify application runtime source trees.
 
-If a workflow *must* write to a runtime tree (examples: `docs/`, `.github/workflows/`, deployment/runtime configs), it MUST require **two gates**:
+If a workflow *must* write to a runtime tree (examples: code/tests, `docs/`, `.github/workflows/`, deployment/runtime configs), it MUST require **two gates**:
 
 1) `--apply` (governed)
 2) a workflow-specific explicit opt-in flag (examples):
+   - `--write-code` (runtime code/tests/config writes)
    - `--write-docs`
    - `--write-ci-workflow`
    - `--write-runtime-config`
@@ -201,7 +203,6 @@ Rules:
   - Example: do NOT use `--platform` to mean "datadog" or "github-pages".
   - Use a namespaced flag such as `--obs-platform` or `--publish-platform`.
 - **No new global flags** may be introduced without updating this Handbook.
-- Breaking changes are allowed in v6; do not keep legacy flags unless absolutely required.
 
 ---
 
@@ -213,6 +214,7 @@ Examples:
 
 - `smartspec_generate_plan <spec.md> --apply`
 - `smartspec_generate_tasks <spec.md> --apply`
+- `smartspec_implement_tasks <tasks.md> --apply --write-code`
 - `smartspec_verify_tasks_progress_strict <tasks.md> --out <dir> --json`
 
 ---
@@ -232,9 +234,9 @@ Any workflow that executes external commands MUST:
 
 Default: network access is denied.
 
-If a workflow needs network (fetch/push/publish/webhook), it MUST:
+If a workflow needs network (fetch/push/publish/webhook, dependency installs, remote downloads), it MUST:
 
-- require an explicit workflow-specific gate flag (recommended name: `--allow-network`)
+- require an explicit gate flag (recommended: `--allow-network`)
 - record in the report whether network was used
 - if the runtime cannot enforce deny-by-default, the workflow MUST emit a warning in its summary/report
 
@@ -304,15 +306,25 @@ This Handbook defines the contracts; it does not duplicate the entire registry.
 
 ## 13) Workflow semantics (core chain)
 
-- `/smartspec_generate_spec`
-- `/smartspec_generate_plan`
-- `/smartspec_generate_tasks`
-- `/smartspec_verify_tasks_progress_strict`
-- `/smartspec_report_implement_prompter`
-- `/smartspec_sync_tasks_checkboxes`
-- `/smartspec_project_copilot`
+### 13.1 Canonical execution chain (preferred)
 
-### 13.1 Dual-command rule
+`SPEC → PLAN → TASKS → implement → STRICT VERIFY → SYNC CHECKBOXES`
+
+Where:
+
+- SPEC: `/smartspec_generate_spec`
+- PLAN: `/smartspec_generate_plan`
+- TASKS: `/smartspec_generate_tasks`
+- implement: `/smartspec_implement_tasks`
+- STRICT VERIFY: `/smartspec_verify_tasks_progress_strict`
+- SYNC CHECKBOXES: `/smartspec_sync_tasks_checkboxes`
+
+### 13.2 Optional helpers (non-canonical)
+
+- PROMPTER: `/smartspec_report_implement_prompter` (recommended before implement for large/complex changes)
+- Project routing: `/smartspec_project_copilot`
+
+### 13.3 Dual-command rule
 
 - CLI: `/workflow_name ...`
 - Kilo Code: `/workflow_name.md ... --kilocode`

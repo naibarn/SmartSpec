@@ -2,7 +2,7 @@
 
 # SmartSpec Installation & Usage
 
-> **Version:** 6.1.1  
+> **Version:** 6.1.2  
 > **Status:** Production Ready  
 > **This document is a thin wrapper.**  
 > Canonical governance lives in: `knowledge_base_smartspec_handbook.md`.
@@ -39,14 +39,14 @@ After installation, verify these directories exist:
 
 ## 2) What’s included
 
-### 2.1 Core chain (most-used)
+### 2.1 Canonical chain (most-used)
 
 ```text
 /smartspec_generate_spec
 /smartspec_generate_plan
 /smartspec_generate_tasks
+/smartspec_implement_tasks
 /smartspec_verify_tasks_progress_strict
-/smartspec_report_implement_prompter
 /smartspec_sync_tasks_checkboxes
 /smartspec_project_copilot
 ```
@@ -62,7 +62,7 @@ The complete list of workflows, aliases, write scopes, and supported platforms i
 ## 3) Standard execution sequence
 
 ```text
-SPEC → PLAN → TASKS → STRICT VERIFY → PROMPTER → implement → STRICT VERIFY → SYNC CHECKBOXES
+SPEC → PLAN → TASKS → implement → STRICT VERIFY → SYNC CHECKBOXES
 ```
 
 Notes:
@@ -70,7 +70,7 @@ Notes:
 - **Governed artifacts** (anything under `specs/**` and registry files) require `--apply`.
 - **Safe outputs** (reports/prompts/scripts) may be written without `--apply`.
 - Workflow-generated helper scripts must be placed under **`.smartspec/generated-scripts/**`**.
-- Some governed writes additionally require an explicit opt-in (examples: `--write-docs`, `--write-runtime-config`, `--write-ci-workflow`).
+- Some runtime-tree writes require an additional explicit opt-in gate (examples: `--write-code`, `--write-docs`, `--write-runtime-config`, `--write-ci-workflow`).
 
 ---
 
@@ -135,7 +135,49 @@ Notes:
   --kilocode
 ```
 
-### 4.4 Strict verify (safe output → no apply)
+### 4.4 Implement from TASKS
+
+`/smartspec_implement_tasks` is **tasks-first** and refuses to expand scope beyond selected tasks.
+
+- Validate-only (no writes): use `--validate-only`.
+- Writing code/tests/config requires **two gates**: `--apply` + `--write-code`.
+- Any action that needs network (dependency install/download/remote fetch) requires `--allow-network`.
+
+#### CLI (validate-only)
+
+```bash
+/smartspec_implement_tasks \
+  specs/feature/spec-002-user-management/tasks.md \
+  --validate-only \
+  --out .spec/reports/implement-tasks/spec-002 \
+  --json
+```
+
+#### CLI (apply + write code)
+
+```bash
+/smartspec_implement_tasks \
+  specs/feature/spec-002-user-management/tasks.md \
+  --apply \
+  --write-code \
+  --out .spec/reports/implement-tasks/spec-002 \
+  --json
+```
+
+#### Kilo Code
+
+```bash
+/smartspec_implement_tasks.md \
+  specs/feature/spec-002-user-management/tasks.md \
+  --apply \
+  --write-code \
+  --require-orchestrator \
+  --out .spec/reports/implement-tasks/spec-002 \
+  --json \
+  --kilocode
+```
+
+### 4.5 Strict verify (safe output → no apply)
 
 #### CLI
 
@@ -156,7 +198,9 @@ Notes:
   --kilocode
 ```
 
-### 4.5 Implementation prompter (safe output → no apply)
+### 4.6 (Optional) Implementation prompter (safe output → no apply)
+
+Recommended before implement for large/complex changes.
 
 #### CLI
 
@@ -179,7 +223,7 @@ Notes:
   --kilocode
 ```
 
-### 4.6 Sync tasks checkboxes (governed → needs apply)
+### 4.7 Sync tasks checkboxes (governed → needs apply)
 
 #### CLI
 
@@ -211,20 +255,64 @@ This section does not list every workflow (see `.spec/WORKFLOWS_INDEX.yaml`). It
   - `--obs-platform` (observability)
   - `--publish-platform` (docs publishing)
 
-### 5.2 Network gating for publish/tag flows
+### 5.2 Network gating for privileged or tool-driven flows
 
-- Any workflow that fetches/pushes/publishes typically requires `--allow-network`.
+- Any workflow that fetches/pushes/publishes or runs tools that may touch the network requires `--allow-network`.
 - If your environment cannot enforce deny-by-default, expect a warning in reports.
 
 ### 5.3 Runtime tree writes require an extra opt-in gate
 
-- Writing into `docs/` or other runtime trees requires BOTH:
+- Writing into runtime trees (code/tests/config, `docs/`, deployment configs) requires BOTH:
   - `--apply`
-  - an explicit opt-in such as `--write-docs` / `--write-runtime-config`
+  - an explicit opt-in such as `--write-code` / `--write-docs` / `--write-runtime-config`
 
-### 5.4 Docs generation → publishing (example chain)
+### 5.4 Implement → verify → sync (example)
 
-Generate docs (preview bundle) and then publish from that bundle.
+#### CLI
+
+```bash
+/smartspec_implement_tasks \
+  specs/<category>/<spec-id>/tasks.md \
+  --apply \
+  --write-code \
+  --out .spec/reports/implement-tasks \
+  --json
+
+/smartspec_verify_tasks_progress_strict \
+  specs/<category>/<spec-id>/tasks.md \
+  --out .spec/reports/verify-tasks-progress \
+  --json
+
+/smartspec_sync_tasks_checkboxes \
+  specs/<category>/<spec-id>/tasks.md \
+  --apply
+```
+
+#### Kilo Code
+
+```bash
+/smartspec_implement_tasks.md \
+  specs/<category>/<spec-id>/tasks.md \
+  --apply \
+  --write-code \
+  --require-orchestrator \
+  --out .spec/reports/implement-tasks \
+  --json \
+  --kilocode
+
+/smartspec_verify_tasks_progress_strict.md \
+  specs/<category>/<spec-id>/tasks.md \
+  --out .spec/reports/verify-tasks-progress \
+  --json \
+  --kilocode
+
+/smartspec_sync_tasks_checkboxes.md \
+  specs/<category>/<spec-id>/tasks.md \
+  --apply \
+  --kilocode
+```
+
+### 5.5 Docs generation → publishing (example chain)
 
 #### CLI
 

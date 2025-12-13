@@ -1,5 +1,6 @@
 [🇬🇧 English](README.md) | [🇹🇭 ภาษาไทย](README_th.md)
 
+
 ---
 
 # SmartSpec: The AI-Native Development Framework

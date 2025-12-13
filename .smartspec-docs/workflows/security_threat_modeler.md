@@ -1,195 +1,141 @@
+| manual_name | manual_version | compatible_workflow | compatible_workflow_versions |
+|-------------|----------------|---------------------|------------------------------|
+| /smartspec_security_threat_modeler Manual (EN) | 6.0 | /smartspec_security_threat_modeler | 6.0.x |
+
 # /smartspec_security_threat_modeler Manual (v6.0, English)
 
-## Overview
+## 1. Overview
 
-The `/smartspec_security_threat_modeler` workflow is a quality assurance tool designed to automatically generate a preliminary security threat model by analyzing the content of a SmartSpec (`spec.md`) and its corresponding plan (`plan.md`).
+The `/smartspec_security_threat_modeler` workflow analyzes specifications to identify security threats and generate threat models.
 
-**Purpose:** To identify and document potential security risks early in the development lifecycle, producing a structured `threats.md` artifact using standard methodologies like STRIDE or DREAD.
+**Purpose:** Analyze specifications to identify security threats, vulnerabilities, and generate comprehensive threat models.
 
-**Version:** 6.1.0
-**Category:** Quality
-**Governance:** This is a **governed write** workflow, requiring the `--apply` flag to modify the project’s specification directory by creating or updating `threats.md`.
+**Version:** 6.0  
+**Category:** security-audit
 
 ---
 
-## Usage
+## 2. Usage
 
-### CLI (Command Line Interface)
-
-The CLI invocation is used for direct execution within the project environment.
+### 🔗 CLI Usage
 
 ```bash
 /smartspec_security_threat_modeler \
-  <path/to/spec.md> \
-  [--framework <STRIDE|DREAD>] \
-  [--apply] \
-  [--json]
+  <spec_md> \
+  [--threat-level <low|medium|high>] \
+  [--apply]
 ```
 
-### Kilo Code
+### Kilo Code Usage
 
-Kilo Code usage is typically embedded within other SmartSpec workflows or CI/CD pipelines.
+**Important:** When using Kilo Code, you MUST include `--platform kilo` flag.
 
 ```bash
 /smartspec_security_threat_modeler.md \
-  specs/<category>/<spec-id>/spec.md \
-  [--framework <STRIDE>] \
+  <spec_md> \
+  [--threat-level <low|medium|high>] \
   [--apply] \
-  [--json]
+  --platform kilo
 ```
 
 ---
 
-## Use Cases
+## 3. Use Cases
 
-### Use Case 1: Generating a Preliminary Threat Model (Preview Mode)
+### Use Case 1: Generating Threat Model (CLI)
 
-**Scenario:** A developer wants to see the initial security threat analysis for a new authentication service specification (`specs/auth/auth-v1/spec.md`) before committing to the findings.
+**Scenario:** Security analyst generates threat model for new API.
 
-**Goal:** Generate the threat model report without modifying the project files.
+**Command:**
 
-**CLI Command:**
 ```bash
-/smartspec_security_threat_modeler specs/auth/auth-v1/spec.md --framework STRIDE --json
+/smartspec_security_threat_modeler specs/api/payment_gateway/spec.md \
+  --threat-level high
 ```
 
 **Expected Result:**
-1.  The workflow reads `specs/auth/auth-v1/spec.md` (and `plan.md` if present).
-2.  A detailed report, including a preview of the generated `threats.md`, is written to `.spec/reports/security-threat-model/<run-id>/report.json`.
-3.  A summary JSON output is printed to stdout.
-4.  The file `specs/auth/auth-v1/threats.md` is **not** created or modified.
 
-**Kilo Code:**
-```kilo
-# Preview the threat model for the authentication service using STRIDE
-/smartspec_security_threat_modeler.md specs/auth/auth-v1/spec.md --framework STRIDE
-```
+1. Spec analyzed for security threats.
+2. Threat model generated.
+3. Exit code `0` (Success).
 
-### Use Case 2: Applying the Threat Model Artifact
+### Use Case 2: CI Pipeline Security Check (Kilo Code)
 
-**Scenario:** The threat model preview has been reviewed and approved. The security team now wants to commit the findings to the specification directory.
+**Scenario:** Automated threat modeling in CI.
 
-**Goal:** Create the `threats.md` artifact in the specification folder.
+**Command (Kilo Code Snippet):**
 
-**CLI Command:**
 ```bash
-/smartspec_security_threat_modeler specs/auth/auth-v1/spec.md --framework STRIDE --apply
+/smartspec_security_threat_modeler.md \
+  specs/auth/oauth/spec.md \
+  --apply \
+  --platform kilo
 ```
 
 **Expected Result:**
-1.  The workflow performs the analysis.
-2.  The file `specs/auth/auth-v1/threats.md` is created or updated atomically with the structured threat model content.
-3.  The exit code is `0` (Success).
 
-**Kilo Code:**
-```kilo
-# Apply the threat model, creating the threats.md file
-/smartspec_security_threat_modeler.md specs/auth/auth-v1/spec.md --apply
-```
+1. Threat model generated and saved.
+2. Exit code `0` (Success).
 
-### Use Case 3: Using an Alternative Framework
+### Use Case 3: JSON Output (CLI)
 
-**Scenario:** The project requires the use of the DREAD framework for risk assessment instead of the default STRIDE.
+**Scenario:** Structured threat data for security dashboard.
 
-**Goal:** Generate the threat model using the DREAD framework.
+**Command:**
 
-**CLI Command:**
 ```bash
-/smartspec_security_threat_modeler specs/data/storage-v2/spec.md --framework DREAD --apply
+/smartspec_security_threat_modeler specs/data/user_data/spec.md \
+  --json
 ```
 
 **Expected Result:**
-1.  The workflow analyzes the spec using the DREAD methodology (Damage, Reproducibility, Exploitability, Affected Users, Discoverability).
-2.  `specs/data/storage-v2/threats.md` is created, detailing threats categorized and assessed by DREAD criteria.
+
+1. Threat model with JSON output.
+2. Exit code `0` (Success).
 
 ---
 
-## Parameters
+## 4. Parameters
 
-### Positional Arguments (Inputs)
+### Required Parameters
 
-| Parameter | Required | Description |
-| :--- | :--- | :--- |
-| `spec_md` | Yes | Path to the primary `spec.md` file to be analyzed. Must reside under `specs/**`. |
-| `plan.md` | No | If present in the same directory as `spec.md`, it is automatically used as additional context for the analysis. |
-
-### Flags (Parameters)
-
-| Flag | Category | Default | Description |
+| Parameter | Type | Description | Validation |
 | :--- | :--- | :--- | :--- |
-| `--framework <STRIDE\|DREAD>` | Workflow-Specific | `STRIDE` | Specifies the threat modeling framework to use for analysis and reporting. |
-| `--apply` | Universal | None | **Required** to perform governed writes (create/update `threats.md`). Without this, the workflow runs in preview mode. |
-| `--json` | Universal | None | Outputs the summary results in machine-readable JSON format to stdout. |
-| `--config <path>` | Universal | Default config path | Specifies a custom configuration file path. |
-| `--lang <th\|en>` | Universal | `en` | Specifies the language for output messages and generated text. |
-| `--platform <cli\|kilo\|ci\|other>` | Universal | Derived | Specifies the execution environment. |
-| `--out <path>` | Universal | `.spec/reports/...` | Specifies an alternative output path for reports and previews. |
-| `--quiet` | Universal | None | Suppresses non-critical output messages. |
+| `<spec_md>` | `<path>` | Path to spec.md file. | Must resolve under `specs/**`. |
+
+### Universal Flags
+
+| Flag | Description | Default | Platform Support |
+| :--- | :--- | :--- | :--- |
+| `--config` | Path to configuration file. | `.spec/smartspec.config.yaml` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--platform` | Execution platform. **Required for Kilo Code.** | (Inferred) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--apply` | Save threat model to spec folder. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--json` | Output in JSON format. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+
+### Workflow-Specific Flags
+
+| Flag | Description | Default | Platform Support |
+| :--- | :--- | :--- | :--- |
+| `--threat-level` | Minimum threat level to report: `low`, `medium`, `high`. | `medium` | `cli` \| `kilo` \| `ci` \| `other` |
 
 ---
 
-## Output
+## 5. Output
 
-### Governed Artifact (Requires `--apply`)
+### Output Files
 
-*   **File:** `specs/<category>/<spec-id>/threats.md`
-*   **Description:** A structured Markdown file containing the preliminary threat model, including a summary table and detailed entries for each identified threat (e.g., T-001, T-002). The structure adheres to the defined format, including Threat Category, Description, Asset at Risk, Affected Component, and Suggested Mitigation.
-
-### Report and Preview Artifacts (Always Generated)
-
-*   **Location:** `.spec/reports/security-threat-model/<run-id>/`
-*   **Contents:**
-    *   **Report:** Detailed logs, analysis findings, and the full content of the proposed `threats.md` file (preview).
-    *   **Summary JSON:** A `summary.json` file detailing the run status, threat counts by category, and recommended next steps.
-
-### `summary.json` Schema Excerpt
-
-The output JSON includes a summary of the threats identified:
-
-```json
-{
-  "status": "success",
-  "applied": true,
-  "scope": { ... },
-  "summary": {
-    "threat_counts": {
-      "spoofing": 2,
-      "tampering": 1,
-      "repudiation": 3,
-      "information_disclosure": 4,
-      "denial_of_service": 1,
-      "elevation_of_privilege": 2
-    }
-  },
-  "writes": { ... },
-  "next_steps": [
-    {
-      "cmd": "/smartspec_generate_tasks --spec <spec.md> --context <threats.md>",
-      "why": "Generate security tasks based on the identified threats."
-    }
-  ]
-}
-```
+| File Path | Description |
+| :--- | :--- |
+| `.spec/reports/security-threat-modeler/<run-id>/threat_model.md` | Generated threat model. |
+| `specs/**/security/threat_model.md` | Saved threat model (with `--apply`). |
 
 ---
 
-## Notes & Related Workflows
+## 6. Notes
 
-### Non-Destructive Merge
-
-If `threats.md` already exists, the workflow is designed to perform a non-destructive merge. It will attempt to integrate new findings while preserving existing, manually-edited entries within the file, respecting the defined structure.
-
-### Hardening Requirements
-
-This workflow adheres to strict security hardening requirements, including:
-*   No external network access (`safety.network_policy.default=deny`).
-*   Redaction of sensitive data based on configuration patterns.
-*   Strict enforcement of read and write scopes to prevent path traversal.
-
-### Related Workflows
-
-*   `/smartspec_generate_tasks`: Use this workflow *after* generating `threats.md` to automatically convert the identified security threats into actionable development tasks.
-*   `/smartspec_analyze_compliance`: Used for checking the generated `threats.md` against organizational security policies or regulatory standards.
+- **Platform Flag:** When using Kilo Code, always include `--platform kilo`.
+- **Threat Levels:** Adjust `--threat-level` based on security requirements.
 
 ---
-*Last updated: SmartSpec v6.0*
+
+**End of Manual**

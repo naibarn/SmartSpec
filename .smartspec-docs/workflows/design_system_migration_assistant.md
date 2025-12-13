@@ -1,174 +1,143 @@
+| manual_name | manual_version | compatible_workflow | compatible_workflow_versions |
+|-------------|----------------|---------------------|------------------------------|
+| /smartspec_design_system_migration_assistant Manual (EN) | 6.0 | /smartspec_design_system_migration_assistant | 6.0.x |
+
 # /smartspec_design_system_migration_assistant Manual (v6.0, English)
 
-## Overview
+## 1. Overview
 
-The `/smartspec_design_system_migration_assistant` workflow (Version: 6.1.1) is designed to facilitate a controlled migration between different UI component libraries or design token systems.
+The `/smartspec_design_system_migration_assistant` workflow assists in migrating UI components to new design systems.
 
-**Purpose:** It generates **deterministic patches** and **risk-scored change sets** to automate the refactoring process.
+**Purpose:** Assist in migrating UI components to new design systems, providing migration guides and component mappings.
 
-The workflow operates in two primary modes:
+**Version:** 6.0  
+**Category:** ui-design
 
-1.  **Preview Mode (Default):** Generates reports, diffs, and patches showing proposed changes without modifying any source code.
-2.  **Apply Mode (`--apply`):** Performs governed code modifications within approved source roots, ensuring backups and atomic writes for safety.
+---
 
-The workflow is non-intrusive: it does not run the application, execute network calls, or install dependencies.
+## 2. Usage
 
-## Usage
-
-### CLI Usage
-
-Execute the workflow directly from the command line.
-
-**Preview Mode (Recommended First Run):**
+### 🔗 CLI Usage
 
 ```bash
 /smartspec_design_system_migration_assistant \
-  --source-root ./src/ui \
-  --from mui \
-  --to smartspec-ui \
-  --audit-summary .spec/reports/ui-component-audit/latest/summary.json \
-  --token-map .smartspec/mappings/design-tokens.json
-```
-
-**Apply Mode (After Reviewing Preview):**
-
-```bash
-/smartspec_design_system_migration_assistant \
-  --source-root ./src/ui \
-  --from mui \
-  --to smartspec-ui \
-  --audit-summary .spec/reports/ui-component-audit/latest/summary.json \
-  --token-map .smartspec/mappings/design-tokens.json \
-  --apply \
-  --confidence-threshold medium
+  <spec_md> \
+  [--from-system <name>] \
+  [--to-system <name>] \
+  [--apply]
 ```
 
 ### Kilo Code Usage
 
-The workflow can be invoked within a SmartSpec Kilo Code environment.
-
-**Preview Mode:**
+**Important:** When using Kilo Code, you MUST include `--platform kilo` flag.
 
 ```bash
 /smartspec_design_system_migration_assistant.md \
-  --source-root ./src/ui \
-  --from antd \
-  --to smartspec-ui \
-  --framework react \
-  --style-system css-in-js \
-  --kilocode
+  <spec_md> \
+  [--from-system <name>] \
+  [--to-system <name>] \
+  [--apply] \
+  --platform kilo
 ```
 
-**Apply Mode:**
+---
+
+## 3. Use Cases
+
+### Use Case 1: Migrating Design System (CLI)
+
+**Scenario:** Migrate from Material UI to Tailwind.
+
+**Command:**
+
+```bash
+/smartspec_design_system_migration_assistant specs/ui/dashboard/spec.md \
+  --from-system material-ui \
+  --to-system tailwind
+```
+
+**Expected Result:**
+
+1. Migration guide generated.
+2. Exit code `0` (Success).
+
+### Use Case 2: Automated Migration (Kilo Code)
+
+**Scenario:** CI generates migration plan.
+
+**Command (Kilo Code Snippet):**
 
 ```bash
 /smartspec_design_system_migration_assistant.md \
-  --source-root ./src/ui \
-  --from antd \
-  --to smartspec-ui \
-  --audit-summary .spec/reports/ui-component-audit/20240101/summary.json \
+  specs/ui/forms/spec.md \
+  --from-system bootstrap \
+  --to-system chakra-ui \
   --apply \
-  --out .spec/reports/design-system-migration/run_antd_to_smartspec \
-  --kilocode
-```
-
-## Use Cases
-
-### Use Case 1: Component and Token Migration (Preview)
-
-**Scenario:** A development team needs to estimate the effort required to migrate a large React application from the older `MUI` library to a new internal library, `SmartSpec-UI`. They want to see all proposed changes, including component renaming and design token updates, before committing.
-
-**Command (CLI):**
-
-```bash
-/smartspec_design_system_migration_assistant \
-  --source-root ./src/app \
-  --from mui \
-  --to smartspec-ui \
-  --audit-summary .spec/reports/ui-component-audit/latest/summary.json \
-  --token-map .smartspec/mappings/mui_to_smartspec.json \
-  --framework react \
-  --confidence-threshold high \
-  --include-globs "**/*.tsx"
+  --platform kilo
 ```
 
 **Expected Result:**
 
-The workflow runs in Preview Mode (default). It generates a `report.md` detailing:
-1.  The number of high-confidence changes (e.g., `Button` -> `SmartButton`).
-2.  The number of medium-confidence changes (e.g., prop mapping changes).
-3.  A `changes.patch` file showing the unified diff for all proposed modifications.
-4.  A list of manual follow-ups for low-confidence or unsupported patterns.
-5.  Exit code `0`. No source files are modified.
+1. Migration plan generated and saved.
+2. Exit code `0` (Success).
 
-### Use Case 2: Applying High-Confidence Changes Only
+### Use Case 3: Preview Migration (CLI)
 
-**Scenario:** After reviewing the preview, the team decides to automatically apply only the safest, high-confidence changes (like import path updates and simple component renames) to minimize manual review time, while leaving medium and low confidence changes for later.
+**Scenario:** Preview migration without applying.
 
-**Command (CLI):**
+**Command:**
 
 ```bash
-/smartspec_design_system_migration_assistant \
-  --source-root ./src/app \
-  --from mui \
-  --to smartspec-ui \
-  --audit-summary .spec/reports/ui-component-audit/latest/summary.json \
-  --token-map .smartspec/mappings/mui_to_smartspec.json \
-  --apply \
-  --confidence-threshold high \
-  --apply-scope high_only
+/smartspec_design_system_migration_assistant specs/ui/navigation/spec.md \
+  --json
 ```
 
 **Expected Result:**
 
-1.  The workflow validates all paths and trust rules (DSM-000, DSM-001).
-2.  For every file modified, a backup is created under `.spec/reports/design-system-migration/<run-id>/backups/`.
-3.  Only changes labeled with `high` confidence are applied using atomic writes.
-4.  The final `report.md` confirms that `--apply` was used, lists the files changed, and provides instructions for rollback using the backup location.
-5.  Exit code `0`.
+1. Migration preview with JSON output.
+2. Exit code `0` (Success).
 
-### Use Case 3: Targeted Migration in Kilo Code
+---
 
-**Scenario:** A specific feature branch only uses Vue components and needs migration from `Chakra` to `SmartSpec-UI`. The migration must be bounded to prevent long execution times.
+## 4. Parameters
 
-**Command (Kilo Code):**
+### Required Parameters
 
-```bash
-/smartspec_design_system_migration_assistant.md \
-  --source-root ./src/features/new-dashboard \
-  --from chakra \
-  --to smartspec-ui \
-  --framework vue \
-  --max-files 50 \
-  --exclude-globs "**/tests/**" \
-  --kilocode
-```
+| Parameter | Type | Description | Validation |
+| :--- | :--- | :--- | :--- |
+| `<spec_md>` | `<path>` | Path to spec.md file. | Must resolve under `specs/**`. |
 
-**Expected Result:**
+### Universal Flags
 
-1.  The workflow scans a maximum of 50 files within the specified source root, excluding test files.
-2.  A preview report is generated, focusing on Vue component transformations (e.g., template syntax changes).
-3.  If the file limit is reached, the report includes a **DSM-201 Reduced Coverage** warning, indicating that the migration is partial.
-4.  Exit code `0`.
+| Flag | Description | Default | Platform Support |
+| :--- | :--- | :--- | :--- |
+| `--platform` | Execution platform. **Required for Kilo Code.** | (Inferred) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--apply` | Save migration guide. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--json` | Output in JSON format. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
 
-## Parameters
+### Workflow-Specific Flags
 
-| Parameter | Type | Required | Description | Governance Notes |
-| :--- | :--- | :--- | :--- | :--- |
-| `--source-root <path>` | Path | **Yes** | Root directory of UI source code to migrate. | Must exist and be a directory. |
-| `--from <name>` | String | **Yes** | Source design system/library identifier (e.g., `mui`, `antd`). | |
-| `--to <name>` | String | **Yes** | Target design system/library identifier. | |
-| `--apply` | Flag | No | Enables governed code modifications (Apply Mode). | Triggers backup and atomic write requirements. |
-| `--audit-summary <path>` | Path | No | Path to a `smartspec_ui_component_audit` `summary.json`. | Used for token paths and findings. Must pass trust rules (DSM-001). |
-| `--token-map <path>` | Path | No | Explicit mapping file (JSON/YAML) defining token and component mappings. | |
-| `--include-globs <glob>` | String | No | Restrict migration to matching files (comma-separated). | |
-| `--exclude-globs <glob>` | String | No | Exclude files from migration (comma-separated). | |
-| `--framework <type>` | String | No | Target framework (`react`, `next`, `vue`, `svelte`, `auto`). | Default: `auto`. |
-| `--style-system <type>` | String | No | Style system used (`css`, `tailwind`, `css-in-js`, `auto`). | Default: `auto`. |
-| `--max-files <int>` | Integer | No | Bounded scanning limit (number of files). | |
-| `--max-bytes <int>` | Integer | No | Bounded scanning limit (total size in bytes). | |
-| `--max-seconds <int>` | Integer | No | Bounded scanning limit (execution time). | |
-| `--confidence-threshold <level>` | String | No | Minimum confidence required for auto-apply transformations (`high` or `medium`). | Default: `high`. |
-| `--apply-scope <scope>` | String | No | Defines which confidence levels are applied (`high_only` or `high_and_medium`). | Default: `high_only`. |
-| `--out <output-root>` | Path | No | Requested base output root for reports. | Must pass output root safety checks. |
-| `--json` | Flag | No | Output primary report as JSON (in addition to standard
+| Flag | Description | Default | Platform Support |
+| :--- | :--- | :--- | :--- |
+| `--from-system` | Source design system name. | (Auto-detect) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--to-system` | Target design system name. | (Required) | `cli` \| `kilo` \| `ci` \| `other` |
+
+---
+
+## 5. Output
+
+### Output Files
+
+| File Path | Description |
+| :--- | :--- |
+| `.spec/reports/design-system-migration/<run-id>/migration_guide.md` | Migration guide. |
+
+---
+
+## 6. Notes
+
+- **Platform Flag:** When using Kilo Code, always include `--platform kilo`.
+
+---
+
+**End of Manual**

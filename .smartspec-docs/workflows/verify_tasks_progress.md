@@ -1,221 +1,165 @@
-# SmartSpec Workflow Manual
-## `/smartspec_verify_tasks_progress` — Evidence-First Verification Workflow
-**English Version (Standalone Manual)**
+| manual_name | manual_version | compatible_workflow | compatible_workflow_versions |
+|-------------|----------------|---------------------|------------------------------|
+| /smartspec_verify_tasks_progress Manual (EN) | 6.0 | /smartspec_verify_tasks_progress | 6.0.x |
+
+# /smartspec_verify_tasks_progress Manual (v6.0, English)
+
+## 1. Overview
+
+This manual explains how to use the workflow:
+
+The `/smartspec_verify_tasks_progress` workflow performs strict evidence-only verification using parseable evidence hooks to validate task completion.
+
+**Purpose:** Strict evidence-only verification using parseable evidence hooks (evidence: type key=value...). Ensures all task completions are backed by verifiable evidence in the codebase.
+
+**Version:** 6.0  
+**Category:** verify
 
 ---
-# 1. Purpose
-`/smartspec_verify_tasks_progress` is the **official verification workflow** in the SmartSpec system for determining the *true* implementation status of a spec’s tasks.
 
-This workflow performs **evidence-first analysis**, meaning:
-- Checkboxes in `tasks.md` are treated only as *hints*.
-- **Actual code, tests, documentation, and deployment artifacts** determine progress.
-- A task is never considered complete unless real evidence exists.
-- The workflow is **read-only**: it never modifies spec, tasks, code, or registries.
+## 2. Usage
 
-This manual explains how to use the workflow effectively in real projects.
+This workflow supports invocation via the Command Line Interface (CLI) and Kilo Code (internal scripting environment).
 
----
-# 2. What This Workflow Does
-### ✔ Reads and analyzes:
-- `spec.md`
-- `tasks.md`
-- Source code (services, routes, helpers)
-- Tests (unit, integration, performance)
-- Documentation
-- Deployment files (K8s, CI/CD, monitoring)
-- Optional custom evidence from user-supplied scripts
+### 🔗 CLI Usage
 
-### ✔ Produces:
-- A **Markdown report** (human-readable)
-- A **JSON report** (for automation workflows like checkbox syncing)
+The CLI invocation requires specifying the target tasks.md file.
 
-### ✔ Computes a verdict for every task:
-| Verdict | Meaning |
-|--------|---------|
-| **complete** | Evidence fully matches expectations |
-| **unsynced_complete** | Evidence complete but task was unchecked |
-| **false_positive** | Task checked but no evidence found |
-| **partial** | Some evidence exists but is incomplete |
-| **incomplete** | No evidence exists |
-
-The workflow enforces **strict governance** and ensures progress cannot be overstated.
-
----
-# 3. Flags & Options
-## 3.1 Evidence-First Controls
-```bash
---evidence-only
-```
-Ignore checkboxes completely — use evidence only.
-
-```bash
---run-tests
-```
-Execute or query tests; failing tests downgrade verdicts.
-
-```bash
---evidence-script=<path>
-```
-Run a custom script (Python/JS) that returns additional evidence.
-
----
-## 3.2 Input Selection
-```bash
---spec=<path>
---tasks=<path>
---spec-id=<id>
-```
-If `--tasks` is omitted, SmartSpec auto-detects it from the spec.
-
----
-## 3.3 Legacy Flags (Fully Preserved)
-### SPEC_INDEX / Registry
-```bash
---index=<path>
---specindex=<path>
---registry-dir=<path>
---registry-roots=<csv>
-```
-### Multi-Repo
-```bash
---workspace-roots=<csv>
---repos-config=<path>
-```
-### Reporting
-```bash
---report-dir=<path>
---report=<summary|detailed>
---report-format=<md|json>
---dry-run
-```
-### Safety
-```bash
---safety-mode=<strict|dev>
---strict
-```
-All original workflow capabilities remain fully supported.
-
----
-# 4. JSON Output Format
-Used by automation workflows such as `/smartspec_sync_tasks_checkboxes`.
-
-Example:
-```json
-{
-  "spec_id": "spec-002-user-management",
-  "tasks_path": "specs/feature/spec-002-user-management/tasks.md",
-  "summary": {
-    "total_tasks": 78,
-    "complete": 40,
-    "unsynced_complete": 5,
-    "false_positive": 6,
-    "partial": 15,
-    "incomplete": 12,
-    "progress_percent": 57.7,
-    "risk_level": "MEDIUM"
-  },
-  "tasks": [
-    {
-      "id": "T047",
-      "declared_status": "checked",
-      "observed_evidence": "none",
-      "verdict": "false_positive",
-      "evidence": {
-        "routes": [],
-        "tests": [],
-        "services": []
-      }
-    }
-  ]
-}
-```
-
----
-# 5. How the Workflow Evaluates Tasks
-### Step 1: Parse `tasks.md`
-Extract IDs, titles, nesting, and checkbox states.
-
-### Step 2: Collect Evidence
-- Scan for matching code
-- Scan tests
-- Run optional evidence script
-- Run tests (if enabled)
-
-### Step 3: Compute Verdicts
-Rules:
-- If evidence = complete → `complete` or `unsynced_complete`
-- If evidence = none + checkbox checked → `false_positive`
-- If evidence = none + checkbox unchecked → `incomplete`
-- If evidence = partial → `partial`
-
-### Step 4: Generate Reports
-Markdown and/or JSON depending on flags.
-
----
-# 6. Example Commands
-## 6.1 Basic Verification
 ```bash
 /smartspec_verify_tasks_progress \
-  --spec specs/feature/spec-002-user-management/spec.md
+  <tasks_md> \
+  [--report-format <markdown|json>] \
+  [--strict]
 ```
 
-## 6.2 Generate Markdown + JSON Reports
+### Kilo Code Usage
+
+The Kilo Code invocation is identical to the CLI structure, typically used within automated pipelines or internal scripts.
+
+**Important:** When using Kilo Code, you MUST include `--platform kilo` flag.
+
 ```bash
-/smartspec_verify_tasks_progress \
-  --spec specs/feature/spec-002-user-management/spec.md \
-  --report-format=json --report=summary
+/smartspec_verify_tasks_progress.md \
+  <tasks_md> \
+  [--report-format <markdown|json>] \
+  [--strict] \
+  --platform kilo
 ```
 
-## 6.3 Use a Custom Evidence Script
+---
+
+## 3. Use Cases
+
+### Use Case 1: Verifying Task Progress with Evidence (CLI)
+
+**Scenario:** A developer wants to verify that all checked tasks have valid evidence in the codebase.
+
+**Command:**
+
 ```bash
-/smartspec_verify_tasks_progress \
-  --spec specs/feature/spec-002-user-management/spec.md \
-  --evidence-script=scripts/check_tasks_evidence.py
+/smartspec_verify_tasks_progress specs/auth/login_service/tasks.md
 ```
 
-## 6.4 Run Tests as Part of Evidence
+**Expected Result:**
+
+1. The workflow loads `specs/auth/login_service/tasks.md`.
+2. It scans for evidence hooks in the codebase for each checked task.
+3. A verification report is generated showing evidence status.
+4. Exit code `0` if all verified, `1` if violations found.
+
+### Use Case 2: Strict Verification for CI Pipeline (Kilo Code)
+
+**Scenario:** A CI pipeline requires strict verification where all checked tasks must have parseable evidence.
+
+**Command (Kilo Code Snippet):**
+
 ```bash
-/smartspec_verify_tasks_progress \
-  --spec specs/feature/spec-002-user-management/spec.md \
-  --run-tests --report-format=json
+/smartspec_verify_tasks_progress.md \
+  specs/payments/checkout/tasks.md \
+  --strict \
+  --report-format json \
+  --platform kilo
 ```
 
----
-# 7. Governance Rules
-- **Read-only** workflow
-- Must not modify:
-  - `spec.md`
-  - `tasks.md`
-  - code files
-  - registries
-  - SPEC_INDEX
-  - UI JSON
-- Must preserve all capabilities from v5.7 while extending functionality in v5.8.
+**Expected Result:**
 
-This workflow is designed to be **safe**, **accurate**, and **compatible** with all SmartSpec governance rules.
+1. The workflow loads the tasks file in strict mode.
+2. It verifies evidence for all checked tasks.
+3. Any checked task without valid evidence causes failure.
+4. Output includes `verification.json` with detailed results.
+5. Exit code `0` if all pass, `1` if any violations.
 
----
-# 8. Best-Practice Workflow for Teams
-1. Implement code normally
-2. Run:
-   ```bash
-   /smartspec_verify_tasks_progress --report-format=json
-   ```
-3. Review the JSON report
-4. (Optional) Sync checkboxes using a separate workflow
-5. Use the verified results for planning and sprint reviews
+### Use Case 3: Markdown Report for Team Review (CLI)
 
----
-# 9. When to Use This Workflow
-Use it whenever you need:
-- Evidence-based progress reports
-- Reliable progress numbers for management
-- Automatic detection of missing code/tests
-- Governance-friendly verification
-- CI/CD accuracy
+**Scenario:** A team lead wants a human-readable report of task verification for team review.
+
+**Command:**
+
+```bash
+/smartspec_verify_tasks_progress specs/dashboard/analytics/tasks.md \
+  --report-format markdown
+```
+
+**Expected Result:**
+
+1. The workflow loads the tasks file.
+2. It verifies evidence for all checked tasks.
+3. A markdown report is generated with detailed findings.
+4. Exit code `0` (Success).
 
 ---
-# 10. Need the Thai Manual Too?
-Just say **“สร้างคู่มือภาษาไทยด้วย”** and I will create a second canvas containing the Thai version.
 
-End of manual. 🚀
+## 4. Parameters
+
+The following parameters and flags control the execution and behavior of the `/smartspec_verify_tasks_progress` workflow.
+
+### Required Parameters
+
+| Parameter | Type | Description | Validation |
+| :--- | :--- | :--- | :--- |
+| `<tasks_md>` | `<path>` | Path to the tasks.md file to verify. | Must resolve under `specs/**`. |
+
+### Universal Flags
+
+| Flag | Description | Default | Platform Support |
+| :--- | :--- | :--- | :--- |
+| `--config` | Path to the SmartSpec configuration file. | `.spec/smartspec.config.yaml` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--lang` | Language for report generation (e.g., `th`, `en`). | (System default) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--platform` | Execution platform context. **Required for Kilo Code.** | (Inferred) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--out` | Base path for safe outputs. | `.spec/reports/verify-tasks-progress/` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--json` | Output in JSON format. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--quiet` | Suppress standard output logs. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+
+### Workflow-Specific Flags
+
+| Flag | Description | Default | Platform Support |
+| :--- | :--- | :--- | :--- |
+| `--report-format` | Report format: `markdown` or `json`. | `markdown` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--strict` | Enable strict verification mode (fail on missing evidence). | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+
+---
+
+## 5. Output
+
+The workflow generates output artifacts according to its configuration.
+
+### Output Files
+
+| File Path | Description |
+| :--- | :--- |
+| `.spec/reports/verify-tasks-progress/<run-id>/verification.md` | Verification report in markdown format. |
+| `.spec/reports/verify-tasks-progress/<run-id>/verification.json` | Verification report in JSON format (if `--report-format json`). |
+
+---
+
+## 6. Notes
+
+- **Platform Flag:** When using Kilo Code, always include `--platform kilo` to ensure proper context and logging.
+- **Evidence Hooks:** Tasks must include parseable evidence hooks (e.g., `evidence: file path=src/auth.ts`) for verification.
+- **Strict Mode:** Use `--strict` to fail the workflow if any checked task lacks valid evidence.
+- **Report Formats:** Choose between markdown for human reading or JSON for programmatic processing.
+- **Configuration:** The workflow respects settings in `.spec/smartspec.config.yaml`.
+
+---
+
+**End of Manual**

@@ -1,194 +1,225 @@
-# /smartspec_generate_tests Manual (v6.0, English)
+| manual_name | manual_version | compatible_workflow | compatible_workflow_versions |
+|-------------|----------------|---------------------|------------------------------|
+| /smartspec_generate_tests Manual (EN) | 6.1 | /smartspec_generate_tests | 6.1.x |
 
-## Overview
+# /smartspec_generate_tests Manual (v6.1, English)
 
-The `/smartspec_generate_tests` workflow (v6.1.1) is a core component of SmartSpec's test planning and governance suite.
+## 1. Overview
 
-**Purpose:** To generate a comprehensive, SmartSpec-governed test plan (including test matrix, acceptance criteria, and required evidence) based on a primary specification (`spec.md`) and adjacent files (`tasks.md`, `ui.json`).
+This manual explains how to use the workflow:
 
-**Key Features:**
+The `/smartspec_generate_tests` workflow generates a comprehensive **test plan** from `spec.md` (and adjacent `tasks.md`, optional `ui.json`), aligned with registries and SmartSpec governance.
 
-1.  **Governance Alignment:** Ensures the resulting test plan adheres to SmartSpec v6 governance standards, including strict security hardening and write scope enforcement.
-2.  **Preview-First:** By default, it operates in a safe, reports-only mode, generating a detailed **Change Plan**. Application (writing the governed test plan) requires the `--apply` flag.
-3.  **Comprehensive Scope:** Generates tests covering functional behavior, contracts, security, NFR/performance, observability, and UI components.
-4.  **De-duplication:** Leverages registries and the `SPEC_INDEX` to avoid redundant tests and align with canonical definitions.
+**Purpose:** Generate a SmartSpec-governed test plan (test matrix + acceptance criteria + required evidence) aligned with SmartSpec v6 governance. Default outputs are reports-only; optional apply writes the test plan into the spec folder under specs/**.
 
-**Version:** 6.1.1
+**Version:** 6.1.1  
+**Category:** test-planning
 
-## Usage
+---
 
-This workflow supports both Command Line Interface (CLI) and Kilo Code execution. The primary input is the path to the `spec.md` file.
+## 2. Usage
 
-### CLI Usage
+This workflow supports invocation via the Command Line Interface (CLI) and Kilo Code (internal scripting environment).
 
-The workflow is invoked directly, passing the required positional argument first.
+### 🔗 CLI Usage
 
-**Syntax:**
-
-```bash
-/smartspec_generate_tests <spec_md> [flags]
-```
-
-**Example (Reports Only):**
+The CLI invocation requires specifying the target spec.md file as a positional argument.
 
 ```bash
-/smartspec_generate_tests specs/user-management/auth-service/spec.md \
-  --mode strict \
-  --plan-format both \
-  --out .spec/reports/auth-test-run-1
-```
-
-**Example (Applying the Test Plan):**
-
-```bash
-/smartspec_generate_tests specs/user-management/auth-service/spec.md \
-  --apply \
-  --target-path specs/user-management/auth-service/testplan/v6_tests.md
+/smartspec_generate_tests <spec_md> \
+  [--apply] \
+  [--test-target <path>] \
+  [--json]
 ```
 
 ### Kilo Code Usage
 
-Kilo Code execution requires appending the `--kilocode` flag, which signals the environment to handle execution and output formatting appropriately.
+The Kilo Code invocation is identical to the CLI structure, typically used within automated pipelines or internal scripts.
 
-**Syntax:**
-
-```bash
-/smartspec_generate_tests.md <spec_md> [flags] --kilocode
-```
-
-**Example (Reports Only):**
+**Important:** When using Kilo Code, you MUST include `--platform kilo` flag.
 
 ```bash
-/smartspec_generate_tests.md specs/payment/checkout-flow/spec.md \
-  --include-dependencies \
-  --json \
-  --kilocode
-```
-
-**Example (Applying the Test Plan):**
-
-```bash
-/smartspec_generate_tests.md specs/payment/checkout-flow/spec.md \
-  --apply \
-  --kilocode
+/smartspec_generate_tests.md \
+  <spec_md> \
+  [--apply] \
+  [--test-target <path>] \
+  [--json] \
+  --platform kilo
 ```
 
 ---
 
-## Use Cases
+## 3. Use Cases
 
-### Use Case 1: Generating a Test Plan for a New Feature (Reports Only)
+### Use Case 1: Generating a Test Plan from a Specification (CLI)
 
-**Scenario:** A new feature specification (`specs/api/v2/new-endpoint/spec.md`) has been written, along with detailed implementation tasks (`tasks.md`). The user wants to review the generated test plan and coverage gaps before committing the plan to the repository.
+**Scenario:** A QA engineer needs to create a comprehensive test plan for a "Shopping Cart" feature based on its specification (`specs/ecommerce/shopping_cart/spec.md`).
 
-| Component | Detail |
-| :--- | :--- |
-| **Input Spec** | `specs/api/v2/new-endpoint/spec.md` |
-| **Goal** | Generate a comprehensive preview in strict mode, including dependency checks. |
-
-**CLI Command:**
+**Command:**
 
 ```bash
-/smartspec_generate_tests specs/api/v2/new-endpoint/spec.md \
-  --strict \
-  --include-dependencies \
-  --plan-format both
+/smartspec_generate_tests specs/ecommerce/shopping_cart/spec.md
 ```
 
 **Expected Result:**
 
-1.  Exit code `0` (unless strict mode blocks on a critical governance failure).
-2.  A new report directory is created (e.g., `.spec/reports/generate-tests/<run-id>/`).
-3.  The directory contains:
-    *   `report.md` (detailed checks and summary).
-    *   `change_plan.md` (stating that no files were written to governed paths).
-    *   `tests.preview.md` and `tests.preview.json` (the full generated test matrix).
-4.  The `report.md` includes a section detailing any **GT-201 Coverage Gaps** found.
+1. The workflow loads `specs/ecommerce/shopping_cart/spec.md`.
+2. It analyzes the spec content and generates a test matrix with acceptance criteria.
+3. A preview bundle is written to `.spec/reports/generate-tests/<run-id>/`.
+4. The preview includes `tests_preview.md` with test cases and evidence requirements.
+5. No governed writes occur (no `--apply` flag).
+6. Exit code `0` (Success).
 
-### Use Case 2: Applying a Governed Test Plan
+### Use Case 2: Applying Test Plan with Custom Target Path (Kilo Code)
 
-**Scenario:** The test plan for the Authentication Service (`specs/user-management/auth-service/spec.md`) has been reviewed and approved. The user needs to apply this plan, writing the final `tests.md` file into the designated `testplan` folder, ensuring the write operation is atomic and governed.
+**Scenario:** A CI pipeline needs to generate and apply a test plan for a spec, storing it in a custom location within the spec folder.
 
-| Component | Detail |
-| :--- | :--- |
-| **Input Spec** | `specs/user-management/auth-service/spec.md` |
-| **Goal** | Write the generated test plan to the governed path. |
-
-**Kilo Code Command:**
+**Command (Kilo Code Snippet):**
 
 ```bash
-/smartspec_generate_tests.md specs/user-management/auth-service/spec.md \
+/smartspec_generate_tests.md \
+  specs/api/rest_endpoints/spec.md \
   --apply \
-  --target-path testplan/auth_tests.md \
-  --kilocode
+  --test-target specs/api/rest_endpoints/testplan/tests.md \
+  --platform kilo
 ```
 
 **Expected Result:**
 
-1.  The workflow performs preflight checks and generates the Change Plan.
-2.  Since `--apply` is present, the Change Plan is executed.
-3.  The file `specs/user-management/auth-service/testplan/auth_tests.md` is created atomically.
-4.  The `summary.json` output confirms the governed write operation under the `writes.governed` array.
+1. The workflow loads `specs/api/rest_endpoints/spec.md`.
+2. It generates a comprehensive test plan.
+3. A preview bundle is written to `.spec/reports/generate-tests/<run-id>/`.
+4. With `--apply`, the test plan is written to `specs/api/rest_endpoints/testplan/tests.md`.
+5. Exit code `0` (Success).
 
-### Use Case 3: Generating a Plan with Overridden Input Paths
+### Use Case 3: Generating Test Plan with UI.json Integration (CLI)
 
-**Scenario:** A development team stores their UI specification (`ui_config.json`) and tasks (`dev_tasks.md`) in non-standard locations relative to the spec file.
+**Scenario:** A developer has a spec with an accompanying `ui.json` file defining UI components. The test plan should include UI-specific test cases.
 
-| Component | Detail |
-| :--- | :--- |
-| **Input Spec** | `specs/frontend/dashboard/spec.md` |
-| **Goal** | Generate a plan using specific paths for tasks and UI configuration. |
-
-**CLI Command:**
+**Command:**
 
 ```bash
-/smartspec_generate_tests specs/frontend/dashboard/spec.md \
-  --tasks ../../dev_tasks.md \
-  --ui-json ./ui_config.json
+/smartspec_generate_tests specs/dashboard/analytics_dashboard/spec.md \
+  --json
 ```
 
 **Expected Result:**
 
-1.  The workflow successfully loads the specified `dev_tasks.md` and `ui_config.json`.
-2.  The generated test matrix includes UI component tests derived from the provided `ui_config.json`.
-3.  The `summary.json` confirms the non-default paths used in the `scope` object.
+1. The workflow loads `specs/dashboard/analytics_dashboard/spec.md`.
+2. It detects and loads the adjacent `ui.json` file.
+3. Test cases are generated for both functional and UI requirements.
+4. A preview bundle is written to `.spec/reports/generate-tests/<run-id>/`.
+5. The output includes `summary.json` with structured test metadata.
+6. No governed writes occur (no `--apply` flag).
+7. Exit code `0` (Success).
+
+### Use Case 4: Preview-first Change Plan (CLI)
+
+**Scenario:** A team lead wants to review what changes would be made to the test plan before applying them.
+
+**Command:**
+
+```bash
+/smartspec_generate_tests specs/auth/oauth_integration/spec.md
+```
+
+**Expected Result:**
+
+1. The workflow loads `specs/auth/oauth_integration/spec.md`.
+2. It generates a test plan preview.
+3. A **Change Plan** is created describing what would be written to governed paths.
+4. The preview bundle includes `change_plan.md` with detailed diff.
+5. No governed writes occur (no `--apply` flag).
+6. Exit code `0` (Success).
+
+### Use Case 5: Refusing Application Due to Path Traversal (CLI)
+
+**Scenario:** A user attempts to specify a test target path that escapes the allowed scope. The workflow should detect this and refuse to proceed.
+
+**Command:**
+
+```bash
+/smartspec_generate_tests specs/feature/new_feature/spec.md \
+  --apply \
+  --test-target ../../outside/tests.md
+```
+
+**Expected Result:**
+
+1. The workflow validates the `--test-target` path.
+2. It detects path traversal attempt (`..`).
+3. The workflow **refuses** to proceed with path validation error.
+4. A detailed error message is generated.
+5. Exit code `2` (Path Validation Fail).
 
 ---
 
-## Parameters
+## 4. Parameters
 
-The `/smartspec_generate_tests` workflow accepts one required positional input and several optional flags.
+The following parameters and flags control the execution and behavior of the `/smartspec_generate_tests` workflow.
 
-### Positional Argument (Required)
+### Required Parameters
 
-| Parameter | Description |
-| :--- | :--- |
-| `<spec_md>` | The path to the primary specification file (e.g., `specs/<category>/<spec-id>/spec.md`). |
+| Parameter | Type | Description | Validation |
+| :--- | :--- | :--- | :--- |
+| `<spec_md>` | `<path>` | Path to the spec.md file to generate tests from. | Must resolve under `specs/**` and must not escape via symlink. |
 
-### Universal Flags (Governance and Environment)
+### Universal Flags
 
-| Flag | Description |
-| :--- | :--- |
-| `--config <path>` | Specifies the path to the SmartSpec configuration file. |
-| `--lang <th|en>` | Sets the language for reports and generated content. |
-| `--platform <cli|kilo|ci|other>` | Specifies the execution environment. |
-| `--apply` | **MANDATORY for governed writes.** Executes the Change Plan, writing the test plan to the target path. |
-| `--out <path>` | Overrides the default report output root (`.spec/reports/generate-tests/`). Must resolve under the configuration allowlist. |
-| `--json` | Outputs the main report and change plan in JSON format in addition to Markdown. |
-| `--quiet` | Suppresses non-critical console output. |
+| Flag | Description | Default | Platform Support |
+| :--- | :--- | :--- | :--- |
+| `--config` | Path to the SmartSpec configuration file. | `.spec/smartspec.config.yaml` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--lang` | Language for report generation (e.g., `th`, `en`). | (System default) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--platform` | Execution platform context. **Required for Kilo Code.** | (Inferred) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--apply` | Enables governed writes (creating test plan files). | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--out` | Base path for safe outputs (reports/previews). | `.spec/reports/generate-tests/` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--json` | Output the primary summary in JSON format (`summary.json`). | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--quiet` | Suppress standard output logs. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
 
 ### Workflow-Specific Flags
 
-| Flag | Description |
+| Flag | Description | Default | Platform Support |
+| :--- | :--- | :--- | :--- |
+| `--test-target` | Custom path for the test plan file (requires `--apply`). | `specs/<category>/<spec-id>/testplan/tests.md` | `cli` \| `kilo` \| `ci` \| `other` |
+
+---
+
+## 5. Output
+
+The workflow generates two types of output artifacts: Safe Preview Bundles (always) and Governed Artifacts (only with `--apply`).
+
+### Safe Preview Bundle (Always Generated)
+
+A unique run folder is created under the report path (default: `.spec/reports/generate-tests/<run-id>/`).
+
+**Contents:**
+
+| File Path | Description |
 | :--- | :--- |
-| `--tasks <path>` | Override the auto-discovered path for the adjacent `tasks.md` file (read-only). |
-| `--ui-json <path>` | Override the auto-discovered path for the adjacent `ui.json` file (read-only). |
-| `--mode <normal|strict>` | Sets the generation mode. Default is `normal`. |
-| `--strict` | Alias for `--mode=strict`. In strict mode, missing required evidence hooks or registry misalignments result in a blocking failure (Exit Code 1). |
-| `--plan-format <md|json|both>` | Specifies the format for the generated test plan preview files. Default is `md`. |
-| `--target-path <path>` | Specifies the governed output path for the final `tests.md`. Only used with `--apply`. Default is `testplan/tests.md` under the spec folder. |
-| `--include-dependencies`| Instructs the workflow to generate tests that specifically validate integration points with dependency specifications referenced in the `spec.md`. |
-| `--max-tests <int>` | Caps the total number of generated test items (bounded output, defense against runaway scans). |
+| `tests_preview.md` | The generated test plan content (before apply). |
+| `change_plan.md` | Description of what would be written to governed paths. |
+| `summary.json` | (If `--json` is used) Structured test metadata and coverage analysis. |
+| `report.md` | Detailed analysis including test matrix and evidence requirements. |
 
-### Input Overrides (Read-Only)
+### Governed Artifacts (Only with `--apply`)
 
+| File Path | Description |
+| :--- | :--- |
+| `specs/<category>/<spec-id>/testplan/tests.md` | The generated test plan file written to the governed location. |
+
+---
+
+## 6. Notes
+
+- **Preview-first:** Always generates a Change Plan describing what would be written before applying changes.
+- **Test Matrix:** Generated test plans include comprehensive test matrices with acceptance criteria.
+- **Evidence Requirements:** Test cases include required evidence hooks for verification workflows.
+- **UI Integration:** Automatically detects and integrates adjacent `ui.json` files for UI-specific test cases.
+- **Path Security:** Enforces strict path validation to prevent traversal and symlink escape attacks.
+- **Atomic Writes:** When `--apply` writes test plans, it uses atomic write semantics (temp+rename).
+- **Network Policy:** This workflow respects `safety.network_policy.default=deny` and does not make external network requests.
+- **Kilo Code Platform:** When using Kilo Code, always include `--platform kilo` to ensure proper context and logging.
+
+---
+
+**End of Manual**

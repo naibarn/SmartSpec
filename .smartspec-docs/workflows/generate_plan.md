@@ -1,153 +1,242 @@
+| manual_name | manual_version | compatible_workflow | compatible_workflow_versions |
+|-------------|----------------|---------------------|------------------------------|
+| /smartspec_generate_plan Manual (EN) | 6.0 | /smartspec_generate_plan | 6.0.x |
+
 # /smartspec_generate_plan Manual (v6.0, English)
 
-## Overview
+## 1. Overview
 
-The `/smartspec_generate_plan` workflow (v6.0.5) is a core component of the SmartSpec toolchain responsible for converting a detailed specification (`spec.md`) into an actionable implementation plan (`plan.md`).
+This manual explains how to use the workflow:
 
-This workflow operates in a **preview-first**, **dependency-aware**, and **reuse-first** manner, ensuring safety and governance before applying any changes. It is designed to generate a structured, phase-based plan that aligns with specified UI governance modes and adheres strictly to the SmartSpec governance contract and hardening requirements.
+The `/smartspec_generate_plan` workflow generates or refines `plan.md` from `spec.md` in a **dependency-aware**, **reuse-first**, **safe-by-default** way.
 
-**Purpose:** Convert `spec.md` → `plan.md` (preview-first; dependency-aware; reuse-first; governed apply).
-**Version:** 6.0.5
+**Purpose:** Convert spec.md → plan.md (preview-first; dependency-aware; reuse-first; governed apply). This workflow sits in the canonical chain between spec generation and task generation, ensuring that implementation plans are properly structured and validated before execution.
 
-## Usage
+**Version:** 6.0.5  
+**Category:** core
 
-### CLI Usage
+---
 
-The workflow is invoked via the command line, requiring the path to the target `spec.md` file as a positional argument.
+## 2. Usage
+
+This workflow supports invocation via the Command Line Interface (CLI) and Kilo Code (internal scripting environment).
+
+### 🔗 CLI Usage
+
+The CLI invocation requires specifying the target spec.md file as a positional argument.
 
 ```bash
-/smartspec_generate_plan <spec_md> [--apply] [--ui-mode auto|json|inline] [--safety-mode strict|dev] [--plan-layout per-spec|consolidated] [--run-label "..."] [--json]
-```
-
-**Example (Preview Mode):**
-To generate a plan preview for a specific specification in strict mode:
-```bash
-/smartspec_generate_plan specs/feature/user-auth/spec.md --ui-mode auto --safety-mode strict
-```
-
-**Example (Apply Mode):**
-To generate and immediately write the plan, using the `dev` safety mode:
-```bash
-/smartspec_generate_plan specs/feature/user-auth/spec.md --apply --safety-mode dev
+/smartspec_generate_plan <spec_md> \
+  [--apply] \
+  [--ui-mode auto|json|inline] \
+  [--safety-mode strict|dev] \
+  [--plan-layout per-spec|consolidated] \
+  [--run-label "..."] \
+  [--json]
 ```
 
 ### Kilo Code Usage
 
-For integration within SmartSpec's internal scripting environment (Kilo Code), the workflow is invoked using a specific syntax.
+The Kilo Code invocation is identical to the CLI structure, typically used within automated pipelines or internal scripts.
+
+**Important:** When using Kilo Code, you MUST include `--platform kilo` flag.
 
 ```bash
 /smartspec_generate_plan.md \
-  specs/<category>/<spec-id>/spec.md \
-  --kilocode \
-  [--apply] [--ui-mode auto|json|inline] [--safety-mode strict|dev] [--plan-layout per-spec|consolidated] [--run-label "..."] [--json]
+  <spec_md> \
+  [--apply] \
+  [--ui-mode auto|json|inline] \
+  [--safety-mode strict|dev] \
+  [--plan-layout per-spec|consolidated] \
+  [--run-label "..."] \
+  [--json] \
+  --platform kilo
 ```
 
-**Example (Kilo Code):**
-```kilocode
-# Generate plan for the search feature, ensuring consolidated layout
-/smartspec_generate_plan.md specs/core/search-engine/spec.md \
-  --kilocode \
-  --plan-layout consolidated \
-  --ui-mode json
-```
+---
 
-## Use Cases
+## 3. Use Cases
 
-### Use Case 1: Generating a New Plan (Preview)
+### Use Case 1: Generating a Plan from a New Specification (CLI)
 
-**Scenario:** A developer has just finished writing a new specification for a "Notification Service" and wants to review the generated implementation plan before committing to it. They require the default strict safety checks.
+**Scenario:** A product manager has just created a new specification for a "Notification Service" (`specs/services/notification_service/spec.md`) and needs to generate an implementation plan. The plan should be reviewed before being applied.
 
-**CLI Command:**
+**Command:**
+
 ```bash
-/smartspec_generate_plan specs/service/notification-service/spec.md --ui-mode auto --run-label "Initial Review"
+/smartspec_generate_plan specs/services/notification_service/spec.md
 ```
 
 **Expected Result:**
-1.  No changes are made to `specs/service/notification-service/plan.md`.
-2.  A new report folder is created, e.g., `.spec/reports/generate-plan/<run-id>/`.
-3.  The folder contains:
-    *   `preview/notification-service/plan.md` (the proposed plan).
-    *   `report.md` detailing the inputs, safety status (`SAFE` or `UNSAFE`), and reuse summary.
-    *   If the plan is marked `UNSAFE`, `report.md` will list blockers and Phase 0 remediation steps.
 
-**Kilo Code Command:**
-```kilocode
-/smartspec_generate_plan.md specs/service/notification-service/spec.md \
-  --kilocode \
-  --ui-mode auto \
-  --run-label "Initial Review"
-```
+1. The workflow loads `specs/services/notification_service/spec.md`.
+2. It analyzes the spec content and identifies implementation phases.
+3. A preview bundle is written to `.spec/reports/generate-plan/<run-id>/`.
+4. The preview includes `plan_preview.md` with dependency-aware phase ordering.
+5. No governed writes occur (no `--apply` flag).
+6. Exit code `0` (Success).
 
-### Use Case 2: Applying a Plan with Developer Override
+### Use Case 2: Applying a Plan with UI Mode Configuration (Kilo Code)
 
-**Scenario:** The plan generated in the preview was marked `UNSAFE` because of ambiguous registry references. The developer, understanding the risk, chooses to proceed in `dev` mode to allow the plan to be written with explicit TODOs for the ambiguities.
+**Scenario:** A CI pipeline needs to generate and apply a plan for a spec with JSON-based UI components. The plan should enforce JSON UI mode and be applied immediately after validation.
 
-**CLI Command:**
+**Command (Kilo Code Snippet):**
+
 ```bash
-/smartspec_generate_plan specs/service/notification-service/spec.md --apply --safety-mode dev
-```
-
-**Expected Result:**
-1.  The workflow proceeds, marking the plan internally as `safety_status=DEV-ONLY`.
-2.  The file `specs/service/notification-service/plan.md` is updated atomically.
-3.  The generated `plan.md` includes the header block with `safety_status: DEV-ONLY`.
-4.  Ambiguous items are replaced with explicit TODOs within the plan phases.
-5.  A summary report is still generated in the reports directory.
-
-**Kilo Code Command:**
-```kilocode
-/smartspec_generate_plan.md specs/service/notification-service/spec.md \
-  --kilocode \
+/smartspec_generate_plan.md \
+  specs/ui/dashboard/spec.md \
   --apply \
-  --safety-mode dev
-```
-
-### Use Case 3: Redrafting an Existing Plan (Non-Destructive Merge)
-
-**Scenario:** The original `plan.md` for the "Payment Gateway" feature contains manual notes added by the team. The underlying `spec.md` was slightly modified. The team needs to regenerate the plan while preserving their manual notes.
-
-**CLI Command:**
-```bash
-/smartspec_generate_plan specs/finance/payment-gateway/spec.md --apply --safety-mode strict
+  --ui-mode json \
+  --platform kilo
 ```
 
 **Expected Result:**
-1.  The workflow reads the existing `plan.md`.
-2.  The new plan is generated, attempting to merge changes non-destructively.
-3.  User-authored sections and notes are preserved where possible.
-4.  If a phase is no longer relevant due to spec changes, it is marked as `Deprecated` in the updated `plan.md`, not silently deleted.
-5.  The updated `plan.md` is written to disk.
 
-## Parameters
+1. The workflow loads `specs/ui/dashboard/spec.md`.
+2. It generates a plan with UI phases configured for JSON mode.
+3. A preview bundle is written to `.spec/reports/generate-plan/<run-id>/`.
+4. With `--apply`, the plan is written to `specs/ui/dashboard/plan.md`.
+5. The plan includes proper UI governance annotations.
+6. Exit code `0` (Success).
 
-The following parameters (flags) control the behavior and output of the `/smartspec_generate_plan` workflow.
+### Use Case 3: Detecting Reuse Opportunities (CLI)
 
-| Flag | Category | Description | Default | Values | Required |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **spec\_md** | Positional Input | Path to the `spec.md` file under `specs/**`. | N/A | File path | Yes |
-| **--apply** | Universal | If present, the generated plan is written to `specs/**/plan.md`. Otherwise, only a safe preview is generated. | (Absent) | Boolean | No |
-| **--ui-mode** | Workflow Specific | Governs how the plan handles UI components and review sequencing. | `auto` | `auto`, `json`, `inline` | No |
-| **--safety-mode** | Workflow Specific | Controls the strictness of checks against registries and dependencies. | `strict` | `strict`, `dev` | No |
-| **--plan-layout** | Workflow Specific | Defines how the plan structure is organized (relevant for multi-spec projects). | `per-spec` | `per-spec`, `consolidated` | No |
-| **--run-label** | Workflow Specific | An optional string label to identify the current run in reports. | (None) | String | No |
-| **--json** | Universal | If present, outputs the run summary as a JSON object to stdout and generates `summary.json`. | (Absent) | Boolean | No |
-| **--config** | Universal | Path to the SmartSpec configuration file. | `.spec/smartspec.config.yaml` | File path | No |
-| **--lang** | Universal | Language setting for outputs (e.g., reports). | (System default) | `th`, `en` | No |
-| **--platform** | Universal | Contextual platform identifier for the run. | `cli` | `cli`, `kilo`, `ci`, `other` | No |
-| **--out** | Universal | Base directory for safe report outputs. | `.spec/reports/generate-plan/` | Directory path | No |
-| **--quiet** | Universal | Suppress non-critical output to stdout. | (Absent) | Boolean | No |
+**Scenario:** A developer is creating a plan for a new "Payment Processing" feature. The workflow should detect that a similar "Payment Gateway" component already exists in the spec index and suggest reuse.
 
-## Output
+**Command:**
 
-The workflow produces safe preview bundles regardless of the `--apply` flag, and conditionally writes the governed artifact.
+```bash
+/smartspec_generate_plan specs/payments/payment_processing/spec.md \
+  --json
+```
 
-### Safe Preview Bundle (Always)
+**Expected Result:**
 
-All safe outputs are written under a unique run folder, typically located at `.spec/reports/generate-plan/<run-id>/`.
+1. The workflow loads `.spec/SPEC_INDEX.json` and scans for similar components.
+2. It detects an existing "Payment Gateway" component.
+3. The preview includes a **Reuse Recommendation** section.
+4. The output `summary.json` contains reuse suggestions with component IDs.
+5. No governed writes occur (no `--apply` flag).
+6. Exit code `0` (Success with recommendations).
 
-| Artifact | Location | Description |
-| :--- | :--- | :--- |
-| **Preview Plan** | `<run-id>/preview/<spec-id>/plan.md` | The full, proposed `plan.md` content. |
-| **Diff Patch** | `<run-id>/diff/<spec-id>.patch` | A best-effort patch file showing changes against the existing `plan.md`. |
-| **Report** | `<run-id>/report.md` | A human-readable report detailing inputs, modes, safety status, reuse summary, blockers, and next steps. |
-| **Summary JSON** | `<run-id>/summary.json` |
+### Use Case 4: Consolidated Plan Layout for Multi-Spec Projects (Kilo Code)
+
+**Scenario:** A team is working on a large project with multiple related specs. They need a consolidated plan that combines all specs into a single implementation roadmap.
+
+**Command (Kilo Code Snippet):**
+
+```bash
+/smartspec_generate_plan.md \
+  specs/project/main_spec.md \
+  --apply \
+  --plan-layout consolidated \
+  --run-label "Q1-2024-Release" \
+  --platform kilo
+```
+
+**Expected Result:**
+
+1. The workflow loads `specs/project/main_spec.md` and related specs.
+2. It generates a consolidated plan with all phases merged and dependency-ordered.
+3. The plan includes a run label "Q1-2024-Release" for tracking.
+4. A preview bundle is written to `.spec/reports/generate-plan/<run-id>/`.
+5. With `--apply`, the consolidated plan is written to `specs/project/plan.md`.
+6. Exit code `0` (Success).
+
+### Use Case 5: Refusing Application Due to Secret Leakage (CLI)
+
+**Scenario:** A user attempts to generate a plan, but the spec content accidentally includes a database connection string. The workflow should detect this and refuse to apply the plan.
+
+**Command:**
+
+```bash
+/smartspec_generate_plan specs/backend/api_service/spec.md \
+  --apply
+```
+
+**Expected Result:**
+
+1. The workflow loads `specs/backend/api_service/spec.md`.
+2. It generates a plan preview.
+3. The content matches a configured redaction pattern (e.g., database credentials).
+4. The workflow redacts the value in the preview/report output.
+5. The workflow **refuses** to proceed with the `--apply` operation.
+6. A detailed `report.md` is generated, noting the secret detection.
+7. Exit code `1` (Validation Fail).
+
+---
+
+## 4. Parameters
+
+The following parameters and flags control the execution and behavior of the `/smartspec_generate_plan` workflow.
+
+### Required Parameters
+
+| Parameter | Type | Description | Validation |
+| :--- | :--- | :--- | :--- |
+| `<spec_md>` | `<path>` | Path to the spec.md file to generate a plan from. | Must resolve under `specs/**` and must not escape via symlink. |
+
+### Universal Flags
+
+| Flag | Description | Default | Platform Support |
+| :--- | :--- | :--- | :--- |
+| `--config` | Path to the SmartSpec configuration file. | `.spec/smartspec.config.yaml` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--lang` | Language for report generation (e.g., `th`, `en`). | (System default) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--platform` | Execution platform context. **Required for Kilo Code.** | (Inferred) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--apply` | Enables governed writes (modifying `specs/**/plan.md`). | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--out` | Base path for safe outputs (reports/previews). | `.spec/reports/generate-plan/` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--json` | Output the primary summary in JSON format (`summary.json`). | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--quiet` | Suppress standard output logs. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+
+### Workflow-Specific Flags
+
+| Flag | Description | Default | Platform Support |
+| :--- | :--- | :--- | :--- |
+| `--ui-mode` | UI governance mode (`auto`, `json`, `inline`). | `auto` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--safety-mode` | Safety validation level (`strict`, `dev`). | `strict` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--plan-layout` | Plan structure (`per-spec`, `consolidated`). | `per-spec` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--run-label` | Custom label for this plan generation run. | (Auto-generated) | `cli` \| `kilo` \| `ci` \| `other` |
+
+---
+
+## 5. Output
+
+The workflow generates two types of output artifacts: Safe Preview Bundles (always) and Governed Artifacts (only with `--apply`).
+
+### Safe Preview Bundle (Always Generated)
+
+A unique run folder is created under the report path (default: `.spec/reports/generate-plan/<run-id>/`).
+
+**Contents:**
+
+| File Path | Description |
+| :--- | :--- |
+| `plan_preview.md` | The generated plan content (before apply). |
+| `dependency_graph.md` | Visual representation of phase dependencies. |
+| `summary.json` | (If `--json` is used) Structured plan metadata and validation results. |
+| `report.md` | Detailed analysis including reuse recommendations and security scan results. |
+| `patch.diff` | (If refining existing plan) Diff showing changes from current version. |
+
+### Governed Artifacts (Only with `--apply`)
+
+| File Path | Description |
+| :--- | :--- |
+| `specs/**/plan.md` | The generated or refined plan file written to the governed location. |
+
+---
+
+## 6. Notes
+
+- **Preview-first:** Always review the preview bundle before using `--apply` to ensure the plan meets expectations.
+- **Dependency-aware:** The workflow automatically orders phases based on explicit dependencies in the spec.
+- **Reuse-first:** The workflow actively detects opportunities to reuse existing components from the spec index.
+- **UI Mode Alignment:** Plan sequencing aligns with UI governance mode (`auto`, `json`, `inline`).
+- **Secret Protection:** Any content matching configured redaction patterns will block the `--apply` operation.
+- **Network Policy:** This workflow respects `safety.network_policy.default=deny` and does not make external network requests.
+- **Symlink Safety:** If `safety.disallow_symlink_writes=true`, the workflow will refuse writes through symlinks.
+- **Kilo Code Platform:** When using Kilo Code, always include `--platform kilo` to ensure proper context and logging.
+- **Canonical Chain:** This workflow is part of the core SmartSpec chain: validate_index → generate_spec → **generate_plan** → generate_tasks → verify_tasks_progress_strict → sync_tasks_checkboxes → report_implement_prompter.
+
+---
+
+**End of Manual**

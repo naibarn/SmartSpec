@@ -1,359 +1,146 @@
----
-description: SmartSpec Validate Index Guide (v5.2)
-version: 5.2
-last_updated: 2025-12-07
----
+| manual_name | manual_version | compatible_workflow | compatible_workflow_versions |
+|-------------|----------------|---------------------|------------------------------|
+| /smartspec_validate_index Manual (EN) | 6.0 | /smartspec_validate_index | 6.0.x |
 
-# SmartSpec Validate Index Guide
+# /smartspec_validate_index Manual (v6.0, English)
 
-This guide explains how to use `/smartspec_validate_index` in SmartSpec v5.2.
+## 1. Overview
 
-Validate Index is the primary **health gate** for your specification ecosystem. It checks that `SPEC_INDEX.json` accurately represents your real specs, dependencies, and shared knowledge rules—without introducing new conflicts.
+This manual explains how to use the workflow:
 
-SmartSpec v5.2 introduces a clearer separation between tooling and project-owned truth and adds **multi-repo awareness** to better reflect real-world architectures where public and private specs live in separate repositories.
+The `/smartspec_validate_index` workflow validates the integrity and consistency of `.spec/SPEC_INDEX.json` against actual spec files.
 
----
+**Purpose:** Validate the integrity and consistency of the spec index, ensuring all references are valid and metadata is accurate.
 
-## Key Concepts
-
-### SmartSpec Centralization (v5.2)
-
-SmartSpec v5.2 separates **tooling** from **project-owned truth**.
-
-- **Project-owned canonical space:** `.spec/`
-- **Canonical index:** `.spec/SPEC_INDEX.json`
-- **Shared registries (optional):** `.spec/registry/`
-- **Legacy root mirror:** `SPEC_INDEX.json`
-- **Deprecated tooling index:** `.smartspec/SPEC_INDEX.json`
-
-The validation workflow is designed to remain compatible with your existing `SPEC_INDEX.json` schema while enforcing safer, clearer rules.
-
-### Portfolio vs Runtime Interpretation
-
-Large systems often store roadmap/idea specs in the index before all files exist.
-
-To avoid forcing low-quality placeholder specs, v5.2 introduces a shared interpretation model:
-
-- `--mode=portfolio` (default)
-  - Optimized for roadmap health.
-  - Planned/backlog/idea/draft specs may be missing `spec.md` without being treated as hard errors.
-
-- `--mode=runtime`
-  - Optimized for delivery readiness.
-  - Active/core/stable specs are expected to have resolvable artifacts and valid dependency chains.
-
-If a spec has no explicit status, the validator assumes it is `active`.
-
-### Multi-Repo Reality
-
-Many SmartSpec programs split specs across sibling repositories (e.g., public + private).
-
-In v5.2, `/smartspec_validate_index` can check file existence across these repos using:
-
-- `--workspace-roots`
-- `--repos-config`
-
-If you do not provide multi-repo configuration, validation runs against the **current repo only**.
-
-### UI Design Addendum (Optional)
-
-When your portfolio includes UI specs:
-
-- **UI design source of truth** is `ui.json` inside the UI spec folder.
-- `spec.md` documents constraints, mapping, and logic boundaries.
-- UI JSON should not contain business logic.
-
-UI checks are conditional and will not break projects that do not use UI JSON.
+**Version:** 6.0  
+**Category:** index-management
 
 ---
 
-## What Validate Index Checks
+## 2. Usage
 
-The workflow performs structural checks such as:
+This workflow supports invocation via the Command Line Interface (CLI) and Kilo Code (internal scripting environment).
 
-1) **File existence** (status-aware)
-2) **Broken references** (dependencies that point to missing IDs)
-3) **Circular dependencies**
-4) **Duplicate specs / conflicting identifiers**
-5) **Orphaned specs** (status-aware)
-6) **Stale specs** (optional heuristics)
-7) **Metadata consistency**
-8) **Dependents calculation correctness**
-9) **UI JSON compliance** (conditional)
+### 🔗 CLI Usage
 
-The validator is conservative by design. Its goal is to prevent your index and shared knowledge layer from drifting into contradictions.
+```bash
+/smartspec_validate_index \
+  [--fix] \
+  [--strict]
+```
 
----
+### Kilo Code Usage
 
-## Inputs & Resolution Rules
+**Important:** When using Kilo Code, you MUST include `--platform kilo` flag.
 
-### SPEC_INDEX auto-detection order
-
-If you do not pass `--index`, SmartSpec resolves the index in this order:
-
-1) `.spec/SPEC_INDEX.json` (canonical)
-2) `SPEC_INDEX.json` (legacy root mirror)
-3) `.smartspec/SPEC_INDEX.json` (deprecated)
-4) `specs/SPEC_INDEX.json` (older layout)
-
-### Default directories
-
-- `REGISTRY_DIR = .spec/registry`
-- **Reports default to** `.spec/reports/validate-index/`
+```bash
+/smartspec_validate_index.md \
+  [--fix] \
+  [--strict] \
+  --platform kilo
+```
 
 ---
 
-## Command Reference
+## 3. Use Cases
 
-### Basic Validation
+### Use Case 1: Validating Index Integrity (CLI)
+
+**Scenario:** A developer wants to check if the spec index is valid and consistent.
+
+**Command:**
 
 ```bash
 /smartspec_validate_index
 ```
 
-### Detailed Report
+**Expected Result:**
+
+1. The workflow validates `.spec/SPEC_INDEX.json`.
+2. It checks for broken references and invalid metadata.
+3. A validation report is generated.
+4. Exit code `0` if valid, `1` if violations found.
+
+### Use Case 2: Fixing Index Issues Automatically (Kilo Code)
+
+**Scenario:** A CI pipeline needs to validate and automatically fix any index issues.
+
+**Command (Kilo Code Snippet):**
 
 ```bash
-/smartspec_validate_index --report=detailed
+/smartspec_validate_index.md \
+  --fix \
+  --platform kilo
 ```
 
-### Portfolio Mode (Recommended for Roadmaps)
+**Expected Result:**
 
-```bash
-/smartspec_validate_index --mode=portfolio --report=detailed
-```
+1. The workflow validates the index.
+2. It automatically fixes detected issues.
+3. The updated index is written.
+4. Exit code `0` (Success).
 
-### Runtime Mode (Recommended Before Releases)
+### Use Case 3: Strict Validation Mode (CLI)
 
-```bash
-/smartspec_validate_index --mode=runtime --strict --report=detailed
-```
+**Scenario:** A user wants strict validation that fails on any warnings or inconsistencies.
 
-### Multi-Repo Validation (Public + Private)
+**Command:**
 
 ```bash
 /smartspec_validate_index \
-  --workspace-roots="../Smart-AI-Hub,../smart-ai-hub-enterprise-security" \
-  --mode=portfolio \
-  --report=detailed
+  --strict \
+  --json
 ```
 
-### Use a Structured Multi-Repo Config
+**Expected Result:**
 
-Create:
-
-`.spec/smartspec.repos.json`
-
-Example:
-
-```json
-{
-  "version": "1.0",
-  "repos": [
-    { "id": "public", "root": "../Smart-AI-Hub" },
-    { "id": "private", "root": "../smart-ai-hub-enterprise-security" }
-  ]
-}
-```
-
-Then run:
-
-```bash
-/smartspec_validate_index --repos-config=.spec/smartspec.repos.json --report=detailed
-```
-
-### Safe Auto-Fix Run
-
-`--fix` is reserved for **safe, mechanical corrections**.
-
-```bash
-/smartspec_validate_index --fix --report=detailed
-```
+1. The workflow performs strict validation.
+2. Any warnings are treated as errors.
+3. Output includes `validation.json` with detailed results.
+4. Exit code `0` if perfect, `1` if any issues.
 
 ---
 
-## Flags
+## 4. Parameters
 
-### Index / Registry
+### Universal Flags
 
-- `--index`
-  - Override SPEC_INDEX path.
+| Flag | Description | Default | Platform Support |
+| :--- | :--- | :--- | :--- |
+| `--config` | Path to the SmartSpec configuration file. | `.spec/smartspec.config.yaml` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--lang` | Language for report generation. | (System default) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--platform` | Execution platform context. **Required for Kilo Code.** | (Inferred) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--out` | Base path for safe outputs. | `.spec/reports/validate-index/` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--json` | Output in JSON format. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--quiet` | Suppress standard output logs. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
 
-- `--registry-dir`
-  - Default: `.spec/registry`
+### Workflow-Specific Flags
 
-### Multi-Repo
-
-- `--workspace-roots`
-  - Comma-separated list of additional repo roots to search for spec files.
-
-- `--repos-config`
-  - JSON config describing known repos and aliases.
-  - Recommended: `.spec/smartspec.repos.json`
-
-### Interpretation
-
-- `--mode`
-  - Values: `portfolio`, `runtime`
-  - Default: `portfolio`
-
-### Reporting
-
-- `--report`
-  - Values: `summary`, `detailed`
-  - Default: `summary`
-
-- `--output`
-  - Optional custom report path
-
-### Safety
-
-- `--strict`
-  - Treat high-risk warnings as errors.
-
-- `--fix`
-  - Apply safe auto-fixes.
-
-- `--dry-run`
-  - Print findings without writing files.
+| Flag | Description | Default | Platform Support |
+| :--- | :--- | :--- | :--- |
+| `--fix` | Automatically fix detected issues. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--strict` | Enable strict validation mode (fail on warnings). | `false` | `cli` \| `kilo` \| `ci` \| `other` |
 
 ---
 
-## What `--fix` Can and Cannot Do
+## 5. Output
 
-### Safe auto-fixes
+### Output Files
 
-- Metadata count normalization
-- Dependents calculation updates
-- Timestamps / housekeeping fields (if applicable)
-
-### Not auto-fixed
-
-- Missing files
-- Broken references
-- Circular dependencies
-- Duplicate IDs
-
-These require human decisions to prevent low-quality placeholder specs or accidental contract changes.
+| File Path | Description |
+| :--- | :--- |
+| `.spec/reports/validate-index/<run-id>/validation.md` | Validation report. |
+| `.spec/SPEC_INDEX.json` | Fixed index (only with `--fix`). |
 
 ---
 
-## How to Interpret Common Findings
+## 6. Notes
 
-### High Missing File Count
-
-In a roadmap-heavy index, this often means planned specs are listed without artifacts.
-
-Recommended actions:
-
-- Set explicit `status` values for planned/backlog specs.
-- Use `--mode=portfolio` during roadmap phases.
-
-### Broken References
-
-This usually means:
-
-- a dependency ID was renamed
-- or a foundational spec is missing
-
-Recommended actions:
-
-- Run `/smartspec_reindex_specs` after folder moves.
-- Confirm dependency IDs and correct them in the index.
-
-### Circular Dependencies
-
-Common causes:
-
-- self-dependency entry mistakes
-- bidirectional dependencies added during parallel development
-
-Recommended actions:
-
-- Remove self-loops.
-- Convert one direction into a softer reference pattern.
-
-### Large Orphan Counts
-
-In portfolio mode, orphans are often a sign of early-stage idea volume.
-
-In runtime mode, focus only on **active/core** orphaned specs.
+- **Platform Flag:** When using Kilo Code, always include `--platform kilo`.
+- **Fix Mode:** Use `--fix` to automatically repair detected issues.
+- **Strict Mode:** Use `--strict` to enforce zero-tolerance validation.
+- **Configuration:** The workflow respects settings in `.spec/smartspec.config.yaml`.
 
 ---
 
-## UI-Specific Validation Notes
-
-The validator will perform UI checks when any of these are true:
-
-- a spec is categorized as `ui`
-- `spec.ui === true`
-- `ui.json` exists in the spec folder
-
-Typical UI warnings:
-
-- A declared UI spec missing `ui.json`
-- UI component names inconsistent with `ui-component-registry.json` (if present)
-
-These checks remain conditional and should not fail non-UI projects.
-
----
-
-## Recommended Follow-Up Workflows
-
-- If the index looks stale or inconsistent:
-  - `/smartspec_reindex_specs`
-
-- If validation highlights cross-SPEC naming drift:
-  - `/smartspec_global_registry_audit`
-
-- If you need guided fixes:
-  - `/smartspec_fix_errors` (spec-targeted or report-targeted)
-
-- If tasks/specs changed and the index should reflect reality:
-  - `/smartspec_sync_spec_tasks`
-
-- If lifecycle transitions are needed:
-  - `/smartspec_spec_lifecycle_manager`
-
----
-
-## Best Practices
-
-- Keep `.spec/SPEC_INDEX.json` as your canonical index.
-- Use root `SPEC_INDEX.json` only as a legacy mirror.
-- Run validation:
-  - after adding/moving many specs
-  - before major releases (`--mode=runtime`)
-- For public/private setups, always supply:
-  - `--workspace-roots` or `--repos-config`
-
----
-
-## Troubleshooting
-
-### “Validation shows many missing files but they exist in another repo”
-
-Provide multi-repo configuration:
-
-```bash
-/smartspec_validate_index --workspace-roots="../PublicRepo,../PrivateRepo"
-```
-
-### “Health score is too harsh for early roadmap work”
-
-Use portfolio mode:
-
-```bash
-/smartspec_validate_index --mode=portfolio
-```
-
-### “Root index is being updated unexpectedly”
-
-Ensure your installation uses the v5.2 workflow and that you do not run legacy scripts that overwrite root mirrors.
-
----
-
-## Summary
-
-`/smartspec_validate_index` is the structural safety net of SmartSpec v5.2. It enforces index integrity with a practical, status-aware interpretation model, supports optional UI JSON governance, and can validate across sibling repositories so your reports match the real shape of your system.
-
+**End of Manual**

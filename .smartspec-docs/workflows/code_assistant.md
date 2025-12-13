@@ -1,169 +1,173 @@
+| manual_name | manual_version | compatible_workflow | compatible_workflow_versions |
+|-------------|----------------|---------------------|------------------------------|
+| /smartspec_code_assistant Manual (EN) | 6.0 | /smartspec_code_assistant | 6.0.x |
+
 # /smartspec_code_assistant Manual (v6.0, English)
 
-## Overview
+## 1. Overview
 
-The `/smartspec_code_assistant` workflow (Version 6.0.0) is a consolidated, multi-purpose helper tool designed to assist developers with implementation, error fixing, and code refactoring.
+This manual explains how to use the workflow:
 
-**Purpose:** This workflow replaces the legacy trio (`smartspec_implement_tasks`, `smartspec_fix_errors`, `smartspec_refactor_code`) by unifying their functionality under a single, secure interface controlled by the required `--mode` flag.
+The `/smartspec_code_assistant` workflow provides AI-powered code assistance for implementing tasks, fixing errors, and refactoring code within the SmartSpec governance framework.
 
-**Key Security Feature:** This workflow is strictly read-only concerning application source code. It **does not modify application runtime source trees**. It produces only **reports**, **prompts**, and optional **helper scripts** in designated, safe output directories, ensuring strict write-scope security.
+**Purpose:** Assist developers with code implementation, error fixing, and refactoring while maintaining SmartSpec governance principles and code quality standards.
 
-## Usage
+**Version:** 6.0  
+**Category:** implementation
 
-### Command Line Interface (CLI)
+---
 
-The workflow is invoked via the `smartspec_code_assistant` command, requiring the `--mode` flag to specify the desired operation.
+## 2. Usage
+
+This workflow supports invocation via the Command Line Interface (CLI) and Kilo Code (internal scripting environment).
+
+### 🔗 CLI Usage
+
+The CLI invocation requires specifying the assistance type and target files or tasks.
 
 ```bash
 /smartspec_code_assistant \
   --mode <implement|fix|refactor> \
-  [--spec <path/to/spec.md>] \
-  [--tasks <path/to/tasks.md>] \
-  [--context <path/to/log-or-error.txt>] \
-  [--out <output-root>] \
-  [--json]
+  --target <file_or_task> \
+  [--context <spec_or_plan>] \
+  [--apply]
 ```
 
-### Kilo Code
+### Kilo Code Usage
 
-When integrated into a Kilo Code environment (e.g., a `.md` file execution), the invocation is similar:
+The Kilo Code invocation is identical to the CLI structure, typically used within automated pipelines or internal scripts.
 
-```markdown
+**Important:** When using Kilo Code, you MUST include `--platform kilo` flag.
+
+```bash
 /smartspec_code_assistant.md \
   --mode <implement|fix|refactor> \
-  [--spec <path/to/spec.md>] \
-  [--tasks <path/to/tasks.md>] \
-  [--context <path/to/log-or-error.txt>] \
-  [--out <output-root>] \
-  [--json]
+  --target <file_or_task> \
+  [--context <spec_or_plan>] \
+  [--apply] \
+  --platform kilo
 ```
 
-## Parameters
+---
 
-The following flags and parameters control the workflow's behavior:
+## 3. Use Cases
 
-| Parameter | Required | Description | Applicable Modes |
-| :--- | :--- | :--- | :--- |
-| `--mode <implement|fix|refactor>` | **Yes** | Specifies the operational goal of the assistant. | All |
-| `--spec <path>` | No | Path to the specification document (e.g., `specs/feature_x.md`). Recommended for `implement` and `refactor`. | implement, refactor |
-| `--tasks <path>` | No | Path to the task list document. Recommended for `implement`. | implement |
-| `--context <path>` | No | Path to external context (e.g., error logs, stack traces, bug reports). Recommended for `fix`. | All, especially fix |
-| `--out <path>` | No | Overrides the default output root directory. Must resolve under allowed write scopes. | All |
-| `--json` | No | Outputs a machine-readable `summary.json` alongside the primary report. | All |
-| `--config <path>` | No | Path to the SmartSpec configuration file (Default: `.spec/smartspec.config.yaml`). | Universal |
-| `--lang <th|en>` | No | Output language preference. | Universal |
-| `--platform <cli|kilo|ci|other>` | No | Execution platform context. | Universal |
-| `--apply` | No | Universal flag, but **ignored** by this workflow for security reasons. Safe outputs are always generated. | Universal (Ignored) |
-| `--quiet` | No | Suppress non-essential console output. | Universal |
+### Use Case 1: Implementing a Task (CLI)
 
-## Use Cases
+**Scenario:** A developer needs assistance implementing a specific task from the tasks.md file.
 
-### Use Case 1: Implementing a New Feature (`--mode=implement`)
-
-**Scenario:** A developer needs a structured plan to implement a new user authentication feature defined in a specification file and a detailed task list.
-
-**Command (CLI):**
+**Command:**
 
 ```bash
 /smartspec_code_assistant \
   --mode implement \
-  --spec specs/auth/user_login.md \
-  --tasks specs/auth/login_tasks.md \
-  --out .smartspec/runs/auth_plan_v1
+  --target "TASK-001" \
+  --context specs/auth/login_service/spec.md
 ```
 
 **Expected Result:**
 
-The workflow analyzes the specification and tasks, then generates outputs under `.smartspec/runs/auth_plan_v1/`.
+1. The workflow loads the task and spec context.
+2. It generates implementation code suggestions.
+3. A preview bundle is written to `.spec/reports/code-assistant/<run-id>/`.
+4. No code changes are applied (no `--apply` flag).
+5. Exit code `0` (Success).
 
-1.  **`report.md`:** Contains a task-by-task implementation plan, suggested file touchpoints, a risk list (e.g., handling password hashing), and a verification checklist.
-2.  **`prompts/`:** A directory containing optimized, LLM-friendly prompts for the developer to use with external models (e.g., "Generate boilerplate for `auth_service.py` based on task 1").
+### Use Case 2: Fixing Errors in a File (Kilo Code)
 
-### Use Case 2: Diagnosing and Fixing a Production Error (`--mode=fix`)
+**Scenario:** A CI pipeline detects errors in a source file and needs automated fix suggestions.
 
-**Scenario:** A critical bug is reported. The developer has a stack trace and server logs saved in a file, and needs a quick diagnosis and proposed fix options.
+**Command (Kilo Code Snippet):**
 
-**Command (Kilo Code):**
-
-```markdown
+```bash
 /smartspec_code_assistant.md \
   --mode fix \
-  --context /tmp/production_error_log_1234.txt \
+  --target src/services/payment.ts \
+  --apply \
+  --platform kilo
+```
+
+**Expected Result:**
+
+1. The workflow analyzes the target file for errors.
+2. It generates fix suggestions based on error patterns.
+3. With `--apply`, the fixes are applied to the file.
+4. Exit code `0` (Success).
+
+### Use Case 3: Refactoring Code (CLI)
+
+**Scenario:** A developer wants to refactor a module to improve code quality and maintainability.
+
+**Command:**
+
+```bash
+/smartspec_code_assistant \
+  --mode refactor \
+  --target src/utils/validation.ts \
   --json
 ```
 
 **Expected Result:**
 
-The workflow analyzes the log file, applies redaction policies, and generates a report and JSON summary in the default run directory (e.g., `.spec/reports/code-assistant/fix/<run-id>/`).
+1. The workflow analyzes the target file.
+2. It generates refactoring suggestions.
+3. Output includes `summary.json` with refactoring recommendations.
+4. No code changes are applied (no `--apply` flag).
+5. Exit code `0` (Success).
 
-1.  **`report.md`:** Includes root-cause hypotheses (e.g., "Hypothesis 1: Off-by-one error in array indexing, Likelihood: High"), minimal-change fix options, and a regression risk assessment.
-2.  **`summary.json`:** Provides a structured summary of the findings, risks, and recommendations, suitable for integration into CI/CD or issue tracking systems.
+---
 
-### Use Case 3: Planning a Major Refactoring (`--mode=refactor`)
+## 4. Parameters
 
-**Scenario:** The team plans to migrate a legacy module to a new design pattern. The original specification is provided to ensure behavior parity.
+The following parameters and flags control the execution and behavior of the `/smartspec_code_assistant` workflow.
 
-**Command (CLI):**
+### Required Parameters
 
-```bash
-/smartspec_code_assistant \
-  --mode refactor \
-  --spec specs/legacy/old_api.md \
-  --out .smartspec/runs/refactor_api_plan
-```
+| Parameter | Type | Description | Validation |
+| :--- | :--- | :--- | :--- |
+| `--mode` | `<string>` | Assistance mode: `implement`, `fix`, or `refactor`. | Must be one of the allowed values. |
+| `--target` | `<string>` | Target file path or task ID. | Must exist and be accessible. |
 
-**Expected Result:**
+### Universal Flags
 
-The workflow generates a comprehensive refactoring plan under `.smartspec/runs/refactor_api_plan/`.
+| Flag | Description | Default | Platform Support |
+| :--- | :--- | :--- | :--- |
+| `--config` | Path to the SmartSpec configuration file. | `.spec/smartspec.config.yaml` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--lang` | Language for report generation (e.g., `th`, `en`). | (System default) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--platform` | Execution platform context. **Required for Kilo Code.** | (Inferred) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--apply` | Enables code changes to be applied. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--out` | Base path for safe outputs. | `.spec/reports/code-assistant/` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--json` | Output in JSON format. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--quiet` | Suppress standard output logs. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
 
-1.  **`report.md`:** Details a safe, step-by-step plan (small commits), suggested tests and checkpoints, and a detailed rollback plan.
-2.  **`scripts/`:** May contain optional helper scripts, such as a preliminary sketch for a codemod tool to automate repetitive syntax changes.
+### Workflow-Specific Flags
 
-## Output
-
-The workflow produces artifacts exclusively within designated, safe write scopes.
-
-### Output Artifacts
-
-| Artifact | Description | Location (Default) |
+| Flag | Description | Platform Support |
 | :--- | :--- | :--- |
-| `report.md` | The primary human-readable output, containing analysis, findings, and recommendations. | `.spec/reports/code-assistant/<mode>/<run-id>/report.md` |
-| `summary.json` | Structured, machine-readable summary of the run (only if `--json` is set). | `.spec/reports/code-assistant/<mode>/<run-id>/summary.json` |
-| Prompts | Optimized, LLM-friendly text files for generating code snippets or documentation. | `.smartspec/prompts/code-assistant/<mode>/<run-id>/...` |
-| Helper Scripts | Optional scripts (e.g., codemod sketches) generated for refactoring or implementation assistance. | `.smartspec/generated-scripts/code-assistant/<mode>/<run-id>/...` |
+| `--context` | Path to spec or plan file for additional context. | `cli` \| `kilo` \| `ci` \| `other` |
 
-**Note on Output Root:** If the `--out <path>` flag is provided, all outputs are nested under that path, provided it is within the configured allowed write scopes.
+---
 
-### Required Content in `report.md`
+## 5. Output
 
-Every report must contain the following sections:
+The workflow generates output artifacts according to its configuration.
 
-1.  Context summary (redacted)
-2.  Evidence sources (files/paths inspected)
-3.  Findings (facts/evidence)
-4.  Recommendations (ranked options)
-5.  Risks & mitigations
-6.  Suggested next commands (SmartSpec / tests)
-7.  Output inventory (what files were written)
+### Output Files
 
-**Mandatory Security Notes (Footer):** The report footer must explicitly state:
-*   No runtime source files were modified.
-*   No governed artifacts were modified.
-*   No scripts were executed.
-*   Any use of `--apply` was ignored.
-*   Any truncation/sampling of inputs occurred (due to context size caps).
+| File Path | Description |
+| :--- | :--- |
+| `.spec/reports/code-assistant/<run-id>/...` | Safe output artifacts (code suggestions, analysis reports). |
 
-## Notes & Related Workflows
+---
 
-### Security and Write Scope
+## 6. Notes
 
-This workflow strictly adheres to the governance contract:
-*   It **cannot** write to source directories (`src/`, `app/`, etc.).
-*   It **cannot** modify SmartSpec governed artifacts (`specs/**`, indices).
-*   The `--apply` flag is accepted for compatibility but has **no effect** on write operations, ensuring the workflow remains safe and non-intrusive.
+- **Platform Flag:** When using Kilo Code, always include `--platform kilo` to ensure proper context and logging.
+- **Preview Mode:** Without `--apply`, the workflow generates safe previews without modifying code files.
+- **Governed Writes:** Use `--apply` flag to enable code changes.
+- **Context Awareness:** Provide `--context` with spec or plan files for better code suggestions.
+- **Configuration:** The workflow respects settings in `.spec/smartspec.config.yaml`.
 
-### Deprecation Mapping
+---
 
-This workflow is the consolidated replacement for the following legacy workflows (which are deprecated in v6):
-
-|
+**End of Manual**

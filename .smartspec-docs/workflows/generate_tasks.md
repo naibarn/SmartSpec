@@ -1,178 +1,219 @@
+| manual_name | manual_version | compatible_workflow | compatible_workflow_versions |
+|-------------|----------------|---------------------|------------------------------|
+| /smartspec_generate_tasks Manual (EN) | 6.0 | /smartspec_generate_tasks | 6.0.x |
+
 # /smartspec_generate_tasks Manual (v6.0, English)
 
-## Overview
+## 1. Overview
 
-The `/smartspec_generate_tasks` workflow is the canonical tool for generating or refining a `tasks.md` file from a source specification (`spec.md`) or plan (`plan.md`).
+This manual explains how to use the workflow:
 
-The primary purpose is to create tasks in a **verification-ready** format, ensuring they include stable IDs, acceptance criteria, and specific evidence hooks. This strict format guarantees compatibility with downstream SmartSpec verification and reporting workflows.
+The `/smartspec_generate_tasks` workflow generates or refines `tasks.md` from `spec.md` (or `plan.md`) in a **verification-ready** format.
 
-This workflow is **safe-by-default** and requires the `--apply` flag to write changes to the source tree.
+**Purpose:** Convert spec.md (or plan.md) → tasks.md (verification-ready; preserves IDs/checkboxes; reports always written). This workflow is the canonical source for creating tasks that downstream workflows can trust, including verify_tasks_progress_strict, report_implement_prompter, and quality_gate.
 
-* **Workflow Version:** 6.0.2
-* **Category:** core
-* **Status:** Production Ready
+**Version:** 6.0.2  
+**Category:** core
 
 ---
 
-## Usage
+## 2. Usage
 
-### CLI
+This workflow supports invocation via the Command Line Interface (CLI) and Kilo Code (internal scripting environment).
 
-The Command Line Interface (CLI) invocation requires the path to the source specification or plan file.
+### 🔗 CLI Usage
+
+The CLI invocation requires specifying the target spec.md or plan.md file as a positional argument.
 
 ```bash
-/smartspec_generate_tasks <spec_or_plan_md> [--json] [--apply] [universal flags...]
+/smartspec_generate_tasks <spec_or_plan_md> \
+  [--json] \
+  [--apply]
 ```
 
-**Example (Preview):**
+### Kilo Code Usage
+
+The Kilo Code invocation is identical to the CLI structure, typically used within automated pipelines or internal scripts.
+
+**Important:** When using Kilo Code, you MUST include `--platform kilo` flag.
+
 ```bash
-/smartspec_generate_tasks specs/feature/user-auth/spec.md
-```
-
-**Example (Apply changes):**
-```bash
-/smartspec_generate_tasks specs/feature/user-auth/spec.md --apply
-```
-
-### Kilo Code
-
-The Kilo Code invocation is identical to the CLI, often used within CI/CD pipelines or automated SmartSpec environments.
-
-```kilo
-/smartspec_generate_tasks.md <spec_or_plan_md> [--json] [--apply] [universal flags...]
-```
-
-**Example:**
-```kilo
-# Generate tasks for a newly approved specification
-run /smartspec_generate_tasks.md specs/api/v2/new-endpoint/spec.md --apply
+/smartspec_generate_tasks.md \
+  <spec_or_plan_md> \
+  [--json] \
+  [--apply] \
+  --platform kilo
 ```
 
 ---
 
-## Use Cases
+## 3. Use Cases
 
-### Use Case 1: Initial Task Generation (Preview Mode)
+### Use Case 1: Generating Tasks from a Specification (CLI)
 
-**Scenario:** A new specification, `specs/core/db-migration/spec.md`, has been drafted. The user wants to see the proposed tasks and evidence hooks before committing them.
+**Scenario:** A developer has completed a specification for a "User Authentication Service" (`specs/auth/user_auth_service/spec.md`) and needs to generate an actionable task list for implementation.
 
-**Command (CLI):**
-
-```bash
-/smartspec_generate_tasks specs/core/db-migration/spec.md
-```
-
-**Expected Result:**
-
-1.  The workflow runs and analyzes the specification.
-2.  No files under `specs/` are modified (due to the absence of `--apply`).
-3.  A detailed report and preview of the generated `tasks.md` are written to the reports directory, e.g., `.spec/reports/generate-tasks/<run-id>/preview/db-migration/tasks.md`.
-4.  A summary is printed to the console, including the task counts and a note that the changes were not applied.
-
-### Use Case 2: Refining Existing Tasks (Applying Changes)
-
-**Scenario:** The existing `tasks.md` for `specs/ui/homepage/` needs updating after the `spec.md` was modified (e.g., a new requirement for accessibility was added). The user wants to merge the new tasks non-destructively.
-
-**Command (Kilo Code):**
-
-```kilo
-run /smartspec_generate_tasks.md specs/ui/homepage/spec.md --apply
-```
-
-**Expected Result:**
-
-1.  The workflow reads the existing `specs/ui/homepage/tasks.md`.
-2.  It compares the existing tasks with the newly generated set.
-3.  Existing task IDs and completion statuses (`[x]`) are preserved where the task meaning hasn't changed.
-4.  New tasks derived from the updated spec are inserted.
-5.  The `specs/ui/homepage/tasks.md` file is atomically updated.
-6.  The report includes a summary of preserved, updated, and newly added tasks.
-
-### Use Case 3: Secret Detection and Refusal
-
-**Scenario:** A developer accidentally included a placeholder secret (`"API_KEY=sk_test_12345"`) in the `plan.md`. The workflow is configured with a redaction pattern matching `sk_test_`.
-
-**Command (CLI):**
+**Command:**
 
 ```bash
-/smartspec_generate_tasks specs/security/audit/plan.md --apply
+/smartspec_generate_tasks specs/auth/user_auth_service/spec.md
 ```
 
 **Expected Result:**
 
-1.  The workflow detects the pattern match while processing the plan content.
-2.  The workflow **refuses** to apply the changes (Exit code `1`).
-3.  The report (`report.md`) logs a security warning stating that a potential secret was detected, and the apply operation was blocked as per the hardening requirements.
-4.  The preview output redacts the detected secret.
+1. The workflow loads `specs/auth/user_auth_service/spec.md`.
+2. It analyzes the spec content and generates verification-ready tasks.
+3. A preview bundle is written to `.spec/reports/generate-tasks/<run-id>/`.
+4. The preview includes `tasks_preview.md` with unique task IDs and evidence hooks.
+5. No governed writes occur (no `--apply` flag).
+6. Exit code `0` (Success).
+
+### Use Case 2: Generating Tasks from a Plan (Kilo Code)
+
+**Scenario:** A CI pipeline has generated a plan file (`specs/payments/checkout/plan.md`) and needs to create tasks based on the plan phases. The tasks should be applied immediately.
+
+**Command (Kilo Code Snippet):**
+
+```bash
+/smartspec_generate_tasks.md \
+  specs/payments/checkout/plan.md \
+  --apply \
+  --platform kilo
+```
+
+**Expected Result:**
+
+1. The workflow loads `specs/payments/checkout/plan.md`.
+2. It locates the sibling `spec.md` for richer context.
+3. Tasks are generated based on plan phases with proper dependencies.
+4. A preview bundle is written to `.spec/reports/generate-tasks/<run-id>/`.
+5. With `--apply`, the tasks file is written to `specs/payments/checkout/tasks.md`.
+6. Exit code `0` (Success).
+
+### Use Case 3: Refining Existing Tasks (Preserving Checkboxes) (CLI)
+
+**Scenario:** A team has partially completed tasks in `specs/notifications/email_service/tasks.md`. The spec was updated with new requirements, and the tasks need to be regenerated while preserving completed checkboxes.
+
+**Command:**
+
+```bash
+/smartspec_generate_tasks specs/notifications/email_service/spec.md \
+  --apply
+```
+
+**Expected Result:**
+
+1. The workflow loads the existing `specs/notifications/email_service/tasks.md`.
+2. It identifies completed tasks (checked checkboxes) by their unique IDs.
+3. New tasks are generated based on the updated spec.
+4. Completed tasks are preserved with their checkboxes intact.
+5. Obsolete tasks are marked as deprecated rather than deleted.
+6. The updated `tasks.md` is written with `--apply`.
+7. Exit code `0` (Success).
+
+### Use Case 4: JSON Output for Programmatic Processing (CLI)
+
+**Scenario:** A developer needs to integrate task generation into a custom tool that requires structured JSON output for downstream processing.
+
+**Command:**
+
+```bash
+/smartspec_generate_tasks specs/api/rest_api/spec.md \
+  --json
+```
+
+**Expected Result:**
+
+1. The workflow loads `specs/api/rest_api/spec.md`.
+2. Tasks are generated in verification-ready format.
+3. A preview bundle is written to `.spec/reports/generate-tasks/<run-id>/`.
+4. The output includes `summary.json` with structured task metadata.
+5. No governed writes occur (no `--apply` flag).
+6. Exit code `0` (Success).
+
+### Use Case 5: Refusing Application Due to Secret Leakage (CLI)
+
+**Scenario:** A user attempts to generate tasks, but the spec content accidentally includes an API key. The workflow should detect this and refuse to apply the tasks.
+
+**Command:**
+
+```bash
+/smartspec_generate_tasks specs/integrations/third_party_api/spec.md \
+  --apply
+```
+
+**Expected Result:**
+
+1. The workflow loads `specs/integrations/third_party_api/spec.md`.
+2. It generates tasks preview.
+3. The content matches a configured redaction pattern (e.g., API key).
+4. The workflow redacts the value in the preview/report output.
+5. The workflow **refuses** to proceed with the `--apply` operation.
+6. A detailed `report.md` is generated, noting the secret detection.
+7. Exit code `1` (Validation Fail).
 
 ---
 
-## Parameters
+## 4. Parameters
 
-### Positional Arguments (Inputs)
+The following parameters and flags control the execution and behavior of the `/smartspec_generate_tasks` workflow.
 
-| Argument | Required | Description | Validation |
+### Required Parameters
+
+| Parameter | Type | Description | Validation |
 | :--- | :--- | :--- | :--- |
-| `<spec_or_plan_md>` | Yes | Path to the source specification (`spec.md`) or plan (`plan.md`). | Must exist, must resolve under `specs/**`, must not escape via symlink. |
+| `<spec_or_plan_md>` | `<path>` | Path to spec.md or plan.md file to generate tasks from. | Must resolve under `specs/**` and must not escape via symlink. |
 
-### Flags
+### Universal Flags
 
-| Flag | Category | Description | Default |
+| Flag | Description | Default | Platform Support |
 | :--- | :--- | :--- | :--- |
-| `--apply` | Workflow-specific | Enables write operations to the source tree (`specs/**/tasks.md`). **Required for persistent changes.** | Absent |
-| `--config <path>` | Universal | Path to the SmartSpec configuration file. | `.spec/smartspec.config.yaml` |
-| `--lang <th|en>` | Universal | Specifies the language for generated content/reports. | (Config dependent) |
-| `--platform <cli|kilo|ci|other>` | Universal | Contextual platform flag. | (Inferred) |
-| `--out <path>` | Universal | Specifies a custom output path for reports/previews. Must be under an allowed path. | `.spec/reports/generate-tasks/<run-id>/` |
-| `--json` | Universal | Outputs the final summary in JSON format (`summary.json`). | Absent |
-| `--quiet` | Universal | Suppresses non-error console output. | Absent |
+| `--config` | Path to the SmartSpec configuration file. | `.spec/smartspec.config.yaml` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--lang` | Language for report generation (e.g., `th`, `en`). | (System default) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--platform` | Execution platform context. **Required for Kilo Code.** | (Inferred) | `cli` \| `kilo` \| `ci` \| `other` |
+| `--apply` | Enables governed writes (modifying `specs/**/tasks.md`). | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--out` | Base path for safe outputs (reports/previews). | `.spec/reports/generate-tasks/` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--json` | Output the primary summary in JSON format (`summary.json`). | `false` | `cli` \| `kilo` \| `ci` \| `other` |
+| `--quiet` | Suppress standard output logs. | `false` | `cli` \| `kilo` \| `ci` \| `other` |
 
 ---
 
-## Output
+## 5. Output
 
-The workflow generates several output artifacts, primarily located under the reports directory, and optionally updates the target `tasks.md` file if `--apply` is used.
+The workflow generates two types of output artifacts: Safe Preview Bundles (always) and Governed Artifacts (only with `--apply`).
 
-### Report Artifacts (Always Generated)
+### Safe Preview Bundle (Always Generated)
 
-All reports are written under: `.spec/reports/generate-tasks/<run-id>/` (or `<out>/<run-id>/`).
+A unique run folder is created under the report path (default: `.spec/reports/generate-tasks/<run-id>/`).
 
-| Artifact | Description | Purpose |
-| :--- | :--- | :--- |
-| `preview/<spec-id>/tasks.md` | The full proposed `tasks.md` file. | Allows review before applying. |
-| `diff/<spec-id>.patch` | A best-effort patch file showing changes to the existing `tasks.md`. | Facilitates quick review of modifications. |
-| `report.md` | A human-readable summary of the run, including task counts, evidence coverage, and security notes. | Primary audit trail. |
-| `summary.json` | A machine-readable summary of the run (if `--json` is used). | Used for CI/CD integration and tracking. |
+**Contents:**
 
-### Applied Artifacts (Only with `--apply`)
+| File Path | Description |
+| :--- | :--- |
+| `tasks_preview.md` | The generated tasks content (before apply). |
+| `summary.json` | (If `--json` is used) Structured task metadata and validation results. |
+| `report.md` | Detailed analysis including task count, evidence hooks, and security scan results. |
+| `diff.md` | (If refining existing tasks) Diff showing changes from current version. |
 
-| Artifact | Description | Location |
-| :--- | :--- | :--- |
-| `tasks.md` | The final, merged, and updated tasks file. | Sibling to the source spec: `specs/<category>/<spec-id>/tasks.md` |
+### Governed Artifacts (Only with `--apply`)
+
+| File Path | Description |
+| :--- | :--- |
+| `specs/**/tasks.md` | The generated or refined tasks file written to the governed location. |
+
+---
+
+## 6. Notes
+
+- **Verification-ready Format:** Tasks are generated with unique IDs and evidence hooks for downstream verification workflows.
+- **Checkbox Preservation:** When refining existing tasks, completed checkboxes are preserved based on task IDs.
+- **Non-destructive Updates:** Obsolete tasks are marked as deprecated rather than deleted to maintain audit trail.
+- **Secret Protection:** Any content matching configured redaction patterns will block the `--apply` operation.
+- **Network Policy:** This workflow respects `safety.network_policy.default=deny` and does not make external network requests.
+- **Symlink Safety:** If `safety.disallow_symlink_writes=true`, the workflow will refuse writes through symlinks.
+- **Kilo Code Platform:** When using Kilo Code, always include `--platform kilo` to ensure proper context and logging.
+- **Canonical Chain:** This workflow is part of the core SmartSpec chain: validate_index → generate_spec → generate_plan → **generate_tasks** → verify_tasks_progress_strict → sync_tasks_checkboxes → report_implement_prompter.
 
 ---
 
-## Notes & Related Workflows
-
-### Task Format Contract
-
-The generated `tasks.md` strictly adheres to a machine-verifiable contract, ensuring:
-*   **Deterministic Task IDs:** Stable IDs (e.g., `TSK-SPECID-001`) are used for tracking.
-*   **Non-destructive Merging:** Existing completed tasks and user notes are preserved during updates.
-*   **Evidence Hooks:** Every task must include specific, actionable evidence hooks (Code, Test, UI, Docs) to prove completion.
-
-### Minimum Coverage Policy
-
-The workflow enforces a minimum coverage policy, ensuring that tasks are generated for:
-*   Happy path and edge cases.
-*   Critical UI states (loading, empty, error, success).
-*   Accessibility and at least one test task for critical flows.
-
-### Related Workflows
-
-*   **`/smartspec_verify_tasks_progress_strict`**: Uses the evidence hooks generated here to automatically check implementation progress against the codebase.
-*   **`/smartspec_report_implement_prompter`**: Uses the tasks and spec content to generate targeted prompts for implementation assistance.
-*   **`/smartspec_quality_gate`**: Relies on the verified status of these tasks to determine if a specification or feature is ready for deployment.
-
----
-*Last updated: SmartSpec v6.0*
+**End of Manual**

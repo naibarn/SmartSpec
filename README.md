@@ -313,13 +313,13 @@ SmartSpec V6 consolidates its powerful features into a streamlined set of workfl
 | [`/smartspec_generate_tests`](.smartspec-docs/workflows/generate_tests.md) | Generate test artifacts/suggestions (prompts/scripts/reports). |
 | [`/smartspec_quality_gate`](.smartspec-docs/workflows/ci_quality_gate.md) | A consolidated quality gate workflow that replaces the legacy pair: |
 | [`/smartspec_test_report_analyzer`](.smartspec-docs/workflows/test_report_analyzer.md) | Analyze test results produced by `smartspec_test_suite_runner` and produce a higher-level diagnostic report: |
-| `/smartspec_test_suite_runner` | Execute a project's test suite (e.g., Jest, Vitest, Cypress) and generate a standardized SmartSpec report. |
+| [`/smartspec_test_suite_runner`](.smartspec-docs/workflows/test_suite_runner.md) | Execute a project's test suite (e.g., Jest, Vitest, Cypress) and generate a standardized SmartSpec report. |
 
 ### Security & Audit
 
 | Command | Description |
 | :--- | :--- |
-| `/smartspec_security_audit_reporter` | Generate a security audit report by correlating identified threats in `threats.md` with mitigation evidence in `tasks.md`, **validated against stri... |
+| [`/smartspec_security_audit_reporter`](.smartspec-docs/workflows/security_audit_reporter.md) | Generate a security audit report by correlating identified threats in `threats.md` with mitigation evidence in `tasks.md`, **validated against stri... |
 | [`/smartspec_security_threat_modeler`](.smartspec-docs/workflows/security_threat_modeler.md) | To automatically generate a preliminary threat model and a `threats.md` artifact by analyzing `spec.md` and `plan.md`. This workflow helps identify... |
 | [`/smartspec_api_contract_validator`](.smartspec-docs/workflows/api_contract_validator.md) | Validate an API implementation against its defined contract (**OpenAPI v3 primary; GraphQL schema supported in limited mode—see Contract parsing ru... |
 | [`/smartspec_data_model_validator`](.smartspec-docs/workflows/data_model_validator.md) | Validate that an application's data model (ORM models / schema files / migrations) is consistent with the data model described in a SmartSpec `spec... |
@@ -336,7 +336,7 @@ SmartSpec V6 consolidates its powerful features into a streamlined set of workfl
 
 | Command | Description |
 | :--- | :--- |
-| `/smartspec_deployment_planner` | Generate deployment plans and checklists. |
+| [`/smartspec_deployment_planner`](.smartspec-docs/workflows/deployment_planner.md) | Generate deployment plans and checklists. |
 | [`/smartspec_hotfix_assistant`](.smartspec-docs/workflows/hotfix_assistant.md) | Assist in creating and managing hotfixes. |
 | [`/smartspec_release_tagger`](.smartspec-docs/workflows/release_tagger.md) | Manage release tags and versioning. |
 | [`/smartspec_data_migration_generator`](.smartspec-docs/workflows/data_migration_generator.md) | To automate the creation of draft Data Migration scripts based on the discrepancies identified by `/smartspec_data_model_validator`. This workflow ... |

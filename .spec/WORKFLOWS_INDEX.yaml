@@ -89,7 +89,7 @@ workflows:
       - /smartspec_verify_tasks_progress_strict.md
       - /smartspec_verify_tasks_progress
       - /smartspec_verify_tasks_progress.md
-    purpose: Strict evidence-only verification using parseable evidence hooks (evidence: type key=value...).
+    purpose: "Strict evidence-only verification using parseable evidence hooks (evidence: type key=value...)."
     category: verify
     positional_args: [tasks_md]
     extra_flags: [--report-format]
@@ -555,3 +555,194 @@ workflows:
     apply_required_for: []
     platform_support: [cli, kilo, ci]
 
+  - name: /smartspec_ci_quality_gate
+    aliases: [/smartspec_ci_quality_gate.md]
+    purpose: The `/smartspec_quality_gate` workflow (Version 6
+    category: quality
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo, ci]
+
+  - name: /smartspec_fix_errors
+    aliases: [/smartspec_fix_errors.md]
+    purpose: Workflow description
+    category: implement
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_generate_cursor_prompt
+    aliases: [/smartspec_generate_cursor_prompt.md]
+    purpose: Workflow description
+    category: core
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_generate_implement_prompt
+    aliases: [/smartspec_generate_implement_prompt.md]
+    purpose: Workflow description
+    category: core
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_global_registry_audit
+    aliases: [/smartspec_global_registry_audit.md]
+    purpose: Workflow description
+    category: index
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_project_copilot_manual
+    aliases: [/smartspec_project_copilot_manual.md]
+    purpose: The `/smartspec_project_copilot` workflow (version 6
+    category: documentation
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_refactor_code
+    aliases: [/smartspec_refactor_code.md]
+    purpose: Workflow description
+    category: implement
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_release_readiness
+    aliases: [/smartspec_release_readiness.md]
+    purpose: Workflow description
+    category: deployment
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_smart_spec_install_manual
+    aliases: [/smartspec_smart_spec_install_manual.md]
+    purpose: Workflow description
+    category: documentation
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_smart_spec_manuals_aligned_workflows
+    aliases: [/smartspec_smart_spec_manuals_aligned_workflows.md]
+    purpose: Workflow description
+    category: documentation
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_smartspec_reindex_workflows
+    aliases: [/smartspec_smartspec_reindex_workflows.md]
+    purpose: Workflow description
+    category: index
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_smartspec_workflow_overview_guide
+    aliases: [/smartspec_smartspec_workflow_overview_guide.md]
+    purpose: Workflow description
+    category: utility
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_tasks_checkboxes
+    aliases: [/smartspec_tasks_checkboxes.md]
+    purpose: Workflow description
+    category: utility
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_ui_consistency_audit_manual
+    aliases: [/smartspec_ui_consistency_audit_manual.md]
+    purpose: Workflow description
+    category: documentation
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_ui_validation_manual
+    aliases: [/smartspec_ui_validation_manual.md]
+    purpose: Workflow description
+    category: documentation
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]
+
+  - name: /smartspec_verify_tasks_progress
+    aliases: [/smartspec_verify_tasks_progress.md]
+    purpose: Workflow description
+    category: verify
+    positional_args: []
+    extra_flags: []
+    reads: []
+    writes: []
+    write_scope: [reports]
+    apply_required_for: []
+    platform_support: [cli, kilo]

@@ -1,109 +1,108 @@
-# คู่มือ SmartSpec Workflow
-## `/smartspec_reindex_workflows`
-### รุ่น 1.0.0 — ฉบับภาษาไทย
+# SmartSpec Workflow Manual  
+## `/smartspec_reindex_workflows`  
+### Version 1.0.0 — คู่มือ (TH)  
 
----
+---  
 
-# 1. ภาพรวม (Overview)
-`/smartspec_reindex_workflows` คือ Workflow อย่างเป็นทางการของ SmartSpec ที่ทำหน้าที่สร้างและอัปเดตไฟล์ **WORKFLOW_INDEX.json** ซึ่งเป็น “สารบัญกลางของ Workflow ทั้งหมด” ที่มีอยู่ในโปรเจกต์ (รองรับทั้ง single-repo และ multi-repo)
+# 1. ภาพรวม  
+`/smartspec_reindex_workflows` คือ workflow อย่างเป็นทางการของ SmartSpec ที่รับผิดชอบในการสร้างและรีเฟรช **WORKFLOW_INDEX.json** ซึ่งเป็นดัชนีกลางของ workflow ทั้งหมดที่มีอยู่ใน repository หรือ workspace ที่มีหลาย repository  
 
-Workflow นี้ทำหน้าที่คล้ายกับ `/smartspec_reindex_specs` ที่สร้าง SPEC_INDEX.json
-แต่ใช้กับ **Workflow** แทน **SPEC**
+workflow นี้เป็นคู่ขนานในระดับ workflow กับ `/smartspec_reindex_specs` (ซึ่งจัดการ SPEC_INDEX.json)  
 
-สิ่งที่ workflow นี้ทำ:
-- ค้นหาไฟล์สเปก workflow ทั้งหมดใน `.smartspec/workflows/`
-- อ่าน metadata ด้าน governance ของแต่ละ workflow
-  - role, category, write_guard
-  - version, status
-  - CLI flags
-  - dependencies/produces
-- รวมข้อมูลเป็น index เดียวในรูปแบบมาตรฐาน
-- เขียนรายงานแบบ markdown และ JSON
-- ทำงานร่วมกับ multi-repo ได้
+workflow นี้:  
+- ค้นหาไฟล์ workflow spec ภายใต้ `.smartspec/workflows/`  
+- ดึงข้อมูล governance metadata (บทบาท, หมวดหมู่, write_guard, flags, เวอร์ชัน)  
+- ทำ normalization และรวบรวมข้อมูลเหล่านี้เข้าเป็น `WORKFLOW_INDEX.json`  
+- สร้างรายงานที่อ่านได้ทั้งโดยมนุษย์และเครื่อง  
+- รองรับการแก้ไขปัญหาแบบ multi-repo และกฎ write-guard ที่ปลอดภัย  
 
----
-# 2. วัตถุประสงค์หลัก
-Workflow นี้ถูกออกแบบมาเพื่อ:
+---  
+# 2. วัตถุประสงค์  
+เป้าหมายหลักของ workflow นี้คือ:  
 
-- สร้าง “แผนที่รวมของ Workflow ทั้งหมด” ในระบบ SmartSpec
-- ให้ SmartSpec UI, Project Copilot และ IDE integrations ใช้อ้างอิง
-- รักษามาตรฐาน governance ให้ workflow ทุกตัวมีข้อมูลครบถ้วน
-- รองรับ automation ขั้นสูง เช่น:
-  - การตรวจสอบ workflow (`/smartspec_validate_workflows` ในอนาคต)
-  - ระบบแนะนำ workflow ให้อัตโนมัติ
-  - Workflow discovery
+- ให้แผนที่ **แบบรวมศูนย์** ของ workflow SmartSpec ที่มีอยู่ทั้งหมด  
+- อนุญาตให้ SmartSpec UI, Project Copilot และการผนวกรวม IDE สามารถระบุ workflow, ความสามารถ, flags ที่ต้องการ, หมวดหมู่ และการพึ่งพาได้  
+- รักษาความสอดคล้องและ governance ในการกำหนด workflow  
+- เปิดทางสำหรับเครื่องมือในอนาคต เช่น:  
+  - การตรวจสอบ workflow (`/smartspec_validate_workflows`)  
+  - อินเทอร์เฟซสำหรับค้นหา workflow  
+  - pipeline อัตโนมัติ  
 
----
-# 3. ตำแหน่งใน Ecosystem ของ SmartSpec
+---  
+# 3. ตำแหน่งของ Workflow ในระบบนิเวศ SmartSpec  
 ```
-.smartspec/workflows/*.md
-          │
-          ▼
-/smartspec_reindex_workflows
-          │
-          ▼
+           +-------------------------+
+           | .smartspec/workflows/*.md|
+           +-------------+-----------+
+                         |
+                         v
+        /smartspec_reindex_workflows
+                         |
+                         v
+          +---------------------------+
+          | WORKFLOW_INDEX.json       |
+          +---------------------------+
+                         |
+                         v
+      Recommended consumers:
+      - /smartspec_project_copilot
+      - SmartSpec UI / IDE integrations
+      - Automation pipelines
+```
+
+workflow นี้จะไม่แก้ไข SPEC, TASKS, ซอร์สโค้ด, การทดสอบ หรือไฟล์ deployment ใดๆ  
+จะเขียนเพียง:  
+- `.smartspec/WORKFLOW_INDEX.json`  
+- รายงานภายใต้ `.spec/reports/reindex-workflows/`  
+
+---  
+# 4. ความรับผิดชอบ  
+`/smartspec_reindex_workflows` ต้อง:  
+
+1. **ค้นหา** ไฟล์ workflow spec ทั้งหมด  
+2. **แยกวิเคราะห์** metadata ของ workflow (id, version, role, write-guard, flags, dependencies)  
+3. **ทำ normalization** metadata ให้อยู่ในรูปแบบมาตรฐาน  
+4. **แก้ไขเส้นทาง** ในโหมด single-repo หรือ multi-repo  
+5. **ตรวจจับความขัดแย้ง** เช่น workflow ID ซ้ำกัน  
+6. **เขียนดัชนีมาตรฐาน** เป็น WORKFLOW_INDEX.json  
+7. **สร้างรายงาน** สรุปปัญหาหรือความขัดแย้ง  
+
+---  
+# 5. แหล่งข้อมูลนำเข้า  
+workflow รวบรวมข้อมูลจาก:  
+- `.smartspec/workflows/` (root เริ่มต้น)  
+- WORKFLOW_INDEX.json ที่มีอยู่แล้ว (ไม่บังคับ)  
+- `--workspace-roots` และ `--repos-config` (สำหรับสภาพแวดล้อม multi-repo)  
+- การกำหนด governance หรือ evidence แบบกำหนดเอง (อ่านอย่างเดียว)  
+
+ข้อมูลนำเข้าทั้งหมดเป็น **อ่านอย่างเดียว** ยกเว้นไฟล์ดัชนีสุดท้ายและรายงาน  
+
+---  
+# 6. ผลลัพธ์  
+### 6.1 ผลลัพธ์หลัก  
+```
 .smartspec/WORKFLOW_INDEX.json
-          │
-          ▼
-ใช้โดย:
-- /smartspec_project_copilot
-- SmartSpec UI และ IDE
-- ระบบอัตโนมัติ (CI/CD)
 ```
 
-Workflow นี้ **จะไม่แก้ไขไฟล์สเปกหรือโค้ดใด ๆ**
-จะเขียนเฉพาะ:
-- `.smartspec/WORKFLOW_INDEX.json`
-- ไฟล์รายงานใน `.spec/reports/reindex-workflows/`
-
----
-# 4. หน้าที่ของ Workflow
-`/smartspec_reindex_workflows` ต้องดำเนินการดังนี้:
-
-1. ค้นหาไฟล์ workflow spec ทั้งหมด
-2. อ่าน metadata (id, version, write_guard, flags)
-3. แปลงข้อมูลเป็น schema มาตรฐานใน index
-4. รองรับ multi-repo path resolution
-5. ตรวจจับปัญหา เช่น ไอดีชนกัน หรือข้อมูลขัดแย้ง
-6. สร้างไฟล์ WORKFLOW_INDEX.json อย่างเป็นทางการ
-7. เขียนรายงานชี้สถานะและปัญหาที่พบ
-
----
-# 5. แหล่งข้อมูลที่ Workflow ใช้
-Workflow นี้จะอ่านข้อมูลจาก:
-- `.smartspec/workflows/` (ค่าเริ่มต้น)
-- WORKFLOW_INDEX.json เดิม (ถ้ามี)
-- `--workspace-roots`, `--repos-config` (เมื่อใช้ multi-repo)
-- ไฟล์ governance หรือ evidence-config อื่น ๆ (แบบ read-only)
-
-Workflow ไม่มีสิทธิ์แก้ไขไฟล์เหล่านี้โดยตรง (นอกจาก index และรายงาน)
-
----
-# 6. สิ่งที่ Workflow สร้างออกมา (Outputs)
-### 6.1 ไฟล์หลัก
+### 6.2 ผลลัพธ์สำเนา (ถ้าเปิดใช้งาน)  
 ```
-.smartspec/WORKFLOW_INDEX.json
+WORKFLOW_INDEX.json (repo root)
 ```
 
-### 6.2 ไฟล์ Mirror (อาจเปิดใช้เพิ่ม)
+### 6.3 รายงาน  
 ```
-WORKFLOW_INDEX.json (ที่ repo root)
-```
-
-### 6.3 ไฟล์รายงาน
-```
-.spec/reports/reindex-workflows/<timestamp>.md
-.spec/reports/reindex-workflows/<timestamp>.json
+.spec/reports/reindex-workflows/<timestamp>-report.md
+.spec/reports/reindex-workflows/<timestamp>-report.json
 ```
 
----
-# 7. ตัวอย่างการใช้งานคำสั่ง (CLI)
-### ใช้งานแบบปกติ
+---  
+# 7. การใช้งาน CLI  
+### การใช้งานพื้นฐาน  
 ```bash
 /smartspec_reindex_workflows --report=summary
 ```
 
-### กรณี multi-repo
+### ตัวอย่าง multi-repo  
 ```bash
 /smartspec_reindex_workflows \
   --workspace-roots=.,../service-a,../service-b \
@@ -111,130 +110,135 @@ WORKFLOW_INDEX.json (ที่ repo root)
   --report=detailed
 ```
 
-### Dry-run (ไม่เขียนไฟล์จริง ใช้ตรวจสอบใน CI)
+### ตัวอย่าง dry-run  
 ```bash
 /smartspec_reindex_workflows --dry-run --report=detailed
 ```
 
----
-# 8. รายละเอียด Flags
+---  
+# 8. อ้างอิง flags ของ CLI  
 
-## 8.1 ส่วนของ Output
-| Flag | ความหมาย |
-|------|-----------|
-| `--out=<path>` | ระบุตำแหน่งไฟล์ WORKFLOW_INDEX.json |
-| `--mirror-root=<true|false>` | สร้างไฟล์ mirror ที่ repo root |
+## 8.1 Output Flags  
+| Flag | วัตถุประสงค์ |
+|------|---------------|
+| `--out=<path>` | กำหนดตำแหน่งผลลัพธ์ของ WORKFLOW_INDEX.json แบบกำหนดเอง |
+| `--mirror-root=<true|false>` | เขียนไฟล์สำเนาเพิ่มเติมที่ root ของ repo |
 
-## 8.2 ส่วนของ Discovery
-| Flag | ความหมาย |
-|------|-----------|
-| `--workflow-roots=<csv>` | ระบุโฟลเดอร์ workflow (ค่าเริ่มต้น `.smartspec/workflows`) |
-| `--include-internal=<true|false>` | รวม workflow แบบ internal/experimental ด้วยหรือไม่ |
+## 8.2 Discovery Flags  
+| Flag | วัตถุประสงค์ |
+|------|---------------|
+| `--workflow-roots=<csv>` | กำหนดโฟลเดอร์ workflow ใหม่ (ค่าเริ่มต้น: `.smartspec/workflows`) |
+| `--include-internal=<true|false>` | รวม workflow ภายในหรือแบบทดลอง |
 
-## 8.3 Multi-Repo
-| Flag | ความหมาย |
-|------|-----------|
-| `--workspace-roots=<csv>` | ระบุ root หลาย repo |
-| `--repos-config=<path>` | ไฟล์ graph ของ multi-repo |
+## 8.3 Multi-Repo Flags  
+| Flag | วัตถุประสงค์ |
+|------|---------------|
+| `--workspace-roots=<csv>` | จำเป็นในบริบท multi-repo |
+| `--repos-config=<path>` | แหล่งข้อมูล metadata ของ workspace ที่แนะนำ |
 
-## 8.4 ความปลอดภัยและรูปแบบ Output
-| Flag | ความหมาย |
-|------|-----------|
-| `--report=<summary|detailed>` | เลือกระดับรายละเอียดของรายงาน |
-| `--dry-run` | สร้าง index ในหน่วยความจำ (ไม่เขียนไฟล์จริง) |
-| `--safety-mode=<strict|dev>` | strict = เจอ conflict จะหยุดการเขียนไฟล์ |
-| `--strict` | alias ของ strict mode |
+## 8.4 ความปลอดภัย / พฤติกรรมผลลัพธ์  
+| Flag | วัตถุประสงค์ |
+|------|---------------|
+| `--report=<summary|detailed>` | ระดับความละเอียดของรายงาน |
+| `--dry-run` | สร้างดัชนีในหน่วยความจำโดยไม่เขียนผลลัพธ์ |
+| `--safety-mode=<strict|dev>` | ควบคุมความเข้มงวดของการจัดการข้อผิดพลาด |
+| `--strict` | เป็น alias ของ `--safety-mode=strict` |
 
-## 8.5 การกรองข้อมูล
-| Flag | ใช้ทำอะไร |
-|------|-----------|
-| `--include-status=<csv>` | include เฉพาะ workflow ที่มี status ตามที่กำหนด |
-| `--exclude-status=<csv>` | exclude workflow ตาม status |
-| `--include-platforms=<csv>` | include เฉพาะ workflow ที่รองรับ platform เหล่านี้ |
+## 8.5 การกรอง  
+| Flag | วัตถุประสงค์ |
+|------|---------------|
+| `--include-status=<csv>` | รวม workflow ที่มีสถานะบางอย่าง (เช่น stable,beta) |
+| `--exclude-status=<csv>` | ยกเว้น workflow (เช่น deprecated) |
+| `--include-platforms=<csv>` | รวม workflow ที่รองรับแพลตฟอร์มเฉพาะ |
 
----
-# 9. โครงสร้าง Metadata ของ Workflow ใน Index
-ข้อมูล 1 รายการของ workflow จะประกอบด้วย:
+---  
+# 9. โครงสร้าง metadata ของ Workflow  
+แต่ละรายการ workflow ใน `WORKFLOW_INDEX.json` ประกอบด้วย:  
 
-- `id`
-- `name` (CLI name)
-- `version`
-- `role` เช่น `support/implement`, `verify/strict`
-- `category` เช่น `verification`, `index`, `ui`, `support`
-- `status` เช่น `stable`, `beta`, `deprecated`
-- `description`
-- `write_guard`
-- `source_file`
-- `supported_platforms[]`
-- `cli.required_flags[]`
-- `cli.optional_flags[]`
-- `tags[]`
-- `depends_on[]`
-- `produces[]`
-- `last_updated`
+- `id` — workflow id แบบมาตรฐาน (เช่น `smartspec_report_implement_prompter`)  
+- `name` — ชื่อ CLI เต็มรูปแบบ (`/smartspec_report_implement_prompter`)  
+- `version` — เวอร์ชันของ workflow  
+- `role` — บทบาทการทำงาน (เช่น `support/implement`)  
+- `category` — การจัดกลุ่มระดับสูง  
+- `status` — `stable`, `beta`, `deprecated` เป็นต้น  
+- `description` — วัตถุประสงค์โดยย่อ  
+- `write_guard` — สิทธิ์การเขียนที่อนุญาต  
+- `source_file` — เส้นทางไปยัง workflow spec  
+- `supported_platforms` — เช่น `["kilocode", "claudecode", "antigravity"]`  
+- `cli`:  
+  - `binary` — ชื่อโปรแกรมที่ใช้รัน  
+  - `required_flags[]`  
+  - `optional_flags[]`  
+- `tags[]` — คำอธิบายแบบอิสระ  
+- `depends_on[]` — workflow ที่ต้องพึ่งพา  
+- `produces[]` — รูปแบบไฟล์ผลลัพธ์  
+- `last_updated` — เวลาที่อัปเดตล่าสุด  
 
----
-# 10. การตรวจจับปัญหา (Conflict Detection)
-Workflow นี้ต้องตรวจจับ:
-- workflow ID ซ้ำกัน
-- write_guard ขัดแย้งกัน
-- CLI name ซ้ำกัน
-- workflow spec ไม่สมบูรณ์หรือหายไป
+---  
+# 10. การตรวจจับความขัดแย้ง  
+workflow จะตรวจสอบ:  
+- workflow ID ซ้ำกัน  
+- บทบาทหรือ write guard ที่ขัดแย้งกัน  
+- ชื่อ CLI ที่ไม่ตรงกัน  
+- ไฟล์ workflow spec ที่ไม่ถูกต้องหรือหายไป  
 
-ใน strict mode → ปัญหาเหล่านี้จะ “บล็อกการเขียน index ใหม่”
-ใน dev mode → จะอนุญาตให้สร้าง index ได้ แต่บันทึกคำเตือนในรายงาน
+พฤติกรรมขึ้นอยู่กับโหมดความปลอดภัย:  
+- **strict** → หยุดการเขียนดัชนีเมื่อพบความขัดแย้งรุนแรง  
+- **dev** → อนุญาตให้สร้างดัชนีแต่ทำเครื่องหมายรายการที่ขัดแย้ง  
 
----
-# 11. การรองรับ Workspace ใหญ่หรือ Multi-Repo
-Workflow รองรับ workspace ขนาดใหญ่ได้โดย:
-- ใช้การสแกนแบบไหล (streaming)
-- เขียนไฟล์แบบ atomic (ปลอดภัยจากการ commit ครึ่ง ๆ กลาง ๆ)
-- เตือนเมื่อพบ path หรือ repo config ไม่สอดคล้องกัน
+---  
+# 11. การจัดการ workspace ขนาดใหญ่  
+สำหรับโปรเจกต์ขนาดใหญ่หรือ multi-repo:  
+- แนะนำให้ใช้การแยกวิเคราะห์แบบ streaming หรือแบ่งเป็นส่วน  
+- การเขียนดัชนียังคงเป็น atomic  
+- แจ้งเตือนเมื่อพบการตั้งค่า repo ที่ไม่สอดคล้องกัน  
 
----
-# 12. การนำ Index ไปใช้
-### 12.1 `/smartspec_project_copilot`
-ใช้เพื่อ:
-- แสดงรายการ workflow
-- แนะนำ workflow ถัดไปที่เหมาะสม
-- สร้าง CLI ตัวอย่างให้ผู้ใช้
+---  
+# 12. การนำไปใช้โดยเครื่องมืออื่น  
+### 12.1 `/smartspec_project_copilot`  
+ใช้ WORKFLOW_INDEX.json เพื่อ:  
+- แนะนำ workflow ถัดไป  
+- แสดง metadata ของ workflow  
+- สร้างตัวอย่าง CLI  
 
-### 12.2 SmartSpec UI / IDE
-- แสดงรายการ workflow
-- กรองตาม role/category/platform
-- ช่วยสร้างคำสั่งให้ผู้ใช้
+### 12.2 SmartSpec UI / การผนวกรวม IDE  
+ใช้ดัชนีเพื่อ:  
+- แสดงรายการ workflow ที่มี  
+- กรองตามหมวดหมู่, บทบาท, แพลตฟอร์ม, สถานะ  
+- สร้างแม่แบบคำสั่งสำหรับผู้ใช้  
 
-### 12.3 ระบบอัตโนมัติ (CI/CD)
-ใช้ตรวจสอบ:
-- ว่า workflow spec ครบหรือไม่
-- ว่ามี workflow deprecated หรือ conflict หรือไม่
+### 12.3 Automation Pipelines  
+เหมาะสำหรับขั้นตอน CI เช่น:  
+- ตรวจสอบความถูกต้องของการกำหนด workflow  
+- ตรวจสอบความสมบูรณ์ของ workflow  
+- รับรองความสอดคล้องกับ governance ของ workflow  
 
----
-# 13. การจัดการ Error
-Workflow ต้อง:
-- เตือนเมื่อหา workflow root ไม่พบ
-- เตือนเมื่อ metadata ไม่ครบ
-- เตือน workflow ที่มีฟิลด์ขัดแย้งกัน
-- สร้างรายงานเพื่อแก้ไข
+---  
+# 13. การจัดการข้อผิดพลาด  
+workflow ต้อง:  
+- แจ้งเตือนเมื่อไม่พบหรือไม่สามารถอ่าน workflow roots  
+- แจ้งเตือนสำหรับฟิลด์ที่ไม่กำหนดหรือไม่รองรับ  
+- ตรวจจับการขาด flags CLI ที่จำเป็นใน spec  
+- บันทึกปัญหาทั้งหมดในรายงานสุดท้าย  
 
-ใน strict mode → error รุนแรงจะหยุดการเขียนไฟล์
+ในโหมด strict ข้อผิดพลาดร้ายแรงจะยกเลิกการสร้างดัชนี  
 
----
-# 14. แนวทางปฏิบัติที่ดี
-- เก็บ workflow spec ไว้ใน `.smartspec/workflows/` เท่านั้น
-- รัน workflow นี้ทุกครั้งที่มีการเพิ่ม/ลบ/แก้ workflow spec
-- ใช้ `--dry-run` ใน CI เพื่อป้องกันปัญหา workflow governance
-- ใช้ detailed report ระหว่างพัฒนา
+---  
+# 14. แนวทางปฏิบัติที่ดีที่สุด  
+- เก็บ workflow specs ให้มีเวอร์ชันและจัดระเบียบภายใต้ `.smartspec/workflows/`  
+- รัน workflow นี้ใหม่ทุกครั้งเมื่อมีการเพิ่ม, ลบ หรือแก้ไข workflow specs  
+- ใช้ `--dry-run` ใน CI เพื่อตรวจจับความขัดแย้งของ metadata ตั้งแต่เนิ่นๆ  
+- ใช้รายงานแบบละเอียดในระหว่างการพัฒนา  
 
----
-# 15. สรุป
-`/smartspec_reindex_workflows` เป็น workflow ระดับ governance ที่ใช้สร้าง **WORKFLOW_INDEX.json** ซึ่งเป็นฐานข้อมูลสำคัญของระบบ SmartSpec สำหรับ:
-- การค้นหา workflow
-- การแนะนำ workflow ให้ผู้ใช้
-- การทำงานร่วมกับ IDE และ UI
-- การตรวจสอบ governance ของ workflow
+---  
+# 15. สรุป  
+`/smartspec_reindex_workflows` คือกลไกที่ได้รับการสนับสนุนด้วย governance สำหรับสร้างดัชนี workflow แบบรวมศูนย์และมีโครงสร้าง ช่วยเสริม:  
+- การค้นหา workflow  
+- การบังคับใช้ governance  
+- การผนวกรวม IDE และ UI  
+- pipeline อัตโนมัติ  
 
-Workflow นี้ช่วยให้ SmartSpec มีความเป็นระบบมากขึ้น และพร้อมรองรับ automation ขั้นสูงในอนาคต
+ด้วยการรักษา `WORKFLOW_INDEX.json` SmartSpec จะมีฐานรากที่ทรงพลังและพร้อมสำหรับอนาคตในการจัดการ orchestration ของ workflow  
 
----
-**End of Manual**
+---  
+สิ้นสุดคู่มือ

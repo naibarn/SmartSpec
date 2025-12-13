@@ -1,3 +1,7 @@
+[🇬🇧 English](README.md) | [🇹🇭 ภาษาไทย](README_th.md)
+
+---
+
 # SmartSpec: The AI-Native Development Framework
 
 ![SmartSpec Production-Grade Orchestration System](.smartspec-assets/images/SmartSpec-Pict6.png)

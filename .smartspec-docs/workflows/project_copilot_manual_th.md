@@ -1,306 +1,154 @@
----
-manual: /smartspec_project_copilot
-version: 5.7
-compatible_workflow_versions: 5.6.x
-language: th
-role: User guide for project-level SmartSpec copilot
----
+# /smartspec_project_copilot คู่มือ (v6.0, ภาษาไทย)
 
-# 1. ภาพรวม
+## ภาพรวม
 
-`/smartspec_project_copilot` คือ workflow แบบ **เลขาโปรเจกต์ (project copilot)** ทำหน้าที่เป็นที่ปรึกษาระดับโปรเจกต์ อ่านข้อมูลจาก SmartSpec ทั้งชุดแล้วตอบคำถาม ที่ผู้ใช้ถามเป็นภาษาคน เช่น
+workflow `/smartspec_project_copilot` (เวอร์ชัน 6.0.7) ทำหน้าที่เป็น **ประตูหน้าแบบอ่านอย่างเดียว** และที่ปรึกษาการกำกับดูแลสำหรับโปรเจกต์ที่เปิดใช้งาน SmartSpec
 
-- ตอนนี้โปรเจกต์คืบหน้าไปถึงไหนแล้ว?
-- ระบบ billing / subscription คืบหน้าไปกี่ % แล้ว และต้องทำอะไรต่อ?
-- จาก report CI / Security / Release นี้ ต้องทำอะไรต่อ?
-- ควร run workflow ตัวไหนต่อ และใช้คำสั่งอย่างไร?
+วัตถุประสงค์หลักคือการตอบคำถามที่เกี่ยวข้องกับโปรเจกต์ โดเมน หรือสเปค โดยการวิเคราะห์หลักฐานที่มีอยู่ในโปรเจกต์ (ดัชนี, รีจิสทรี, สเปค, แผนงาน, งาน และรายงาน) จากหลักฐานเหล่านี้ จะสรุปสถานะโปรเจกต์ และที่สำคัญคือ นำทางผู้ใช้ไปยัง **workflow และคำสั่ง SmartSpec ที่ถูกต้องถัดไป** ซึ่งจำเป็นสำหรับการพัฒนาโปรเจกต์ต่อไป
 
-Copilot จะ:
+**ลักษณะสำคัญ:**
 
-- อ่าน `SPEC_INDEX`, registry, reports, และคู่มือของ workflow ต่าง ๆ
-- วิเคราะห์สถานะเป็นราย service / domain
-- สรุปเป็นภาษาคน พร้อมเสนอ **คำสั่ง /smartspec\_**\* ที่ run ได้จริง
-- ถ้าอยู่บน Kilo และใช้ `--kilocode` จะคิดแบบ Orchestrator เน้นวางแผน/วิเคราะห์ ไม่เน้นเขียนโค้ดเอง
+*   **บทบาท:** การกำกับดูแลระดับโปรเจกต์, ที่ปรึกษา และตัวนำทาง
+*   **ความปลอดภัย:** เข้มงวดแบบ **ไม่เขียนข้อมูลใดๆ** (`write_guard: NO-WRITE`) ไม่แก้ไขไฟล์โปรเจกต์ สเปค หรือรีจิสทรีใดๆ
+*   **หลักฐานเป็นที่ตั้ง:** คำตอบได้มาจากหลักฐานที่มีอยู่ในโปรเจกต์เท่านั้น ไม่ได้สรุปจากรายการตรวจสอบง่ายๆ
+*   **คำสั่งถูกต้อง:** แนะนำเฉพาะ workflow และ flags ของ SmartSpec ที่ถูกต้อง ป้องกันการสร้างคำสั่งที่ผิดพลาด
+*   **ประเภท:** เครื่องมืออรรถประโยชน์
 
-> สำคัญ: copilot เป็น NO-WRITE — ไม่แก้โค้ด, ไม่แก้ spec/plan/tasks เอง
+## การใช้งาน
 
----
+### การใช้งาน CLI
 
-# 2. What’s New ในคู่มือเวอร์ชันนี้ (v5.7)
-
-- เพิ่ม use case แบบ “คุยเหมือน LLM/ChatGPT” อย่างละเอียด
-- เพิ่มตัวอย่างระบบ **billing + subscription** แสดงการอ่านจาก `SPEC_INDEX` แล้วแปลเป็นคำสั่ง `/smartspec_generate_tasks` ที่ใช้ได้จริง
-- อธิบายการทำงานแบบ **chunked context** (อ่านไฟล์ทีละส่วน ไม่เกิน \~500–800 บรรทัด)
-- ชัดเจนขึ้นว่าถ้าใช้ `--kilocode` จะให้ Orchestrator เป็นคนวางแผนและแตกงาน
-
----
-
-# 3. ใช้เมื่อไหร่ / ไม่ควรใช้เมื่อไหร่
-
-## 3.1 ควรใช้เมื่อ
-
-- อยากรู้สถานะโปรเจกต์แต่ไม่อยากจำ workflow ทุกตัว
-- อยากดูความคืบหน้าของ service/domain บางตัว เช่น `billing`, `checkout`, `auth`
-- มี report จาก workflow อื่นแล้ว แต่อ่านยาก อยากให้ช่วยอ่าน / สรุป / แนะนำสิ่งที่ต้องทำต่อ
-- อยากขอ roadmap ระยะสั้นสำหรับ feature หรือผลิตภัณฑ์จากสถานะจริงปัจจุบัน
-- อยากถามว่า “ควรใช้ workflow ตัวไหนต่อ” โดยไม่ต้องจำชื่อทั้งหมดเอง
-
-## 3.2 ไม่ควรใช้เมื่อ
-
-- ต้องการให้ระบบแก้ไฟล์จริง (โค้ด, spec, plan, tasks) → copilot ทำไม่ได้
-- อยากใช้แทน workflow เฉพาะด้าน เช่น security audit, CI gate, UI audit
-- ใช้เพื่อเลี่ยง approval จาก security / architecture
-
----
-
-# 4. สิ่งที่ต้องมีในโปรเจกต์ก่อนใช้
-
-อย่างน้อยควรมี:
-
-1. โครงสร้าง SmartSpec พื้นฐาน
-   - `.spec/SPEC_INDEX.json`
-   - `.spec/registry/**` (รวมถึง `tool-version-registry.json` ถ้ามี)
-   - `.spec/reports/**` (ถ้าเคยรัน workflow อื่นแล้ว)
-2. ไฟล์ governance กลาง
-   - `.smartspec/system_prompt_smartspec.md`
-   - `.smartspec/knowledge_base_smartspec.md`
-3. เอกสาร workflow
-   - `.smartspec-docs/workflows/**` (manual TH/EN, example ของแต่ละ workflow)
-
-ถ้าบางอย่างยังไม่มี copilot ควรแจ้งเป็น governance gap แล้วเสนอว่า ควรสร้าง/ติดตั้งอะไรเพิ่มก่อน
-
----
-
-# 5. วิธีใช้แบบ “คุยเหมือนแชตกับ LLM”
-
-สำหรับผู้ใช้ส่วนใหญ่ ไม่ต้องจำ flag หรือคำสั่งยาว ๆ เลย ให้คิดแบบนี้:
-
-> เปิด `/smartspec_project_copilot` แล้ว **พิมพ์คำถามเป็นภาษาคน** ที่เหลือให้ copilot ไปอ่านข้อมูลในโปรเจกต์และ workflow docs ให้เอง
-
-ด้านล่างคือ use case สำคัญที่เจอได้บ่อย
-
-## 5.1 ถามความคืบหน้าทั้งโปรเจกต์ + % คร่าว ๆ ต่อ service
-
-**สิ่งที่ผู้ใช้ทำ:**
-
-- เปิด copilot แล้วพิมพ์:
-
-> ตอนนี้โปรเจกต์พัฒนาถึงขั้นตอนไหนแล้ว มี service อะไรเสร็จแล้วบ้าง แต่ละ service เสร็จไปประมาณกี่เปอร์เซ็นต์ ถ้ายังไม่เสร็จ ช่วยบอกทีว่าควรทำอะไรต่อก่อน–หลัง
-
-**สิ่งที่ copilot ควรทำ:**
-
-- ใช้ `SPEC_INDEX` หา spec ทั้งหมดในโปรเจกต์
-- อ่าน `spec.md`, `plan.md`, `tasks.md`, report ต่าง ๆ แบบ chunk ไม่เกิน \~500–800 บรรทัดต่อรอบ
-- ประเมินความคืบหน้าเป็น phase (spec / plan / tasks / CI / security / UI / release)
-- แสดง % คร่าว ๆ ต่อ service พร้อมอธิบายที่มาของตัวเลข
-- เสนอสิ่งที่ควรทำต่อ (เช่น สร้าง tasks, รัน CI gate, ทำ security audit, รัน release readiness)
-
-## 5.2 เน้นเฉพาะบาง service (ไม่ต้องรู้ `--project-scope`)
-
-**ผู้ใช้ถาม:**
-
-> ช่วยดูให้หน่อยว่าตอนนี้
->
-> - payment-service เสร็จไปประมาณกี่ % แล้ว
-> - checkout-service เสร็จไปประมาณกี่ % แล้ว
->
-> แต่ละตัวเหลืองานอะไรสำคัญอยู่บ้าง แล้วช่วยจัดลำดับว่างานไหนควรทำต่อก่อน–หลัง
-
-**copilot:**
-
-- เดาว่า scope คือ `payment-service` + `checkout-service`
-- ใช้ `SPEC_INDEX` หา spec ที่เกี่ยวข้องกับ 2 บริการนี้
-- อ่านไฟล์เฉพาะส่วนที่เกี่ยวข้อง
-- สรุปคืบหน้า + แนะนำ next step ราย service
-
-## 5.3 แนบ report แล้วถามว่า “จาก report นี้ต้องทำอะไรต่อ”
-
-**สถานการณ์:** มี report จาก `smartspec_ci_quality_gate` หรือ `smartspec_security_evidence_audit` แล้วอ่านไม่ออก
-
-**ผู้ใช้ทำ:**
-
-1. เปิด report → copy เนื้อหาสำคัญ
-2. เปิด copilot แล้วพิมพ์:
-
-> จาก report ด้านล่างนี้
->
-> - ช่วยสรุปให้หน่อยว่าอะไรผ่าน / ไม่ผ่าน
-> - มี blocker อะไรที่ต้องแก้ก่อนปล่อยจริง
-> - เราควรทำอะไรต่อก่อน–หลัง
-> - ถ้ามี workflow ที่ควรรันต่อ ช่วยบอกชื่อและเหตุผลด้วย
->
-> (วางเนื้อหา report ต่อท้าย)
-
-**copilot:**
-
-- ตรวจว่ารายงานมาจาก workflow ไหน
-- อ่านเนื้อหาแบบ chunk
-- สรุปเป็นภาษาคน + ชี้ blocker
-- แนะนำ workflow ที่ควร run ซ้ำ / run เพิ่ม เช่น CI gate อีกรอบ, security audit, release readiness
-
-## 5.4 ขอ roadmap สั้น ๆ เป็นภาษาคน
-
-**ผู้ใช้ถาม:**
-
-> สมมติเราอยากปล่อย feature X เข้า production ภายใน 2 เดือน จากสภาพโปรเจกต์ตอนนี้ ช่วยทำ roadmap ให้หน่อยว่า
->
-> - ภายใน 1–2 sprint ข้างหน้าเราควรโฟกัสอะไรบ้าง
-> - ควรรัน workflow ตัวไหนในแต่ละช่วง
-> - มีความเสี่ยงด้าน security / CI / UI / performance ตรงไหนที่ควรจัดการก่อน
-
-**copilot:**
-
-- ตรวจ spec/plan/tasks/report ที่เกี่ยวข้องกับ feature X
-- แบ่งเป็น phase เช่น Spec/Plan → CI/Security → UI → Release
-- ผูก phase กับ workflow เช่น
-  - `smartspec_generate_spec`, `smartspec_generate_plan`
-  - `smartspec_ci_quality_gate`, `smartspec_security_evidence_audit`
-  - `smartspec_ui_validation`, `smartspec_ui_consistency_audit`
-  - `smartspec_release_readiness`
-- สรุปเป็น roadmap พร้อมรายการงานสำคัญ
-
----
-
-# 6. Use case ระบบ Billing & Subscription (ตัวอย่างละเอียด)
-
-use case นี้สำคัญเพราะแสดงวิธีที่ copilot ใช้ `SPEC_INDEX` + โครงไฟล์จริง → แปลเป็นคำสั่งที่รันได้ทันที
-
-## 6.1 สภาพโปรเจกต์สมมติ
-
-- ใน `.spec/SPEC_INDEX.json` พบว่า domain billing มี spec:
-  - `spec-076-billing-system` → `specs/feature/spec-076-billing-system/spec.md`
-  - `spec-090-billing-and-subscription-ui` → `specs/feature/spec-090-billing-and-subscription-ui/spec.md`
-- ในแต่ละโฟลเดอร์มีไฟล์:
-  - `spec.md` ✅
-  - `plan.md` ✅
-  - `tasks.md` ❌ ยังไม่มี
-
-## 6.2 ผู้ใช้ถามเป็นภาษาคน
-
-> อยากเช็คความคืบหน้าระบบ billing หน่อย ทั้งระบบ billing core และระบบเรียกเก็บเงินตาม subscription plan พัฒนาไปถึงขั้นตอนไหนแล้ว และควรทำอะไรต่อ
-
-## 6.3 สิ่งที่ copilot ควรทำเบื้องหลัง
-
-1. ใช้ `SPEC_INDEX` ค้นหาคำว่า `billing`, `subscription` → เจอ 2 spec ข้างต้น
-2. เปิดดูโฟลเดอร์ของแต่ละ spec แล้วเช็กว่า **มีไฟล์อะไรแล้วบ้าง**
-3. สรุปเป็น phase:
-   - Spec phase       : 100% (มี `spec.md`)
-   - Plan phase       : 100% (มี `plan.md`)
-   - Tasks/Implementation plan : 0% (ยังไม่มี `tasks.md`)
-4. ประเมินความคืบหน้าภาพรวมของระบบ billing ว่าอยู่ช่วง “พร้อมวางแผน implementation” แต่ยังไม่ define tasks
-5. แนะนำสิ่งที่ควรทำต่อเป็น **คำสั่งที่ run ได้ทันที**
-
-## 6.4 ตัวอย่างคำตอบที่คาดหวัง (ย่อ)
-
-> **สรุปภาพรวมระบบ Billing & Subscription**
->
-> - ระบบ billing ปัจจุบันมี 2 spec หลัก:
->   1. `spec-076-billing-system`
->   2. `spec-090-billing-and-subscription-ui`
-> - ทั้งคู่มี `spec.md` และ `plan.md` แล้ว → phase spec/plan ถือว่า \~100%
-> - ยังไม่พบ `tasks.md` → phase Implementation plan ยัง \~0%
->
-> **สิ่งที่ควรทำต่อ:**
->
-> 1. สร้าง `tasks.md` สำหรับ billing core
->
-> ```bash
-> /smartspec_generate_tasks specs/feature/spec-076-billing-system
-> ```
->
-> 2. สร้าง `tasks.md` สำหรับ Billing & Subscription UI
->
-> ```bash
-> /smartspec_generate_tasks specs/feature/spec-090-billing-and-subscription-ui
-> ```
->
-> ถ้าคุณรันคำสั่งเหล่านี้บน Kilo ให้เพิ่ม `--kilocode` ต่อท้ายทุกคำสั่ง เช่น
->
-> ```bash
-> /smartspec_generate_tasks specs/feature/spec-076-billing-system --kilocode
-> /smartspec_generate_tasks specs/feature/spec-090-billing-and-subscription-ui --kilocode
-> ```
->
-> หลังจากสร้าง `tasks.md` แล้ว แนะนำให้รัน copilot อีกครั้งเพื่อตรวจ ความคืบหน้าระดับ tasks และวางแผน CI/security/UI ต่อไป
-
-## 6.5 ตัวอย่างคำตอบที่คาดหวัง
-```
-/smartspec_project_copilot \
-  --aspect=roadmap \
-  --lang=th \
-  --spec-path=specs/core/spec-core-UM-001/spec.md \
-  "สรุปงานค้าง user management ที่ยังไม่เสร็จ และให้ตอบตามโครงสร้างต่อไปนี้:
-   1) Status summary
-   2) ปัญหาร้ายแรงและวิธีแก้ไข (Critical issues & remediation)
-   3) แผนแก้ไขเป็นระยะ (Timeline / phased plan)
-   4) คำสั่ง SmartSpec ที่ควรใช้ต่อไป (พร้อมตัวอย่างคำสั่ง /smartspec_... ที่รันได้จริง)
-   5) Weakness & Risk Check"
-```
-
----
-
-# 7. การใช้ร่วมกับ Kilo (`--kilocode`)
-
-เมื่อใช้คู่กับ Kilo และเพิ่ม `--kilocode`:
-
-- copilot จะถูกมองเป็น workflow แบบ **Ask/Architect**
-- Kilo Orchestrator เป็นคนช่วย:
-  - วิเคราะห์ intent จากข้อความ
-  - วางแผนว่าจะอ่านไฟล์ไหนบ้าง
-  - อ่านไฟล์ทีละ chunk (\~300–600 บรรทัด) และสรุป
-- copilot จะเน้นสรุปและแนะนำ ไม่เขียนโค้ดเอง
-
-ตัวอย่างคำถามบวกคำสั่ง (เชิงแนวคิด):
+copilot ถูกเรียกใช้งานผ่าน SmartSpec CLI โดยใส่คำถามของผู้ใช้เป็นอาร์กิวเมนต์แรก
 
 ```bash
-/smartspec_project_copilot --kilocode
+/smartspec_project_copilot "<question>" \
+  [--domain <name>] \
+  [--spec-id <id>] \
+  [--spec-path <path>] \
+  [--aspect status|roadmap|security|ci|ui|perf|all] \
+  [--report <path>] \
+  [--format markdown|plain|json] \
+  [--short] \
+  [--repos-config <path>] \
+  [--workspace-roots <root1,root2,...>] \
+  [--registry-roots <dir1,dir2,...>] \
+  [--out <safe_reports_root>] \
+  [--json]
 ```
 
-ข้อความที่พิมพ์ถาม:
+### การใช้งาน Kilo Code
 
-> อยากรู้ว่าใน sprint นี้ สำหรับ service checkout ควรทำอะไรต่อบ้างเพื่อให้พร้อมปล่อย production ช่วยวางลำดับงาน และแนะนำ workflow ที่ควรใช้ให้หน่อย
+เมื่อผนวก copilot เข้ากับสภาพแวดล้อม Kilo Code (เช่น ส่วนขยาย IDE หรือแพลตฟอร์ม) การใช้ flag `--kilocode` จะระบุบริบทการทำงาน
 
-copilot ควรตอบเป็นลำดับงาน เช่น
+```bash
+/smartspec_project_copilot.md "<question>" --kilocode \
+  [--domain <name>] [--spec-id <id>] [--spec-path <path>] [--aspect ...] \
+  [--report <path>] [--format ...] [--short] \
+  [--repos-config <path>] [--workspace-roots ...] [--registry-roots ...] \
+  [--out <safe_reports_root>] \
+  [--json]
+```
 
-- ปรับ spec/plan ให้ครบ → `/smartspec_generate_spec`, `/smartspec_generate_plan`
-- ตั้ง CI gate → `/smartspec_ci_quality_gate`
-- เก็บ security evidence → `/smartspec_security_evidence_audit`
-- ตรวจ UI → `/smartspec_ui_validation`, `/smartspec_ui_consistency_audit`
-- ตรวจ readiness → `/smartspec_release_readiness`
+## กรณีการใช้งาน
 
-พร้อมตัวอย่างคำสั่งที่แนะนำให้ใช้บน Kilo (มี `--kilocode` ต่อท้าย)
+### กรณีการใช้งาน 1: ตรวจสอบความก้าวหน้าของโปรเจกต์และขั้นตอนถัดไป
 
----
+**สถานการณ์:** ผู้จัดการโปรเจกต์ต้องการทราบสถานะปัจจุบันของสเปค `user-auth-v2` และขั้นตอนถัดไปที่ควรทำ
 
-# 8. สรุป Do / Don’t
+**คำสั่ง CLI:**
 
-**ควรทำ**
+```bash
+/smartspec_project_copilot "สถานะของสเปค user-auth-v2 เป็นอย่างไร และฉันควรทำอะไรต่อ?" \
+  --spec-id user-auth-v2 \
+  --aspect status
+```
 
-- ใช้ copilot เป็นจุดเริ่มถามทุกอย่างเกี่ยวกับสถานะโปรเจกต์
-- พิมพ์ถามเป็นภาษาคน แล้วให้ copilot แปลเป็น spec/plan/tasks/workflow ให้
-- ถ้ามี report อยู่แล้วให้ copy มาวางแล้วถามว่า “จาก report นี้ต้องทำอะไรต่อ”
-- ใช้ `--kilocode` เมื่อรันบน Kilo เพื่อให้ Orchestrator ช่วยจัดการ context และแผนงาน
+**ผลลัพธ์ที่คาดหวัง:**
 
-**ไม่ควรทำ**
+copilot สแกนโปรเจกต์ พบไฟล์ `specs/auth/user-auth-v2/spec.md` และตรวจสอบ `tasks.md` และรายงานที่เกี่ยวข้อง
 
-- คาดหวังให้ copilot แก้โค้ดหรือแก้ไฟล์ให้เอง (มันเป็น NO-WRITE)
-- ใช้ copilot แทน security/architect review ทั้งหมด
-- เพิกเฉยต่อคำเตือนเรื่อง version, CVE, design system ที่ copilot ชี้
+1.  **สรุปสถานะ:** *สเปค `user-auth-v2` สมบูรณ์แล้ว มีไฟล์ `tasks.md` ที่เกี่ยวข้องแต่ยังไม่ได้รับการตรวจสอบตั้งแต่สัปดาห์ที่แล้ว*
+2.  **ปัญหาสำคัญ:** *ไม่พบปัญหาสำคัญ แต่การตรวจสอบล้าสมัย*
+3.  **Workflow & คำสั่งที่แนะนำ:**
+    *   **เพื่อยืนยันความก้าวหน้า:** `/smartspec_verify_tasks_progress_strict specs/auth/user-auth-v2/tasks.md`
+    *   **หากการตรวจสอบล้มเหลว:** `/smartspec_generate_code specs/auth/user-auth-v2/spec.md --language typescript`
 
----
+### กรณีการใช้งาน 2: ค้นหาช่องโหว่ด้านความปลอดภัย
 
-# 9. Backward Compatibility Notes
+**สถานการณ์:** ผู้ตรวจสอบความปลอดภัยต้องการสรุปอย่างรวดเร็วเกี่ยวกับปัญหาความปลอดภัยที่เปิดอยู่ในรายงานหรือสเปค โดยเน้นที่แง่มุม `security`
 
-- คู่มือนี้รองรับ workflow เวอร์ชัน `5.6.x` ทั้งช่วง
-- ถ้าในอนาคตมี flag/ความสามารถใหม่เพิ่มเข้ามา ควรเพิ่มเข้าไปแบบ additive โดยไม่ลบตัวอย่าง/คำอธิบายเดิม
+**คำสั่ง CLI:**
 
----
+```bash
+/smartspec_project_copilot "มีช่องโหว่ด้านความปลอดภัยที่เปิดอยู่หรือมาตรการแก้ไขที่รอดำเนินการในโปรเจกต์หรือไม่?" \
+  --aspect security \
+  --format markdown
+```
 
-# 10. Troubleshooting พื้นฐาน
+**ผลลัพธ์ที่คาดหวัง:**
 
-- ถ้า copilot ตอบว่าไม่พบ `SPEC_INDEX` → ตรวจว่า `.spec/SPEC_INDEX.json` มีจริงหรือไม่
-- ถ้าบอกว่าไม่พบ registry สำคัญ (เช่น `tool-version-registry.json`) → ให้สร้างตาม ที่ KB แนะนำแล้วรัน copilot ใหม่
-- ถ้าคำตอบดูไม่อัปเดตกับ workflow เวอร์ชันล่าสุด → ตรวจว่า `.smartspec` และ `.smartspec-docs` ถูกอัปเดตมาจาก distribution repo ล่าสุดแล้วหรือยัง
+copilot สแกน `.spec/reports/**` เพื่อหารายงานที่เกี่ยวข้องกับความปลอดภัย และไฟล์ `spec.md` ที่ติดแท็กปัญหาความปลอดภัย
 
-เมื่อมีข้อสงสัยเพิ่มเติม ให้ Platform/Architecture team ตรวจ version ของ KB, workflow และสคริปต์ติดตั้ง ก่อน debug เพิ่มเติมเสมอ
+1.  **สรุปสถานะ:** *พบปัญหาระดับกลาง 2 รายการที่เปิดอยู่: การส่งข้อมูลที่ไม่ปลอดภัย (รายงาน ID 456) และการพึ่งพาที่ยังไม่ได้แพตช์ (รายงาน ID 789)*
+2.  **ปัญหาสำคัญ:** *การพึ่งพาที่ยังไม่ได้แพตช์ต้องได้รับการแก้ไขทันที*
+3.  **Workflow & คำสั่งที่แนะนำ:**
+    *   **เพื่อสร้างแผนการแก้ไข:** `/smartspec_generate_plan .spec/reports/security/report_789.json --type mitigation`
+    *   **เพื่ออัปเดตรีจิสทรีของการพึ่งพา:** `/smartspec_update_registry --type dependencies --id vulnerable-lib`
 
+### กรณีการใช้งาน 3: การผนวก Kilo Code สำหรับการนำทาง workflow
+
+**สถานการณ์:** นักพัฒนาที่ใช้ IDE ที่รองรับ Kilo Code ถามคำถามทั่วไปเกี่ยวกับความก้าวหน้าการดำเนินงาน
+
+**คำสั่ง Kilo Code:**
+
+```bash
+/smartspec_project_copilot.md "ตอนนี้เราก้าวหน้าในการดำเนินงานถึงไหน? ฉันไม่เห็นไฟล์ tasks" --kilocode
+```
+
+**ผลลัพธ์ที่คาดหวัง (ใช้กฎการนำทาง):**
+
+เนื่องจากนักพัฒนาไม่แน่ใจและไม่มีการระบุเส้นทาง `tasks.md` กฎการนำทางบังคับสำหรับคำถามเกี่ยวกับความก้าวหน้าจะถูกเรียกใช้
+
+1.  **สรุปสถานะ:** *ไม่สามารถระบุความก้าวหน้าการดำเนินงานที่แน่นอนได้โดยไม่มีรายการงานที่ได้รับการตรวจสอบ*
+2.  **ปัญหาสำคัญ:** *ขาดหลักฐานที่ตรวจสอบได้สำหรับความก้าวหน้า*
+3.  **Workflow & คำสั่งที่แนะนำ:**
+    *   **ขั้นแรก ค้นหาสเปคที่เกี่ยวข้อง (เช่น `specs/feature/new_api/spec.md`)**
+    *   **จากนั้น สร้างงาน:** `/smartspec_generate_tasks specs/feature/new_api/spec.md --apply`
+    *   **สุดท้าย ยืนยันความก้าวหน้า:** `/smartspec_verify_tasks_progress_strict specs/feature/new_api/tasks.md`
+
+## พารามิเตอร์
+
+| Parameter/Flag | Type | Description | Default |
+| :--- | :--- | :--- | :--- |
+| `<question>` | String | **จำเป็น.** คำถามหรือคำสืบค้นของผู้ใช้สำหรับ copilot | N/A |
+| `--domain` | String | กรองขอบเขตไปยังชื่อโดเมนเฉพาะ | ทุกโดเมน |
+| `--spec-id` | String | กรองขอบเขตไปยังรหัสสเปคเฉพาะ | ทุกสเปค |
+| `--spec-path` | Path | กรองขอบเขตไปยังเส้นทางไฟล์สเปคเฉพาะ (เช่น `specs/auth/login/spec.md`) | ทุกสเปค |
+| `--aspect` | Enum | จำกัดขอบเขตคำตอบให้แคบลง ค่าที่ใช้ได้: `status`, `roadmap`, `security`, `ci`, `ui`, `perf`, `all` | `all` |
+| `--report` | Path | กำหนดให้ copilot รวมรายงานไฟล์เฉพาะเป็นหลักฐานหลัก | ไม่มี |
+| `--format` | Enum | กำหนดรูปแบบผลลัพธ์ ค่าที่ใช้ได้: `markdown`, `plain`, `json` | `markdown` |
+| `--short` | Boolean | ขอคำตอบที่กระชับและสั้น | False |
+| `--repos-config` | Path | เส้นทางไปยังไฟล์กำหนดค่าที่เก็บซอร์สโค้ด | N/A |
+| `--workspace-roots` | List[Path] | รายการไดเรกทอรีรากที่คั่นด้วยเครื่องหมายจุลภาคเพื่อสแกน | พื้นที่ทำงานปัจจุบัน |
+| `--registry-roots` | List[Path] | รายการไดเรกทอรีที่มีรีจิสทรีแบบอ่านอย่างเดียว คั่นด้วยเครื่องหมายจุลภาค | รีจิสทรีเริ่มต้น |
+| `--out` | Path | เส้นทางทางเลือกสำหรับ orchestrator ในการเขียนรายงานชั่วคราวที่ปลอดภัย | N/A |
+| `--json` | Boolean | แสดงผลลัพธ์ทั้งหมดในรูปแบบ JSON (แทนที่ `--format`) | False |
+| `--config` | Path | เส้นทางไปยังไฟล์กำหนดค่า SmartSpec | `.spec/smartspec.config.yaml` |
+| `--lang` | Enum | ภาษาผลลัพธ์ ค่าที่ใช้ได้: `en`, `th`, `auto` | `auto` |
+| `--platform` | Enum | ตัวบ่งชี้แพลตฟอร์มการทำงาน ค่าที่ใช้ได้: `cli`, `kilo`, `ci`, `other` | `cli` |
+| `--quiet` | Boolean | ปิดการแสดงผลที่ไม่จำเป็น | False |
+| `--kilocode` | Boolean | ตัวบ่งชี้โหมดแพลตฟอร์ม (ใช้ในตัวอย่าง Kilo Code) | False |
+
+## ผลลัพธ์
+
+ผลลัพธ์หลักคือคำตอบที่ให้คำแนะนำ ซึ่งจัดโครงสร้างตามรูปแบบบังคับดังนี้:
+
+1.  **สรุปสถานะ:** ภาพรวมระดับสูงของขอบเขต
+2.  **ปัญหาสำคัญ & การแก้ไข:** ปัญหาที่เป็นอุปสรรคที่พบในหลักฐาน
+3.  **ไทม์ไลน์ / แผนงานเป็นช่วง:** (ถ้ามี) ไทม์ไลน์ที่คาดการณ์จากแผนงาน/รายงานที่มีอยู่
+4.  **Workflow & คำสั่ง SmartSpec ที่แนะนำ:** ส่วนสำคัญที่สุด ให้คำสั่งที่ตรวจสอบแล้วและพร้อมใช้งานสำหรับการดำเนินการถัดไปของผู้ใช้
+5.  **การตรวจสอบจุดอ่อน & ความเสี่ยง:** ความโปร่งใสเกี่ยวกับข้อจำกัดใดๆ (เช่น ดัชนีที่ขาดหาย, พฤติกรรมสำรอง, การแก้ไขข้อมูล)
+
+**ผลลัพธ์ที่บันทึกไว้ (ถ้ามี):**
+
+หาก orchestrator ใช้ flag `--out`

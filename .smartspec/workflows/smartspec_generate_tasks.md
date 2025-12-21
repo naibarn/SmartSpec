@@ -1,3 +1,10 @@
+---
+description: Convert spec.md (or plan.md) → tasks.md (verification-ready; preserves
+  IDs/checkboxes; reports always written).
+version: 6.0.0
+workflow: /smartspec_generate_tasks
+---
+
 # smartspec_generate_tasks
 
 > **Canonical path:** `.smartspec/workflows/smartspec_generate_tasks.md`  

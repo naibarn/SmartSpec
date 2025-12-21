@@ -4,8 +4,13 @@ version: 6.0.5
 role: plan-generation
 category: core
 write_guard: ALLOW-WRITE
-purpose: Convert spec.md → plan.md (preview-first; dependency-aware; reuse-first; governed apply)
+purpose: Convert spec.md → plan.md (preview-first; dependency-aware; reuse-first;
+  governed apply)
+description: Convert spec.md → plan.md (preview-first; dependency-aware; reuse-first;
+  governed apply).
+workflow: /smartspec_generate_plan
 ---
+
 
 # smartspec_generate_plan
 

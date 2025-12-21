@@ -1,3 +1,10 @@
+---
+description: Consolidated implementation helper (implement/fix/refactor) producing
+  reports/prompts/scripts only.
+version: 6.0.0
+workflow: /smartspec_code_assistant
+---
+
 # smartspec_code_assistant
 
 > **Version:** 6.0.0  

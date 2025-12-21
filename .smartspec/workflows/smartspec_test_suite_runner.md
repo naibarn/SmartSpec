@@ -1,3 +1,9 @@
+---
+description: Run test suites and generate reports.
+version: 6.0.0
+workflow: /smartspec_test_suite_runner
+---
+
 # smartspec_test_suite_runner
 
 > **Version:** 6.1.1  

@@ -1,3 +1,9 @@
+---
+description: Generate security audit reports.
+version: 6.0.0
+workflow: /smartspec_security_audit_reporter
+---
+
 # smartspec_security_audit_reporter
 
 > **Version:** 6.1.1  

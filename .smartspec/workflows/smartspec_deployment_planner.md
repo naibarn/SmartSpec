@@ -3,10 +3,18 @@ name: /smartspec_deployment_planner
 version: 6.1.1
 role: release/deployment
 write_guard: REPORTS-ONLY+GOVERNED-WRITE-WITH-APPLY
-purpose: Generate a deployment plan, release notes, and optional CI pipeline patch for a spec. Preview-first; governed writes only with --apply and explicit CI write enable.
+purpose: Generate a deployment plan, release notes, and optional CI pipeline patch
+  for a spec. Preview-first; governed writes only with --apply and explicit CI write
+  enable.
 version_notes:
-  - v6.1.1: Align to SmartSpec v6 hardening (path normalization + no symlink escape + spec-id constraints); evidence-first release notes via strict verify report; CI workflow generation is patch-first and requires explicit opt-in to write into .github/workflows; universal flags + output root safety; safer git usage.
+- v6.1.1: Align to SmartSpec v6 hardening (path normalization + no symlink escape
+    + spec-id constraints); evidence-first release notes via strict verify report;
+    CI workflow generation is patch-first and requires explicit opt-in to write into
+    .github/workflows; universal flags + output root safety; safer git usage.
+description: Generate deployment plans and checklists.
+workflow: /smartspec_deployment_planner
 ---
+
 
 # /smartspec_deployment_planner (v6.1.1)
 

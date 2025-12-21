@@ -1,3 +1,9 @@
+---
+description: Audit UI components for consistency and best practices.
+version: 6.0.0
+workflow: /smartspec_ui_component_audit
+---
+
 # smartspec_ui_component_audit
 
 > **Version:** 6.1.1  

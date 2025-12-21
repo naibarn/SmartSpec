@@ -1,3 +1,9 @@
+---
+description: UI audit/validation (includes consistency mode).
+version: 6.0.0
+workflow: /smartspec_ui_validation
+---
+
 # smartspec_ui_validation
 
 > **Version:** 6.0.0  

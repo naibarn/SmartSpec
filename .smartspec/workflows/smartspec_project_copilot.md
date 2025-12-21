@@ -4,8 +4,13 @@ version: 6.0.7
 role: project-level governance/advisor/router
 write_guard: NO-WRITE
 category: utility
-purpose: Read-only project copilot that summarizes status and routes users to correct SmartSpec workflows (never edits files).
+purpose: Read-only project copilot that summarizes status and routes users to correct
+  SmartSpec workflows (never edits files).
+description: Read-only project copilot that summarizes status and routes users to
+  correct SmartSpec workflows (never edits files).
+workflow: /smartspec_project_copilot
 ---
+
 
 # smartspec_project_copilot
 

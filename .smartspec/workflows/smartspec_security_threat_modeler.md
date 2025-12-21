@@ -1,3 +1,9 @@
+---
+description: Model security threats and generate mitigation strategies.
+version: 6.0.0
+workflow: /smartspec_security_threat_modeler
+---
+
 # smartspec_security_threat_modeler
 
 > **Version:** 6.1.0  

@@ -1,3 +1,10 @@
+---
+description: Generate implementation prompt packs from spec + tasks + optional strict
+  verify report.
+version: 6.0.0
+workflow: /smartspec_report_implement_prompter
+---
+
 # smartspec_report_implement_prompter
 
 > **Canonical path:** `.smartspec/workflows/smartspec_report_implement_prompter.md`

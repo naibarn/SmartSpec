@@ -1,3 +1,9 @@
+---
+description: Validate API contracts and OpenAPI specifications.
+version: 6.0.0
+workflow: /smartspec_api_contract_validator
+---
+
 # smartspec_api_contract_validator
 
 > **Version:** 6.1.1  

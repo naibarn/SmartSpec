@@ -1,3 +1,9 @@
+---
+description: Implement code changes strictly from tasks.md with SmartSpec v6 governance.
+version: 6.0.0
+workflow: /smartspec_implement_tasks
+---
+
 name: /smartspec_implement_tasks
 version: 6.2.0
 role: implementation/execution

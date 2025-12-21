@@ -1,3 +1,10 @@
+---
+description: Refine spec.md (SPEC-first) with deterministic preview/diff + completeness/reuse
+  checks.
+version: 6.0.0
+workflow: /smartspec_generate_spec
+---
+
 # smartspec_generate_spec
 
 > **Canonical path:** `.smartspec/workflows/smartspec_generate_spec.md`  

@@ -1,3 +1,9 @@
+---
+description: Assist in migrating between design systems (e.g., MUI to Ant Design).
+version: 6.0.0
+workflow: /smartspec_design_system_migration_assistant
+---
+
 # smartspec_design_system_migration_assistant
 
 > **Version:** 6.1.1  

@@ -1,3 +1,9 @@
+---
+description: Generate data migration scripts and documentation.
+version: 6.0.0
+workflow: /smartspec_data_migration_generator
+---
+
 # smartspec_data_migration_generator
 
 > **Version:** 6.1.0  

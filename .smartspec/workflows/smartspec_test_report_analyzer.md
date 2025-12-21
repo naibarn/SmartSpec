@@ -1,3 +1,9 @@
+---
+description: Analyze test reports and generate insights.
+version: 6.0.0
+workflow: /smartspec_test_report_analyzer
+---
+
 # smartspec_test_report_analyzer
 
 > **Version:** 6.1.1  

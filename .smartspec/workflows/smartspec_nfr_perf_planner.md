@@ -3,10 +3,17 @@ name: /smartspec_nfr_perf_planner
 version: 6.1.1
 role: design/planning
 write_guard: REPORTS-ONLY
-purpose: Generate performance/load/reliability test task proposals from existing NFRs, SLOs, policies, and SmartSpec artifacts. Planner-only; never modifies specs, tasks, CI, or application code.
+purpose: Generate performance/load/reliability test task proposals from existing NFRs,
+  SLOs, policies, and SmartSpec artifacts. Planner-only; never modifies specs, tasks,
+  CI, or application code.
 version_notes:
-  - v6.1.1: v6 governance alignment; safe output path moved under .spec/reports; universal flags clarified; mandatory hardening + path safety; deterministic output; strict-mode policy compliance rules.
+- v6.1.1: v6 governance alignment; safe output path moved under .spec/reports; universal
+    flags clarified; mandatory hardening + path safety; deterministic output; strict-mode
+    policy compliance rules.
+description: Produce NFR/performance plan from spec (reports).
+workflow: /smartspec_nfr_perf_planner
 ---
+
 
 # /smartspec_nfr_perf_planner (v6.1.1)
 

@@ -1,3 +1,10 @@
+---
+description: Sync checkbox states in tasks.md using a strict verifier summary.json
+  (checkbox-only governed write; preview-first).
+version: 6.0.0
+workflow: /smartspec_sync_tasks_checkboxes
+---
+
 # smartspec_sync_tasks_checkboxes
 
 > **Canonical path:** `.smartspec/workflows/smartspec_sync_tasks_checkboxes.md`  

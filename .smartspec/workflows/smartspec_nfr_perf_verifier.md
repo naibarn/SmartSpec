@@ -3,10 +3,17 @@ name: /smartspec_nfr_perf_verifier
 version: 6.1.1
 role: verify
 write_guard: REPORTS-ONLY
-purpose: Verify NFR performance/reliability compliance using existing evidence artifacts (perf reports, metrics exports, logs). Does not run tests. Outputs verifier reports only.
+purpose: Verify NFR performance/reliability compliance using existing evidence artifacts
+  (perf reports, metrics exports, logs). Does not run tests. Outputs verifier reports
+  only.
 version_notes:
-  - v6.1.1: Align with SmartSpec v6 governance; resolve NO-WRITE/output mismatch; mandatory hardening (path safety + symlink escape); deterministic evidence selection; evidence trust rules; redaction + excerpt policy; universal flags.
+- v6.1.1: Align with SmartSpec v6 governance; resolve NO-WRITE/output mismatch; mandatory
+    hardening (path safety + symlink escape); deterministic evidence selection; evidence
+    trust rules; redaction + excerpt policy; universal flags.
+description: Verify NFR/performance evidence (reports).
+workflow: /smartspec_nfr_perf_verifier
 ---
+
 
 # /smartspec_nfr_perf_verifier (v6.1.1)
 

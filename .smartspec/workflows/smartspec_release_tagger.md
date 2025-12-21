@@ -3,10 +3,18 @@ name: /smartspec_release_tagger
 version: 6.1.1
 role: release
 write_guard: REPORTS-ONLY
-purpose: Create a git tag and (optionally) a GitHub/GitLab release using evidence-first inputs. Preview-first; privileged operations require --apply and explicit network allow.
+purpose: Create a git tag and (optionally) a GitHub/GitLab release using evidence-first
+  inputs. Preview-first; privileged operations require --apply and explicit network
+  allow.
 version_notes:
-  - v6.1.1: v6 hardening (path normalization + no symlink escape + output root safety + spec-id constraints); ban shell execution; strict validation for version/commit; remote verification is MUST; redaction + excerpt policy; aligns inputs/outputs with deployment_planner + verify/run/analyzer workflows.
+- v6.1.1: v6 hardening (path normalization + no symlink escape + output root safety
+    + spec-id constraints); ban shell execution; strict validation for version/commit;
+    remote verification is MUST; redaction + excerpt policy; aligns inputs/outputs
+    with deployment_planner + verify/run/analyzer workflows.
+description: Manage release tags and versioning.
+workflow: /smartspec_release_tagger
 ---
+
 
 # /smartspec_release_tagger (v6.1.1)
 

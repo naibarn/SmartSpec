@@ -3,10 +3,21 @@ name: /smartspec_docs_publisher
 version: 6.1.1
 role: documentation/publishing
 write_guard: REPORTS-ONLY
-purpose: Publish documentation produced by docs_generator to GitHub Pages or Read the Docs using a safe, preview-first, no-shell, allowlisted approach. Writes reports only; uses a temporary workspace under the run folder.
+purpose: Publish documentation produced by docs_generator to GitHub Pages or Read
+  the Docs using a safe, preview-first, no-shell, allowlisted approach. Writes reports
+  only; uses a temporary workspace under the run folder.
 version_notes:
-  - v6.1.1: Fixes universal flag collision by renaming workflow-specific platform flag; adds v6 hardening (path normalization + no symlink escape + output root safety); introduces explicit --allow-network gate and enforcement check; replaces "no local writes" contradiction with approved temp workspace under run folder; removes webhook URL flag in favor of env secret ref; bans shell execution and allowlists commands with timeouts; aligns integration with docs_generator v6.1.1 and release/deploy workflow evidence hooks.
+- v6.1.1: Fixes universal flag collision by renaming workflow-specific platform flag;
+    adds v6 hardening (path normalization + no symlink escape + output root safety);
+    introduces explicit --allow-network gate and enforcement check; replaces "no local
+    writes" contradiction with approved temp workspace under run folder; removes webhook
+    URL flag in favor of env secret ref; bans shell execution and allowlists commands
+    with timeouts; aligns integration with docs_generator v6.1.1 and release/deploy
+    workflow evidence hooks.
+description: Publish documentation to various platforms.
+workflow: /smartspec_docs_publisher
 ---
+
 
 # /smartspec_docs_publisher (v6.1.1)
 

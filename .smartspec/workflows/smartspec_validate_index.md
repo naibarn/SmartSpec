@@ -1,3 +1,9 @@
+---
+description: Validate SPEC_INDEX and WORKFLOWS_INDEX integrity.
+version: 6.0.0
+workflow: /smartspec_validate_index
+---
+
 # smartspec_validate_index
 
 > **Version:** 6.0.0  

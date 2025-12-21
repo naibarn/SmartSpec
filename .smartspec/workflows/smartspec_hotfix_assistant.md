@@ -3,10 +3,19 @@ name: /smartspec_hotfix_assistant
 version: 6.1.1
 role: release/hotfix
 write_guard: REPORTS-ONLY
-purpose: Orchestrate a safe hotfix flow (branch, cherry-pick, test, merge, tag) using preview-first and evidence-first gates. Executes allowlisted git commands without a shell. Writes reports only.
+purpose: Orchestrate a safe hotfix flow (branch, cherry-pick, test, merge, tag) using
+  preview-first and evidence-first gates. Executes allowlisted git commands without
+  a shell. Writes reports only.
 version_notes:
-  - v6.1.1: Fixes v6 hardening gaps (path normalization + no symlink escape + output root safety + identifier constraints); removes broad shell execution; adds explicit network gating; resolves tag vs branch ambiguity; adds deterministic rollback plan; aligns with test-suite-runner, test-report-analyzer, deployment-planner, and release-tagger (v6.1.1).
+- v6.1.1: Fixes v6 hardening gaps (path normalization + no symlink escape + output
+    root safety + identifier constraints); removes broad shell execution; adds explicit
+    network gating; resolves tag vs branch ambiguity; adds deterministic rollback
+    plan; aligns with test-suite-runner, test-report-analyzer, deployment-planner,
+    and release-tagger (v6.1.1).
+description: Assist in creating and managing hotfixes.
+workflow: /smartspec_hotfix_assistant
 ---
+
 
 # /smartspec_hotfix_assistant (v6.1.1)
 

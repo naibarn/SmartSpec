@@ -3,10 +3,20 @@ name: /smartspec_observability_configurator
 version: 6.1.1
 role: observability
 write_guard: REPORTS-ONLY+GOVERNED-WRITE-WITH-APPLY
-purpose: Generate observability configuration (metrics/logs/tracing/alerts/dashboards) aligned with NFRs and release/deploy workflows. Preview-first; governed writes only with --apply and explicit runtime-config write enable.
+purpose: Generate observability configuration (metrics/logs/tracing/alerts/dashboards)
+  aligned with NFRs and release/deploy workflows. Preview-first; governed writes only
+  with --apply and explicit runtime-config write enable.
 version_notes:
-  - v6.1.1: Fixes flag collision with universal --platform; adds v6 hardening (path normalization + no symlink escape + output root safety + atomic writes); adds Change Plan artifacts; replaces full-content previews with diff/excerpt+hash; strengthens secret-leak prevention; updates dual-command examples with --kilocode; aligns interoperability with deployment_planner/release_tagger/hotfix_assistant/test runner/analyzer.
+- v6.1.1: Fixes flag collision with universal --platform; adds v6 hardening (path
+    normalization + no symlink escape + output root safety + atomic writes); adds
+    Change Plan artifacts; replaces full-content previews with diff/excerpt+hash;
+    strengthens secret-leak prevention; updates dual-command examples with --kilocode;
+    aligns interoperability with deployment_planner/release_tagger/hotfix_assistant/test
+    runner/analyzer.
+description: Configure observability tools (logging, metrics, tracing).
+workflow: /smartspec_observability_configurator
 ---
+
 
 # /smartspec_observability_configurator (v6.1.1)
 

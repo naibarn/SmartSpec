@@ -1,3 +1,9 @@
+---
+description: Consolidated quality gate (replaces ci_quality_gate + release_readiness).
+version: 6.0.0
+workflow: /smartspec_quality_gate
+---
+
 # smartspec_quality_gate
 
 > **Version:** 6.0.0  

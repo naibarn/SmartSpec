@@ -1,3 +1,10 @@
+---
+description: 'Strict evidence-only verification using parseable evidence hooks (evidence:
+  type key=value...).'
+version: 6.0.0
+workflow: /smartspec_verify_tasks_progress_strict
+---
+
 # smartspec_verify_tasks_progress_strict
 
 > **Canonical path:** `.smartspec/workflows/smartspec_verify_tasks_progress_strict.md`  

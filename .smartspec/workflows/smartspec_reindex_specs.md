@@ -1,3 +1,10 @@
+---
+description: Rebuild/refresh SPEC_INDEX.json from specs/** (non-destructive; reports
+  always written).
+version: 6.0.0
+workflow: /smartspec_reindex_specs
+---
+
 # smartspec_reindex_specs
 
 > **Canonical path:** `.smartspec/workflows/smartspec_reindex_specs.md`  

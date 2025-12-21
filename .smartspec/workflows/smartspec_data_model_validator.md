@@ -1,3 +1,9 @@
+---
+description: Validate data models and database schemas.
+version: 6.0.0
+workflow: /smartspec_data_model_validator
+---
+
 # smartspec_data_model_validator
 
 > **Version:** 6.1.1  

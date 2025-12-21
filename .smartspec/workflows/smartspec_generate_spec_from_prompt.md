@@ -1,3 +1,10 @@
+---
+description: Bootstrap starter specs from a natural-language prompt (reuse-first;
+  reference-pack aware; no-network).
+version: 6.0.0
+workflow: /smartspec_generate_spec_from_prompt
+---
+
 # smartspec_generate_spec_from_prompt
 
 > **Canonical path:** `.smartspec/workflows/smartspec_generate_spec_from_prompt.md`  

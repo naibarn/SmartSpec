@@ -1,3 +1,10 @@
+---
+description: Rebuild/refresh WORKFLOWS_INDEX.yaml from .smartspec/workflows/** (non-destructive;
+  reports always written).
+version: 6.0.0
+workflow: /smartspec_reindex_workflows
+---
+
 # smartspec_reindex_workflows
 
 > **Canonical path:** `.smartspec/workflows/smartspec_reindex_workflows.md`  

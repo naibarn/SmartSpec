@@ -3,10 +3,17 @@ name: /smartspec_generate_tests
 version: 6.1.1
 role: test-planning/governance
 write_guard: REPORTS-ONLY+GOVERNED-WRITE-WITH-APPLY
-purpose: Generate a SmartSpec-governed test plan (test matrix + acceptance criteria + required evidence) aligned with SmartSpec v6 governance. Default outputs are reports-only; optional apply writes the test plan into the spec folder under specs/**.
+purpose: Generate a SmartSpec-governed test plan (test matrix + acceptance criteria
+  + required evidence) aligned with SmartSpec v6 governance. Default outputs are reports-only;
+  optional apply writes the test plan into the spec folder under specs/**.
 version_notes:
-  - v6.1.1: v6 governance alignment; resolves NO-WRITE/output mismatch; universal flags; preview-first change plan; secure path + symlink hardening; de-dup via SPEC_INDEX/registries; reduces overlap by referencing specialized workflows (NFR/UI/contract/security).
+- v6.1.1: v6 governance alignment; resolves NO-WRITE/output mismatch; universal flags;
+    preview-first change plan; secure path + symlink hardening; de-dup via SPEC_INDEX/registries;
+    reduces overlap by referencing specialized workflows (NFR/UI/contract/security).
+description: Generate test artifacts/suggestions (prompts/scripts/reports).
+workflow: /smartspec_generate_tests
 ---
+
 
 # /smartspec_generate_tests (v6.1.1)
 

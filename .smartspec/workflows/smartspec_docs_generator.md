@@ -3,10 +3,19 @@ name: /smartspec_docs_generator
 version: 6.1.1
 role: documentation
 write_guard: REPORTS-ONLY+GOVERNED-WRITE-WITH-APPLY
-purpose: Generate project documentation bundles (API docs, user guide, architecture diagrams) from spec/registry/code signals. Preview-first; default writes reports only; governed writes to repo docs require explicit opt-in and config allowlist.
+purpose: Generate project documentation bundles (API docs, user guide, architecture
+  diagrams) from spec/registry/code signals. Preview-first; default writes reports
+  only; governed writes to repo docs require explicit opt-in and config allowlist.
 version_notes:
-  - v6.1.1: Adds v6 hardening (path normalization + no symlink escape + output root safety + atomic writes); replaces full-content previews with change plan + diff/excerpt+hash; introduces explicit --write-docs gate for repo writes; adds network gate (--allow-network) and external tool allowlist/no-shell policy; aligns chain integration with deployment_planner/release_tagger/test workflows; updates Kilo examples to include --kilocode.
+- v6.1.1: Adds v6 hardening (path normalization + no symlink escape + output root
+    safety + atomic writes); replaces full-content previews with change plan + diff/excerpt+hash;
+    introduces explicit --write-docs gate for repo writes; adds network gate (--allow-network)
+    and external tool allowlist/no-shell policy; aligns chain integration with deployment_planner/release_tagger/test
+    workflows; updates Kilo examples to include --kilocode.
+description: Generate technical documentation from specs and code.
+workflow: /smartspec_docs_generator
 ---
+
 
 # /smartspec_docs_generator (v6.1.1)
 

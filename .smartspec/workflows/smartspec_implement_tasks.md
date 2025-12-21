@@ -48,7 +48,7 @@ purpose: Implement code changes strictly from `tasks.md` with 100% duplication p
    - in `strict` safety mode: fail fast and present duplicates to user;
    - in `dev` safety mode: warn prominently but allow continuation with user confirmation.
 3. After implementation, the workflow MUST validate that no duplicates were created.
-4. This invariant applies to all component types: APIs, data models, UI components,
+4. This invariant applies to all component types: APIs, data models, UI components (including A2UI),
    services, workflows, and integrations.
 
 ### 0.3 Kilo Orchestrator Sub-Task Invariant (Legacy Rule — DO NOT REMOVE)

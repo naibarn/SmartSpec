@@ -21,6 +21,7 @@ Refresh the canonical spec registry:
 from spec docs:
 
 - `specs/**/spec.md`
+- `specs/**/ui-spec.json` (A2UI specifications)
 
 This workflow prevents drift between:
 
@@ -185,6 +186,7 @@ Before indexing any extracted text:
 ### 1) Discover specs
 
 - Enumerate `specs/**/spec.md`.
+- Enumerate `specs/**/ui-spec.json` (A2UI specifications).
 - Respect `max_files_scanned`.
 - For files larger than `max_file_bytes_scanned`, do not parse; record metadata only and emit a warning.
 

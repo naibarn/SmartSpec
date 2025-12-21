@@ -42,6 +42,8 @@ It MUST:
 This workflow MUST follow:
 
 - `knowledge_base_smartspec_handbook.md` (v6)
+- `knowledge_base_smartspec_install_and_usage.md` (usage patterns + workflow parameters)
+- `.smartspec/WORKFLOW_PARAMETERS_REFERENCE.md` (complete parameter reference for all 40 workflows)
 - `.spec/smartspec.config.yaml`
 
 ### Write guard
@@ -84,23 +86,28 @@ Hardening rules:
 
 The copilot treats these as primary evidence, in this priority order:
 
-1) **Indexes**
+1) **Knowledge base** (MUST read before answering)
+   - `knowledge_base_smartspec_handbook.md` (governance + security)
+   - `knowledge_base_smartspec_install_and_usage.md` (usage patterns)
+   - `.smartspec/WORKFLOW_PARAMETERS_REFERENCE.md` (parameter reference)
+
+2) **Indexes**
    - `.spec/SPEC_INDEX.json`
    - `.spec/WORKFLOWS_INDEX.yaml` (canonical workflow catalogue)
 
-2) **Registries**
+3) **Registries**
    - `.spec/registry/**`
    - plus any `--registry-roots` (read-only)
 
-3) **Specs & local artifacts**
+4) **Specs & local artifacts**
    - `specs/<category>/<spec-id>/spec.md`
    - `plan.md`, `tasks.md` alongside `spec.md`
    - `ui.json` (if used by the project)
 
-4) **Reports**
+5) **Reports**
    - `.spec/reports/**`
 
-5) **Workflow specs/manuals**
+6) **Workflow specs/manuals**
    - `.smartspec/workflows/smartspec_*.md`
    - optional user manuals under `.smartspec-docs/workflows/**` (when present)
 

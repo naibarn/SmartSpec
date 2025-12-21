@@ -1,28 +1,28 @@
 ---
-description: Refine spec.md (SPEC-first) with deterministic preview/diff + completeness/reuse
-  checks.
-version: 6.0.3
+description: Refine spec.md (SPEC-first) with 100% duplication prevention and reuse-first
+  governance.
+version: 7.0.0
 workflow: /smartspec_generate_spec
 ---
 
 # smartspec_generate_spec
 
 > **Canonical path:** `.smartspec/workflows/smartspec_generate_spec.md`  
-> **Version:** 6.0.3  
+> **Version:** 7.0.0  
 > **Status:** Production Ready  
 > **Category:** core
 
 ## Purpose
 
-Create or refine a `spec.md` using **SPEC-first** governance.
+Create or refine a `spec.md` with **100% duplication prevention** and **reuse-first** governance.
 
 This workflow is the canonical entry point for:
 
-- refining an existing spec by `--spec` or `--spec-ids` (governed)
+- **preventing duplicate components** before they are created
 - enforcing spec completeness (UX/UI baseline + NFRs)
 - enforcing reuse-first behavior (avoid duplicates)
 - producing an auditable preview + diff before any governed writes
-- **populating the component registry** (`.spec/registry/**`)
+- **populating all component registries** (`.spec/registry/**`)
 
 It is **safe-by-default** and writes governed artifacts only when explicitly applied.
 
@@ -32,8 +32,8 @@ It is **safe-by-default** and writes governed artifacts only when explicitly app
 
 **All SmartSpec configuration and registry files are located in the `.spec/` folder:**
 
-- **Config:** `.spec/smartspec.config.yaml` (NOT `smartspec.config.yaml` at root)
-- **Spec Index:** `.spec/SPEC_INDEX.json` (NOT `SPEC_INDEX.json` at root)
+- **Config:** `.spec/smartspec.config.yaml`
+- **Spec Index:** `.spec/SPEC_INDEX.json`
 - **Registry:** `.spec/registry/` (component registry, reuse index)
 - **Reports:** `.spec/reports/` (workflow outputs, previews, diffs)
 - **Scripts:** `.spec/scripts/` (automation scripts)
@@ -79,10 +79,26 @@ Forbidden writes (must hard-fail):
 
 ## Behavior
 
-### 1) Read inputs
+### 1) Pre-Generation Validation (MANDATORY)
 
-- Parse spec.md to extract requirements.
-- Load existing registry files for context.
+Before generating or refining a spec, the AI agent **MUST** check for potential duplicates.
+
+**Validation Command:**
+```bash
+python3 .spec/scripts/detect_duplicates.py \
+  --registry-dir .spec/registry/ \
+  --threshold 0.8
+```
+
+**Validation Rules:**
+- **Exit Code `0` (Success):** No duplicates found. The agent may proceed.
+- **Exit Code `1` (Failure):** Potential duplicates found. The agent **MUST**:
+  - Present the duplicates to the user.
+  - Ask the user to:
+    a) Reuse existing components
+    b) Justify creating new components
+    c) Cancel and review existing specs
+  - **MUST NOT** proceed until the user confirms.
 
 ### 2) Refine Spec & Extract Registry Information (MANDATORY)
 
@@ -90,6 +106,10 @@ Forbidden writes (must hard-fail):
 - **Parse the refined spec.md** to extract:
   - API endpoints (method, path, description, status codes)
   - Data models (name, fields, description)
+  - **UI components** (name, type, props, dependencies)
+  - **Services** (name, responsibilities, dependencies)
+  - **Workflows** (name, steps, description)
+  - **Integrations** (name, type, provider)
   - Terminology (terms, definitions, categories)
   - Critical sections (sections marked as immutable)
 
@@ -100,21 +120,26 @@ Write:
 - `.spec/reports/generate-spec/<run-id>/preview/spec.md`
 - `.spec/reports/generate-spec/<run-id>/preview/registry/api-registry.json`
 - `.spec/reports/generate-spec/<run-id>/preview/registry/data-model-registry.json`
+- `.spec/reports/generate-spec/<run-id>/preview/registry/ui-components-registry.json`
+- `.spec/reports/generate-spec/<run-id>/preview/registry/services-registry.json`
+- `.spec/reports/generate-spec/<run-id>/preview/registry/workflows-registry.json`
+- `.spec/reports/generate-spec/<run-id>/preview/registry/integrations-registry.json`
 - `.spec/reports/generate-spec/<run-id>/preview/registry/glossary.json`
 - `.spec/reports/generate-spec/<run-id>/preview/registry/critical-sections-registry.json`
 - `.spec/reports/generate-spec/<run-id>/diff/spec.patch` (best-effort)
 - `.spec/reports/generate-spec/<run-id>/report.md`
 - `.spec/reports/generate-spec/<run-id>/summary.json` (if `--json`)
 
-### 4) Validate Preview (MANDATORY)
+### 4) Post-Generation Validation (MANDATORY)
 
 After generating the preview and before applying, the AI agent **MUST** validate the generated spec and registry files.
 
 **Validation Command:**
 ```bash
-python3 .spec/scripts/validate_spec.py \
+python3 .spec/scripts/validate_spec_enhanced.py \
   --spec .spec/reports/generate-spec/<run-id>/preview/spec.md \
-  --registry .spec/reports/generate-spec/<run-id>/preview/registry/
+  --registry .spec/reports/generate-spec/<run-id>/preview/registry/ \
+  --check-duplicates --threshold 0.8
 ```
 
 **Validation Rules:**
@@ -126,10 +151,7 @@ python3 .spec/scripts/validate_spec.py \
 
 - Update `specs/<category>/<spec-id>/spec.md`.
 - Update `.spec/SPEC_INDEX.json` (if allowlisted).
-- Update `.spec/registry/api-registry.json`.
-- Update `.spec/registry/data-model-registry.json`.
-- Update `.spec/registry/glossary.json`.
-- Update `.spec/registry/critical-sections-registry.json`.
+- Update all `.spec/registry/**` files.
 
 ---
 
@@ -144,88 +166,98 @@ When updating registry files, the agent MUST:
 1. **Load the existing registry file** from `.spec/registry/`.
 2. **Load the new entries** extracted from the refined `spec.md`.
 3. **Merge new entries** into the existing registry:
-   - Add new items (endpoints, models, terms) if they don't exist.
+   - Add new items if they don't exist.
    - Update existing items if the `owner_spec` matches the current spec.
    - Preserve items owned by other specs.
-   - Detect and report conflicts (e.g., same API path with different owner).
+   - Detect and report conflicts.
 4. **Update `last_updated` and `specs_included`** fields.
 5. **Write the merged content** to the preview directory.
 
-### 11.2 `api-registry.json` Template
+### 11.2 `ui-components-registry.json` Template
 
 ```json
 {
-  "version": "1.0.3",
+  "version": "1.0.0",
   "last_updated": "<ISO_DATETIME>",
   "source": "smartspec_generate_spec",
   "specs_included": ["<spec-id>", ...],
-  "endpoints": [
+  "components": [
     {
-      "method": "POST",
-      "path": "/api/v1/auth/register",
-      "description": "User registration",
+      "name": "LoginForm",
+      "type": "form",
+      "description": "User login form with email and password",
       "owner_spec": "<spec-id>",
-      "status_codes": [201, 400, 409, 429]
+      "props": ["onSubmit", "loading", "error"],
+      "dependencies": ["Button", "Input", "ErrorMessage"]
     }
   ]
 }
 ```
 
-### 11.3 `data-model-registry.json` Template
+### 11.3 `services-registry.json` Template
 
 ```json
 {
-  "version": "1.0.2",
+  "version": "1.0.0",
   "last_updated": "<ISO_DATETIME>",
   "source": "smartspec_generate_spec",
   "specs_included": ["<spec-id>", ...],
-  "models": [
+  "services": [
     {
-      "name": "User",
-      "description": "Primary user profile entity",
+      "name": "AuthenticationService",
+      "description": "Handles user authentication and session management",
       "owner_spec": "<spec-id>",
-      "shared_with": ["<other-spec-id>"],
-      "fields": ["id", "email", "name", ...]
+      "responsibilities": [
+        "User login/logout",
+        "Token generation/validation",
+        "Session management"
+      ],
+      "dependencies": ["UserRepository", "TokenService"]
     }
   ]
 }
 ```
 
-### 11.4 `glossary.json` Template
+### 11.4 `workflows-registry.json` Template
 
 ```json
 {
-  "version": "1.0.2",
+  "version": "1.0.0",
   "last_updated": "<ISO_DATETIME>",
   "source": "smartspec_generate_spec",
   "specs_included": ["<spec-id>", ...],
-  "terms": [
+  "workflows": [
     {
-      "term": "JWT",
-      "definition": "JSON Web Token - Stateless access token",
+      "name": "User Registration Flow",
+      "description": "End-to-end user registration process",
       "owner_spec": "<spec-id>",
-      "category": "authentication"
+      "steps": [
+        "Enter email and password",
+        "Verify email address",
+        "Create user profile",
+        "Send welcome email"
+      ]
     }
   ]
 }
 ```
 
-### 11.5 `critical-sections-registry.json` Template
+### 11.5 `integrations-registry.json` Template
 
 ```json
 {
-  "version": "1.0.2",
+  "version": "1.0.0",
   "last_updated": "<ISO_DATETIME>",
   "source": "smartspec_generate_spec",
   "specs_included": ["<spec-id>", ...],
-  "sections": [
+  "integrations": [
     {
-      "spec_id": "<spec-id>",
-      "title": "Security Threat Model (STRIDE)",
-      "location": "Section 3.1",
-      "hash": "stride-threat-model",
-      "allow_update": false,
-      "reason": "Core security requirements - changes require security review"
+      "name": "Stripe Payment Gateway",
+      "type": "payment",
+      "provider": "Stripe",
+      "description": "Integration with Stripe for payment processing",
+      "owner_spec": "<spec-id>",
+      "api_version": "2022-11-15"
     }
   ]
 }

@@ -302,6 +302,104 @@ Every product-facing spec must include:
 Only `.spec/WORKFLOWS_INDEX.yaml` lists **all** workflows.
 This Handbook defines the contracts; it does not duplicate the entire registry.
 
+### 12.1 Workflow File Format (Antigravity Support)
+
+All workflow files under `.smartspec/workflows/*.md` MUST include proper YAML frontmatter for antigravity compatibility.
+
+#### 12.1.1 Required Structure
+
+Every workflow file MUST:
+
+1. **Start with YAML frontmatter block**
+   - First line MUST be `---`
+   - YAML block MUST be closed with `---`
+   - No content before the opening `---`
+
+2. **Include required fields**
+   - `description`: Brief explanation of what the workflow does (REQUIRED)
+   - `version`: Workflow version (RECOMMENDED, default: `6.0.0`)
+   - `workflow`: Canonical workflow path (RECOMMENDED, e.g., `/smartspec_generate_spec`)
+
+#### 12.1.2 Example Format
+
+```yaml
+---
+description: Refine spec.md (SPEC-first) with deterministic preview/diff + completeness/reuse checks
+version: 6.0.0
+workflow: /smartspec_generate_spec
+---
+
+# Workflow content starts here...
+```
+
+#### 12.1.3 Field Specifications
+
+**Required Fields:**
+
+- `description` (string, REQUIRED)
+  - Clear, concise explanation of workflow purpose
+  - Should match the `purpose` field in WORKFLOWS_INDEX.yaml
+  - Used for UI display and documentation
+  - Example: `"Generate implementation prompt packs from spec + tasks + optional strict verify report"`
+
+**Recommended Fields:**
+
+- `version` (string, RECOMMENDED)
+  - Workflow behavior contract version
+  - Should follow semantic versioning
+  - Minimum version: `6.0.0` (see §14)
+  - Example: `"6.0.0"`
+
+- `workflow` (string, RECOMMENDED)
+  - Canonical workflow path/name
+  - Must start with `/smartspec_`
+  - Example: `"/smartspec_generate_plan"`
+
+**Optional Fields:**
+
+- `tags` (array of strings, OPTIONAL)
+  - Categorization tags
+  - Example: `["core", "spec-generation"]`
+
+- `platform` (array of strings, OPTIONAL)
+  - Supported platforms
+  - Values: `cli`, `kilo`, `ci`, `other`
+  - Example: `["cli", "kilo", "ci"]`
+
+- `deprecated` (boolean, OPTIONAL)
+  - Indicates if workflow is deprecated
+  - Default: `false`
+  - Example: `true`
+
+#### 12.1.4 Validation
+
+Workflow files MUST pass frontmatter validation:
+
+- File starts with `---` (line 1)
+- YAML block is properly closed with `---`
+- `description` field is present and non-empty
+- YAML syntax is valid
+
+Validation can be performed using:
+
+```bash
+python3 check_workflow_frontmatter.py
+```
+
+#### 12.1.5 Enforcement
+
+- CI/CD pipelines SHOULD validate workflow frontmatter
+- New workflow submissions MUST include proper frontmatter
+- Existing workflows without frontmatter SHOULD be updated
+- Antigravity system MAY reject workflows without proper frontmatter
+
+#### 12.1.6 Best Practices
+
+1. **Consistency**: Keep `description` in sync with WORKFLOWS_INDEX.yaml `purpose`
+2. **Clarity**: Write descriptions that are clear to both humans and AI systems
+3. **Completeness**: Include all recommended fields for better tooling support
+4. **Validation**: Always validate before committing workflow changes
+
 ---
 
 ## 13) Workflow semantics (core chain)

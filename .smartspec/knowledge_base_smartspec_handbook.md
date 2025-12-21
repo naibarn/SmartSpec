@@ -1,7 +1,7 @@
 # knowledge_base_smartspec_handbook.md
 
-> **Version:** 6.1.3 (Canonical)  
-> **Status:** Production Ready  
+> **Version:** 6.2.0 (Canonical)
+> **Status:** Production Ready
 > **Single source of truth:** This file defines governance, security, and command contracts.
 >
 > Any other SmartSpec docs must be *thin wrappers* that link to sections here and MUST NOT redefine rules.
@@ -41,7 +41,51 @@ Principles:
 
 ---
 
-## 2) Canonical folder layout
+## 2) Workflow Loops: The Big Picture
+
+SmartSpec is designed around **8 critical workflow loops** that cover the entire software development lifecycle. These loops are not rigid sequences but flexible, interconnected processes that combine multiple workflows to achieve a specific goal.
+
+### 2.1 Understanding Loops vs. Categories
+
+- **6 Categories** (in README): Group workflows by **function** (e.g., Quality, Security). This helps you find the right tool for a job.
+- **8 Loops**: Group workflows by **process** (e.g., Debugging, Incident Response). This shows you how to combine tools to solve a problem from end to end.
+
+### 2.2 The 8 Workflow Loops
+
+Here is a summary of each loop, its purpose, and its typical flow.
+
+| # | Loop | Purpose | Typical Flow |
+|:-:|:---|:---|:---|
+| 1 | **Happy Path Loop** | The primary development cycle from idea to production. | `Ideation → Deploy → Monitor` |
+| 2 | **Debugging Loop** | Isolate, fix, and verify bugs found during testing. | `Test Failure → Fix → Verify` |
+| 3 | **Incident Response Loop** | Manage and resolve live production incidents. | `Alert → Triage → Resolve` |
+| 4 | **Continuous Improvement Loop** | Use production data to drive new features and fixes. | `Metrics → Feedback → Update` |
+| 5 | **Rollback Loop** | Safely revert a failed deployment to a stable state. | `Failure → Decision → Execute` |
+| 6 | **Dependency Management Loop** | Proactively manage and update third-party dependencies. | `Scan → Analyze → Update` |
+| 7 | **Code Quality Loop** | Identify and refactor code smells and technical debt. | `Analyze → Refactor → Verify` |
+| 8 | **Performance Optimization Loop** | Find and eliminate performance bottlenecks. | `Profile → Optimize → Measure` |
+
+### 2.3 Canonical Execution Chain (Happy Path)
+
+The most common sequence follows the Happy Path Loop:
+
+`SPEC → PLAN → TASKS → implement → STRICT VERIFY → SYNC CHECKBOXES`
+
+Where:
+
+- **SPEC stage** (two-step when starting from an idea):
+  - Draft: `/smartspec_generate_spec_from_prompt` (creates a first-draft spec)
+  - Human edit (mandatory): clarify intent, scope, constraints, and NFRs
+  - Refine/normalize: `/smartspec_generate_spec` (brings the draft to SmartSpec standards)
+- **PLAN**: `/smartspec_generate_plan`
+- **TASKS**: `/smartspec_generate_tasks`
+- **implement**: `/smartspec_implement_tasks`
+- **STRICT VERIFY**: `/smartspec_verify_tasks_progress_strict`
+- **SYNC CHECKBOXES**: `/smartspec_sync_tasks_checkboxes`
+
+---
+
+## 3) Canonical folder layout
 
 ```text
 .spec/
@@ -58,6 +102,14 @@ Principles:
   cache/
   logs/
 
+.smartspec-docs/
+  guides/
+  reports/
+  workflows/
+
+.smartspec-assets/
+  infographics/
+
 specs/
   <category>/
     <spec-id>/
@@ -65,28 +117,14 @@ specs/
       plan.md
       tasks.md
       references/
-        sources.yaml
-        decisions.md
-        notes.md
-      design/
-      ui/
-      schema/
-      api/
-      testplan/
+      ...
 ```
-
-Rules:
-
-- `.spec/SPEC_INDEX.json` is the canonical spec registry.
-- `.spec/WORKFLOWS_INDEX.yaml` is the canonical workflow registry.
-- `.spec/smartspec.config.yaml` is the canonical configuration.
-- `references/` is mandatory when a spec uses external references or APIs.
 
 ---
 
-## 3) Write model
+## 4) Write model
 
-### 3.1 Definitions
+### 4.1 Definitions
 
 - **Safe outputs (allowed by default)**
   - reports: `.spec/reports/**`
@@ -97,16 +135,16 @@ Rules:
   - anything under `specs/**`
   - `.spec/SPEC_INDEX.json`
   - `.spec/WORKFLOWS_INDEX.yaml`
-  - any runtime source tree changes (see §3.5)
+  - any runtime source tree changes (see §4.5)
 
-### 3.2 Rules
+### 4.2 Rules
 
 - Workflows may always read the project.
 - Workflows may write **safe outputs** without `--apply`.
 - Workflows MUST require `--apply` to modify governed artifacts.
 - Any workflow that can modify governed artifacts MUST output a **Change Plan** first.
 
-### 3.3 Allowed write scopes
+### 4.3 Allowed write scopes
 
 - Spec workflows: `specs/<category>/<spec-id>/**` (governed)
 - Spec index updates: `.spec/SPEC_INDEX.json` (governed)
@@ -114,347 +152,112 @@ Rules:
 - Reports: `.spec/reports/**` (safe)
 - Prompter outputs: `.smartspec/prompts/**` (safe)
 - Generated scripts: `.smartspec/generated-scripts/**` (safe)
-  - scripts must never be written into runtime source folders (e.g., `src/`, `app/`, `server/`, `packages/`, `services/`) unless explicitly requested by a human and reviewed.
-- Checkbox sync: only checkbox state changes in `tasks.md` (governed)
 
-### 3.4 Security hardening (mandatory)
+### 4.4 Security hardening (mandatory)
 
 Workflows that read or write filesystem paths MUST enforce:
 
 - **Path normalization**: reject traversal (`..`), absolute paths, and control characters.
 - **No symlink escape**: do not read/write through symlinks that resolve outside allowed scopes.
-- **Output root safety**: any user-provided `--out` (and any governed target dir) MUST:
-  - resolve under config allowlist (e.g., `safety.allow_writes_only_under`)
-  - NOT fall under config denylist (e.g., `safety.deny_writes_under`)
-  - hard-fail when invalid
+- **Output root safety**: any user-provided `--out` MUST resolve under a configured allowlist.
 - **Spec-id constraints**: `^[a-z0-9_\-]{3,64}$`.
 - **No secrets**: redact tokens/keys; use placeholders.
-- **Excerpt policy**: reports MUST NOT dump full configs/logs/docs; prefer diffs + short excerpts + hashes.
-- **Bounded scanning**: enforce config limits (max files/bytes/time); record reduced coverage when limits are hit.
+- **Bounded scanning**: enforce config limits (max files/bytes/time).
 
-Workflows that write governed files MUST additionally enforce:
-
-- **Atomic writes**: write via temp+rename (and lock when configured) to avoid partial updates.
-- **Output collision**: do not overwrite existing run folders unless explicitly configured.
-
-### 3.5 No source pollution + explicit runtime-tree opt-in
+### 4.5 No source pollution + explicit runtime-tree opt-in
 
 Default rule: SmartSpec workflows MUST NOT modify application runtime source trees.
 
-If a workflow *must* write to a runtime tree (examples: code/tests, `docs/`, `.github/workflows/`, deployment/runtime configs), it MUST require **two gates**:
+If a workflow *must* write to a runtime tree, it MUST require **two gates**:
 
 1) `--apply` (governed)
-2) a workflow-specific explicit opt-in flag (examples):
-   - `--write-code` (runtime code/tests/config writes)
-   - `--write-docs`
-   - `--write-ci-workflow`
-   - `--write-runtime-config`
-
-Both gates MUST be documented and enforced.
-
-### 3.6 Temporary workspace allowance (for privileged workflows)
-
-Some privileged workflows (e.g., publish/tag flows) may require a temporary workspace (clone/worktree/copy).
-
-Allowed workspace rule:
-
-- Workspace is allowed **only** under the run folder:
-  - `.spec/reports/<workflow>/<run-id>/workspace/**`
-- Workspace paths MUST still obey §3.4 hardening.
-- Workspace contents MUST NOT be treated as governed artifacts.
+2) a workflow-specific explicit opt-in flag (e.g., `--write-code`, `--write-docs`)
 
 ---
 
-## 4) Configuration (config-first)
+## 5) Configuration (config-first)
 
-### 4.1 Canonical config file
-
-Default path: `.spec/smartspec.config.yaml`
-
-The config file is the single place for environment wiring:
-
-- workspace roots / multi-repo
-- registry roots
-- language and platform defaults
-- output roots
-- safety settings (allow/deny roots, redaction, limits, network policy)
-
-### 4.2 CLI flags are overrides only
-
-Workflows must not require long flag lists for normal usage.
+- **Canonical config file**: `.spec/smartspec.config.yaml`
+- **CLI flags are overrides only**: Workflows must not require long flag lists for normal usage.
 
 ---
 
-## 5) Universal flag contract (minimal)
+## 6) Universal flag contract (minimal)
 
-Every workflow MUST support these flags (same names, same behavior):
+Every workflow MUST support these flags:
 
-- `--config <path>` (default: `.spec/smartspec.config.yaml`)
-- `--lang <th|en>` (optional override)
-- `--platform <cli|kilo|ci|other>` (optional override)
-- `--apply` (required only when modifying governed artifacts)
+- `--config <path>`
+- `--lang <th|en>`
+- `--platform <cli|kilo|ci|other>`
+- `--apply`
 - `--out <path>`
 - `--json`
 - `--quiet`
 
-Rules:
-
-- **Reserved names:** workflow-specific flags MUST NOT reuse a universal flag name with a different meaning.
-  - Example: do NOT use `--platform` to mean "datadog" or "github-pages".
-  - Use a namespaced flag such as `--obs-platform` or `--publish-platform`.
-- **No new global flags** may be introduced without updating this Handbook.
+**Reserved names:** workflow-specific flags MUST NOT reuse a universal flag name with a different meaning. Use a namespaced flag such as `--obs-platform` or `--publish-platform`.
 
 ---
 
-## 6) Positional-first command style
+## 7) Positional-first command style
 
-To reduce parameter sprawl, workflows should accept the primary input as a positional argument.
+Workflows should accept the primary input as a positional argument.
 
 Examples:
 
 - `smartspec_generate_plan <spec.md> --apply`
-- `smartspec_generate_tasks <spec.md> --apply`
 - `smartspec_implement_tasks <tasks.md> --apply --write-code`
 - `smartspec_verify_tasks_progress_strict <tasks.md> --out <dir> --json`
 
 ---
 
-## 7) Privileged operations: execution + network policy
+## 8) Privileged operations: execution + network policy
 
-### 7.1 No-shell + allowlist + timeouts
+### 8.1 No-shell + allowlist + timeouts
 
 Any workflow that executes external commands MUST:
 
-- spawn without a shell (no `sh -c`, no command-string concatenation)
-- use an allowlist of binaries (and subcommands where applicable)
-- enforce timeouts for every command
-- redact captured stdout/stderr using configured redaction
+- spawn without a shell (no `sh -c`)
+- use an allowlist of binaries
+- enforce timeouts
+- redact captured stdout/stderr
 
-### 7.2 Network deny-by-default + allow-network gate
+### 8.2 Network deny-by-default + allow-network gate
 
 Default: network access is denied.
 
-If a workflow needs network (fetch/push/publish/webhook, dependency installs, remote downloads), it MUST:
+If a workflow needs network, it MUST require an explicit gate flag (e.g., `--allow-network`).
 
-- require an explicit gate flag (recommended: `--allow-network`)
-- record in the report whether network was used
-- if the runtime cannot enforce deny-by-default, the workflow MUST emit a warning in its summary/report
-
-### 7.3 Secret handling for privileged workflows
+### 8.3 Secret handling for privileged workflows
 
 - Secrets MUST NOT be accepted as raw CLI flags.
 - Prefer environment variables or secret references (e.g., `env:NAME`).
-- Reports MUST NOT print secret values; only redaction counts and safe placeholders.
 
 ---
 
-## 8) Change Plan requirement (governed writes)
+## 9) Change Plan requirement (governed writes)
 
 Any workflow that can write governed artifacts MUST produce a Change Plan *before apply*.
 
 Minimum Change Plan contents:
 
 - list of files to be created/modified
-- diff summary (or patch files), with redaction
+- diff summary (or patch files)
 - rationale and safety notes
-- hashes of final intended file contents (optional but recommended)
 
 ---
 
-## 9) SPEC_INDEX governance (reuse + de-dup)
+## 10) Workflow registry (single source)
 
-Any workflow that creates a new spec MUST:
+Only `.spec/WORKFLOWS_INDEX.yaml` lists **all** workflows. This Handbook defines the contracts; it does not duplicate the entire registry.
 
-1) Load `.spec/SPEC_INDEX.json`
-2) Search for overlap against title/summary/tags/integrations/components
-3) Decide reuse vs extend vs supersede
-
-If a strong match exists, **do not create a new overlapping spec**.
+All workflow files (`.smartspec/workflows/*.md`) MUST include proper YAML frontmatter for antigravity compatibility.
 
 ---
 
-## 10) Reference system and research requirements
-
-- Reference types: UX benchmark, UI inspiration, API docs, Internal spec reuse
-- Reference IDs: `REF-UX-###`, `REF-UI-###`, `REF-API-###`, `REF-SPEC-###`
-- Specs using references must provide `references/sources.yaml`
-- API integrations must include implementable details (auth, endpoints, error modes, rate limits, etc.)
-- No-cloning rule: inspiration only (do not copy layouts/assets/microcopy)
-
----
-
-## 11) UI/UX minimum standard
-
-Every product-facing spec must include:
-
-- personas/roles + key journeys
-- IA (navigation map)
-- screens + flows
-- state coverage: loading/empty/error/success
-- accessibility baseline
-- responsive notes
-- microcopy guidance
-
----
-
-## 12) Workflow registry (single source)
-
-Only `.spec/WORKFLOWS_INDEX.yaml` lists **all** workflows.
-This Handbook defines the contracts; it does not duplicate the entire registry.
-
-### 12.1 Workflow File Format (Antigravity Support)
-
-All workflow files under `.smartspec/workflows/*.md` MUST include proper YAML frontmatter for antigravity compatibility.
-
-#### 12.1.1 Required Structure
-
-Every workflow file MUST:
-
-1. **Start with YAML frontmatter block**
-   - First line MUST be `---`
-   - YAML block MUST be closed with `---`
-   - No content before the opening `---`
-
-2. **Include required fields**
-   - `description`: Brief explanation of what the workflow does (REQUIRED)
-   - `version`: Workflow version (RECOMMENDED, default: `6.0.0`)
-   - `workflow`: Canonical workflow path (RECOMMENDED, e.g., `/smartspec_generate_spec`)
-
-#### 12.1.2 Example Format
-
-```yaml
----
-description: Refine spec.md (SPEC-first) with deterministic preview/diff + completeness/reuse checks
-version: 6.0.0
-workflow: /smartspec_generate_spec
----
-
-# Workflow content starts here...
-```
-
-#### 12.1.3 Field Specifications
-
-**Required Fields:**
-
-- `description` (string, REQUIRED)
-  - Clear, concise explanation of workflow purpose
-  - Should match the `purpose` field in WORKFLOWS_INDEX.yaml
-  - Used for UI display and documentation
-  - Example: `"Generate implementation prompt packs from spec + tasks + optional strict verify report"`
-
-**Recommended Fields:**
-
-- `version` (string, RECOMMENDED)
-  - Workflow behavior contract version
-  - Should follow semantic versioning
-  - Minimum version: `6.0.0` (see §14)
-  - Example: `"6.0.0"`
-
-- `workflow` (string, RECOMMENDED)
-  - Canonical workflow path/name
-  - Must start with `/smartspec_`
-  - Example: `"/smartspec_generate_plan"`
-
-**Optional Fields:**
-
-- `tags` (array of strings, OPTIONAL)
-  - Categorization tags
-  - Example: `["core", "spec-generation"]`
-
-- `platform` (array of strings, OPTIONAL)
-  - Supported platforms
-  - Values: `cli`, `kilo`, `ci`, `other`
-  - Example: `["cli", "kilo", "ci"]`
-
-- `deprecated` (boolean, OPTIONAL)
-  - Indicates if workflow is deprecated
-  - Default: `false`
-  - Example: `true`
-
-#### 12.1.4 Validation
-
-Workflow files MUST pass frontmatter validation:
-
-- File starts with `---` (line 1)
-- YAML block is properly closed with `---`
-- `description` field is present and non-empty
-- YAML syntax is valid
-
-Validation can be performed using:
-
-```bash
-python3 check_workflow_frontmatter.py
-```
-
-#### 12.1.5 Enforcement
-
-- CI/CD pipelines SHOULD validate workflow frontmatter
-- New workflow submissions MUST include proper frontmatter
-- Existing workflows without frontmatter SHOULD be updated
-- Antigravity system MAY reject workflows without proper frontmatter
-
-#### 12.1.6 Best Practices
-
-1. **Consistency**: Keep `description` in sync with WORKFLOWS_INDEX.yaml `purpose`
-2. **Clarity**: Write descriptions that are clear to both humans and AI systems
-3. **Completeness**: Include all recommended fields for better tooling support
-4. **Validation**: Always validate before committing workflow changes
-
----
-
-## 13) Workflow semantics (core chain)
-
-### 13.1 Canonical execution chain (preferred)
-
-`SPEC → PLAN → TASKS → implement → STRICT VERIFY → SYNC CHECKBOXES`
-
-Where:
-
-- SPEC stage (two-step when starting from an idea):
-  - Draft: `/smartspec_generate_spec_from_prompt` (creates a first-draft spec)
-  - Human edit (mandatory): clarify intent, scope, constraints, and NFRs
-  - Refine/normalize: `/smartspec_generate_spec` (brings the draft to SmartSpec standards)
-- SPEC stage (when a spec file already exists):
-  - Refine/normalize: `/smartspec_generate_spec`
-- PLAN: `/smartspec_generate_plan`
-- TASKS: `/smartspec_generate_tasks`
-- implement: `/smartspec_implement_tasks`
-- STRICT VERIFY: `/smartspec_verify_tasks_progress_strict`
-- SYNC CHECKBOXES: `/smartspec_sync_tasks_checkboxes`
-
-### 13.2 Optional helpers (non-canonical)
-
-- PROMPTER: `/smartspec_report_implement_prompter` (recommended before implement for large/complex changes)
-- Project routing: `/smartspec_project_copilot`
-
-### 13.3 Dual-command rule
-
-- CLI: `/workflow_name ...`
-- Kilo Code: `/workflow_name.md ... --kilocode`
-
----
-
-## 14) Versioning policy
-
-### 14.1 Minimum workflow version
+## 11) Versioning policy
 
 - All workflow docs under `.smartspec/workflows/*.md` MUST use **version `6.0.0` or higher**.
-
-### 14.2 What version means
-
-- Workflow doc `version:` is the **behavior contract version**.
-- YAML `version: 1` fields (e.g., config/index schemas) are **schema versions**.
-
-### 14.3 Optional enforcement (recommended)
-
-Add to `.spec/smartspec.config.yaml`:
-
-```yaml
-safety:
-  workflow_version_min: "6.0.0"
-```
-
-Index validators should fail if any workflow header version is below the minimum.
+- The `version:` in a workflow doc is the **behavior contract version**.
 
 ---
 

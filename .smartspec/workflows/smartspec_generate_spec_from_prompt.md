@@ -27,6 +27,20 @@ It writes governed artifacts only when explicitly applied.
 
 ---
 
+## File Locations (Important for AI Agents)
+
+**All SmartSpec configuration and registry files are located in the `.spec/` folder:**
+
+- **Config:** `.spec/smartspec.config.yaml` (NOT `smartspec.config.yaml` at root)
+- **Spec Index:** `.spec/SPEC_INDEX.json` (NOT `SPEC_INDEX.json` at root)
+- **Registry:** `.spec/registry/` (component registry, reuse index)
+- **Reports:** `.spec/reports/` (workflow outputs, previews, diffs)
+- **Scripts:** `.spec/scripts/` (automation scripts)
+
+**When searching for these files, ALWAYS use the `.spec/` prefix from project root.**
+
+---
+
 ## Governance contract
 
 This workflow MUST follow:
@@ -50,7 +64,7 @@ Forbidden writes (must hard-fail):
 
 ### `--apply` behavior
 
-- Without `--apply`: MUST NOT create/modify governed artifacts. Output a deterministic preview bundle in reports.
+- Without `--apply`: MUST NOT create/modify governed artifacts. Output a deterministic preview bundle in `.spec/reports/`.
 - With `--apply`: may create spec folders and optionally update `.spec/SPEC_INDEX.json`.
 
 Additional governed-write guard (MANDATORY):
@@ -152,7 +166,7 @@ Rules:
 - `--lang <th|en>`
 - `--platform <cli|kilo|ci|other>`
 - `--apply`
-- `--out <path>`: **reports/previews only** (safe output). Must be under allowlist and not denylist.
+- `--out <path>`: **`.spec/reports/` previews only** (safe output). Must be under allowlist and not denylist.
 - `--json`
 - `--quiet`
 
@@ -162,7 +176,7 @@ Rules:
 - `--max-specs <n>`: default `1`, max `5`
 - `--refs <dir>`: read-only reference pack (recommended)
 - `--update-index`: update `.spec/SPEC_INDEX.json` when `--apply`
-- `--dry-run`: write previews to reports only (no governed writes)
+- `--dry-run`: write previews to `.spec/reports/` only (no governed writes)
 
 #### Deprecation note
 

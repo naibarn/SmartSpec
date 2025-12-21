@@ -26,6 +26,20 @@ It is **safe-by-default** and writes governed artifacts only when explicitly app
 
 ---
 
+## File Locations (Important for AI Agents)
+
+**All SmartSpec configuration and registry files are located in the `.spec/` folder:**
+
+- **Config:** `.spec/smartspec.config.yaml` (NOT `smartspec.config.yaml` at root)
+- **Spec Index:** `.spec/SPEC_INDEX.json` (NOT `SPEC_INDEX.json` at root)
+- **Registry:** `.spec/registry/` (component registry, reuse index)
+- **Reports:** `.spec/reports/` (workflow outputs, previews, diffs)
+- **Scripts:** `.spec/scripts/` (automation scripts)
+
+**When searching for these files, ALWAYS use the `.spec/` prefix from project root.**
+
+---
+
 ## Governance contract
 
 This workflow MUST follow:
@@ -50,7 +64,7 @@ Forbidden writes (must hard-fail):
 
 - Without `--apply`:
   - MUST NOT modify `specs/**/tasks.md`.
-  - MUST write a deterministic preview bundle to reports.
+  - MUST write a deterministic preview bundle to `.spec/reports/`.
 - With `--apply`:
   - MAY update or create `specs/**/tasks.md`.
   - MUST NOT modify any other files.
@@ -125,7 +139,7 @@ If any newly-generated/modified content matches configured redaction patterns:
 - `--lang <th|en>`
 - `--platform <cli|kilo|ci|other>`
 - `--apply`
-- `--out <path>`: **reports/previews only** (safe output). Must be under allowlist and not denylist.
+- `--out <path>`: **`.spec/reports/` previews only** (safe output). Must be under allowlist and not denylist.
 - `--json`
 - `--quiet`
 

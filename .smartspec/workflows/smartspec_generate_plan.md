@@ -38,6 +38,20 @@ Key goals:
 
 ---
 
+## File Locations (Important for AI Agents)
+
+**All SmartSpec configuration and registry files are located in the `.spec/` folder:**
+
+- **Config:** `.spec/smartspec.config.yaml` (NOT `smartspec.config.yaml` at root)
+- **Spec Index:** `.spec/SPEC_INDEX.json` (NOT `SPEC_INDEX.json` at root)
+- **Registry:** `.spec/registry/` (component registry, reuse index)
+- **Reports:** `.spec/reports/` (workflow outputs, previews, diffs)
+- **Scripts:** `.spec/scripts/` (automation scripts)
+
+**When searching for these files, ALWAYS use the `.spec/` prefix from project root.**
+
+---
+
 ## Governance contract
 
 This workflow MUST follow:
@@ -67,7 +81,7 @@ Forbidden writes (must hard-fail):
 
 - Without `--apply`:
   - MUST NOT modify `specs/**/plan.md`.
-  - MUST write a deterministic preview bundle to reports.
+  - MUST write a deterministic preview bundle to `.spec/reports/`.
 
 - With `--apply`:
   - MAY update `specs/**/plan.md`.
@@ -155,7 +169,7 @@ If any newly-generated content matches configured redaction patterns:
 - `--lang <th|en>`
 - `--platform <cli|kilo|ci|other>`
 - `--apply`
-- `--out <path>` (reports root; safe outputs only)
+- `--out <path>` (`.spec/reports/` root; safe outputs only)
 - `--json`
 - `--quiet`
 
@@ -270,7 +284,7 @@ If an existing `plan.md` is present:
 The report MUST include:
 
 1) Target spec + resolved `spec-id`
-2) Inputs discovered (SPEC_INDEX, registries)
+2) Inputs discovered (`.spec/SPEC_INDEX.json`, `.spec/registry/`)
 3) `ui_mode`, `safety_mode`, and computed `safety_status`
 4) Reuse vs new summary (what is reused, what must be created)
 5) Blockers (strict mode) + Phase 0 remediation

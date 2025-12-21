@@ -352,6 +352,33 @@ These flags are supported by this workflow:
 
 ---
 
+## smartspec_generate_multiplatform_ui
+
+### Usage Examples
+
+**CLI:**
+```bash
+/smartspec_generate_multiplatform_ui \
+  --spec specs/feature/spec-002-contact/ui-spec.json \
+  --platforms web,flutter \
+  --web-renderer lit \
+  --output-dir src/ui/contact \
+  --apply
+```
+
+**Kilo Code:**
+```bash
+/smartspec_generate_multiplatform_ui.md \
+  --spec specs/feature/spec-002-contact/ui-spec.json \
+  --platforms web,flutter \
+  --web-renderer lit \
+  --output-dir src/ui/contact \
+  --platform kilo \
+  --apply
+```
+
+---
+
 ## smartspec_generate_plan
 
 **Description:** Convert spec.md → plan.md (preview-first; dependency-aware; reuse-first;
@@ -1216,6 +1243,27 @@ These flags are supported by this workflow:
   --timeout 600 \
   --out .spec/reports/test-suite-runner \
   --json \
+  --platform kilo
+```
+
+---
+
+## smartspec_ui_agent
+
+### Usage Examples
+
+**CLI:**
+```bash
+/smartspec_ui_agent \
+  --mode interactive \
+  --context specs/feature/spec-002-contact
+```
+
+**Kilo Code:**
+```bash
+/smartspec_ui_agent.md \
+  --mode interactive \
+  --context specs/feature/spec-002-contact \
   --platform kilo
 ```
 

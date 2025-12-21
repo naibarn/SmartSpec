@@ -238,3 +238,21 @@ workflows:
     write_scopes: [catalog, reports]
     status: active
     version: "6.0.0"
+
+  - name: /smartspec_generate_multiplatform_ui
+    purpose: Generate UI implementation for multiple platforms simultaneously from a single A2UI specification.
+    category: ui_generation
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [code, tests, reports]
+    status: active
+    version: "6.0.0"
+
+  - name: /smartspec_ui_agent
+    purpose: Interactive AI agent for conversational UI design and iterative refinement.
+    category: ui_generation
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [reports, specs, sessions]
+    status: active
+    version: "6.0.0"

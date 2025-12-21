@@ -256,3 +256,42 @@ workflows:
     write_scopes: [reports, specs, sessions]
     status: active
     version: "6.0.0"
+
+  # ---------------------------------------------------------------------------
+  # UI Optimization & Analytics (A2UI Phase 5) (4)
+  # ---------------------------------------------------------------------------
+  - name: /smartspec_optimize_ui_catalog
+    purpose: Optimize UI catalog performance with caching and indexing.
+    category: ui_optimization_and_analytics
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [catalog, reports]
+    status: active
+    version: "6.0.0"
+
+  - name: /smartspec_ui_accessibility_audit
+    purpose: Comprehensive WCAG accessibility audit for UI components.
+    category: ui_optimization_and_analytics
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [reports]
+    status: active
+    version: "6.0.0"
+
+  - name: /smartspec_ui_performance_test
+    purpose: Performance testing for UI components (bundle size, render time, metrics).
+    category: ui_optimization_and_analytics
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [reports]
+    status: active
+    version: "6.0.0"
+
+  - name: /smartspec_ui_analytics_reporter
+    purpose: Track UI component usage, adoption metrics, and quality indicators.
+    category: ui_optimization_and_analytics
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [reports]
+    status: active
+    version: "6.0.0"

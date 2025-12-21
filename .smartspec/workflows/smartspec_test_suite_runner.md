@@ -110,7 +110,7 @@ This workflow must defend against:
   --timeout 600 \
   --out .spec/reports/test-suite-runner \
   --json \
-  --kilocode
+  --platform kilo
 ```
 
 ---
@@ -282,7 +282,7 @@ CLI:
 `/<workflow_name> <primary-input> [--out <dir>] [--json]`
 
 Kilo:
-`/<workflow_name>.md <primary-input> [--out <dir>] [--json] --kilocode`
+`/<workflow_name>.md <primary-input> [--out <dir>] [--json] --platform kilo`
 ```
 
 ---

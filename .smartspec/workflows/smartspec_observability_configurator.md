@@ -10,7 +10,7 @@ version_notes:
 - v6.1.1: Fixes flag collision with universal --platform; adds v6 hardening (path
     normalization + no symlink escape + output root safety + atomic writes); adds
     Change Plan artifacts; replaces full-content previews with diff/excerpt+hash;
-    strengthens secret-leak prevention; updates dual-command examples with --kilocode;
+    strengthens secret-leak prevention; updates dual-command examples with --platform kilo;
     aligns interoperability with deployment_planner/release_tagger/hotfix_assistant/test
     runner/analyzer.
 description: Configure observability tools (logging, metrics, tracing).
@@ -299,7 +299,7 @@ Deployment planner may reference these as part of the deployment checklist.
   --obs-platform opentelemetry \
   --out .spec/reports/observability-configurator \
   --json \
-  --kilocode
+  --platform kilo
 ```
 
 ---

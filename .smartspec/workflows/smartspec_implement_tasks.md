@@ -53,7 +53,7 @@ purpose: Implement code changes strictly from `tasks.md` with 100% duplication p
 
 ### 0.3 Kilo Orchestrator Sub-Task Invariant (Legacy Rule — DO NOT REMOVE)
 
-When running under Kilo with `--kilocode`:
+When running under Kilo with `--platform kilo`:
 
 1. Kilo MUST NOT execute this workflow as a single root job over many tasks
    without sub-task decomposition.
@@ -63,8 +63,8 @@ When running under Kilo with `--kilocode`:
      SmartSpec tasks (typically one sub-task per top-level task, or per
      small batch).
 3. This workflow MUST assume that it is running inside a Kilo sub-task
-   whenever `--kilocode` is set and Orchestrator is active.
-4. If this workflow detects that it is running with `--kilocode` but not
+   whenever `--platform kilo` is set and Orchestrator is active.
+4. If this workflow detects that it is running with `--platform kilo` but not
    inside a sub-task context (for example, required Kilo sub-task metadata
    is missing), it MUST:
    - in `strict` safety mode: fail fast with a governance error and
@@ -84,7 +84,7 @@ To prevent premature stops and half-finished work:
 
 1. Completion of a single task or edit attempt MUST NOT be treated as a
    reason to end the entire workflow if there are remaining selected tasks.
-2. When running under `--kilocode`, any single Kilo edit failure (for
+2. When running under `--platform kilo`, any single Kilo edit failure (for
    example "Edit Unsuccessful" or similar) MUST be treated as a recoverable
    event:
    - narrow scope (fewer tasks, smaller file ranges);
@@ -106,7 +106,7 @@ To prevent premature stops and half-finished work:
 This invariant encodes the legacy rule that implementation runs must not
 "die quietly" under Kilo Orchestrator:
 
-1. When running with `--kilocode` and Orchestrator is active, if an
+1. When running with `--platform kilo` and Orchestrator is active, if an
    implementation attempt:
    - stalls or makes no forward progress;
    - fails repeatedly with non-fatal edit errors; or

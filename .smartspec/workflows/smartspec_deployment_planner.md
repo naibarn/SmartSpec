@@ -219,7 +219,7 @@ Release notes MUST be derived from **verification evidence**:
   --target-env prod \
   --out .spec/reports/deployment-planner \
   --json \
-  --kilocode
+  --platform kilo
 ```
 
 ---

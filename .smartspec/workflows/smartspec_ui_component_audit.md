@@ -105,7 +105,7 @@ This workflow must defend against:
   [--strict] \
   [--out <output-root>] \
   [--json] \
-  --kilocode
+  --platform kilo
 ```
 
 ---
@@ -281,7 +281,7 @@ CLI:
 `/<workflow_name> <primary-input> [--out <dir>] [--json]`
 
 Kilo:
-`/<workflow_name>.md <primary-input> [--out <dir>] [--json] --kilocode`
+`/<workflow_name>.md <primary-input> [--out <dir>] [--json] --platform kilo`
 ```
 
 ---

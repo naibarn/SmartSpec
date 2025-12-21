@@ -238,7 +238,7 @@ Evidence inputs (recommended):
   --apply \
   --out .spec/reports/release-tagger \
   --json \
-  --kilocode
+  --platform kilo
 ```
 
 ---

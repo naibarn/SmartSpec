@@ -247,7 +247,7 @@ Quality gates (optional but recommended):
   --apply \
   --out .spec/reports/hotfix-assistant \
   --json \
-  --kilocode
+  --platform kilo
 ```
 
 ---

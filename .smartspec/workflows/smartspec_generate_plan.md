@@ -134,7 +134,7 @@ If any newly-generated content matches configured redaction patterns:
 ```bash
 /smartspec_generate_plan.md \
   specs/<category>/<spec-id>/spec.md \
-  --kilocode \
+  --platform kilo \
   [--apply] [--ui-mode auto|json|inline] [--safety-mode strict|dev] [--plan-layout per-spec|consolidated] [--run-label "..."] [--json]
 ```
 

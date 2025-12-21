@@ -103,7 +103,7 @@ This workflow must defend against:
   --mode normal \
   --out .spec/reports/test-report-analyzer \
   --json \
-  --kilocode
+  --platform kilo
 ```
 
 ---
@@ -248,7 +248,7 @@ CLI:
 `/<workflow_name> <primary-input> [--out <dir>] [--json]`
 
 Kilo:
-`/<workflow_name>.md <primary-input> [--out <dir>] [--json] --kilocode`
+`/<workflow_name>.md <primary-input> [--out <dir>] [--json] --platform kilo`
 
 ---
 

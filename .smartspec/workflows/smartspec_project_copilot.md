@@ -155,7 +155,7 @@ Instead, it MUST route to the canonical verifier:
 ### Kilo Code
 
 ```bash
-/smartspec_project_copilot.md "<question>" --kilocode \
+/smartspec_project_copilot.md "<question>" --platform kilo \
   [--domain <name>] [--spec-id <id>] [--spec-path <path>] [--aspect ...] \
   [--report <path>] [--format ...] [--short] \
   [--repos-config <path>] [--workspace-roots ...] [--registry-roots ...] \
@@ -195,7 +195,7 @@ Notes:
 
 ### Orchestrator/meta notes (not user flags)
 
-- `--kilocode` is a platform mode indicator and is shown only in Kilo examples.
+- `--platform kilo` is a platform mode indicator and is shown only in Kilo examples.
 - `--nosubtasks` (if supported) is an orchestrator hint and MUST NOT change semantics.
 
 No other flags in v6.
@@ -221,7 +221,7 @@ When recommending commands, the copilot MUST:
 1) Use `.spec/WORKFLOWS_INDEX.yaml` to choose valid workflow names.
 2) Confirm flags/usage by reading the workflow spec under `.smartspec/workflows/`.
 3) NEVER invent flags. If unsure, describe the action instead of outputting a command.
-4) Provide dual examples when `--kilocode` is relevant (CLI + Kilo forms).
+4) Provide dual examples when `--platform kilo` is relevant (CLI + Kilo forms).
 
 ---
 

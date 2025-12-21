@@ -317,3 +317,94 @@ The report MUST include:
 
 # End of workflow doc
 
+
+---
+
+## 10) `tasks.md` Content Templates (For AI Agent Implementation)
+
+To ensure consistent and complete output, the AI agent executing this workflow MUST use the following templates when generating `tasks.md`.
+
+### 10.1 Header Template
+
+A markdown table header is required.
+
+```markdown
+| spec-id | source | generated_by | updated_at |
+|---|---|---|---|
+| `<spec-id>` | `spec.md` | `smartspec_generate_tasks:6.0.3` | `<ISO_DATETIME>` |
+```
+
+### 10.2 Readiness Checklist Template
+
+A new mandatory section to ensure the task list is production-ready.
+
+```markdown
+## Readiness Checklist
+
+- [ ] All tasks have a stable, unique ID (`TSK-<spec-id>-NNN`).
+- [ ] All tasks have at least one specific evidence hook.
+- [ ] All `TBD` evidence items are listed in the 'Open Questions' section.
+- [ ] All acceptance criteria are verifiable.
+- [ ] No secrets or sensitive data are present in the tasks.
+```
+
+### 10.3 Task Item Template
+
+Each task item under the `## Tasks` section MUST follow this template.
+
+```markdown
+- [ ] **TSK-<spec-id>-001: Setup initial project structure**
+  - **Acceptance Criteria:**
+    - [ ] A new directory is created for the project.
+    - [ ] `package.json` is initialized.
+    - [ ] Basic folder structure (`src`, `tests`, `docs`) is present.
+  - **Evidence Hooks:**
+    - **Code:** `package.json`, `src/`, `tests/`
+    - **Verification:** Run `ls -lR` and check for directory structure.
+```
+
+### 10.4 Evidence Mapping Template
+
+This section maps task IDs to the specific artifacts that prove completion.
+
+```markdown
+## Evidence Mapping
+
+| Task ID | Status | Evidence Artifacts | Verification Report |
+|---|---|---|---|
+| TSK-<spec-id>-001 | `[ ] Open` | `package.json`, `src/` | `TBD` |
+| TSK-<spec-id>-002 | `[x] Done` | `src/api/auth.js` | `.spec/reports/verify/run-123.md` |
+```
+
+### 10.5 Open Questions Template
+
+This section lists all tasks where evidence is not yet clearly defined.
+
+```markdown
+## Open Questions & TBD Evidence
+
+| Task ID | Question / TBD Item |
+|---|---|
+| TSK-<spec-id>-003 | What is the exact API endpoint for the payment gateway? |
+| TSK-<spec-id>-004 | Evidence for UI component rendering needs to be defined. |
+```
+
+---
+
+## 11) Validation
+
+After generating the `tasks.md` preview and before applying it, the AI agent MUST validate the generated task list using the provided validation script.
+
+### 11.1 Validation Command
+
+```bash
+python3 .spec/scripts/validate_tasks.py .spec/reports/generate-tasks/<run-id>/preview/<spec-id>/tasks.md
+```
+
+### 11.2 Validation Rules
+
+- **Exit Code `0` (Success):** The tasks file is valid and complete. The agent may proceed with the `--apply` flag if requested.
+- **Exit Code `1` (Failure):** The tasks file is invalid or incomplete. The agent MUST NOT use the `--apply` flag.
+- The full output from the validation script (both errors and warnings) MUST be included in the `report.md` for the workflow run.
+
+This step ensures that all generated task lists adhere to the governance and completeness standards before they are integrated into the project.

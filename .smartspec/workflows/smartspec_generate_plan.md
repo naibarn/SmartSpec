@@ -357,3 +357,102 @@ The report MUST include:
 
 # End of workflow doc
 
+
+---
+
+## 10) Plan Content Templates (For AI Agent Implementation)
+
+To ensure consistent and complete output, the AI agent executing this workflow MUST use the following templates when generating `plan.md`.
+
+### 10.1 Template for `Evidence & Verification Artifacts`
+
+For any phase that is marked as `Status: Complete`, the following section MUST be appended.
+
+```markdown
+**Evidence & Verification Artifacts:**
+
+- **Verification Report:**
+  - **Path:** `.spec/reports/<workflow_name>/<run_id>/report.md`
+  - **Run ID:** `<run_id>`
+  - **Status:** `SUCCESS`
+  - **Timestamp:** `<timestamp>`
+- **File Inventory:**
+  - **Created:**
+    - `path/to/new_file.ext` (Size: 1.2 KB, SHA256: `...`)
+  - **Modified:**
+    - `path/to/modified_file.ext` (Size: 3.4 KB, SHA256: `...`)
+- **Test Results:**
+  - **Coverage:** 95%
+  - **Pass/Fail:** 128/130 Passed, 2 Failed
+  - **Report Path:** `.spec/reports/tests/<run_id>/report.xml`
+- **Security Scan:**
+  - **Vulnerabilities:** 0 Critical, 1 High, 5 Medium
+  - **Compliance:** PCI-DSS Compliant
+  - **Report Path:** `.spec/reports/security/<run_id>/scan.json`
+```
+
+### 10.2 Template for `Rollout & Release Plan`
+
+This section is mandatory for all production-ready plans.
+
+```markdown
+### Rollout & Release Plan
+
+**Strategy:** Phased Rollout (Canary)
+
+1.  **Phase 1: Internal Canary (1 day)**
+    - **Audience:** Internal employees, QA team
+    - **Scope:** 1% of production traffic
+    - **Metrics:** Monitor error rates, latency, CPU/memory usage.
+    - **Go/No-Go Criteria:** Error rate < 0.1%, Latency < 200ms.
+2.  **Phase 2: Public Canary (3 days)**
+    - **Audience:** 10% of public users (opt-in)
+    - **Scope:** Gradually increase traffic from 1% to 10%.
+    - **Metrics:** Monitor user feedback, business metrics (e.g., conversion rate).
+    - **Go/No-Go Criteria:** No critical bugs reported, conversion rate stable.
+3.  **Phase 3: Full Rollout (1 day)**
+    - **Audience:** All users
+    - **Scope:** 100% of production traffic.
+    - **Metrics:** Monitor all systems closely.
+```
+
+### 10.3 Template for `Rollback & Recovery Plan`
+
+This section is mandatory for all production-ready plans.
+
+```markdown
+### Rollback & Recovery Plan
+
+**Rollback Criteria:**
+
+- Critical bug identified affecting >5% of users.
+- Sustained error rate > 1% for 15 minutes.
+- Key business metric drops by > 10%.
+
+**Rollback Procedure:**
+
+1.  **Immediate Action:** Switch traffic back to the previous stable version (blue/green deployment).
+2.  **Time Estimate:** < 5 minutes.
+3.  **Data Recovery:** No data migration required for this release. If needed, run `scripts/rollback_data_migration.sh`.
+4.  **Post-Mortem:** Conduct a post-mortem within 24 hours to identify the root cause.
+```
+
+---
+
+## 11) Validation
+
+After generating the `plan.md` preview and before applying it, the AI agent MUST validate the generated plan using the provided validation script.
+
+### 11.1 Validation Command
+
+```bash
+python3 .spec/scripts/validate_plan.py .spec/reports/generate-plan/<run-id>/preview/<spec-id>/plan.md
+```
+
+### 11.2 Validation Rules
+
+- **Exit Code `0` (Success):** The plan is valid and complete. The agent may proceed with the `--apply` flag if requested.
+- **Exit Code `1` (Failure):** The plan is invalid or incomplete. The agent MUST NOT use the `--apply` flag.
+- The full output from the validation script (both errors and warnings) MUST be included in the `report.md` for the workflow run.
+
+This step ensures that all generated plans adhere to the governance and completeness standards before they are integrated into the project.

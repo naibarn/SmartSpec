@@ -201,9 +201,9 @@ cat .spec/reports/generate-spec/<run-id>/preview/spec.md
 
 ---
 
-## 🗂️ All 40 Workflows & Commands
+## 🗂️ All 50 Workflows & Commands
 
-SmartSpec V6 consolidates its powerful features into a streamlined set of 40 workflows, organized by function. These commands form the backbone of the **SPEC → PLAN → TASKS → IMPLEMENT** lifecycle.
+SmartSpec V6 consolidates its powerful features into a comprehensive set of 50 workflows, organized by function. These commands form the backbone of the **SPEC → PLAN → TASKS → IMPLEMENT** lifecycle, including advanced A2UI (Automated to UI) workflows for UI automation and optimization.
 
 **⚠️ Remember:** Most workflows follow the **preview-first pattern** — run without `--apply` first to review, then run with `--apply` to apply changes.
 
@@ -243,7 +243,7 @@ SmartSpec V6 consolidates its powerful features into a streamlined set of 40 wor
 | [`/smartspec_reindex_workflows`](.smartspec-docs/workflows/smartspec_reindex_workflows.md) | Rebuild the workflow index for the copilot. |
 | [`/smartspec_validate_index`](.smartspec-docs/workflows/validate_index.md) | Validate the integrity of spec and workflow indexes. |
 
-### Quality & Testing (12 Workflows)
+### Quality & Testing (10 Workflows)
 
 | Command | Description |
 | :--- | :--- |
@@ -255,8 +255,6 @@ SmartSpec V6 consolidates its powerful features into a streamlined set of 40 wor
 | [`/smartspec_sync_tasks_checkboxes`](.smartspec-docs/workflows/tasks_checkboxes.md) | Synchronize `tasks.md` checkbox markers (`[x]` / `[ ]`) to match the **latest strict verification report**. |
 | [`/smartspec_api_contract_validator`](.smartspec-docs/workflows/api_contract_validator.md) | Validate API implementation against its OpenAPI/Swagger contract. |
 | [`/smartspec_data_model_validator`](.smartspec-docs/workflows/data_model_validator.md) | Validate database schema against the defined data models. |
-| [`/smartspec_ui_component_audit`](.smartspec-docs/workflows/ui_component_audit.md) | Audit UI components for consistency and adherence to design system. |
-| [`/smartspec_ui_validation`](.smartspec-docs/workflows/ui_validation_manual.md) | Validate UI implementation against design mockups or specs. |
 | [`/smartspec_nfr_perf_planner`](.smartspec-docs/workflows/nfr_perf_planner.md) | Plan performance tests based on Non-Functional Requirements. |
 | [`/smartspec_nfr_perf_verifier`](.smartspec-docs/workflows/nfr_perf_verifier.md) | Verify system performance against NFRs. |
 
@@ -266,6 +264,21 @@ SmartSpec V6 consolidates its powerful features into a streamlined set of 40 wor
 | :--- | :--- |
 | [`/smartspec_security_audit_reporter`](.smartspec-docs/workflows/security_audit_reporter.md) | Run security audits and generate reports. |
 | [`/smartspec_security_threat_modeler`](.smartspec-docs/workflows/security_threat_modeler.md) | Analyze specs to identify and model potential security threats. |
+
+### A2UI: UI Automation & Optimization (10 Workflows)
+
+| Command | Description |
+| :--- | :--- |
+| [`/smartspec_generate_ui_spec`](.smartspec-docs/workflows/generate_ui_spec.md) | Generate UI specification from design mockups or requirements. |
+| [`/smartspec_generate_ui_implementation`](.smartspec-docs/workflows/generate_ui_implementation.md) | Generate UI component implementation from UI spec. |
+| [`/smartspec_ui_catalog_generator`](.smartspec-docs/workflows/ui_catalog_generator.md) | Generate a comprehensive UI component catalog from specs. |
+| [`/smartspec_ui_component_audit`](.smartspec-docs/workflows/ui_component_audit.md) | Audit UI components for consistency and adherence to design system. |
+| [`/smartspec_ui_validation`](.smartspec-docs/workflows/ui_validation_manual.md) | Validate UI implementation against design mockups or specs. |
+| [`/smartspec_ui_test_generator`](.smartspec-docs/workflows/ui_test_generator.md) | Generate automated UI tests from UI specifications. |
+| [`/smartspec_optimize_ui_catalog`](.smartspec-docs/workflows/optimize_ui_catalog.md) | Optimize UI catalog performance with caching and indexing (10-100x faster). |
+| [`/smartspec_ui_accessibility_audit`](.smartspec-docs/workflows/ui_accessibility_audit.md) | Audit UI components for WCAG 2.1 accessibility compliance. |
+| [`/smartspec_ui_performance_test`](.smartspec-docs/workflows/ui_performance_test.md) | Test UI component performance and Core Web Vitals. |
+| [`/smartspec_ui_analytics_reporter`](.smartspec-docs/workflows/ui_analytics_reporter.md) | Track UI component usage, adoption, and quality metrics. |
 
 ### Project Management & Support (5 Workflows)
 

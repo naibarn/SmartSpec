@@ -215,6 +215,12 @@ Every `plan.md` MUST include:
   - `ui_mode` + `safety_mode` + `safety_status`
   - `generated_at`
 
+And mandatory governance sections:
+
+- **Assumptions & Prerequisites** (project-level assumptions, infra, team, SLA)
+- **Out of Scope** (what is explicitly NOT included in this plan)
+- **Definition of Done** (system-level DoD criteria)
+
 And phases (omit irrelevant ones but explain why):
 
 - **Phase 0 — Foundations & governance**
@@ -225,11 +231,28 @@ And phases (omit irrelevant ones but explain why):
 - **Phase 5 — Quality & safety**
 - **Phase 6 — UI (when applicable)**
 
+And deployment/operations sections:
+
+- **Rollout & Release Plan** (migration, cutover, phased rollout, feature flags)
+- **Rollback & Recovery Plan** (rollback criteria, procedures, data recovery)
+- **Data Retention & Privacy Operations**:
+  - Retention policies per entity (e.g., Session: 7 days, AuditLog: 7 years, PhoneVerification: 90 days)
+  - Audit log access control and tamper resistance
+  - GDPR data export/deletion procedures
+  - PII handling and encryption requirements
+  - Data anonymization/pseudonymization rules
+
 Each phase MUST include:
 
 - objectives
 - prerequisites
 - deliverables
+- **evidence & verification artifacts** (for completed phases):
+  - Report paths (`.spec/reports/.../run-id/...`)
+  - Verification results (run_id, status, timestamp)
+  - File inventory (paths of created/modified files with sizes/hashes)
+  - Test results (coverage %, pass/fail counts)
+  - Security scan results (vulnerability counts, compliance status)
 - risks & mitigations
 - acceptance criteria
 
@@ -289,7 +312,16 @@ The report MUST include:
 4) Reuse vs new summary (what is reused, what must be created)
 5) Blockers (strict mode) + Phase 0 remediation
 6) Output inventory
-7) Recommended next commands (dual form)
+7) **Readiness Verification Checklist** (for production-ready plans):
+   - [ ] All assumptions documented with evidence
+   - [ ] Out-of-scope items explicitly listed
+   - [ ] Rollout plan includes migration/cutover/rollback procedures
+   - [ ] Data retention policies defined per entity
+   - [ ] Evidence artifacts provided for completed phases
+   - [ ] Security scan results attached
+   - [ ] Test coverage meets threshold (>90%)
+   - [ ] GDPR compliance verified
+8) Recommended next commands (dual form)
 
 ---
 
@@ -306,6 +338,17 @@ The report MUST include:
   "reuse": {"reused": [], "new": [], "conflicts": []},
   "writes": {"reports": ["path"], "specs": ["path"]},
   "security": {"secret_detected": false, "apply_refused": false},
+  "readiness": {
+    "assumptions_documented": true,
+    "out_of_scope_defined": true,
+    "rollout_plan_complete": true,
+    "data_retention_defined": true,
+    "evidence_artifacts_provided": true,
+    "security_scanned": true,
+    "test_coverage_met": true,
+    "gdpr_compliant": true,
+    "ready_for_execution": true
+  },
   "next_steps": [{"cmd": "...", "why": "..."}]
 }
 ```

@@ -1,6 +1,11 @@
 ---
-description: Aggregate feedback from multiple sources to drive continuous improvement.
+name: /smartspec_feedback_aggregator
 version: 1.0.0
+role: continuous-improvement
+category: core
+write_guard: ALLOW-WRITE
+purpose: Aggregate feedback from multiple sources to drive continuous improvement.
+description: Aggregate feedback from multiple sources to drive continuous improvement.
 workflow: /smartspec_feedback_aggregator
 ---
 
@@ -8,7 +13,7 @@ workflow: /smartspec_feedback_aggregator
 
 > **Canonical path:** `.smartspec/workflows/smartspec_feedback_aggregator.md`  
 > **Version:** 1.0.0  
-> **Status:** New  
+> **Status:** Production Ready  
 > **Category:** continuous-improvement
 
 ## Purpose
@@ -22,6 +27,73 @@ This workflow MUST:
 -   Identify trends and recurring issues.
 -   Generate suggestions for new specs, spec updates, or technical debt tasks.
 -   Create a feedback dashboard for easy visualization.
+
+---
+
+## File Locations (Important for AI Agents)
+
+**All SmartSpec configuration and registry files are located in the `.spec/` folder:**
+- **Config:** `.spec/smartspec.config.yaml`
+- **Spec Index:** `.spec/SPEC_INDEX.json`
+- **Registry:** `.spec/registry/`
+- **Reports:** `.spec/reports/`
+
+---
+
+## Governance contract
+
+This workflow MUST follow:
+
+- `knowledge_base_smartspec_handbook.md` (v7)
+- `.spec/smartspec.config.yaml`
+
+### Write scopes (enforced)
+
+Allowed writes (safe outputs):
+
+- `.spec/reports/feedback/**`
+
+Forbidden writes (must hard-fail):
+
+- Any path outside config `safety.allow_writes_only_under`
+
+### `--apply` behavior
+
+- This workflow does not have an `--apply` behavior as it does not write to governed paths.
+
+---
+
+## Threat model (minimum)
+
+This workflow must defend against:
+
+- **User Privacy:** All user feedback must be handled with respect for privacy, and PII must be redacted.
+- **Data Integrity:** Ensure that feedback data is not tampered with.
+- **Unauthorized Access:** Access to feedback sources must be properly authenticated and authorized.
+
+---
+
+## Invocation
+
+```bash
+/smartspec_feedback_aggregator \
+  --run-once
+```
+
+---
+
+## Inputs
+
+-   `--run-once`: Run the aggregation process once and exit.
+
+---
+
+## Flags (Universal)
+
+- `--help`: Show help message.
+- `--version`: Show version.
+- `--verbose`: Enable verbose logging.
+- `--quiet`: Suppress all output except errors.
 
 ---
 
@@ -56,31 +128,23 @@ This workflow MUST:
 
 ---
 
-## Governance contract
-
--   This workflow MUST have read-only access to all feedback sources.
--   It MUST NOT automatically create specs or tasks without a review step.
--   All user feedback MUST be handled with respect for privacy.
-
----
-
-## Invocation
-
-```bash
-/smartspec_feedback_aggregator \
-  --run-once
-```
-
----
-
-## Inputs
-
--   `--run-once`: Run the aggregation process once and exit.
-
----
-
-## Output
+## Output Structure
 
 -   **Feedback Dashboard:** A web-based dashboard for visualizing feedback.
 -   **Suggestions:** Saved in `.spec/reports/feedback/suggestions/`.
 -   **Summary Reports:** Sent to stakeholders.
+
+---
+
+## `summary.json` Schema
+
+```json
+{
+  "workflow": "smartspec_feedback_aggregator",
+  "version": "1.0.0",
+  "run_id": "string",
+  "feedback_items_processed": 0,
+  "suggestions_generated": 0,
+  "trends_identified": []
+}
+```

@@ -1,6 +1,11 @@
 ---
-description: Manage production incidents from triage to resolution and post-mortem.
+name: /smartspec_incident_response
 version: 1.0.0
+role: production-ops
+category: core
+write_guard: ALLOW-WRITE
+purpose: Manage production incidents from triage to resolution and post-mortem.
+description: Manage production incidents from triage to resolution and post-mortem.
 workflow: /smartspec_incident_response
 ---
 
@@ -8,7 +13,7 @@ workflow: /smartspec_incident_response
 
 > **Canonical path:** `.smartspec/workflows/smartspec_incident_response.md`  
 > **Version:** 1.0.0  
-> **Status:** New  
+> **Status:** Production Ready  
 > **Category:** production-ops
 
 ## Purpose
@@ -22,6 +27,74 @@ This workflow MUST:
 - Automate communication to stakeholders.
 - Facilitate root cause analysis (RCA).
 - Generate post-mortem reports to feed back into the development lifecycle.
+
+---
+
+## File Locations (Important for AI Agents)
+
+**All SmartSpec configuration and registry files are located in the `.spec/` folder:**
+- **Config:** `.spec/smartspec.config.yaml`
+- **Spec Index:** `.spec/SPEC_INDEX.json`
+- **Registry:** `.spec/registry/`
+- **Reports:** `.spec/reports/`
+
+---
+
+## Governance contract
+
+This workflow MUST follow:
+
+- `knowledge_base_smartspec_handbook.md` (v7)
+- `.spec/smartspec.config.yaml`
+
+### Write scopes (enforced)
+
+Allowed writes (safe outputs):
+
+- `.spec/reports/incidents/**`
+- `.spec/reports/post-mortems/**`
+
+Forbidden writes (must hard-fail):
+
+- Any path outside config `safety.allow_writes_only_under`
+
+### `--apply` behavior
+
+- This workflow does not have an `--apply` behavior as it does not write to governed paths.
+
+---
+
+## Threat model (minimum)
+
+This workflow must defend against:
+
+- **PII Leakage:** All incident data and communications must be sanitized to remove personally identifiable information.
+- **Unauthorized Actions:** Triggering other workflows (e.g., `smartspec_rollback`) must require proper authorization and auditing.
+- **Data Loss:** Incident reports and post-mortems must be stored durably.
+
+---
+
+## Invocation
+
+```bash
+/smartspec_incident_response \
+  --alert-payload <json-payload>
+```
+
+---
+
+## Inputs
+
+- `--alert-payload <json-payload>`: The JSON payload of the alert that triggered the incident.
+
+---
+
+## Flags (Universal)
+
+- `--help`: Show help message.
+- `--version`: Show version.
+- `--verbose`: Enable verbose logging.
+- `--quiet`: Suppress all output except errors.
 
 ---
 
@@ -61,31 +134,25 @@ This workflow MUST:
 
 ---
 
-## Governance contract
-
-- This workflow MUST have the ability to trigger other workflows (e.g., `smartspec_rollback`).
-- All incident data MUST be stored securely.
-- Post-mortem reports MUST be blameless.
-
----
-
-## Invocation
-
-```bash
-/smartspec_incident_response \
-  --alert-payload <json-payload>
-```
-
----
-
-## Inputs
-
-- `--alert-payload <json-payload>`: The JSON payload of the alert that triggered the incident.
-
----
-
-## Output
+## Output Structure
 
 - **Incident Reports:** Saved in `.spec/reports/incidents/`.
 - **Post-Mortems:** Saved in `.spec/reports/post-mortems/`.
 - **Action Items:** Sent to `smartspec_feedback_aggregator`.
+
+---
+
+## `summary.json` Schema
+
+```json
+{
+  "workflow": "smartspec_incident_response",
+  "version": "1.0.0",
+  "run_id": "string",
+  "incident_id": "string",
+  "severity": "SEV-1|SEV-2|SEV-3|SEV-4",
+  "status": "open|investigating|mitigating|resolved|closed",
+  "root_cause_identified": false,
+  "action_items_created": 0
+}
+```

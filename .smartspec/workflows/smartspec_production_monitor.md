@@ -1,6 +1,11 @@
 ---
-description: Monitor production health, generate alerts, and feed metrics back into the SmartSpec ecosystem.
+name: /smartspec_production_monitor
 version: 1.0.0
+role: production-ops
+category: core
+write_guard: ALLOW-WRITE
+purpose: Monitor production health, generate alerts, and feed metrics back into the SmartSpec ecosystem.
+description: Monitor production health, generate alerts, and feed metrics back into the SmartSpec ecosystem.
 workflow: /smartspec_production_monitor
 ---
 
@@ -8,7 +13,7 @@ workflow: /smartspec_production_monitor
 
 > **Canonical path:** `.smartspec/workflows/smartspec_production_monitor.md`  
 > **Version:** 1.0.0  
-> **Status:** New  
+> **Status:** Production Ready  
 > **Category:** production-ops
 
 ## Purpose
@@ -22,6 +27,77 @@ This workflow MUST:
 - Generate alerts when KPIs deviate from their service-level objectives (SLOs).
 - Create performance reports that can be fed into the `smartspec_feedback_aggregator`.
 - Be highly available and resilient.
+
+---
+
+## File Locations (Important for AI Agents)
+
+**All SmartSpec configuration and registry files are located in the `.spec/` folder:**
+- **Config:** `.spec/smartspec.config.yaml`
+- **Spec Index:** `.spec/SPEC_INDEX.json`
+- **Registry:** `.spec/registry/`
+- **Reports:** `.spec/reports/`
+
+---
+
+## Governance contract
+
+This workflow MUST follow:
+
+- `knowledge_base_smartspec_handbook.md` (v7)
+- `.spec/smartspec.config.yaml`
+
+### Write scopes (enforced)
+
+Allowed writes (safe outputs):
+
+- `.spec/reports/production-monitoring/**`
+
+Forbidden writes (must hard-fail):
+
+- Any path outside config `safety.allow_writes_only_under`
+
+### `--apply` behavior
+
+- This workflow does not have an `--apply` behavior as it does not write to governed paths.
+
+---
+
+## Threat model (minimum)
+
+This workflow must defend against:
+
+- **Secret Leakage:** API keys for observability platforms must never be logged or exposed.
+- **Data Integrity:** Ensure that metrics are not tampered with.
+- **Denial of Service:** Implement rate limiting to prevent abuse of observability platform APIs.
+
+---
+
+## Invocation
+
+```bash
+/smartspec_production_monitor \
+  --spec-id <spec-id> \
+  [--run-once] \
+  [--daemon]
+```
+
+---
+
+## Inputs
+
+- `--spec-id <spec-id>`: The ID of the spec to monitor.
+- `--run-once`: Run the monitoring check once and exit.
+- `--daemon`: Run continuously as a background process.
+
+---
+
+## Flags (Universal)
+
+- `--help`: Show help message.
+- `--version`: Show version.
+- `--verbose`: Enable verbose logging.
+- `--quiet`: Suppress all output except errors.
 
 ---
 
@@ -53,35 +129,30 @@ This workflow MUST:
 
 ---
 
-## Governance contract
-
-- This workflow MUST have read-only access to production metrics.
-- It MUST NOT have write access to any production systems.
-- All API keys and credentials for observability platforms MUST be stored securely and never logged.
-
----
-
-## Invocation
-
-```bash
-/smartspec_production_monitor \
-  --spec-id <spec-id> \
-  [--run-once] \
-  [--daemon]
-```
-
----
-
-## Inputs
-
-- `--spec-id <spec-id>`: The ID of the spec to monitor.
-- `--run-once`: Run the monitoring check once and exit.
-- `--daemon`: Run continuously as a background process.
-
----
-
-## Output
+## Output Structure
 
 - **Alerts:** Sent to `smartspec_incident_response`.
 - **Reports:** Saved in `.spec/reports/production-monitoring/`.
 - **Logs:** Standard monitoring logs.
+
+---
+
+## `summary.json` Schema
+
+```json
+{
+  "workflow": "smartspec_production_monitor",
+  "version": "1.0.0",
+  "run_id": "string",
+  "spec_id": "string",
+  "status": "healthy|unhealthy|degraded",
+  "metrics": [
+    {
+      "name": "p99_latency",
+      "value": 150,
+      "slo": 200,
+      "status": "healthy"
+    }
+  ]
+}
+```

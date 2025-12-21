@@ -1,6 +1,11 @@
 ---
-description: Safely roll back a failed deployment to a previous stable version.
+name: /smartspec_rollback
 version: 1.0.0
+role: production-ops
+category: core
+write_guard: ALLOW-WRITE
+purpose: Safely roll back a failed deployment to a previous stable version.
+description: Safely roll back a failed deployment to a previous stable version.
 workflow: /smartspec_rollback
 ---
 
@@ -8,7 +13,7 @@ workflow: /smartspec_rollback
 
 > **Canonical path:** `.smartspec/workflows/smartspec_rollback.md`  
 > **Version:** 1.0.0  
-> **Status:** New  
+> **Status:** Production Ready  
 > **Category:** production-ops
 
 ## Purpose
@@ -23,6 +28,82 @@ This workflow MUST:
 - Execute the rollback.
 - Verify that the rollback was successful and the system is stable.
 - Generate a report for audit purposes.
+
+---
+
+## File Locations (Important for AI Agents)
+
+**All SmartSpec configuration and registry files are located in the `.spec/` folder:**
+- **Config:** `.spec/smartspec.config.yaml`
+- **Spec Index:** `.spec/SPEC_INDEX.json`
+- **Registry:** `.spec/registry/`
+- **Reports:** `.spec/reports/`
+
+---
+
+## Governance contract
+
+This workflow MUST follow:
+
+- `knowledge_base_smartspec_handbook.md` (v7)
+- `.spec/smartspec.config.yaml`
+
+### Write scopes (enforced)
+
+Allowed writes (safe outputs):
+
+- `.spec/reports/rollbacks/**`
+
+Governed writes (**requires** `--apply`):
+
+- Production deployment configuration
+
+Forbidden writes (must hard-fail):
+
+- Any path outside config `safety.allow_writes_only_under`
+
+### `--apply` behavior
+
+- Without `--apply`: Generate a rollback plan and save it to `.spec/reports/rollbacks/`.
+- With `--apply`: Execute the rollback plan.
+
+---
+
+## Threat model (minimum)
+
+This workflow must defend against:
+
+- **Data Loss:** The rollback plan must include checks to prevent data loss.
+- **Further Instability:** The rollback must be verified to ensure it doesn't cause more problems.
+- **Unauthorized Rollbacks:** All rollback actions must be audited, and high-risk rollbacks must require manual approval.
+
+---
+
+## Invocation
+
+```bash
+/smartspec_rollback \
+  --failed-deployment-id <id> \
+  [--target-version <version>] \
+  [--auto-approve]
+```
+
+---
+
+## Inputs
+
+- `--failed-deployment-id <id>`: The ID of the deployment that failed.
+- `--target-version <version>`: (Optional) The specific version to roll back to. Defaults to the last known good version.
+- `--auto-approve`: (Optional) Skip manual approval for high-risk rollbacks. Use with caution.
+
+---
+
+## Flags (Universal)
+
+- `--help`: Show help message.
+- `--version`: Show version.
+- `--verbose`: Enable verbose logging.
+- `--quiet`: Suppress all output except errors.
 
 ---
 
@@ -61,33 +142,23 @@ This workflow MUST:
 
 ---
 
-## Governance contract
-
-- This workflow MUST have the necessary permissions to modify production deployments.
-- All rollback actions MUST be logged for auditing.
-- High-risk rollbacks MUST require manual approval.
-
----
-
-## Invocation
-
-```bash
-/smartspec_rollback \
-  --failed-deployment-id <id> \
-  [--target-version <version>] \
-  [--auto-approve]
-```
-
----
-
-## Inputs
-
-- `--failed-deployment-id <id>`: The ID of the deployment that failed.
-- `--target-version <version>`: (Optional) The specific version to roll back to. Defaults to the last known good version.
-- `--auto-approve`: (Optional) Skip manual approval for high-risk rollbacks. Use with caution.
-
----
-
-## Output
+## Output Structure
 
 - **Rollback Reports:** Saved in `.spec/reports/rollbacks/`.
+
+---
+
+## `summary.json` Schema
+
+```json
+{
+  "workflow": "smartspec_rollback",
+  "version": "1.0.0",
+  "run_id": "string",
+  "rollback_id": "string",
+  "status": "success|failure",
+  "reason": "string",
+  "from_version": "string",
+  "to_version": "string"
+}
+```

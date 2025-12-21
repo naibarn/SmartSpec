@@ -168,6 +168,7 @@ Detailed changes for each version are tracked in:
 
 ## 📊 Infographic Generation Prompt
 
-The infographic in this README was generated using AI. You can find the exact prompt used for generation in the following file:
+The infographic in this README was generated using AI. For a detailed breakdown of all 8 workflow loops and the prompt used to generate the infographic, see the following documents:
 
-- **[Infographic Prompt](INFOGRAPHIC_PROMPT.md)**
+- **[Workflow Loops Explained](WORKFLOW_LOOPS_EXPLAINED.md)** - A comprehensive guide to each loop.
+- **[Infographic Generation Prompt](INFOGRAPHIC_GENERATION_PROMPT.md)** - The exact prompt used for AI generation.

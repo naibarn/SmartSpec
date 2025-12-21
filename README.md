@@ -12,16 +12,16 @@
 
 ## 🔄 100% Workflow Loop Completeness
 
-SmartSpec now provides **end-to-end coverage** of the entire software development lifecycle with 8 critical workflow loops:
+SmartSpec now provides **end-to-end coverage** of the entire software development lifecycle with 8 critical, interconnected workflow loops. This ensures that every phase, from initial idea to production maintenance, is handled by a dedicated, intelligent, and automated process.
 
-1.  **Happy Path Loop:** From ideation to production monitoring.
-2.  **Debugging Loop:** For identifying and fixing issues during testing.
-3.  **Incident Response Loop:** For managing and resolving production incidents.
-4.  **Continuous Improvement Loop:** To feed production data back into development.
-5.  **Rollback Loop:** For safe and automated deployment rollbacks.
-6.  **Dependency Management Loop:** For proactive dependency scanning and updates.
-7.  **Code Quality Loop:** For automated code smell detection and refactoring.
-8.  **Performance Optimization Loop:** For profiling and resolving performance bottlenecks.
+1.  **Happy Path Loop (9 phases):** The core development cycle, taking an idea from `Ideation → Deploy → Monitor`. This loop covers specification, planning, task generation, implementation, and deployment.
+2.  **Debugging Loop (5 phases):** Activates when a test fails. This loop guides the developer through a structured process of `Test Failure → Fix → Verify` to ensure issues are resolved systematically.
+3.  **Incident Response Loop (6 phases):** Manages production issues from `Alert → Triage → Resolve`. It provides a clear workflow for handling incidents, from initial notification to resolution and post-mortem.
+4.  **Continuous Improvement Loop (6 phases):** Feeds production data and user feedback back into the development cycle using a `Metrics → Feedback → Update` flow, ensuring the product evolves based on real-world usage.
+5.  **Rollback Loop (5 phases):** Provides a safe and automated process for reverting deployments in case of failure, following a `Failure → Decision → Execute` path to minimize downtime.
+6.  **Dependency Management Loop (6 phases):** Proactively keeps the project secure and up-to-date by following a `Scan → Analyze → Update` process for all third-party dependencies.
+7.  **Code Quality Loop (6 phases):** Automatically detects code smells, technical debt, and areas for improvement, then plans and executes refactoring with an `Analyze → Refactor → Verify` cycle.
+8.  **Performance Optimization Loop (6 phases):** Identifies and resolves performance bottlenecks by following a `Profile → Optimize → Measure` workflow, ensuring the application runs efficiently.
 
 ---
 

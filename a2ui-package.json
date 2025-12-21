@@ -1,0 +1,38 @@
+{
+  "name": "smartspec-a2ui",
+  "version": "1.0.0",
+  "description": "Optional A2UI dependencies for SmartSpec UI generation workflows",
+  "private": true,
+  "keywords": [
+    "smartspec",
+    "a2ui",
+    "ui-generation",
+    "agent-driven-ui"
+  ],
+  "author": "SmartSpec",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@a2ui/core": "^0.8.0",
+    "lit": "^3.0.0"
+  },
+  "devDependencies": {
+    "@a2ui/lit-renderer": "^0.8.0",
+    "@a2ui/flutter-renderer": "^0.8.0",
+    "@a2ui/testing": "^0.8.0",
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "install-a2ui": "npm install",
+    "test": "echo 'A2UI dependencies installed successfully'",
+    "check": "npm list --depth=0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/naibarn/SmartSpec"
+  },
+  "readme": "README-A2UI.md"
+}

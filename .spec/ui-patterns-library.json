@@ -1,0 +1,407 @@
+{
+  "version": "1.0.0",
+  "description": "Pre-built UI patterns library for common scenarios",
+  "patterns": [
+    {
+      "id": "form-contact",
+      "name": "Contact Form",
+      "description": "Standard contact form with name, email, message fields",
+      "category": "forms",
+      "tags": ["form", "contact", "input"],
+      "complexity": "simple",
+      "components": [
+        {
+          "id": "input-name",
+          "type": "input-text",
+          "label": "Name",
+          "required": true,
+          "validation": "minLength:2"
+        },
+        {
+          "id": "input-email",
+          "type": "input-email",
+          "label": "Email",
+          "required": true,
+          "validation": "email"
+        },
+        {
+          "id": "textarea-message",
+          "type": "textarea",
+          "label": "Message",
+          "required": true,
+          "validation": "minLength:10"
+        },
+        {
+          "id": "button-submit",
+          "type": "button-primary",
+          "label": "Send Message"
+        }
+      ],
+      "layout": "vertical",
+      "accessibility": {
+        "wcag_level": "AA",
+        "aria_labels": true,
+        "keyboard_navigation": true
+      }
+    },
+    {
+      "id": "list-data-table",
+      "name": "Data Table with Pagination",
+      "description": "Sortable data table with pagination and search",
+      "category": "lists",
+      "tags": ["table", "list", "pagination", "search"],
+      "complexity": "medium",
+      "components": [
+        {
+          "id": "input-search",
+          "type": "input-search",
+          "label": "Search",
+          "placeholder": "Search..."
+        },
+        {
+          "id": "table-data",
+          "type": "data-table",
+          "columns": ["id", "name", "email", "status"],
+          "sortable": true,
+          "selectable": true
+        },
+        {
+          "id": "pagination",
+          "type": "pagination",
+          "page_size": 10,
+          "show_page_size_selector": true
+        }
+      ],
+      "layout": "vertical",
+      "accessibility": {
+        "wcag_level": "AA",
+        "aria_labels": true,
+        "keyboard_navigation": true,
+        "screen_reader_announcements": true
+      }
+    },
+    {
+      "id": "card-product",
+      "name": "Product Card",
+      "description": "Product card with image, title, price, and action button",
+      "category": "cards",
+      "tags": ["card", "product", "ecommerce"],
+      "complexity": "simple",
+      "components": [
+        {
+          "id": "image-product",
+          "type": "image",
+          "alt": "Product image",
+          "aspect_ratio": "1:1"
+        },
+        {
+          "id": "text-title",
+          "type": "text-heading",
+          "level": 3
+        },
+        {
+          "id": "text-price",
+          "type": "text-body",
+          "format": "currency"
+        },
+        {
+          "id": "button-add-to-cart",
+          "type": "button-primary",
+          "label": "Add to Cart"
+        }
+      ],
+      "layout": "card",
+      "accessibility": {
+        "wcag_level": "AA",
+        "aria_labels": true,
+        "keyboard_navigation": true
+      }
+    },
+    {
+      "id": "modal-confirmation",
+      "name": "Confirmation Modal",
+      "description": "Modal dialog for confirmation actions (delete, submit, etc.)",
+      "category": "modals",
+      "tags": ["modal", "dialog", "confirmation"],
+      "complexity": "simple",
+      "components": [
+        {
+          "id": "text-title",
+          "type": "text-heading",
+          "level": 2
+        },
+        {
+          "id": "text-message",
+          "type": "text-body"
+        },
+        {
+          "id": "button-cancel",
+          "type": "button-secondary",
+          "label": "Cancel"
+        },
+        {
+          "id": "button-confirm",
+          "type": "button-primary",
+          "label": "Confirm",
+          "variant": "danger"
+        }
+      ],
+      "layout": "modal",
+      "accessibility": {
+        "wcag_level": "AA",
+        "aria_labels": true,
+        "keyboard_navigation": true,
+        "focus_trap": true,
+        "escape_to_close": true
+      }
+    },
+    {
+      "id": "navigation-sidebar",
+      "name": "Sidebar Navigation",
+      "description": "Collapsible sidebar navigation with nested items",
+      "category": "navigation",
+      "tags": ["navigation", "sidebar", "menu"],
+      "complexity": "medium",
+      "components": [
+        {
+          "id": "nav-menu",
+          "type": "navigation-menu",
+          "items": [
+            {
+              "label": "Dashboard",
+              "icon": "dashboard",
+              "link": "/dashboard"
+            },
+            {
+              "label": "Users",
+              "icon": "users",
+              "link": "/users",
+              "children": [
+                { "label": "All Users", "link": "/users" },
+                { "label": "Add User", "link": "/users/add" }
+              ]
+            }
+          ],
+          "collapsible": true
+        }
+      ],
+      "layout": "sidebar",
+      "accessibility": {
+        "wcag_level": "AA",
+        "aria_labels": true,
+        "keyboard_navigation": true,
+        "skip_link": true
+      }
+    },
+    {
+      "id": "dashboard-metrics",
+      "name": "Metrics Dashboard",
+      "description": "Dashboard with metric cards and charts",
+      "category": "dashboards",
+      "tags": ["dashboard", "metrics", "charts", "analytics"],
+      "complexity": "complex",
+      "components": [
+        {
+          "id": "card-metric-1",
+          "type": "metric-card",
+          "label": "Total Users",
+          "value": "1,234",
+          "change": "+12%",
+          "trend": "up"
+        },
+        {
+          "id": "card-metric-2",
+          "type": "metric-card",
+          "label": "Revenue",
+          "value": "$45,678",
+          "change": "+8%",
+          "trend": "up"
+        },
+        {
+          "id": "chart-line",
+          "type": "chart-line",
+          "title": "User Growth",
+          "data_source": "api/analytics/users"
+        },
+        {
+          "id": "chart-bar",
+          "type": "chart-bar",
+          "title": "Revenue by Category",
+          "data_source": "api/analytics/revenue"
+        }
+      ],
+      "layout": "grid",
+      "accessibility": {
+        "wcag_level": "AA",
+        "aria_labels": true,
+        "keyboard_navigation": true,
+        "data_tables_for_charts": true
+      }
+    },
+    {
+      "id": "form-login",
+      "name": "Login Form",
+      "description": "Standard login form with email/password and remember me",
+      "category": "forms",
+      "tags": ["form", "login", "authentication"],
+      "complexity": "simple",
+      "components": [
+        {
+          "id": "input-email",
+          "type": "input-email",
+          "label": "Email",
+          "required": true,
+          "autocomplete": "email"
+        },
+        {
+          "id": "input-password",
+          "type": "input-password",
+          "label": "Password",
+          "required": true,
+          "autocomplete": "current-password"
+        },
+        {
+          "id": "checkbox-remember",
+          "type": "checkbox",
+          "label": "Remember me"
+        },
+        {
+          "id": "button-login",
+          "type": "button-primary",
+          "label": "Log In"
+        },
+        {
+          "id": "link-forgot-password",
+          "type": "link",
+          "label": "Forgot password?"
+        }
+      ],
+      "layout": "vertical",
+      "accessibility": {
+        "wcag_level": "AA",
+        "aria_labels": true,
+        "keyboard_navigation": true,
+        "password_visibility_toggle": true
+      }
+    },
+    {
+      "id": "list-timeline",
+      "name": "Timeline/Activity Feed",
+      "description": "Chronological timeline of events or activities",
+      "category": "lists",
+      "tags": ["timeline", "activity", "feed", "history"],
+      "complexity": "medium",
+      "components": [
+        {
+          "id": "timeline",
+          "type": "timeline",
+          "items": [
+            {
+              "timestamp": "2025-12-22T10:00:00Z",
+              "icon": "user",
+              "title": "User registered",
+              "description": "John Doe created an account"
+            },
+            {
+              "timestamp": "2025-12-22T09:30:00Z",
+              "icon": "edit",
+              "title": "Profile updated",
+              "description": "Jane Smith updated profile information"
+            }
+          ],
+          "show_dates": true,
+          "group_by_date": true
+        }
+      ],
+      "layout": "vertical",
+      "accessibility": {
+        "wcag_level": "AA",
+        "aria_labels": true,
+        "keyboard_navigation": true,
+        "semantic_time_elements": true
+      }
+    },
+    {
+      "id": "form-multi-step",
+      "name": "Multi-Step Form",
+      "description": "Wizard-style form with multiple steps and progress indicator",
+      "category": "forms",
+      "tags": ["form", "wizard", "multi-step", "progress"],
+      "complexity": "complex",
+      "components": [
+        {
+          "id": "progress-indicator",
+          "type": "progress-stepper",
+          "steps": ["Personal Info", "Address", "Payment", "Review"]
+        },
+        {
+          "id": "form-step-1",
+          "type": "form-group",
+          "fields": ["input-name", "input-email"]
+        },
+        {
+          "id": "form-step-2",
+          "type": "form-group",
+          "fields": ["input-address", "input-city", "input-zip"]
+        },
+        {
+          "id": "button-next",
+          "type": "button-primary",
+          "label": "Next"
+        },
+        {
+          "id": "button-back",
+          "type": "button-secondary",
+          "label": "Back"
+        }
+      ],
+      "layout": "vertical",
+      "accessibility": {
+        "wcag_level": "AA",
+        "aria_labels": true,
+        "keyboard_navigation": true,
+        "progress_announcements": true,
+        "validation_on_step_change": true
+      }
+    },
+    {
+      "id": "notification-toast",
+      "name": "Toast Notification",
+      "description": "Temporary notification message (success, error, warning, info)",
+      "category": "notifications",
+      "tags": ["notification", "toast", "alert", "message"],
+      "complexity": "simple",
+      "components": [
+        {
+          "id": "toast",
+          "type": "toast",
+          "variants": ["success", "error", "warning", "info"],
+          "auto_dismiss": true,
+          "dismiss_timeout": 5000,
+          "dismissible": true
+        }
+      ],
+      "layout": "overlay",
+      "accessibility": {
+        "wcag_level": "AA",
+        "aria_labels": true,
+        "keyboard_navigation": true,
+        "screen_reader_announcements": true,
+        "focus_management": true
+      }
+    }
+  ],
+  "categories": [
+    { "id": "forms", "name": "Forms", "description": "Form patterns and input groups" },
+    { "id": "lists", "name": "Lists & Tables", "description": "Data display patterns" },
+    { "id": "cards", "name": "Cards", "description": "Card-based layouts" },
+    { "id": "modals", "name": "Modals & Dialogs", "description": "Overlay patterns" },
+    { "id": "navigation", "name": "Navigation", "description": "Navigation patterns" },
+    { "id": "dashboards", "name": "Dashboards", "description": "Dashboard and analytics patterns" },
+    { "id": "notifications", "name": "Notifications", "description": "Notification and alert patterns" }
+  ],
+  "usage": {
+    "description": "Use patterns as starting points for UI specs",
+    "example": "smartspec_generate_ui_spec --pattern form-contact --output specs/feature/spec-005-contact/ui-spec.json"
+  }
+}

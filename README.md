@@ -34,6 +34,96 @@ SmartSpec V6 supports your favorite AI coding platforms with a single-command in
 
 ---
 
+## ⚠️ Critical: Preview-First Workflow Pattern
+
+**SmartSpec follows a strict preview-first approach to prevent accidental file modifications.** This is a core safety principle that ensures you always review changes before they are applied.
+
+### How It Works
+
+#### Step 1: Run Without `--apply` (Preview Mode)
+
+When you run a workflow **without** the `--apply` flag, SmartSpec generates a **preview report** showing what changes will be made, but **does not modify any files**.
+
+**CLI:**
+```bash
+/smartspec_generate_spec --spec specs/feature/spec-001/spec.md
+```
+
+**Kilo Code:**
+```bash
+/smartspec_generate_spec.md --spec specs/feature/spec-001/spec.md --platform kilo
+```
+
+**Result:** A report is generated at `.spec/reports/generate-spec/<run-id>/` showing:
+- What will be changed
+- Why it will be changed
+- Preview of the new content
+
+#### Step 2: Review the Report Carefully
+
+**Read the generated report thoroughly:**
+- Check if the proposed changes are correct
+- Verify that no unintended modifications will occur
+- Ensure the changes align with your requirements
+
+**Report location:**
+```
+.spec/reports/<workflow-name>/<run-id>/
+├── report.md          # Human-readable summary
+├── report.json        # Machine-readable data
+└── preview/           # Preview of changes
+```
+
+#### Step 3: Run Again With `--apply` (Apply Mode)
+
+**Only after you are confident the changes are correct**, run the same command again with the `--apply` flag.
+
+**CLI:**
+```bash
+/smartspec_generate_spec --spec specs/feature/spec-001/spec.md --apply
+```
+
+**Kilo Code:**
+```bash
+/smartspec_generate_spec.md --spec specs/feature/spec-001/spec.md --apply --platform kilo
+```
+
+**Result:** SmartSpec now **actually modifies the files** as shown in the preview.
+
+### Why This Matters
+
+✅ **Safety:** Prevents accidental overwrites or incorrect modifications  
+✅ **Transparency:** You always know exactly what will change before it happens  
+✅ **Control:** You make the final decision to apply changes  
+✅ **Auditability:** Every change is documented in reports before being applied  
+
+### Workflows That Require `--apply`
+
+The following workflows modify **governed artifacts** (specs, plans, tasks) and **require `--apply`** to make actual changes:
+
+- `smartspec_generate_spec` - Modifies `spec.md`
+- `smartspec_generate_plan` - Modifies `plan.md`
+- `smartspec_generate_tasks` - Modifies `tasks.md`
+- `smartspec_implement_tasks` - Modifies source code
+- `smartspec_sync_tasks_checkboxes` - Modifies `tasks.md` checkboxes
+
+### Workflows That Don't Need `--apply`
+
+Some workflows only generate **reports or prompts** (safe outputs) and don't need `--apply`:
+
+- `smartspec_project_copilot` - Read-only analysis
+- `smartspec_verify_tasks_progress_strict` - Generates verification report
+- `smartspec_report_implement_prompter` - Generates implementation prompts
+- `smartspec_test_report_analyzer` - Analyzes test results
+
+### Remember
+
+🔴 **Never use `--apply` on the first run**  
+🟡 **Always review the preview report**  
+🟢 **Only use `--apply` when you're confident**
+
+---
+
 ## 🚀 New Feature: SmartSpec Copilot — Your Dedicated SmartSpec Help Assistant
 
 **SmartSpec version >6.0** introduces **SmartSpec Copilot**, an always-available interactive assistant built using OpenAI CustomGPT. It allows users to interact with SmartSpec in natural language to understand workflows, debug issues, and navigate the full SmartSpec lifecycle with far less friction.
@@ -43,9 +133,79 @@ It is now the official support channel for learning and using SmartSpec.  [**[Li
 
 ---
 
-## 🗂️ All 40 Workflows & Commands
+## 🚀 Quick Start: Your First Workflow
 
-SmartSpec V6 consolidates its powerful features into a streamlined set of 40 workflows, organized by function. These commands form the backbone of the **SPEC → PLAN → TASKS → IMPLEMENT** lifecycle.
+Here's a complete example showing the **preview-first pattern** in action:
+
+### Example: Creating a New Specification
+
+#### 1️⃣ First Run: Preview Mode (No `--apply`)
+
+**CLI:**
+```bash
+/smartspec_generate_spec --spec specs/feature/spec-001-user-auth/spec.md
+```
+
+**Kilo Code:**
+```bash
+/smartspec_generate_spec.md --spec specs/feature/spec-001-user-auth/spec.md --platform kilo
+```
+
+**What happens:**
+- ✅ SmartSpec analyzes your requirements
+- ✅ Generates a preview report at `.spec/reports/generate-spec/<run-id>/`
+- ❌ **Does NOT create or modify** `spec.md` yet
+
+#### 2️⃣ Review the Report
+
+```bash
+# Open and read the report
+cat .spec/reports/generate-spec/<run-id>/report.md
+
+# Check the preview
+cat .spec/reports/generate-spec/<run-id>/preview/spec.md
+```
+
+**Questions to ask yourself:**
+- ❓ Does the spec cover all requirements?
+- ❓ Are the NFRs (security, performance) included?
+- ❓ Is the structure correct?
+- ❓ Are there any errors or omissions?
+
+#### 3️⃣ Second Run: Apply Mode (With `--apply`)
+
+**Only after you're satisfied with the preview:**
+
+**CLI:**
+```bash
+/smartspec_generate_spec --spec specs/feature/spec-001-user-auth/spec.md --apply
+```
+
+**Kilo Code:**
+```bash
+/smartspec_generate_spec.md --spec specs/feature/spec-001-user-auth/spec.md --apply --platform kilo
+```
+
+**What happens:**
+- ✅ SmartSpec **creates** `specs/feature/spec-001-user-auth/spec.md`
+- ✅ Updates `.spec/SPEC_INDEX.json`
+- ✅ Generates final report
+
+### 🎯 Key Takeaway
+
+**Two-step process:**
+1. **Preview** (no `--apply`) → Review report → Decide
+2. **Apply** (with `--apply`) → Changes are made
+
+**This pattern applies to most SmartSpec workflows!**
+
+---
+
+## 🗂️ All 50 Workflows & Commands
+
+SmartSpec V6 consolidates its powerful features into a comprehensive set of 50 workflows, organized by function. These commands form the backbone of the **SPEC → PLAN → TASKS → IMPLEMENT** lifecycle, including advanced A2UI (Automated to UI) workflows for UI automation and optimization.
+
+**⚠️ Remember:** Most workflows follow the **preview-first pattern** — run without `--apply` first to review, then run with `--apply` to apply changes.
 
 ### Core Development (5 Workflows)
 
@@ -83,7 +243,7 @@ SmartSpec V6 consolidates its powerful features into a streamlined set of 40 wor
 | [`/smartspec_reindex_workflows`](.smartspec-docs/workflows/smartspec_reindex_workflows.md) | Rebuild the workflow index for the copilot. |
 | [`/smartspec_validate_index`](.smartspec-docs/workflows/validate_index.md) | Validate the integrity of spec and workflow indexes. |
 
-### Quality & Testing (12 Workflows)
+### Quality & Testing (10 Workflows)
 
 | Command | Description |
 | :--- | :--- |
@@ -95,8 +255,6 @@ SmartSpec V6 consolidates its powerful features into a streamlined set of 40 wor
 | [`/smartspec_sync_tasks_checkboxes`](.smartspec-docs/workflows/tasks_checkboxes.md) | Synchronize `tasks.md` checkbox markers (`[x]` / `[ ]`) to match the **latest strict verification report**. |
 | [`/smartspec_api_contract_validator`](.smartspec-docs/workflows/api_contract_validator.md) | Validate API implementation against its OpenAPI/Swagger contract. |
 | [`/smartspec_data_model_validator`](.smartspec-docs/workflows/data_model_validator.md) | Validate database schema against the defined data models. |
-| [`/smartspec_ui_component_audit`](.smartspec-docs/workflows/ui_component_audit.md) | Audit UI components for consistency and adherence to design system. |
-| [`/smartspec_ui_validation`](.smartspec-docs/workflows/ui_validation_manual.md) | Validate UI implementation against design mockups or specs. |
 | [`/smartspec_nfr_perf_planner`](.smartspec-docs/workflows/nfr_perf_planner.md) | Plan performance tests based on Non-Functional Requirements. |
 | [`/smartspec_nfr_perf_verifier`](.smartspec-docs/workflows/nfr_perf_verifier.md) | Verify system performance against NFRs. |
 
@@ -106,6 +264,21 @@ SmartSpec V6 consolidates its powerful features into a streamlined set of 40 wor
 | :--- | :--- |
 | [`/smartspec_security_audit_reporter`](.smartspec-docs/workflows/security_audit_reporter.md) | Run security audits and generate reports. |
 | [`/smartspec_security_threat_modeler`](.smartspec-docs/workflows/security_threat_modeler.md) | Analyze specs to identify and model potential security threats. |
+
+### A2UI: UI Automation & Optimization (10 Workflows)
+
+| Command | Description |
+| :--- | :--- |
+| [`/smartspec_generate_ui_spec`](.smartspec-docs/workflows/generate_ui_spec.md) | Generate UI specification from design mockups or requirements. |
+| [`/smartspec_generate_ui_implementation`](.smartspec-docs/workflows/generate_ui_implementation.md) | Generate UI component implementation from UI spec. |
+| [`/smartspec_ui_catalog_generator`](.smartspec-docs/workflows/ui_catalog_generator.md) | Generate a comprehensive UI component catalog from specs. |
+| [`/smartspec_ui_component_audit`](.smartspec-docs/workflows/ui_component_audit.md) | Audit UI components for consistency and adherence to design system. |
+| [`/smartspec_ui_validation`](.smartspec-docs/workflows/ui_validation_manual.md) | Validate UI implementation against design mockups or specs. |
+| [`/smartspec_ui_test_generator`](.smartspec-docs/workflows/ui_test_generator.md) | Generate automated UI tests from UI specifications. |
+| [`/smartspec_optimize_ui_catalog`](.smartspec-docs/workflows/optimize_ui_catalog.md) | Optimize UI catalog performance with caching and indexing (10-100x faster). |
+| [`/smartspec_ui_accessibility_audit`](.smartspec-docs/workflows/ui_accessibility_audit.md) | Audit UI components for WCAG 2.1 accessibility compliance. |
+| [`/smartspec_ui_performance_test`](.smartspec-docs/workflows/ui_performance_test.md) | Test UI component performance and Core Web Vitals. |
+| [`/smartspec_ui_analytics_reporter`](.smartspec-docs/workflows/ui_analytics_reporter.md) | Track UI component usage, adoption, and quality metrics. |
 
 ### Project Management & Support (5 Workflows)
 

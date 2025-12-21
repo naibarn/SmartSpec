@@ -13,7 +13,7 @@ workflow: /smartspec_generate_tasks
 
 ## Purpose
 
-Generate or refine `tasks.md` from `spec.md` (or `plan.md`) with **100% duplication prevention** and **reuse-first** governance.
+Generate or refine `tasks.md` from `spec.md` (or `plan.md`) or `ui-spec.json` (A2UI) with **100% duplication prevention** and **reuse-first** governance.
 
 This workflow is the canonical source for creating tasks that downstream workflows can trust:
 
@@ -91,7 +91,7 @@ Flags specific to `/smartspec_generate_tasks`:
 
 | Flag | Required | Description |
 |---|---|---|
-| `--spec` | Yes (positional) | Path to the spec.md file to generate tasks from (e.g., `specs/feature/spec-001/spec.md`) |
+| `--spec` | Yes (positional) | Path to the spec.md or ui-spec.json file to generate tasks from (e.g., `specs/feature/spec-001/spec.md` or `specs/feature/spec-002/ui-spec.json`) |
 | `--apply` | No | Enable writes to governed artifacts (tasks.md) |
 | `--validate-only` | No | Run validation and preview without writing any files |
 | `--skip-duplication-check` | No | Skip pre-generation duplication validation (not recommended) |

@@ -1,0 +1,52 @@
+{
+  "$schema": "./schemas/spec-index-schema.json",
+  "version": "6.3.5",
+  "generated_at": "2025-12-22T00:00:00Z",
+  "project": {
+    "name": "SmartSpec Project",
+    "description": "A SmartSpec-enabled project with UI support"
+  },
+  "specs": [],
+  "ui_specs": [],
+  "categories": [
+    {
+      "id": "feature",
+      "name": "Features",
+      "description": "Feature specifications"
+    },
+    {
+      "id": "nfr",
+      "name": "Non-Functional Requirements",
+      "description": "Performance, security, and other NFRs"
+    },
+    {
+      "id": "ui",
+      "name": "User Interface",
+      "description": "UI specifications (A2UI format)"
+    }
+  ],
+  "tags": [
+    "backend",
+    "frontend",
+    "ui",
+    "api",
+    "database",
+    "security",
+    "performance"
+  ],
+  "statistics": {
+    "total_specs": 0,
+    "total_ui_specs": 0,
+    "by_category": {
+      "feature": 0,
+      "nfr": 0,
+      "ui": 0
+    },
+    "by_status": {
+      "draft": 0,
+      "review": 0,
+      "approved": 0,
+      "implemented": 0
+    }
+  }
+}

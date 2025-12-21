@@ -26,6 +26,7 @@ Supported modes:
 - `api-docs`: generate API reference (OpenAPI/GraphQL summaries, endpoint tables, examples)
 - `user-guide`: generate user/operator guide (flows, setup, troubleshooting)
 - `architecture-diagram`: generate diagram source files + rendered outputs (best-effort)
+- `ui-docs`: generate UI component documentation from A2UI specs (component catalog, usage examples, accessibility notes)
 
 This workflow is **preview-first**:
 
@@ -123,7 +124,7 @@ If tool policy cannot be satisfied, render step MUST be skipped and recorded as 
 
 ### 3.1 Primary inputs
 
-- `--mode <api-docs|user-guide|architecture-diagram>` (required)
+- `--mode <api-docs|user-guide|architecture-diagram|ui-docs>` (required)
 - `--spec <path>`: recommended `specs/<category>/<spec-id>/spec.md` (best-effort accepted)
 
 ### 3.2 Optional inputs
@@ -182,7 +183,7 @@ If any validation fails: `exit 2`.
 
 ### 5.2 Workflow-specific flags
 
-- `--mode <api-docs|user-guide|architecture-diagram>` (required)
+- `--mode <api-docs|user-guide|architecture-diagram|ui-docs>` (required)
 - `--spec <path>`
 - `--tasks <path>`
 - `--template <path>`

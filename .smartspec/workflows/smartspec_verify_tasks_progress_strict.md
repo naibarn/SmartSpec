@@ -236,7 +236,7 @@ Verification rule:
 - `code`: path exists → at least medium; symbol/contains match → high
 - `test`: path exists → at least medium; contains match → high
 - `docs`: path exists → at least medium; heading/contains match → high
-- `ui`: if component/route evidence exists in codebase and states are declared → medium/high depending on matches; otherwise `needs_manual`
+- `ui`: if component/route evidence exists in codebase and states are declared → medium/high depending on matches; for A2UI specs, check ui-spec.json validity and component catalog adherence → high if valid; otherwise `needs_manual`
 
 ---
 

@@ -43,9 +43,9 @@ Copilot ตอบสนองเป็นภาษาอังกฤษหรื
 
 ---
 
-## 🗂️ Workflows และคำสั่งทั้งหมด 40 รายการ
+## 🗂️ Workflows และคำสั่งทั้งหมด 50 รายการ
 
-SmartSpec V6 ได้รวบรวมฟีเจอร์อันทรงพลังไว้ในชุด workflows ที่คล่องตัว 40 รายการ จัดระเบียบตามฟังก์ชัน คำสั่งเหล่านี้เป็นแกนหลักของวงจรชีวิต **SPEC → PLAN → TASKS → IMPLEMENT**
+SmartSpec V6 ได้รวบรวมฟีเจอร์อันทรงพลังไว้ในชุด workflows ที่ครอบคลุม 50 รายการ จัดระเบียบตามฟังก์ชัน คำสั่งเหล่านี้เป็นแกนหลักของวงจรชีวิต **SPEC → PLAN → TASKS → IMPLEMENT** รวมถึง workflows A2UI (Automated to UI) ขั้นสูงสำหรับการทำงาน UI อัตโนมัติและการเพิ่มประสิทธิภาพ
 
 ### การพัฒนาหลัก (5 Workflows)
 
@@ -83,7 +83,7 @@ SmartSpec V6 ได้รวบรวมฟีเจอร์อันทรง�
 | [`/smartspec_reindex_workflows`](.smartspec-docs/workflows/smartspec_reindex_workflows_th.md) | สร้างดัชนี workflow ใหม่สำหรับ copilot |
 | [`/smartspec_validate_index`](.smartspec-docs/workflows/validate_index_th.md) | ตรวจสอบความสมบูรณ์ของดัชนี spec และ workflow |
 
-### คุณภาพและการทดสอบ (12 Workflows)
+### คุณภาพและการทดสอบ (10 Workflows)
 
 | คำสั่ง | คำอธิบาย |
 | :--- | :--- |
@@ -95,8 +95,6 @@ SmartSpec V6 ได้รวบรวมฟีเจอร์อันทรง�
 | [`/smartspec_sync_tasks_checkboxes`](.smartspec-docs/workflows/tasks_checkboxes_th.md) | ซิงโครไนซ์เครื่องหมาย checkbox (`[x]` / `[ ]`) ใน `tasks.md` ให้ตรงกับ **รายงานการตรวจสอบล่าสุด** |
 | [`/smartspec_api_contract_validator`](.smartspec-docs/workflows/api_contract_validator_th.md) | ตรวจสอบการ implement API กับ contract ของ OpenAPI/Swagger |
 | [`/smartspec_data_model_validator`](.smartspec-docs/workflows/data_model_validator_th.md) | ตรวจสอบ schema ของฐานข้อมูลกับ data model ที่กำหนดไว้ |
-| [`/smartspec_ui_component_audit`](.smartspec-docs/workflows/ui_component_audit_th.md) | ตรวจสอบ UI components เพื่อความสอดคล้องและเป็นไปตาม design system |
-| [`/smartspec_ui_validation`](.smartspec-docs/workflows/ui_validation_manual_th.md) | ตรวจสอบการ implement UI กับ design mockups หรือ specs |
 | [`/smartspec_nfr_perf_planner`](.smartspec-docs/workflows/nfr_perf_planner_th.md) | วางแผนการทดสอบประสิทธิภาพตาม Non-Functional Requirements |
 | [`/smartspec_nfr_perf_verifier`](.smartspec-docs/workflows/nfr_perf_verifier_th.md) | ตรวจสอบประสิทธิภาพของระบบเทียบกับ NFRs |
 
@@ -106,6 +104,21 @@ SmartSpec V6 ได้รวบรวมฟีเจอร์อันทรง�
 | :--- | :--- |
 | [`/smartspec_security_audit_reporter`](.smartspec-docs/workflows/security_audit_reporter_th.md) | รันการตรวจสอบความปลอดภัยและสร้างรายงาน |
 | [`/smartspec_security_threat_modeler`](.smartspec-docs/workflows/security_threat_modeler_th.md) | วิเคราะห์ specs เพื่อระบุและสร้างแบบจำลองภัยคุกคามความปลอดภัยที่อาจเกิดขึ้น |
+
+### A2UI: การทำงาน UI อัตโนมัติแลฦการเพิ่มประสิทธิภาพ (10 Workflows)
+
+| คำสั่ง | คำอธิบาย |
+| :--- | :--- |
+| [`/smartspec_generate_ui_spec`](.smartspec-docs/workflows/generate_ui_spec_th.md) | สร้าง UI specification จาก design mockups หรือ requirements |
+| [`/smartspec_generate_ui_implementation`](.smartspec-docs/workflows/generate_ui_implementation_th.md) | สร้าง UI component implementation จาก UI spec |
+| [`/smartspec_ui_catalog_generator`](.smartspec-docs/workflows/ui_catalog_generator_th.md) | สร้าง UI component catalog แบบครอบคลุมจาก specs |
+| [`/smartspec_ui_component_audit`](.smartspec-docs/workflows/ui_component_audit_th.md) | ตรวจสอบ UI components เพื่อความสอดคล้องและเป็นไปตาม design system |
+| [`/smartspec_ui_validation`](.smartspec-docs/workflows/ui_validation_manual_th.md) | ตรวจสอบการ implement UI กับ design mockups หรือ specs |
+| [`/smartspec_ui_test_generator`](.smartspec-docs/workflows/ui_test_generator_th.md) | สร้างการทดสอบ UI อัตโนมัติจาก UI specifications |
+| [`/smartspec_optimize_ui_catalog`](.smartspec-docs/workflows/optimize_ui_catalog_th.md) | เพิ่มประสิทธิภาพ UI catalog ด้วย caching และ indexing (เร็วขึ้น 10-100 เท่า) |
+| [`/smartspec_ui_accessibility_audit`](.smartspec-docs/workflows/ui_accessibility_audit_th.md) | ตรวจสอบ UI components สำหรับ WCAG 2.1 accessibility compliance |
+| [`/smartspec_ui_performance_test`](.smartspec-docs/workflows/ui_performance_test_th.md) | ทดสอบประสิทธิภาพ UI component และ Core Web Vitals |
+| [`/smartspec_ui_analytics_reporter`](.smartspec-docs/workflows/ui_analytics_reporter_th.md) | ติดตามการใช้งาน, adoption และ quality metrics ของ UI component |
 
 ### การจัดการโครงการและการสนับสนุน (5 Workflows)
 

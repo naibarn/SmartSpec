@@ -1,0 +1,495 @@
+{
+  "$schema": "https://a2ui.org/schemas/catalog/v0.8.json",
+  "version": "0.8",
+  "name": "SmartSpec UI Catalog",
+  "description": "Governed catalog of approved UI components for SmartSpec A2UI workflows",
+  "preset": "material",
+  "components": [
+    {
+      "id": "text",
+      "type": "text",
+      "name": "Text",
+      "description": "Display static or dynamic text content",
+      "category": "basic",
+      "properties": {
+        "value": {
+          "type": "string",
+          "description": "Text content to display"
+        },
+        "valuePath": {
+          "type": "string",
+          "description": "JSON Pointer path to data model value"
+        },
+        "variant": {
+          "type": "string",
+          "enum": ["body", "heading", "caption", "label"],
+          "default": "body"
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "button",
+      "type": "button",
+      "name": "Button",
+      "description": "Clickable button that triggers an action",
+      "category": "input",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Button label text"
+        },
+        "action": {
+          "type": "string",
+          "description": "Action ID to trigger on click"
+        },
+        "variant": {
+          "type": "string",
+          "enum": ["primary", "secondary", "text", "outlined"],
+          "default": "primary"
+        },
+        "disabled": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "text-field",
+      "type": "text-field",
+      "name": "Text Field",
+      "description": "Single-line text input field",
+      "category": "input",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Field label"
+        },
+        "valuePath": {
+          "type": "string",
+          "description": "JSON Pointer path to bind value"
+        },
+        "placeholder": {
+          "type": "string",
+          "description": "Placeholder text"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        },
+        "type": {
+          "type": "string",
+          "enum": ["text", "email", "password", "tel", "url"],
+          "default": "text"
+        },
+        "maxLength": {
+          "type": "number"
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "text-area",
+      "type": "text-area",
+      "name": "Text Area",
+      "description": "Multi-line text input field",
+      "category": "input",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "valuePath": {
+          "type": "string"
+        },
+        "placeholder": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        },
+        "rows": {
+          "type": "number",
+          "default": 4
+        },
+        "maxLength": {
+          "type": "number"
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "select",
+      "type": "select",
+      "name": "Select Dropdown",
+      "description": "Dropdown selection from a list of options",
+      "category": "input",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "valuePath": {
+          "type": "string"
+        },
+        "optionsPath": {
+          "type": "string",
+          "description": "JSON Pointer path to options array"
+        },
+        "options": {
+          "type": "array",
+          "description": "Static options array"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        },
+        "multiple": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "checkbox",
+      "type": "checkbox",
+      "name": "Checkbox",
+      "description": "Boolean checkbox input",
+      "category": "input",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "valuePath": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "radio-group",
+      "type": "radio-group",
+      "name": "Radio Group",
+      "description": "Single selection from multiple options",
+      "category": "input",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "valuePath": {
+          "type": "string"
+        },
+        "optionsPath": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "date-picker",
+      "type": "date-picker",
+      "name": "Date Picker",
+      "description": "Date selection input",
+      "category": "input",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "valuePath": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        },
+        "min": {
+          "type": "string",
+          "description": "Minimum date (ISO 8601)"
+        },
+        "max": {
+          "type": "string",
+          "description": "Maximum date (ISO 8601)"
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "number-input",
+      "type": "number-input",
+      "name": "Number Input",
+      "description": "Numeric input field",
+      "category": "input",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "valuePath": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "step": {
+          "type": "number",
+          "default": 1
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "card",
+      "type": "card",
+      "name": "Card",
+      "description": "Container with elevation and padding",
+      "category": "layout",
+      "properties": {
+        "children": {
+          "type": "array",
+          "description": "Array of child component IDs"
+        },
+        "variant": {
+          "type": "string",
+          "enum": ["elevated", "outlined", "filled"],
+          "default": "elevated"
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "container",
+      "type": "container",
+      "name": "Container",
+      "description": "Generic container for grouping components",
+      "category": "layout",
+      "properties": {
+        "children": {
+          "type": "array"
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["row", "column"],
+          "default": "column"
+        },
+        "spacing": {
+          "type": "string",
+          "enum": ["none", "small", "medium", "large"],
+          "default": "medium"
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "divider",
+      "type": "divider",
+      "name": "Divider",
+      "description": "Horizontal or vertical dividing line",
+      "category": "layout",
+      "properties": {
+        "orientation": {
+          "type": "string",
+          "enum": ["horizontal", "vertical"],
+          "default": "horizontal"
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "dialog",
+      "type": "dialog",
+      "name": "Dialog",
+      "description": "Modal dialog overlay",
+      "category": "overlay",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "children": {
+          "type": "array"
+        },
+        "visible": {
+          "type": "boolean",
+          "default": false
+        },
+        "closeable": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "list",
+      "type": "list",
+      "name": "List",
+      "description": "Dynamic list of items from data model",
+      "category": "data",
+      "properties": {
+        "itemsPath": {
+          "type": "string",
+          "description": "JSON Pointer path to items array"
+        },
+        "itemTemplate": {
+          "type": "object",
+          "description": "Template for each list item"
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "table",
+      "type": "table",
+      "name": "Table",
+      "description": "Tabular data display",
+      "category": "data",
+      "properties": {
+        "dataPath": {
+          "type": "string",
+          "description": "JSON Pointer path to data array"
+        },
+        "columns": {
+          "type": "array",
+          "description": "Column definitions"
+        },
+        "sortable": {
+          "type": "boolean",
+          "default": false
+        },
+        "filterable": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "progress-bar",
+      "type": "progress-bar",
+      "name": "Progress Bar",
+      "description": "Progress indicator",
+      "category": "feedback",
+      "properties": {
+        "valuePath": {
+          "type": "string",
+          "description": "JSON Pointer path to progress value (0-100)"
+        },
+        "value": {
+          "type": "number",
+          "description": "Static progress value (0-100)"
+        },
+        "indeterminate": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    },
+    {
+      "id": "alert",
+      "type": "alert",
+      "name": "Alert",
+      "description": "Alert message with severity",
+      "category": "feedback",
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "messagePath": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["info", "success", "warning", "error"],
+          "default": "info"
+        },
+        "closeable": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "approved": true,
+      "security_level": "safe"
+    }
+  ],
+  "categories": [
+    {
+      "id": "basic",
+      "name": "Basic",
+      "description": "Basic display components"
+    },
+    {
+      "id": "input",
+      "name": "Input",
+      "description": "User input components"
+    },
+    {
+      "id": "layout",
+      "name": "Layout",
+      "description": "Layout and container components"
+    },
+    {
+      "id": "overlay",
+      "name": "Overlay",
+      "description": "Modal and overlay components"
+    },
+    {
+      "id": "data",
+      "name": "Data",
+      "description": "Data display components"
+    },
+    {
+      "id": "feedback",
+      "name": "Feedback",
+      "description": "User feedback components"
+    }
+  ],
+  "security": {
+    "policy": "catalog-based",
+    "description": "Only components listed in this catalog can be used in A2UI specifications. This ensures security and governance.",
+    "levels": {
+      "safe": "Component has no security concerns",
+      "review": "Component requires security review before use",
+      "restricted": "Component requires explicit approval"
+    }
+  },
+  "metadata": {
+    "created": "2025-12-22",
+    "version": "1.0.0",
+    "author": "SmartSpec",
+    "license": "Apache-2.0"
+  }
+}

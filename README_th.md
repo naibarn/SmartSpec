@@ -162,3 +162,12 @@ irm https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/
 - **[บันทึกการอัปเดต v5.7](.smartspec-docs/release-notes/smart_spec_release_notes_v_5_7_th.md)**
 - **[บันทึกการอัปเดต v5.6](.smartspec-docs/release-notes/smartspec_v_56_release_notes_th.md)**
 - **[บันทึกการอัปเดต v5.2](.smartspec-docs/release-notes/RELEASE_NOTES_v5.2_th.md)**
+
+
+---
+
+## 📊 Prompt สำหรับสร้าง Infographic
+
+Infographic ใน README นี้สร้างขึ้นโดยใช้ AI คุณสามารถดู prompt ที่ใช้ในการสร้างได้จากไฟล์ต่อไปนี้:
+
+- **[Prompt สำหรับ Infographic](INFOGRAPHIC_PROMPT.md)**

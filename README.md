@@ -162,3 +162,12 @@ Detailed changes for each version are tracked in:
 - **[v5.7 Release Notes](.smartspec-docs/release-notes/smart_spec_release_notes_v_5_7.md)**
 - **[v5.6 Release Notes](.smartspec-docs/release-notes/smartspec_v_56_release_notes_en.md)**
 - **[v5.2 Release Notes](.smartspec-docs/release-notes/RELEASE_NOTES_v5.2.md)**
+
+
+---
+
+## 📊 Infographic Generation Prompt
+
+The infographic in this README was generated using AI. You can find the exact prompt used for generation in the following file:
+
+- **[Infographic Prompt](INFOGRAPHIC_PROMPT.md)**

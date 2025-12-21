@@ -70,6 +70,45 @@ Forbidden writes (must hard-fail):
 
 ---
 
+## Flags
+
+### Universal flags (must support)
+
+All SmartSpec workflows support these universal flags:
+
+| Flag | Required | Description |
+|---|---|---|
+| `--config` | No | Path to custom config file (default: `.spec/smartspec.config.yaml`) |
+| `--lang` | No | Output language (`th` for Thai, `en` for English, `auto` for automatic detection) |
+| `--platform` | No | Platform mode (`cli` for CLI, `kilo` for Kilo Code, `ci` for CI/CD, `other` for custom integrations) |
+| `--out` | No | Base output directory for reports and generated files (must pass safety checks) |
+| `--json` | No | Output results in JSON format for machine parsing and automation |
+| `--quiet` | No | Suppress non-essential output, showing only errors and critical information |
+
+### Workflow-specific flags
+
+Flags specific to `/smartspec_generate_tasks`:
+
+| Flag | Required | Description |
+|---|---|---|
+| `--spec` | Yes (positional) | Path to the spec.md file to generate tasks from (e.g., `specs/feature/spec-001/spec.md`) |
+| `--apply` | No | Enable writes to governed artifacts (tasks.md) |
+| `--validate-only` | No | Run validation and preview without writing any files |
+| `--skip-duplication-check` | No | Skip pre-generation duplication validation (not recommended) |
+| `--registry-roots` | No | Additional registry directories to check for duplicates (comma-separated) |
+
+### Flag usage notes
+
+- **Config-first approach:** Prefer setting defaults in `.spec/smartspec.config.yaml` to minimize command-line flags
+- **Positional arguments:** Use positional argument for spec path: `/smartspec_generate_tasks specs/feature/spec-001/spec.md`
+- **Boolean flags:** Flags without values are boolean (presence = true, absence = false)
+- **Path safety:** All path arguments must pass safety validation (no directory traversal, symlink escape, or absolute paths outside project)
+- **Secret handling:** Never pass secrets as flag values; use `env:VAR_NAME` references or config file
+- **Preview-first:** Always run without `--apply` first to review changes
+- **Duplication prevention:** Never use `--skip-duplication-check` unless explicitly instructed
+
+---
+
 ## Behavior
 
 ### 1) Pre-Generation Validation (MANDATORY)

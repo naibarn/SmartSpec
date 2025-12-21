@@ -88,7 +88,41 @@ flags:
 
 ## 🚩 Flags
 
-- `--run-profile`: **(Required)** Run the performance profiling
-- `--scenario <name>`: Run a specific performance scenario (e.g., `high-load`, `api-stress-test`)
-- `--profiler <name>`: Use a specific profiler (e.g., `pprof`, `jprofiler`)
-- `--min-gain <percentage>`: Report only optimizations with a minimum expected performance gain
+### Universal flags (must support)
+
+All SmartSpec workflows support these universal flags:
+
+| Flag | Required | Description |
+|---|---|---|
+| `--config` | No | Path to custom config file (default: `.spec/smartspec.config.yaml`) |
+| `--lang` | No | Output language (`th` for Thai, `en` for English, `auto` for automatic detection) |
+| `--platform` | No | Platform mode (`cli` for CLI, `kilo` for Kilo Code, `ci` for CI/CD, `other` for custom integrations) |
+| `--out` | No | Base output directory for reports and generated files (must pass safety checks) |
+| `--json` | No | Output results in JSON format for machine parsing and automation |
+| `--quiet` | No | Suppress non-essential output, showing only errors and critical information |
+
+### Workflow-specific flags
+
+Flags specific to `/smartspec_performance_profiler`:
+
+| Flag | Required | Description |
+|---|---|---|
+| `--run-profile` | Yes | Run the performance profiling with configured profiler |
+| `--target` | Yes | Path to code/module to profile (e.g., `src/api/auth`) |
+| `--scenario` | No | Run a specific performance scenario (high-load, api-stress-test, normal-usage) |
+| `--profiler` | No | Use a specific profiler (pprof, jprofiler, py-spy, perf, default: auto-detect) |
+| `--min-gain` | No | Report only optimizations with a minimum expected performance gain (percentage, e.g., 10) |
+| `--apply` | No | Enable creation of tasks.md with optimization tasks |
+| `--dry-run` | No | Perform profiling and analysis without creating any tasks (preview mode) |
+| `--help` | No | Show help message and usage examples |
+| `--version` | No | Show workflow version information |
+| `--verbose` | No | Show detailed profiling output including all measurements |
+
+### Flag usage notes
+
+- **Config-first approach:** Prefer setting defaults in `.spec/smartspec.config.yaml` to minimize command-line flags
+- **Boolean flags:** Flags without values are boolean (presence = true, absence = false)
+- **Path safety:** All path arguments must pass safety validation (no directory traversal, symlink escape, or absolute paths outside project)
+- **Secret handling:** Never pass secrets as flag values; use `env:VAR_NAME` references or config file
+- **Preview-first:** Use `--dry-run` to preview optimization recommendations before using `--apply`
+- **Profiler selection:** Use `--profiler auto` to let the workflow detect the best profiler for your stack

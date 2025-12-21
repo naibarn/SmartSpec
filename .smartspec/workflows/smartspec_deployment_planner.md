@@ -355,5 +355,31 @@ Each check MUST emit a stable ID (`DEP-xxx`).
 
 ---
 
+
+---
+
+## Flags
+
+### Universal flags (must support)
+
+All SmartSpec workflows support these universal flags:
+
+| Flag | Required | Description |
+|---|---|---|
+| `--config` | No | Path to custom config file (default: `.spec/smartspec.config.yaml`) |
+| `--lang` | No | Output language (`th` for Thai, `en` for English, `auto` for automatic detection) |
+| `--platform` | No | Platform mode (`cli` for CLI, `kilo` for Kilo Code, `ci` for CI/CD, `other` for custom integrations) |
+| `--out` | No | Base output directory for reports and generated files (must pass safety checks) |
+| `--json` | No | Output results in JSON format for machine parsing and automation |
+| `--quiet` | No | Suppress non-essential output, showing only errors and critical information |
+
+### Flag usage notes
+
+- **Config-first approach:** Prefer setting defaults in `.spec/smartspec.config.yaml` to minimize command-line flags
+- **Positional arguments:** When supported, use positional arguments for primary inputs (e.g., spec path) instead of flags
+- **Boolean flags:** Flags without values are boolean (presence = true, absence = false)
+- **Path safety:** All path arguments must pass safety validation (no directory traversal, symlink escape, or absolute paths outside project)
+- **Secret handling:** Never pass secrets as flag values; use `env:VAR_NAME` references or config file
+
 # End of workflow doc
 

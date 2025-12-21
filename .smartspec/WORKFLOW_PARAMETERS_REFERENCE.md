@@ -160,6 +160,11 @@ These flags are supported by this workflow:
 
 **Version:** 1.0.0
 
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
+
 ---
 
 ## smartspec_deployment_planner
@@ -167,6 +172,11 @@ These flags are supported by this workflow:
 **Description:** Generate deployment plans and checklists.
 
 **Version:** 6.1.1
+
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
 
 ### Usage Examples
 
@@ -241,6 +251,11 @@ These flags are supported by this workflow:
 
 **Version:** 6.1.1
 
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
+
 ### Usage Examples
 
 **Example 1:**
@@ -271,6 +286,11 @@ These flags are supported by this workflow:
 **Description:** Publish documentation to various platforms.
 
 **Version:** 6.1.1
+
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
 
 ### Usage Examples
 
@@ -362,6 +382,11 @@ These flags are supported by this workflow:
 
 **Version:** 7.0.0
 
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
+
 ---
 
 ## smartspec_generate_spec_from_prompt
@@ -385,6 +410,11 @@ These flags are supported by this workflow:
 
 **Version:** 7.0.0
 
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
+
 ---
 
 ## smartspec_generate_tests
@@ -392,6 +422,11 @@ These flags are supported by this workflow:
 **Description:** Generate test artifacts/suggestions (prompts/scripts/reports).
 
 **Version:** 6.1.1
+
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
 
 ### Usage Examples
 
@@ -423,6 +458,11 @@ These flags are supported by this workflow:
 **Description:** Assist in creating and managing hotfixes.
 
 **Version:** 6.1.1
+
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
 
 ### Usage Examples
 
@@ -469,6 +509,11 @@ These flags are supported by this workflow:
 
 **Version:** 7.0.0
 
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
+
 ---
 
 ## smartspec_incident_response
@@ -502,6 +547,11 @@ These flags are supported by this workflow:
 **Description:** Produce NFR/performance plan from spec (reports).
 
 **Version:** 6.1.1
+
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
 
 ### Usage Examples
 
@@ -552,6 +602,11 @@ These flags are supported by this workflow:
 
 **Version:** 6.1.1
 
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
+
 ### Usage Examples
 
 **Example 1:**
@@ -591,6 +646,11 @@ These flags are supported by this workflow:
 
 **Version:** 6.1.1
 
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
+
 ### Usage Examples
 
 **Example 1:**
@@ -619,6 +679,11 @@ These flags are supported by this workflow:
 ## smartspec_performance_profiler
 
 **Version:** 1.0.0
+
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
 
 ---
 
@@ -733,6 +798,11 @@ These flags are supported by this workflow:
 
 **Version:** 1.0.0
 
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
+
 ---
 
 ## smartspec_reindex_specs
@@ -791,6 +861,11 @@ These flags are supported by this workflow:
 
 **Version:** 6.1.1
 
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
+
 ### Usage Examples
 
 **Example 1:**
@@ -830,6 +905,11 @@ These flags are supported by this workflow:
 **Description:** Generate implementation prompt packs with 100% duplication prevention.
 
 **Version:** 7.0.0
+
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
 
 ### Usage Examples
 

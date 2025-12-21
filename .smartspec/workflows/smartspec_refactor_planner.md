@@ -88,7 +88,41 @@ flags:
 
 ## 🚩 Flags
 
-- `--run-analysis`: **(Required)** Run the code analysis
-- `--scope <path>`: Limit the analysis to a specific directory or file
-- `--min-impact <level>`: Report only opportunities with a minimum impact level (e.g., `medium`, `high`)
-- `--auto-plan`: Automatically generate plans for all high-impact opportunities
+### Universal flags (must support)
+
+All SmartSpec workflows support these universal flags:
+
+| Flag | Required | Description |
+|---|---|---|
+| `--config` | No | Path to custom config file (default: `.spec/smartspec.config.yaml`) |
+| `--lang` | No | Output language (`th` for Thai, `en` for English, `auto` for automatic detection) |
+| `--platform` | No | Platform mode (`cli` for CLI, `kilo` for Kilo Code, `ci` for CI/CD, `other` for custom integrations) |
+| `--out` | No | Base output directory for reports and generated files (must pass safety checks) |
+| `--json` | No | Output results in JSON format for machine parsing and automation |
+| `--quiet` | No | Suppress non-essential output, showing only errors and critical information |
+
+### Workflow-specific flags
+
+Flags specific to `/smartspec_refactor_planner`:
+
+| Flag | Required | Description |
+|---|---|---|
+| `--run-analysis` | Yes | Run the code smell detection and refactoring analysis |
+| `--target` | Yes | Path to code/module to analyze (e.g., `src/api/auth`) |
+| `--scope` | No | Limit the analysis to a specific directory or file (overrides --target) |
+| `--min-impact` | No | Report only opportunities with a minimum impact level (low, medium, high, critical) |
+| `--auto-plan` | No | Automatically generate detailed plans for all high-impact opportunities |
+| `--apply` | No | Enable creation of tasks.md with refactoring tasks |
+| `--dry-run` | No | Perform analysis and planning without creating any tasks (preview mode) |
+| `--help` | No | Show help message and usage examples |
+| `--version` | No | Show workflow version information |
+| `--verbose` | No | Show detailed analysis output including all code smells detected |
+
+### Flag usage notes
+
+- **Config-first approach:** Prefer setting defaults in `.spec/smartspec.config.yaml` to minimize command-line flags
+- **Boolean flags:** Flags without values are boolean (presence = true, absence = false)
+- **Path safety:** All path arguments must pass safety validation (no directory traversal, symlink escape, or absolute paths outside project)
+- **Secret handling:** Never pass secrets as flag values; use `env:VAR_NAME` references or config file
+- **Preview-first:** Use `--dry-run` to preview refactoring recommendations before using `--apply`
+- **Impact filtering:** Use `--min-impact high` to focus on the most important refactoring opportunities

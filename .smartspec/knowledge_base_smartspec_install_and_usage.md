@@ -147,11 +147,21 @@ Notes:
 
 Use this when you **do not have `spec.md` yet**.
 
+**CLI:**
 ```bash
 /smartspec_generate_spec_from_prompt \
   "<your feature/product prompt>" \
   --out .spec/reports/generate-spec-from-prompt \
   --json
+```
+
+**Kilo Code (must have .md + --platform kilo):**
+```bash
+/smartspec_generate_spec_from_prompt.md \
+  "<your feature/product prompt>" \
+  --out .spec/reports/generate-spec-from-prompt \
+  --json \
+  --platform kilo
 ```
 
 Next: **human edit** the draft spec to confirm scope, assumptions, constraints, NFRs, and acceptance criteria.
@@ -160,26 +170,53 @@ Next: **human edit** the draft spec to confirm scope, assumptions, constraints, 
 
 Use this after the human-edited draft, or when you already have a `spec.md`.
 
+**CLI:**
 ```bash
 /smartspec_generate_spec \
   --spec specs/feature/spec-002-user-management/spec.md \
   --apply
 ```
 
+**Kilo Code (must have .md + --platform kilo):**
+```bash
+/smartspec_generate_spec.md \
+  --spec specs/feature/spec-002-user-management/spec.md \
+  --apply \
+  --platform kilo
+```
+
 ### 4.3 Generate PLAN (governed → needs apply)
 
+**CLI:**
 ```bash
 /smartspec_generate_plan \
   specs/feature/spec-002-user-management/spec.md \
   --apply
 ```
 
+**Kilo Code (must have .md + --platform kilo):**
+```bash
+/smartspec_generate_plan.md \
+  specs/feature/spec-002-user-management/spec.md \
+  --apply \
+  --platform kilo
+```
+
 ### 4.4 Generate TASKS (governed → needs apply)
 
+**CLI:**
 ```bash
 /smartspec_generate_tasks \
   specs/feature/spec-002-user-management/spec.md \
   --apply
+```
+
+**Kilo Code (must have .md + --platform kilo):**
+```bash
+/smartspec_generate_tasks.md \
+  specs/feature/spec-002-user-management/spec.md \
+  --apply \
+  --platform kilo
 ```
 
 ### 4.5 Implement from TASKS
@@ -190,6 +227,7 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
 - Writing code/tests/config requires **two gates**: `--apply` + `--write-code`.
 - Any action that needs network (dependency install/download/remote fetch) requires `--allow-network`.
 
+**CLI:**
 ```bash
 # Validate only
 /smartspec_implement_tasks \
@@ -207,8 +245,29 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
   --json
 ```
 
+**Kilo Code (must have .md + --platform kilo):**
+```bash
+# Validate only
+/smartspec_implement_tasks.md \
+  specs/feature/spec-002-user-management/tasks.md \
+  --validate-only \
+  --out .spec/reports/implement-tasks/spec-002 \
+  --json \
+  --platform kilo
+
+# Apply and write code
+/smartspec_implement_tasks.md \
+  specs/feature/spec-002-user-management/tasks.md \
+  --apply \
+  --write-code \
+  --out .spec/reports/implement-tasks/spec-002 \
+  --json \
+  --platform kilo
+```
+
 ### 4.6 Strict verify (safe output → no apply)
 
+**CLI:**
 ```bash
 /smartspec_verify_tasks_progress_strict \
   specs/feature/spec-002-user-management/tasks.md \
@@ -216,12 +275,30 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
   --json
 ```
 
+**Kilo Code (must have .md + --platform kilo):**
+```bash
+/smartspec_verify_tasks_progress_strict.md \
+  specs/feature/spec-002-user-management/tasks.md \
+  --out .spec/reports/verify-tasks-progress/spec-002 \
+  --json \
+  --platform kilo
+```
+
 ### 4.7 Sync tasks checkboxes (governed → needs apply)
 
+**CLI:**
 ```bash
 /smartspec_sync_tasks_checkboxes \
   specs/feature/spec-002-user-management/tasks.md \
   --apply
+```
+
+**Kilo Code (must have .md + --platform kilo):**
+```bash
+/smartspec_sync_tasks_checkboxes.md \
+  specs/feature/spec-002-user-management/tasks.md \
+  --apply \
+  --platform kilo
 ```
 
 ---

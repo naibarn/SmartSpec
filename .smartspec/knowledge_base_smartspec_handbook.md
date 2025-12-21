@@ -188,7 +188,7 @@ Every workflow MUST support these flags:
 
 - `--config <path>`
 - `--lang <th|en>`
-- `--platform <cli|kilo|ci|other>`
+- `--platform <cli|kilo|ci|other>` (e.g., `--platform kilo` for Kilo Code)
 - `--apply`
 - `--out <path>`
 - `--json`

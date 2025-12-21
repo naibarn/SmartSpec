@@ -408,3 +408,89 @@ python3 .spec/scripts/validate_tasks.py .spec/reports/generate-tasks/<run-id>/pr
 - The full output from the validation script (both errors and warnings) MUST be included in the `report.md` for the workflow run.
 
 This step ensures that all generated task lists adhere to the governance and completeness standards before they are integrated into the project.
+
+
+---
+
+## 12) Traceability & Completeness (MANDATORY)
+
+To ensure full traceability from requirements to tasks, the AI agent MUST generate the following sections and the validation script MUST verify them.
+
+### 12.1 Requirement Traceability Matrix (RTM)
+
+This new mandatory section maps requirements from `spec.md` to implementing tasks in `tasks.md`.
+
+#### 12.1.1 Security Requirements Coverage Template
+
+```markdown
+## Requirement Traceability Matrix
+
+### Security Requirements Coverage
+
+| Requirement ID | Description | Implementing Tasks | Coverage Status |
+|---|---|---|---|
+| SEC-001 | Password Hashing (bcrypt, cost 12) | TSK-AUTH-025 | ✅ Complete |
+| SEC-002 | JWT Algorithm (RS256, JWKS endpoint) | TSK-AUTH-030, TSK-AUTH-031, TSK-AUTH-032 | ✅ Complete |
+```
+
+#### 12.1.2 Functional Requirements Coverage Template
+
+```markdown
+### Functional Requirements Coverage
+
+| T-ID | Description | TSK-ID | Coverage Status |
+|---|---|---|---|
+| T001 | User Model (Prisma schema) | TSK-AUTH-020 | ✅ Complete |
+| T010 | JWT Token Management (RS256) | TSK-AUTH-030 | ✅ Complete |
+```
+
+### 12.2 Completeness Checklist Template
+
+This checklist provides a high-level overview of requirement coverage.
+
+```markdown
+## Completeness Checklist
+
+### Security Requirements (SEC-XXX)
+- [x] SEC-001: Password Hashing
+- [x] SEC-002: JWT Algorithm (including JWKS endpoint)
+
+### Critical Functional Requirements
+- [x] User registration with email verification
+- [x] JWKS endpoint for public key distribution
+```
+
+### 12.3 Reverse Traceability in Task Items
+
+Each task item MUST include metadata to trace back to the requirements it implements.
+
+```markdown
+- [ ] **TSK-AUTH-032: Implement JWKS endpoint**
+  - **Implements:** SEC-002 (JWT Algorithm - JWKS endpoint)
+  - **T-Reference:** T010 (JWT Token Management)
+  - **Acceptance Criteria:**
+    - [ ] Endpoint `GET /.well-known/jwks.json` returns JWK Set
+  - **Evidence Hooks:**
+    - **Code:** `packages/auth-service/src/routes/jwks.route.ts`
+    - **Test:** `packages/auth-service/tests/e2e/jwks.test.ts`
+```
+
+### 12.4 Enhanced Validation
+
+The validation script is now enhanced to check for traceability.
+
+#### 12.4.1 Enhanced Validation Command
+
+```bash
+python3 .spec/scripts/validate_tasks_enhanced.py \
+  --tasks .spec/reports/generate-tasks/<run-id>/preview/<spec-id>/tasks.md \
+  --spec specs/<category>/<spec-id>/spec.md
+```
+
+#### 12.4.2 Enhanced Validation Rules
+
+- The `--spec` argument is now **MANDATORY**.
+- The script will parse `spec.md` to find all `SEC-XXX` requirements and `T-XXX` references.
+- It will then check that all requirements and references are present in the **Requirement Traceability Matrix**.
+- It will fail validation if any requirement is not covered.
+- The full output, including coverage statistics, MUST be included in `report.md`.

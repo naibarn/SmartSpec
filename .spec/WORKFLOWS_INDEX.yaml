@@ -199,3 +199,15 @@ workflows:
   - name: /smartspec_docs_publisher
     purpose: Publish generated documentation to a static site or wiki.
     category: project_management_and_support
+
+  # ---------------------------------------------------------------------------
+  # UI Generation (A2UI Integration) (1)
+  # ---------------------------------------------------------------------------
+  - name: /smartspec_generate_ui_spec
+    purpose: Generate A2UI-compliant UI specification from natural language requirements.
+    category: ui_generation
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [reports, specs, spec-index]
+    status: active
+    version: "6.0.0"

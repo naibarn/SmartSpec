@@ -457,6 +457,27 @@ These flags are supported by this workflow:
 
 ---
 
+## smartspec_generate_ui_spec
+
+### Usage Examples
+
+**CLI:**
+```bash
+/smartspec_generate_ui_spec \
+  --requirements "Create restaurant booking form with date picker, time selector, guest count, and special requests" \
+  --spec specs/feature/spec-001-booking/ui-spec.json
+```
+
+**Kilo Code:**
+```bash
+/smartspec_generate_ui_spec.md \
+  --requirements "Create restaurant booking form with date picker, time selector, guest count, and special requests" \
+  --spec specs/feature/spec-001-booking/ui-spec.json \
+  --platform kilo
+```
+
+---
+
 ## smartspec_hotfix_assistant
 
 **Description:** Assist in creating and managing hotfixes.

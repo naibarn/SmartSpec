@@ -219,6 +219,74 @@ spec_policies:
     file: "references/decisions.md"
 
 # -----------------------------------------------------------------------------
+# A2UI (Agent-to-User Interface) Configuration (Optional)
+# -----------------------------------------------------------------------------
+a2ui:
+  # Enable A2UI features (default: false for backward compatibility)
+  enabled: false
+
+  # A2UI specification version
+  version: "0.8"
+
+  # UI Catalog configuration
+  catalog:
+    # Path to UI component catalog (created by smartspec_manage_ui_catalog)
+    path: ".spec/ui-catalog.json"
+
+    # Preset catalog to use if catalog file doesn't exist
+    # Options: material, fluent, custom, none
+    preset: "material"
+
+  # Default renderers for each platform
+  renderers:
+    web: "lit"          # lit, angular, react
+    mobile: "flutter"   # flutter
+
+  # Transport protocol for A2UI messages
+  # Options: a2a, websocket, sse
+  transport: "websocket"
+
+  # Generation defaults
+  generation:
+    # Default style framework
+    style: "material"   # material, fluent, custom
+
+    # Accessibility level
+    accessibility: "wcag-aa"  # basic, wcag-aa, wcag-aaa
+
+    # Generate TypeScript by default
+    typescript: true
+
+    # Generate unit tests by default
+    tests: true
+
+    # Generate Storybook stories
+    storybook: false
+
+  # Verification settings
+  verification:
+    # Strict verification mode
+    strict: false
+
+    # Check accessibility compliance
+    accessibility_check: true
+
+    # Check cross-platform consistency
+    cross_platform_consistency: true
+
+  # Dependencies (optional, not installed by default)
+  # Install only if A2UI features are needed:
+  # npm install @a2ui/core @a2ui/lit-renderer @a2ui/flutter-renderer lit
+  dependencies:
+    required:
+      - "@a2ui/core@^0.8.0"
+      - "lit@^3.0.0"
+    optional:
+      - "@a2ui/lit-renderer@^0.8.0"
+      - "@a2ui/flutter-renderer@^0.8.0"
+      - "@a2ui/testing@^0.8.0"
+
+# -----------------------------------------------------------------------------
 # Platform options
 # -----------------------------------------------------------------------------
 platform_options:

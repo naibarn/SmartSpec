@@ -261,4 +261,82 @@ All workflow files (`.smartspec/workflows/*.md`) MUST include proper YAML frontm
 
 ---
 
+## 12) A2UI Cross-Spec Binding
+
+### 12.1 Overview
+
+A2UI (Agent-to-User Interface) specifications are declarative and self-contained for implementation, but they must interact with other parts of the system. Cross-spec binding is the declarative method for defining these interactions.
+
+### 12.2 Four Types of Cross-Spec Binding
+
+| Binding Type | Purpose | Keywords |
+|:---|:---|:---|
+| **Data Binding** | Connect to backend APIs | `data_bindings`, `endpoint_ref` |
+| **Action Binding** | Connect to business logic services | `logic_bindings`, `service_ref`, `function_ref` |
+| **Component Reference** | Reuse UI components from other specs | `imports`, `component_ref` |
+| **State Binding** | Connect to global application state | `state_bindings`, `state_ref` |
+
+### 12.3 Data Binding Example
+
+**API Spec** (`specs/api/booking-api.json`):
+```json
+{
+  "spec_id": "booking-api",
+  "endpoints": [
+    {
+      "id": "get_available_times",
+      "path": "/api/bookings/available-times",
+      "method": "GET"
+    }
+  ]
+}
+```
+
+**UI Spec** (`specs/ui/booking-form.json`):
+```json
+{
+  "metadata": {
+    "api_spec": "specs/api/booking-api.json"
+  },
+  "components": [
+    {
+      "id": "booking-form",
+      "data_bindings": {
+        "load_times": {
+          "source": "api",
+          "endpoint_ref": "booking-api:get_available_times",
+          "trigger": "date_field.onChange",
+          "target": "time_field.options"
+        }
+      }
+    }
+  ]
+}
+```
+
+### 12.4 Validation Workflow
+
+Before implementation, run validation to verify all cross-spec references:
+
+```bash
+/smartspec_validate_cross_spec_bindings --spec specs/ui/booking-form.json
+```
+
+**Checks performed:**
+- Existence of referenced spec files
+- Availability of referenced resources (endpoints, functions, components)
+- Version compatibility between specs
+- Schema matching for parameters and outputs
+
+### 12.5 Governance Principles
+
+1. **Explicit Dependencies**: All dependencies between specs must be declared
+2. **Spec-as-API**: Every spec is treated as a contract that others can consume
+3. **Declarative Bindings**: Bindings use consistent JSON structure for code generation
+4. **Type Safety**: Generated code includes type checking for cross-spec interactions
+
+**For detailed examples and concepts, see:** `A2UI_CROSS_SPEC_BINDING_GUIDE.md`
+
+---
+
 # End of Canonical Handbook

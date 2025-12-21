@@ -541,6 +541,33 @@ These flags are supported by this workflow:
 
 ---
 
+## smartspec_implement_ui_from_spec
+
+### Usage Examples
+
+**CLI:**
+```bash
+/smartspec_implement_ui_from_spec \
+  --spec specs/feature/spec-002-contact/ui-spec.json \
+  --target-platform web \
+  --renderer lit \
+  --output-dir src/ui/contact \
+  --apply
+```
+
+**Kilo Code:**
+```bash
+/smartspec_implement_ui_from_spec.md \
+  --spec specs/feature/spec-002-contact/ui-spec.json \
+  --target-platform web \
+  --renderer lit \
+  --output-dir src/ui/contact \
+  --platform kilo \
+  --apply
+```
+
+---
+
 ## smartspec_incident_response
 
 **Description:** Manage production incidents from triage to resolution and post-mortem.
@@ -563,6 +590,31 @@ These flags are supported by this workflow:
 ```bash
 /smartspec_incident_response \
   --alert-payload <json-payload>
+```
+
+---
+
+## smartspec_manage_ui_catalog
+
+### Usage Examples
+
+**CLI:**
+```bash
+/smartspec_manage_ui_catalog \
+  --action add \
+  --component-type slider \
+  --component-def slider-component.json \
+  --apply
+```
+
+**Kilo Code:**
+```bash
+/smartspec_manage_ui_catalog.md \
+  --action add \
+  --component-type slider \
+  --component-def slider-component.json \
+  --platform kilo \
+  --apply
 ```
 
 ---
@@ -1300,6 +1352,29 @@ These flags are supported by this workflow:
 **Kilo Code:**
 ```bash
 /smartspec_verify_tasks_progress_strict.md <path/to/tasks.md> [--report-format <md|json|both>] [--json] \
+  --platform kilo
+```
+
+---
+
+## smartspec_verify_ui_implementation
+
+### Usage Examples
+
+**CLI:**
+```bash
+/smartspec_verify_ui_implementation \
+  --spec specs/feature/spec-002-contact/ui-spec.json \
+  --implementation src/ui/contact \
+  --target-platform web
+```
+
+**Kilo Code:**
+```bash
+/smartspec_verify_ui_implementation.md \
+  --spec specs/feature/spec-002-contact/ui-spec.json \
+  --implementation src/ui/contact \
+  --target-platform web \
   --platform kilo
 ```
 

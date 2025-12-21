@@ -211,3 +211,30 @@ workflows:
     write_scopes: [reports, specs, spec-index]
     status: active
     version: "6.0.0"
+
+  - name: /smartspec_implement_ui_from_spec
+    purpose: Generate platform-specific UI implementation code from A2UI specification.
+    category: ui_generation
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [code, tests, reports]
+    status: active
+    version: "6.0.0"
+
+  - name: /smartspec_verify_ui_implementation
+    purpose: Verify that UI implementation matches the A2UI specification.
+    category: ui_generation
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [reports]
+    status: active
+    version: "6.0.0"
+
+  - name: /smartspec_manage_ui_catalog
+    purpose: Manage the UI component catalog for A2UI workflows.
+    category: ui_generation
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [catalog, reports]
+    status: active
+    version: "6.0.0"

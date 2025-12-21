@@ -4,7 +4,7 @@
 
 # SmartSpec: เฟรมเวิร์กการพัฒนาที่เน้น AI เป็นหลัก
 
-![SmartSpec 100% Workflow Loop Completeness](smartspec_100_completeness_infographic.png)
+![SmartSpec 100% Workflow Loop Completeness](.smartspec-assets/infographics/smartspec_100_completeness_infographic.png)
 
 **SmartSpec คือเฟรมเวิร์กที่มีโครงสร้างและพร้อมสำหรับการใช้งานในระดับโปรดักชัน ที่ช่วยเพิ่มคุณภาพ ความสม่ำเสมอ และความรวดเร็วให้กับขั้นตอนการพัฒนาที่ขับเคลื่อนด้วย AI ของคุณ** โดยเปลี่ยนไอเดียเริ่มต้นของคุณให้กลายเป็นโค้ดคุณภาพสูงพร้อมใช้งานจริง ด้วยการจัดการขั้นตอนที่ชัดเจนและทำซ้ำได้: **SPEC → PLAN → TASKS → PROMPT → IMPLEMENT**
 
@@ -169,5 +169,5 @@ irm https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/
 
 Infographic ใน README นี้สร้างขึ้นโดยใช้ AI สำหรับคำอธิบายโดยละเอียดของทั้ง 8 workflow loops และ prompt ที่ใช้ในการสร้าง infographic โปรดดูเอกสารต่อไปนี้:
 
-- **[คำอธิบาย Workflow Loops](WORKFLOW_LOOPS_EXPLAINED.md)** - คู่มือฉบับสมบูรณ์สำหรับแต่ละ loop
-- **[Prompt สำหรับสร้าง Infographic](INFOGRAPHIC_GENERATION_PROMPT.md)** - Prompt ที่ใช้สำหรับการสร้างด้วย AI
+- **[คำอธิบาย Workflow Loops](.smartspec-docs/reports/WORKFLOW_LOOPS_EXPLAINED.md)** - คู่มือฉบับสมบูรณ์สำหรับแต่ละ loop
+- **[Prompt สำหรับสร้าง Infographic](.smartspec-docs/reports/INFOGRAPHIC_GENERATION_PROMPT.md)** - Prompt ที่ใช้สำหรับการสร้างด้วย AI

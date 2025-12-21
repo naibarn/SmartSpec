@@ -4,7 +4,7 @@
 
 # SmartSpec: The AI-Native Development Framework
 
-![SmartSpec 100% Workflow Loop Completeness](smartspec_100_completeness_infographic.png)
+![SmartSpec 100% Workflow Loop Completeness](.smartspec-assets/infographics/smartspec_100_completeness_infographic.png)
 
 **SmartSpec is a structured, production-grade framework that brings quality, consistency, and speed to your AI-powered development workflow.** It transforms your initial ideas into high-quality, production-ready code by orchestrating a clear, repeatable process: **SPEC → PLAN → TASKS → PROMPT → IMPLEMENT**.
 
@@ -170,5 +170,5 @@ Detailed changes for each version are tracked in:
 
 The infographic in this README was generated using AI. For a detailed breakdown of all 8 workflow loops and the prompt used to generate the infographic, see the following documents:
 
-- **[Workflow Loops Explained](WORKFLOW_LOOPS_EXPLAINED.md)** - A comprehensive guide to each loop.
-- **[Infographic Generation Prompt](INFOGRAPHIC_GENERATION_PROMPT.md)** - The exact prompt used for AI generation.
+- **[Workflow Loops Explained](.smartspec-docs/reports/WORKFLOW_LOOPS_EXPLAINED.md)** - A comprehensive guide to each loop.
+- **[Infographic Generation Prompt](.smartspec-docs/reports/INFOGRAPHIC_GENERATION_PROMPT.md)** - The exact prompt used for AI generation.

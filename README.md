@@ -34,6 +34,96 @@ SmartSpec V6 supports your favorite AI coding platforms with a single-command in
 
 ---
 
+## ⚠️ Critical: Preview-First Workflow Pattern
+
+**SmartSpec follows a strict preview-first approach to prevent accidental file modifications.** This is a core safety principle that ensures you always review changes before they are applied.
+
+### How It Works
+
+#### Step 1: Run Without `--apply` (Preview Mode)
+
+When you run a workflow **without** the `--apply` flag, SmartSpec generates a **preview report** showing what changes will be made, but **does not modify any files**.
+
+**CLI:**
+```bash
+/smartspec_generate_spec --spec specs/feature/spec-001/spec.md
+```
+
+**Kilo Code:**
+```bash
+/smartspec_generate_spec.md --spec specs/feature/spec-001/spec.md --platform kilo
+```
+
+**Result:** A report is generated at `.spec/reports/generate-spec/<run-id>/` showing:
+- What will be changed
+- Why it will be changed
+- Preview of the new content
+
+#### Step 2: Review the Report Carefully
+
+**Read the generated report thoroughly:**
+- Check if the proposed changes are correct
+- Verify that no unintended modifications will occur
+- Ensure the changes align with your requirements
+
+**Report location:**
+```
+.spec/reports/<workflow-name>/<run-id>/
+├── report.md          # Human-readable summary
+├── report.json        # Machine-readable data
+└── preview/           # Preview of changes
+```
+
+#### Step 3: Run Again With `--apply` (Apply Mode)
+
+**Only after you are confident the changes are correct**, run the same command again with the `--apply` flag.
+
+**CLI:**
+```bash
+/smartspec_generate_spec --spec specs/feature/spec-001/spec.md --apply
+```
+
+**Kilo Code:**
+```bash
+/smartspec_generate_spec.md --spec specs/feature/spec-001/spec.md --apply --platform kilo
+```
+
+**Result:** SmartSpec now **actually modifies the files** as shown in the preview.
+
+### Why This Matters
+
+✅ **Safety:** Prevents accidental overwrites or incorrect modifications  
+✅ **Transparency:** You always know exactly what will change before it happens  
+✅ **Control:** You make the final decision to apply changes  
+✅ **Auditability:** Every change is documented in reports before being applied  
+
+### Workflows That Require `--apply`
+
+The following workflows modify **governed artifacts** (specs, plans, tasks) and **require `--apply`** to make actual changes:
+
+- `smartspec_generate_spec` - Modifies `spec.md`
+- `smartspec_generate_plan` - Modifies `plan.md`
+- `smartspec_generate_tasks` - Modifies `tasks.md`
+- `smartspec_implement_tasks` - Modifies source code
+- `smartspec_sync_tasks_checkboxes` - Modifies `tasks.md` checkboxes
+
+### Workflows That Don't Need `--apply`
+
+Some workflows only generate **reports or prompts** (safe outputs) and don't need `--apply`:
+
+- `smartspec_project_copilot` - Read-only analysis
+- `smartspec_verify_tasks_progress_strict` - Generates verification report
+- `smartspec_report_implement_prompter` - Generates implementation prompts
+- `smartspec_test_report_analyzer` - Analyzes test results
+
+### Remember
+
+🔴 **Never use `--apply` on the first run**  
+🟡 **Always review the preview report**  
+🟢 **Only use `--apply` when you're confident**
+
+---
+
 ## 🚀 New Feature: SmartSpec Copilot — Your Dedicated SmartSpec Help Assistant
 
 **SmartSpec version >6.0** introduces **SmartSpec Copilot**, an always-available interactive assistant built using OpenAI CustomGPT. It allows users to interact with SmartSpec in natural language to understand workflows, debug issues, and navigate the full SmartSpec lifecycle with far less friction.
@@ -43,9 +133,79 @@ It is now the official support channel for learning and using SmartSpec.  [**[Li
 
 ---
 
+## 🚀 Quick Start: Your First Workflow
+
+Here's a complete example showing the **preview-first pattern** in action:
+
+### Example: Creating a New Specification
+
+#### 1️⃣ First Run: Preview Mode (No `--apply`)
+
+**CLI:**
+```bash
+/smartspec_generate_spec --spec specs/feature/spec-001-user-auth/spec.md
+```
+
+**Kilo Code:**
+```bash
+/smartspec_generate_spec.md --spec specs/feature/spec-001-user-auth/spec.md --platform kilo
+```
+
+**What happens:**
+- ✅ SmartSpec analyzes your requirements
+- ✅ Generates a preview report at `.spec/reports/generate-spec/<run-id>/`
+- ❌ **Does NOT create or modify** `spec.md` yet
+
+#### 2️⃣ Review the Report
+
+```bash
+# Open and read the report
+cat .spec/reports/generate-spec/<run-id>/report.md
+
+# Check the preview
+cat .spec/reports/generate-spec/<run-id>/preview/spec.md
+```
+
+**Questions to ask yourself:**
+- ❓ Does the spec cover all requirements?
+- ❓ Are the NFRs (security, performance) included?
+- ❓ Is the structure correct?
+- ❓ Are there any errors or omissions?
+
+#### 3️⃣ Second Run: Apply Mode (With `--apply`)
+
+**Only after you're satisfied with the preview:**
+
+**CLI:**
+```bash
+/smartspec_generate_spec --spec specs/feature/spec-001-user-auth/spec.md --apply
+```
+
+**Kilo Code:**
+```bash
+/smartspec_generate_spec.md --spec specs/feature/spec-001-user-auth/spec.md --apply --platform kilo
+```
+
+**What happens:**
+- ✅ SmartSpec **creates** `specs/feature/spec-001-user-auth/spec.md`
+- ✅ Updates `.spec/SPEC_INDEX.json`
+- ✅ Generates final report
+
+### 🎯 Key Takeaway
+
+**Two-step process:**
+1. **Preview** (no `--apply`) → Review report → Decide
+2. **Apply** (with `--apply`) → Changes are made
+
+**This pattern applies to most SmartSpec workflows!**
+
+---
+
 ## 🗂️ All 40 Workflows & Commands
 
 SmartSpec V6 consolidates its powerful features into a streamlined set of 40 workflows, organized by function. These commands form the backbone of the **SPEC → PLAN → TASKS → IMPLEMENT** lifecycle.
+
+**⚠️ Remember:** Most workflows follow the **preview-first pattern** — run without `--apply` first to review, then run with `--apply` to apply changes.
 
 ### Core Development (5 Workflows)
 

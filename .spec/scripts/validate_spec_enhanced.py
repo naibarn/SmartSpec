@@ -12,6 +12,11 @@ Exit codes:
 """
 
 import argparse
+try:
+    import jsonschema
+    HAS_JSONSCHEMA = True
+except ImportError:
+    HAS_JSONSCHEMA = False
 import json
 import os
 import re
@@ -304,6 +309,26 @@ def validate_cross_spec_consistency(registry_dir):
     
     return errors, warnings
 
+
+
+def validate_registry_schema(registry_path, schema_path):
+    """Validate registry JSON against schema."""
+    if not HAS_JSONSCHEMA:
+        return []  # Skip validation if jsonschema not installed
+    
+    try:
+        with open(registry_path, 'r') as f:
+            registry = json.load(f)
+        
+        with open(schema_path, 'r') as f:
+            schema = json.load(f)
+        
+        jsonschema.validate(registry, schema)
+        return []
+    except jsonschema.ValidationError as e:
+        return [f"Schema validation error: {e.message}"]
+    except Exception as e:
+        return [f"Validation error: {str(e)}"]
 
 def main():
     args = parse_args()

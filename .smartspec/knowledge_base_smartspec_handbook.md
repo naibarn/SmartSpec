@@ -335,7 +335,7 @@ Before implementation, run validation to verify all cross-spec references:
 3. **Declarative Bindings**: Bindings use consistent JSON structure for code generation
 4. **Type Safety**: Generated code includes type checking for cross-spec interactions
 
-**For detailed examples and concepts, see:** `A2UI_CROSS_SPEC_BINDING_GUIDE.md`
+**For detailed examples and concepts, see:** `docs/a2ui/A2UI_CROSS_SPEC_BINDING_GUIDE.md`
 
 ---
 

@@ -1,8 +1,9 @@
 ---
 description: Refine spec.md (SPEC-first) with deterministic preview/diff + completeness/reuse
   checks.
-version: 6.0.0
+version: 6.0.2
 workflow: /smartspec_generate_spec
+category: core
 ---
 
 # smartspec_generate_spec
@@ -175,9 +176,9 @@ When refining a spec, the workflow MUST detect probable duplication and surface 
 
 Minimum behavior:
 
-1) Load `.spec/SPEC_INDEX.json`.
-2) Compute best-effort similarity against existing index entries using fields configured under `spec_policies.reuse.fields`.
-3) If a strong match indicates duplicated purpose/components:
+1. Load `.spec/SPEC_INDEX.json`.
+2. Compute best-effort similarity against existing index entries using fields configured under `spec_policies.reuse.fields`.
+3. If a strong match indicates duplicated purpose/components:
    - add a **Reuse Warning** section to the spec (or preview)
    - add a decision record in `references/decisions.md`
    - recommend consolidation (do not silently fork)
@@ -254,13 +255,13 @@ If `--out` is provided:
 
 The report MUST include:
 
-1) Target spec(s) and resolution method (`--spec` or `--spec-ids`)
-2) Changes summary (high-level)
-3) Reuse/duplication findings (if any)
-4) Completeness summary (UX/UI baseline + NFR)
-5) Secret/redaction note (including any apply refusal)
-6) Output inventory
-7) Recommended next commands:
+1. Target spec(s) and resolution method (`--spec` or `--spec-ids`)
+2. Changes summary (high-level)
+3. Reuse/duplication findings (if any)
+4. Completeness summary (UX/UI baseline + NFR)
+5. Secret/redaction note (including any apply refusal)
+6. Output inventory
+7. Recommended next commands:
    - `/smartspec_generate_plan <spec.md> --apply`
    - `/smartspec_generate_tasks <spec.md> --apply`
    - `/smartspec_validate_index --strict --json`
@@ -275,15 +276,14 @@ The report MUST include:
   "version": "6.0.2",
   "run_id": "string",
   "applied": false,
-  "targets": [{"spec_id": "...", "path": "..."}],
-  "results": [{"spec_id": "...", "status": "ok|warn|fail", "why": "..."}],
-  "security": {"secret_detected": false, "apply_refused": false},
-  "writes": {"reports": ["path"], "specs": ["path"], "registry": ["path"]},
-  "next_steps": [{"cmd": "...", "why": "..."}]
+  "targets": [{ "spec_id": "...", "path": "..." }],
+  "results": [{ "spec_id": "...", "status": "ok|warn|fail", "why": "..." }],
+  "security": { "secret_detected": false, "apply_refused": false },
+  "writes": { "reports": ["path"], "specs": ["path"], "registry": ["path"] },
+  "next_steps": [{ "cmd": "...", "why": "..." }]
 }
 ```
 
 ---
 
 # End of workflow doc
-

@@ -17,6 +17,31 @@ This guide provides **scenario-based recommendations** for using SmartSpec workf
 - **Best practices:** Tips for optimal results
 - **Common pitfalls:** What to avoid
 
+### Important: Dual-Syntax Requirement
+
+**When answering user questions about workflow usage, ALWAYS provide BOTH syntaxes:**
+
+1. **CLI syntax:** `/workflow_name <args> --flags`
+2. **Kilo Code syntax:** `/workflow_name.md <args> --flags --platform kilo`
+
+**Example:**
+
+**CLI:**
+```bash
+/smartspec_generate_spec --spec specs/feature/spec-001/spec.md --apply
+```
+
+**Kilo Code:**
+```bash
+/smartspec_generate_spec.md --spec specs/feature/spec-001/spec.md --apply --platform kilo
+```
+
+**Rules:**
+- MUST show both syntaxes for every workflow command recommendation
+- Kilo Code MUST include `--platform kilo` flag
+- Use code blocks for clarity
+- If a scenario below shows only one syntax, generate the other syntax following this pattern
+
 ---
 
 ## Table of Contents

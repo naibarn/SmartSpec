@@ -99,7 +99,16 @@ def main():
             if info['examples']:
                 out.write("### Usage Examples\n\n")
                 for i, example in enumerate(info['examples'], 1):
-                    out.write(f"**Example {i}:**\n```bash\n{example}\n```\n\n")
+                    # Determine if this is CLI or Kilo Code
+                    # Kilo Code has .md extension in workflow name (e.g., /smartspec_xxx.md)
+                    is_kilo = re.search(r'/smartspec_\w+\.md', example) is not None
+                    label = "Kilo Code" if is_kilo else "CLI"
+                    
+                    # Add --platform kilo if it's Kilo Code and doesn't have it
+                    if is_kilo and '--platform kilo' not in example:
+                        example = example.rstrip() + ' \\\n  --platform kilo'
+                    
+                    out.write(f"**{label}:**\n```bash\n{example}\n```\n\n")
             
             out.write("---\n\n")
     

@@ -1,0 +1,179 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SmartSpec Registry Schema",
+  "description": "JSON schema for SmartSpec registry files",
+  "definitions": {
+    "api_registry": {
+      "type": "object",
+      "required": ["version", "last_updated", "source", "specs_included", "endpoints"],
+      "properties": {
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "last_updated": {"type": "string", "format": "date-time"},
+        "source": {"type": "string", "enum": ["smartspec_generate_spec", "manual"]},
+        "specs_included": {"type": "array", "items": {"type": "string"}},
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["method", "path", "description", "owner_spec"],
+            "properties": {
+              "method": {"type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]},
+              "path": {"type": "string"},
+              "description": {"type": "string"},
+              "owner_spec": {"type": "string"},
+              "status_codes": {"type": "array", "items": {"type": "integer"}},
+              "shared_with": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        }
+      }
+    },
+    "data_model_registry": {
+      "type": "object",
+      "required": ["version", "last_updated", "source", "specs_included", "models"],
+      "properties": {
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "last_updated": {"type": "string", "format": "date-time"},
+        "source": {"type": "string", "enum": ["smartspec_generate_spec", "manual"]},
+        "specs_included": {"type": "array", "items": {"type": "string"}},
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "description", "owner_spec", "fields"],
+            "properties": {
+              "name": {"type": "string"},
+              "description": {"type": "string"},
+              "owner_spec": {"type": "string"},
+              "shared_with": {"type": "array", "items": {"type": "string"}},
+              "fields": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        }
+      }
+    },
+    "ui_components_registry": {
+      "type": "object",
+      "required": ["version", "last_updated", "source", "specs_included", "components"],
+      "properties": {
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "last_updated": {"type": "string", "format": "date-time"},
+        "source": {"type": "string", "enum": ["smartspec_generate_spec", "manual"]},
+        "specs_included": {"type": "array", "items": {"type": "string"}},
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "type", "description", "owner_spec"],
+            "properties": {
+              "name": {"type": "string"},
+              "type": {"type": "string"},
+              "description": {"type": "string"},
+              "owner_spec": {"type": "string"},
+              "shared_with": {"type": "array", "items": {"type": "string"}},
+              "props": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        }
+      }
+    },
+    "services_registry": {
+      "type": "object",
+      "required": ["version", "last_updated", "source", "specs_included", "services"],
+      "properties": {
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "last_updated": {"type": "string", "format": "date-time"},
+        "source": {"type": "string", "enum": ["smartspec_generate_spec", "manual"]},
+        "specs_included": {"type": "array", "items": {"type": "string"}},
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "description", "owner_spec", "responsibilities"],
+            "properties": {
+              "name": {"type": "string"},
+              "description": {"type": "string"},
+              "owner_spec": {"type": "string"},
+              "shared_with": {"type": "array", "items": {"type": "string"}},
+              "responsibilities": {"type": "array", "items": {"type": "string"}},
+              "dependencies": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        }
+      }
+    },
+    "workflows_registry": {
+      "type": "object",
+      "required": ["version", "last_updated", "source", "specs_included", "workflows"],
+      "properties": {
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "last_updated": {"type": "string", "format": "date-time"},
+        "source": {"type": "string", "enum": ["smartspec_generate_spec", "manual"]},
+        "specs_included": {"type": "array", "items": {"type": "string"}},
+        "workflows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "description", "owner_spec", "steps"],
+            "properties": {
+              "name": {"type": "string"},
+              "description": {"type": "string"},
+              "owner_spec": {"type": "string"},
+              "shared_with": {"type": "array", "items": {"type": "string"}},
+              "steps": {"type": "array", "items": {"type": "string"}},
+              "triggers": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        }
+      }
+    },
+    "glossary": {
+      "type": "object",
+      "required": ["version", "last_updated", "source", "specs_included", "terms"],
+      "properties": {
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "last_updated": {"type": "string", "format": "date-time"},
+        "source": {"type": "string", "enum": ["smartspec_generate_spec", "manual"]},
+        "specs_included": {"type": "array", "items": {"type": "string"}},
+        "terms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["term", "definition", "owner_spec"],
+            "properties": {
+              "term": {"type": "string"},
+              "definition": {"type": "string"},
+              "owner_spec": {"type": "string"},
+              "aliases": {"type": "array", "items": {"type": "string"}},
+              "related_terms": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        }
+      }
+    },
+    "critical_sections_registry": {
+      "type": "object",
+      "required": ["version", "last_updated", "source", "specs_included", "sections"],
+      "properties": {
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "last_updated": {"type": "string", "format": "date-time"},
+        "source": {"type": "string", "enum": ["smartspec_generate_spec", "manual"]},
+        "specs_included": {"type": "array", "items": {"type": "string"}},
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["spec_id", "section", "hash", "allow_update", "reason"],
+            "properties": {
+              "spec_id": {"type": "string"},
+              "section": {"type": "string"},
+              "hash": {"type": "string"},
+              "allow_update": {"type": "boolean"},
+              "reason": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

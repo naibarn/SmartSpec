@@ -1,6 +1,6 @@
 ---
 name: /smartspec_generate_plan
-version: 6.0.5
+version: 6.0.6
 role: plan-generation
 category: core
 write_guard: ALLOW-WRITE
@@ -184,121 +184,61 @@ No other flags in v6.
 
 ---
 
-## Safety mode behavior
+## Behavior
 
-### strict (default)
+### 1) Read inputs
 
-In `strict` mode, the workflow MUST mark the plan as `safety_status=UNSAFE` (and refuse `--apply`) when:
+- Parse spec/plan to extract:
+  - scope, user stories, flows
+  - UI screens/states
+  - integrations, data model, NFRs
+  - open questions
 
-- registries indicate an existing shared entity/component name collision
-- spec references shared entities/components but registries are missing or ambiguous
-- plan would require guessing critical integration contracts
+### 2) Produce plan graph
 
-The report MUST list blockers and produce **Phase 0 remediation steps**.
+- Convert scope into milestones + phases.
+- Ensure every phase has verifiable outputs (evidence hooks).
 
-### dev
+### 3) Preview & report (always)
 
-In `dev` mode:
-
-- generation proceeds, but the plan MUST be marked `safety_status=DEV-ONLY`
-- ambiguous items become explicit TODOs
-
----
-
-## Plan structure (minimum)
-
-Every `plan.md` MUST include:
-
-- front-matter or header block:
-  - `spec-id`
-  - `workflow` + `workflow_version`
-  - `ui_mode` + `safety_mode` + `safety_status`
-  - `generated_at`
-
-And mandatory governance sections:
-
-- **Assumptions & Prerequisites** (project-level assumptions, infra, team, SLA)
-- **Out of Scope** (what is explicitly NOT included in this plan)
-- **Definition of Done** (system-level DoD criteria)
-
-And phases (omit irrelevant ones but explain why):
-
-- **Phase 0 — Foundations & governance**
-- **Phase 1 — Shared contracts & vocabulary**
-- **Phase 2 — Domain & data**
-- **Phase 3 — Core services / use cases**
-- **Phase 4 — Integration & edge cases**
-- **Phase 5 — Quality & safety**
-- **Phase 6 — UI (when applicable)**
-
-And deployment/operations sections:
-
-- **Rollout & Release Plan** (migration, cutover, phased rollout, feature flags)
-- **Rollback & Recovery Plan** (rollback criteria, procedures, data recovery)
-- **Data Retention & Privacy Operations**:
-  - Retention policies per entity (e.g., Session: 7 days, AuditLog: 7 years, PhoneVerification: 90 days)
-  - Audit log access control and tamper resistance
-  - GDPR data export/deletion procedures
-  - PII handling and encryption requirements
-  - Data anonymization/pseudonymization rules
-
-Each phase MUST include:
-
-- objectives
-- prerequisites
-- deliverables
-- **evidence & verification artifacts** (for completed phases):
-  - Report paths (`.spec/reports/.../run-id/...`)
-  - Verification results (run_id, status, timestamp)
-  - File inventory (paths of created/modified files with sizes/hashes)
-  - Test results (coverage %, pass/fail counts)
-  - Security scan results (vulnerability counts, compliance status)
-- risks & mitigations
-- acceptance criteria
-
-UI alignment rules:
-
-- `ui_mode=json` MUST plan for UI artifacts review before UI build
-- `ui_mode=inline` MUST plan for UI directly from spec with design-system constraints
-
----
-
-## Determinism & stability
-
-- Plans MUST be stable across reruns when inputs unchanged.
-- Use deterministic ordering for headings/items.
-- Do not embed machine-specific absolute paths.
-
----
-
-## Outputs
-
-### Safe preview bundle (always)
-
-Write under a run folder:
+Write:
 
 - `.spec/reports/generate-plan/<run-id>/preview/<spec-id>/plan.md`
 - `.spec/reports/generate-plan/<run-id>/diff/<spec-id>.patch` (best-effort)
 - `.spec/reports/generate-plan/<run-id>/report.md`
 - `.spec/reports/generate-plan/<run-id>/summary.json` (if `--json`)
 
-If `--out` is provided:
+If `--out` is provided, write under `<out>/<run-id>/...`.
 
-- treat it as a base report root and write under `<out>/<run-id>/...`.
+### 4) Validate Preview (MANDATORY)
 
-### Non-destructive merge rules (MUST)
+After generating the preview and before applying, the AI agent **MUST** validate the generated plan using the provided validation script.
 
-If an existing `plan.md` is present:
+**Validation Command:**
+```bash
+python3 .spec/scripts/validate_plan.py .spec/reports/generate-plan/<run-id>/preview/<spec-id>/plan.md
+```
 
-- MUST preserve user-authored notes/sections where possible.
-- MUST NOT delete entire phases silently.
-- If a phase or item is no longer applicable, mark it as `Deprecated` with a short rationale.
-- MUST keep headings stable (avoid full rewrites) unless input meaning changed.
+**Validation Rules:**
+- **Exit Code `0` (Success):** The plan is valid and complete. The agent may proceed with the `--apply` flag if requested.
+- **Exit Code `1` (Failure):** The plan is invalid or incomplete. The agent **MUST NOT** use the `--apply` flag.
+- The full output from the validation script (both errors and warnings) **MUST** be included in the `report.md` for the workflow run.
 
-### Governed output (only with `--apply`)
+This step ensures that all generated plans adhere to the governance and completeness standards before they are integrated into the project.
+
+### 5) Apply (only with `--apply` and if validation passes)
 
 - Update `specs/<category>/<spec-id>/plan.md`.
-- MUST use temp + atomic rename (and lock if configured).
+- MUST use safe update semantics:
+  - write to temp file + atomic rename (and lock if configured)
+
+---
+
+## Exit codes
+
+- `0` success (preview or applied)
+- `1` validation fail (unsafe path, secret detected, missing inputs)
+- `2` usage/config error
 
 ---
 
@@ -311,8 +251,9 @@ The report MUST include:
 3) `ui_mode`, `safety_mode`, and computed `safety_status`
 4) Reuse vs new summary (what is reused, what must be created)
 5) Blockers (strict mode) + Phase 0 remediation
-6) Output inventory
-7) **Readiness Verification Checklist** (for production-ready plans):
+6) **Full validation script output**
+7) Output inventory
+8) **Readiness Verification Checklist** (for production-ready plans):
    - [ ] All assumptions documented with evidence
    - [ ] Out-of-scope items explicitly listed
    - [ ] Rollout plan includes migration/cutover/rollback procedures
@@ -321,7 +262,7 @@ The report MUST include:
    - [ ] Security scan results attached
    - [ ] Test coverage meets threshold (>90%)
    - [ ] GDPR compliance verified
-8) Recommended next commands (dual form)
+9) Recommended next commands (dual form)
 
 ---
 
@@ -330,129 +271,114 @@ The report MUST include:
 ```json
 {
   "workflow": "smartspec_generate_plan",
-  "version": "6.0.5",
+  "version": "6.0.6",
   "run_id": "string",
   "applied": false,
-  "target": {"spec_id": "...", "spec_path": "...", "plan_path": "..."},
-  "modes": {"ui_mode": "auto|json|inline", "safety_mode": "strict|dev", "safety_status": "SAFE|UNSAFE|DEV-ONLY"},
-  "reuse": {"reused": [], "new": [], "conflicts": []},
+  "inputs": {"source": "spec", "path": "..."},
+  "spec": {"spec_id": "...", "plan_path": "..."},
+  "safety": {"mode": "strict|dev", "status": "SAFE|UNSAFE|DEV-ONLY"},
+  "validation": {"passed": false, "errors": 0, "warnings": 0},
   "writes": {"reports": ["path"], "specs": ["path"]},
-  "security": {"secret_detected": false, "apply_refused": false},
-  "readiness": {
-    "assumptions_documented": true,
-    "out_of_scope_defined": true,
-    "rollout_plan_complete": true,
-    "data_retention_defined": true,
-    "evidence_artifacts_provided": true,
-    "security_scanned": true,
-    "test_coverage_met": true,
-    "gdpr_compliant": true,
-    "ready_for_execution": true
-  },
   "next_steps": [{"cmd": "...", "why": "..."}]
 }
 ```
 
 ---
 
-# End of workflow doc
-
-
----
-
-## 10) Plan Content Templates (For AI Agent Implementation)
+## 10) `plan.md` Content Templates (For AI Agent Implementation)
 
 To ensure consistent and complete output, the AI agent executing this workflow MUST use the following templates when generating `plan.md`.
 
-### 10.1 Template for `Evidence & Verification Artifacts`
-
-For any phase that is marked as `Status: Complete`, the following section MUST be appended.
+### 10.1 Header Template
 
 ```markdown
-**Evidence & Verification Artifacts:**
-
-- **Verification Report:**
-  - **Path:** `.spec/reports/<workflow_name>/<run_id>/report.md`
-  - **Run ID:** `<run_id>`
-  - **Status:** `SUCCESS`
-  - **Timestamp:** `<timestamp>`
-- **File Inventory:**
-  - **Created:**
-    - `path/to/new_file.ext` (Size: 1.2 KB, SHA256: `...`)
-  - **Modified:**
-    - `path/to/modified_file.ext` (Size: 3.4 KB, SHA256: `...`)
-- **Test Results:**
-  - **Coverage:** 95%
-  - **Pass/Fail:** 128/130 Passed, 2 Failed
-  - **Report Path:** `.spec/reports/tests/<run_id>/report.xml`
-- **Security Scan:**
-  - **Vulnerabilities:** 0 Critical, 1 High, 5 Medium
-  - **Compliance:** PCI-DSS Compliant
-  - **Report Path:** `.spec/reports/security/<run_id>/scan.json`
+| spec-id | workflow | version | generated_at |
+|---|---|---|---|
+| `<spec-id>` | `smartspec_generate_plan` | `6.0.6` | `<ISO_DATETIME>` |
 ```
 
-### 10.2 Template for `Rollout & Release Plan`
-
-This section is mandatory for all production-ready plans.
+### 10.2 Governance Sections Template
 
 ```markdown
+## Governance
+
+### Assumptions & Prerequisites
+
+- **Infrastructure:** ...
+- **Team:** ...
+- **SLA:** ...
+
+### Out of Scope
+
+- ...
+
+### Definition of Done
+
+- ...
+```
+
+### 10.3 Phase Template
+
+```markdown
+## Phase <N>: <Phase Title>
+
+- **Objectives:** ...
+- **Prerequisites:** ...
+- **Deliverables:** ...
+- **Evidence & Verification Artifacts:**
+  - **Report Path:** `.spec/reports/.../run-id/...`
+  - **Verification Results:** `run_id`, `status`, `timestamp`
+  - **File Inventory:** paths of created/modified files with sizes/hashes
+  - **Test Results:** coverage %, pass/fail counts
+  - **Security Scan Results:** vulnerability counts, compliance status
+- **Risks & Mitigations:** ...
+- **Acceptance Criteria:** ...
+```
+
+### 10.4 Deployment Sections Template
+
+```markdown
+## Deployment & Operations
+
 ### Rollout & Release Plan
 
-**Strategy:** Phased Rollout (Canary)
+- **Strategy:** Phased rollout (Internal Canary → Public Canary → Full Rollout)
+- **Audience:** ...
+- **Scope:** ...
+- **Metrics:** ...
+- **Go/No-Go Criteria:** ...
 
-1.  **Phase 1: Internal Canary (1 day)**
-    - **Audience:** Internal employees, QA team
-    - **Scope:** 1% of production traffic
-    - **Metrics:** Monitor error rates, latency, CPU/memory usage.
-    - **Go/No-Go Criteria:** Error rate < 0.1%, Latency < 200ms.
-2.  **Phase 2: Public Canary (3 days)**
-    - **Audience:** 10% of public users (opt-in)
-    - **Scope:** Gradually increase traffic from 1% to 10%.
-    - **Metrics:** Monitor user feedback, business metrics (e.g., conversion rate).
-    - **Go/No-Go Criteria:** No critical bugs reported, conversion rate stable.
-3.  **Phase 3: Full Rollout (1 day)**
-    - **Audience:** All users
-    - **Scope:** 100% of production traffic.
-    - **Metrics:** Monitor all systems closely.
-```
-
-### 10.3 Template for `Rollback & Recovery Plan`
-
-This section is mandatory for all production-ready plans.
-
-```markdown
 ### Rollback & Recovery Plan
 
-**Rollback Criteria:**
+- **Rollback Criteria:** error rates, business metrics
+- **Rollback Procedure:** blue/green deployment, time estimate
+- **Data Recovery:** ...
 
-- Critical bug identified affecting >5% of users.
-- Sustained error rate > 1% for 15 minutes.
-- Key business metric drops by > 10%.
+### Data Retention & Privacy Operations
 
-**Rollback Procedure:**
+- **Retention Policies:**
+  - Session: 7 days
+  - AuditLog: 7 years
+  - PhoneVerification: 90 days
+- **Audit Log Access Control:** ...
+- **GDPR Data Export/Deletion:** ...
+```
 
-1.  **Immediate Action:** Switch traffic back to the previous stable version (blue/green deployment).
-2.  **Time Estimate:** < 5 minutes.
-3.  **Data Recovery:** No data migration required for this release. If needed, run `scripts/rollback_data_migration.sh`.
-4.  **Post-Mortem:** Conduct a post-mortem within 24 hours to identify the root cause.
+### 10.5 Readiness Verification Checklist Template
+
+```markdown
+## Readiness Verification Checklist
+
+- [ ] All assumptions documented with evidence
+- [ ] Out-of-scope items explicitly listed
+- [ ] Rollout plan includes migration/cutover/rollback procedures
+- [ ] Data retention policies defined per entity
+- [ ] Evidence artifacts provided for completed phases
+- [ ] Security scan results attached
+- [ ] Test coverage meets threshold (>90%)
+- [ ] GDPR compliance verified
 ```
 
 ---
 
-## 11) Validation
-
-After generating the `plan.md` preview and before applying it, the AI agent MUST validate the generated plan using the provided validation script.
-
-### 11.1 Validation Command
-
-```bash
-python3 .spec/scripts/validate_plan.py .spec/reports/generate-plan/<run-id>/preview/<spec-id>/plan.md
-```
-
-### 11.2 Validation Rules
-
-- **Exit Code `0` (Success):** The plan is valid and complete. The agent may proceed with the `--apply` flag if requested.
-- **Exit Code `1` (Failure):** The plan is invalid or incomplete. The agent MUST NOT use the `--apply` flag.
-- The full output from the validation script (both errors and warnings) MUST be included in the `report.md` for the workflow run.
-
-This step ensures that all generated plans adhere to the governance and completeness standards before they are integrated into the project.
+# End of workflow doc

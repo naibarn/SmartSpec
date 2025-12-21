@@ -1,16 +1,16 @@
 ---
-description: Implement code changes strictly from tasks.md with SmartSpec v6 governance.
-version: 6.0.0
+description: Implement code changes strictly from tasks.md with 100% duplication prevention and SmartSpec v7 governance.
+version: 7.0.0
 workflow: /smartspec_implement_tasks
 ---
 
 name: /smartspec_implement_tasks
-version: 6.2.0
+version: 7.0.0
 role: implementation/execution
 write_guard: ALLOW-WRITE
-purpose: Implement code changes strictly from `tasks.md` (and `spec.md`/`plan.md` when present)
-         with SmartSpec v6 governance: tasks-first execution, multi-repo read-only context,
-         registry-aware reuse, KiloCode Orchestrator sub-task enforcement, safe write gating,
+purpose: Implement code changes strictly from `tasks.md` with 100% duplication prevention,
+         tasks-first execution, multi-repo read-only context, registry-aware reuse,
+         KiloCode Orchestrator sub-task enforcement, safe write gating,
          privileged-ops hardening (no-shell/allowlist/timeouts), network deny-by-default,
          and report-first evidence.
 
@@ -40,7 +40,18 @@ purpose: Implement code changes strictly from `tasks.md` (and `spec.md`/`plan.md
    - silently expand scope beyond the selected tasks;
    - modify task numbering or structure (only checkboxes/notes are allowed).
 
-### 0.2 Kilo Orchestrator Sub-Task Invariant (Legacy Rule — DO NOT REMOVE)
+### 0.2 Duplication Prevention Invariant (NEW in v7.0.0)
+
+1. Before implementing any task, the workflow MUST check for existing similar
+   components in `.spec/registry/**`.
+2. If potential duplicates are found (similarity >= threshold), the workflow MUST:
+   - in `strict` safety mode: fail fast and present duplicates to user;
+   - in `dev` safety mode: warn prominently but allow continuation with user confirmation.
+3. After implementation, the workflow MUST validate that no duplicates were created.
+4. This invariant applies to all component types: APIs, data models, UI components,
+   services, workflows, and integrations.
+
+### 0.3 Kilo Orchestrator Sub-Task Invariant (Legacy Rule — DO NOT REMOVE)
 
 When running under Kilo with `--kilocode`:
 
@@ -67,7 +78,7 @@ When running under Kilo with `--kilocode`:
    > When switching to Orchestrator Mode under Kilo, you MUST `new subtasks`
    > before implementing tasks.
 
-### 0.3 Non-Stop Workflow Invariant
+### 0.4 Non-Stop Workflow Invariant
 
 To prevent premature stops and half-finished work:
 
@@ -90,7 +101,7 @@ To prevent premature stops and half-finished work:
    - hand control back to Orchestrator so it can decide the next sub-task;
    - not terminate the entire project run unless Orchestrator decides so.
 
-### 0.4 Orchestrator Recovery Invariant (Legacy Rule — DO NOT REMOVE)
+### 0.5 Orchestrator Recovery Invariant (Legacy Rule — DO NOT REMOVE)
 
 This invariant encodes the legacy rule that implementation runs must not
 "die quietly" under Kilo Orchestrator:
@@ -118,7 +129,7 @@ This invariant encodes the legacy rule that implementation runs must not
    - allow Orchestrator to resume control and plan the next steps.
 4. Under Kilo, a valid stop condition is either:
    - Orchestrator explicitly decides the project is complete or cancelled; or
-   - a hard governance violation (see 0.3) that prevents any safe
+   - a hard governance violation (see 0.4) that prevents any safe
      continuation.
 
 The historical rule can be restated as:
@@ -132,336 +143,65 @@ workflow. Teams may extend them but MUST NOT delete or contradict them.
 
 ---
 
-## 1) Summary (and what changed in v6.2.0)
+## 1) Behavior
 
-`/smartspec_implement_tasks` performs real implementation changes, but only under explicit write gates.
+### 1) Pre-Implementation Validation (MANDATORY)
 
-**Breaking (v6):** Writes to runtime source trees (code/tests/config) are now governed by a two-gate rule:
+Before implementing any task, the AI agent **MUST** check for existing similar components.
 
-- `--apply` AND
-- `--write-code`
+**Validation Command:**
+```bash
+python3 .spec/scripts/detect_duplicates.py \
+  --registry-dir .spec/registry/ \
+  --threshold 0.8
+```
 
-Without both, the workflow MUST run in `--validate-only` mode (no code writes, no `tasks.md` checkbox updates).
+**Validation Rules:**
+- **Exit Code `0` (Success):** No duplicates found. The agent may proceed.
+- **Exit Code `1` (Failure):** Potential duplicates found. The agent **MUST**:
+  - Present the duplicates to the user.
+  - Ask the user to:
+    a) Reuse existing components
+    b) Justify creating new components
+    c) Cancel and review existing specs
+  - **MUST NOT** proceed until the user confirms.
 
-This aligns the workflow with v6 governance requiring explicit opt-in for runtime-tree writes.
+### 2) Implement tasks
 
----
+- Implement code changes strictly from `tasks.md`.
+- Ensure every task has verifiable outputs (evidence hooks).
 
-## 2) Where this fits (relationship with other workflows)
+### 3) Preview & report (always)
 
-Canonical chain context (preferred order):
-
-1) `/smartspec_generate_spec` → `/smartspec_generate_plan` → `/smartspec_generate_tasks`
-2) **THIS (implement):** `/smartspec_implement_tasks`
-3) **STRICT VERIFY:** `/smartspec_verify_tasks_progress_strict` (recommended immediately after implement)
-4) **SYNC CHECKBOXES:** `/smartspec_sync_tasks_checkboxes` (if checkbox sync is separated in your setup)
-
-Optional helpers (non-canonical but commonly useful):
-
-- PROMPTER: `/smartspec_report_implement_prompter` (recommended for large/complex changes before implement)
-- Quality gates: `/smartspec_test_suite_runner` → `/smartspec_test_report_analyzer`
-- Security audits / threat-model checks (project-specific)
-- Release flows (e.g., hotfix/release tagging) should consume verified evidence, not assumptions
-
-This workflow MUST NOT invoke other workflows programmatically; it may only recommend them.
-
----
-
-## 3) Inputs / Outputs
-
-### 3.1 Primary input (positional-first)
-
-- Positional: `<tasks.md>`
-
-Examples:
-
-- `specs/<category>/<spec-id>/tasks.md`
-
-### 3.2 Optional inputs
-
-- adjacent artifacts (auto-detected from tasks folder when possible):
-  - `spec.md` (required)
-  - `plan.md` (optional)
-  - `ui.json` (optional)
-
-### 3.3 Governance context (read-only)
-
-- `.spec/SPEC_INDEX.json` (canonical)
-- `.spec/registry/**` (canonical)
-- optional registry roots (read-only)
-- multi-repo context via config (`workspace_roots`, `repos_config`)
-
-### 3.4 Outputs
-
-Safe outputs (no `--apply` required):
+Write:
 
 - `.spec/reports/implement-tasks/<run-id>/report.md`
 - `.spec/reports/implement-tasks/<run-id>/summary.json`
 - `.spec/reports/implement-tasks/<run-id>/change_plan.md` (always generated when `--apply` is present; generated before any write)
 
-Governed writes (require `--apply`):
+### 4) Post-Implementation Validation (MANDATORY)
 
-- `tasks.md` checkbox changes and implementation notes (governed by spec folder rules)
+After implementing tasks and before applying changes, the AI agent **MUST** validate the changes.
 
-Runtime-tree writes (require two gates):
-
-- code/tests/config changes in the current repo only (require `--apply --write-code`)
-
----
-
-## 4) Write model, gates, and constraints
-
-### 4.1 Default behavior
-
-- If `--apply` is absent → MUST behave like `--validate-only`.
-- If `--apply` is present but `--write-code` is absent → MAY update governed artifacts only (e.g., `tasks.md`), but MUST NOT write code.
-- If both `--apply` and `--write-code` are present → may write code/tests/config **in the current repo only**.
-
-### 4.2 Allowed write scopes
-
-- `.spec/reports/implement-tasks/**` (safe)
-- `specs/<category>/<spec-id>/tasks.md` (governed; checkbox + notes only)
-- runtime source trees in **current repo only** when gated by `--apply --write-code`
-
-Must never:
-
-- write into sibling repos discovered via multi-repo scanning
-- write into `.spec/registry/**` or `.spec/SPEC_INDEX.json`
-
----
-
-## 5) Flags
-
-### 5.1 Universal flags (must support)
-
-- `--config <path>` (default: `.spec/smartspec.config.yaml`)
-- `--lang <th|en>`
-- `--platform <cli|kilo|ci|other>`
-- `--apply`
-- `--out <path>` (report root override; must pass output-root safety checks)
-- `--json`
-- `--quiet`
-
-### 5.2 Inputs
-
-- positional: `<tasks.md>`
-- `--tasks-path <path>` (override positional)
-- `--spec-path <path>` (override auto-detect)
-- `--spec-id <id>` (resolve via SPEC_INDEX; if present)
-
-### 5.3 Task selection
-
-- `--task <n>`
-- `--tasks <csv>`
-- `--range <a-b>`
-- `--from <n>`
-- `--start-from <Tnnn>` (legacy alias)
-
-### 5.4 Completion and resume
-
-- `--skip-completed` (default)
-- `--force-all`
-- `--resume`
-
-### 5.5 Phases (if tasks are phase-tagged)
-
-- `--phase <n>`
-- `--phases <csv>`
-- `--phase-range <a-b>`
-
-### 5.6 Safety / preview
-
-- `--safety-mode <strict|dev>` (default: strict)
-- `--strict` (alias for strict)
-- `--validate-only`
-- `--dry-run` (alias)
-
-### 5.7 Runtime-tree write gates (v6)
-
-- `--write-code`
-  - explicit opt-in to modify runtime source trees in the current repo
-  - only takes effect when `--apply` is present
-
-### 5.8 Privileged operations
-
-- `--allow-network`
-  - required to perform any action that needs network (dependency fetch, remote git fetch/push, remote APIs)
-
-### 5.9 Kilo / Orchestrator
-
-- `--kilocode`
-  - enables Kilo integration semantics when running under Kilo
-
-- `--require-orchestrator`
-  - only meaningful with `--kilocode`
-  - in strict mode: fail fast if Orchestrator Mode is not clearly active
-
----
-
-## 6) Security hardening (mandatory)
-
-### 6.1 Path safety
-
-All filesystem paths (inputs and outputs) MUST enforce:
-
-- path normalization; reject traversal (`..`), absolute paths, control chars
-- no symlink escape for reads/writes
-- output-root safety: `--out` (and report dir) must resolve under an allowlist and not under a denylist
-
-### 6.2 Bounded scanning
-
-- enforce limits (max files/bytes/time) from config
-- if limits are hit, record reduced coverage in report
-
-### 6.3 Secret handling
-
-- do not accept secrets as raw CLI flags
-- redact secrets and sensitive values from reports
-- reports should prefer diffs + short excerpts + hashes; avoid dumping full configs/logs
-
-### 6.4 Privileged execution (if running external commands)
-
-If the workflow executes external commands (tests, linters, package managers), it MUST:
-
-- spawn without a shell (no `sh -c`)
-- use a binary allowlist (+ subcommand allowlist where applicable)
-- enforce per-command timeouts
-- capture outputs with redaction
-
----
-
-## 7) KiloCode semantics (ties back to Section 0)
-
-When `--kilocode` is present and Kilo is detected:
-
-- Orchestrator-per-task execution is mandatory for complex scopes.
-- This workflow MUST assume it runs inside a Kilo sub-task when Orchestrator is active.
-- If sub-task context is missing:
-  - strict: fail fast with a governance error
-  - dev: allow degraded mode with prominent warnings
-
----
-
-## 8) Report structure
-
-Default report path:
-
-- `.spec/reports/implement-tasks/<run-id>/`
-
-Minimum artifacts:
-
-- `report.md`
-- `change_plan.md` (when `--apply` is present; created before any governed/runtime write)
-- `summary.json`
-
-### `summary.json` (minimum schema)
-
-```json
-{
-  "workflow": "smartspec_implement_tasks",
-  "version": "6.2.0",
-  "run_id": "string",
-  "status": "success|failed|blocked",
-  "applied": true,
-  "write_gates": {
-    "apply": true,
-    "write_code": true,
-    "allow_network": false
-  },
-  "scope": {
-    "tasks_path": "string",
-    "spec_path": "string",
-    "selected_tasks": ["T001", "T002"],
-    "safety_mode": "strict"
-  },
-  "writes": {
-    "reports": ["..."],
-    "governed": ["..."],
-    "runtime": ["..."]
-  },
-  "warnings": ["string"],
-  "errors": ["string"]
-}
-```
-
----
-
-## 9) Weakness & risk check (threats to watch)
-
-This workflow is high-impact. Minimum risks and required mitigations:
-
-- **Scope creep** → enforce tasks-first; fail on empty selection; forbid implicit new tasks.
-- **Repo boundary escape** → hard block writes outside current repo; treat other repos as read-only.
-- **Path traversal/symlink escape** → normalize paths; refuse unsafe; resolve symlinks before writing.
-- **Supply-chain risk (deps install/update)** → require `--allow-network`; prefer lockfile-respecting installs; record changes.
-- **Command injection** → no-shell spawning + allowlists.
-- **Secret leakage** → redact outputs; never print env values; avoid logging raw prompts or tokens.
-- **DoS via scanning** → bounded scanning; record reduced coverage.
-
----
-
-## 10) Examples (dual-command)
-
-### 10.1 Validate-only (no writes)
-
-CLI:
-
+**Validation Command:**
 ```bash
-/smartspec_implement_tasks \
-  specs/<category>/<spec-id>/tasks.md \
-  --validate-only \
-  --out .spec/reports/implement-tasks \
-  --json
+python3 .spec/scripts/validate_implementation.py \
+  --tasks specs/<category>/<spec-id>/tasks.md \
+  --spec specs/<category>/<spec-id>/spec.md \
+  --registry .spec/registry/ \
+  --check-duplicates --threshold 0.8
 ```
 
-Kilo Code:
+**Validation Rules:**
+- **Exit Code `0` (Success):** The implementation is valid. The agent may proceed with `--apply`.
+- **Exit Code `1` (Failure):** The implementation is invalid. The agent **MUST NOT** use `--apply`.
+- The full output from the validation script **MUST** be included in `report.md`.
 
-```bash
-/smartspec_implement_tasks.md \
-  specs/<category>/<spec-id>/tasks.md \
-  --validate-only \
-  --out .spec/reports/implement-tasks \
-  --json \
-  --kilocode
-```
+### 5) Apply (only with `--apply` and if validation passes)
 
-### 10.2 Apply + write code (governed + runtime-tree writes)
-
-CLI:
-
-```bash
-/smartspec_implement_tasks \
-  specs/<category>/<spec-id>/tasks.md \
-  --apply \
-  --write-code \
-  --safety-mode strict \
-  --out .spec/reports/implement-tasks \
-  --json
-```
-
-Kilo Code:
-
-```bash
-/smartspec_implement_tasks.md \
-  specs/<category>/<spec-id>/tasks.md \
-  --apply \
-  --write-code \
-  --require-orchestrator \
-  --safety-mode strict \
-  --out .spec/reports/implement-tasks \
-  --json \
-  --kilocode
-```
-
----
-
-## 11) Exit codes
-
-- `0`: success (or validate-only completed)
-- `1`: implementation failed (recoverable errors exhausted)
-- `2`: governance/config error (blocked before implementation)
+- Update `specs/<category>/<spec-id>/tasks.md`.
+- Apply code changes.
 
 ---
 
 # End of workflow doc
-

@@ -340,7 +340,7 @@ Each check MUST emit a stable ID (`DPU-xxx`).
   --apply \
   --out .spec/reports/docs-publisher \
   --json \
-  --kilocode
+  --platform kilo
 ```
 
 ---

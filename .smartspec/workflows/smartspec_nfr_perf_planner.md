@@ -159,7 +159,7 @@ The plan includes:
   [--nosubtasks] \
   [--out <output-root>] \
   [--json] \
-  --kilocode
+  --platform kilo
 ```
 
 ---

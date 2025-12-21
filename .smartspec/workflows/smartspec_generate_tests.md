@@ -194,7 +194,7 @@ Apply mode (writes governed test plan into spec folder):
   [--include-dependencies] \
   [--out .spec/reports/generate-tests/<label>] \
   [--json] \
-  --kilocode
+  --platform kilo
 ```
 
 Apply mode:
@@ -206,7 +206,7 @@ Apply mode:
   [--target-path specs/<category>/<spec-id>/testplan/tests.md] \
   [--out .spec/reports/generate-tests/<label>] \
   [--json] \
-  --kilocode
+  --platform kilo
 ```
 
 ---

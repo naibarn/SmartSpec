@@ -243,7 +243,7 @@ The report MUST record:
   [--stdout-summary] \
   [--out <output-root>] \
   [--json] \
-  --kilocode
+  --platform kilo
 ```
 
 ---

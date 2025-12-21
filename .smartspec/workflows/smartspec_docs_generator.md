@@ -11,7 +11,7 @@ version_notes:
     safety + atomic writes); replaces full-content previews with change plan + diff/excerpt+hash;
     introduces explicit --write-docs gate for repo writes; adds network gate (--allow-network)
     and external tool allowlist/no-shell policy; aligns chain integration with deployment_planner/release_tagger/test
-    workflows; updates Kilo examples to include --kilocode.
+    workflows; updates Kilo examples to include --platform kilo.
 description: Generate technical documentation from specs and code.
 workflow: /smartspec_docs_generator
 ---
@@ -228,7 +228,7 @@ If any validation fails: `exit 2`.
   --spec specs/<category>/<spec-id>/spec.md \
   --out .spec/reports/docs-generator \
   --json \
-  --kilocode
+  --platform kilo
 ```
 
 ---

@@ -215,7 +215,7 @@ When `--apply` is used:
   [--apply-scope high_only] \
   [--out <output-root>] \
   [--json] \
-  --kilocode
+  --platform kilo
 ```
 
 Apply mode example:

@@ -42,6 +42,8 @@ It MUST:
 This workflow MUST follow:
 
 - `knowledge_base_smartspec_handbook.md` (v6)
+- `knowledge_base_smartspec_install_and_usage.md` (usage patterns + workflow parameters)
+- `.smartspec/WORKFLOW_PARAMETERS_REFERENCE.md` (complete parameter reference for all 40 workflows)
 - `.spec/smartspec.config.yaml`
 
 ### Write guard
@@ -84,23 +86,28 @@ Hardening rules:
 
 The copilot treats these as primary evidence, in this priority order:
 
-1) **Indexes**
+1) **Knowledge base** (MUST read before answering)
+   - `knowledge_base_smartspec_handbook.md` (governance + security)
+   - `knowledge_base_smartspec_install_and_usage.md` (usage patterns)
+   - `.smartspec/WORKFLOW_PARAMETERS_REFERENCE.md` (parameter reference)
+
+2) **Indexes**
    - `.spec/SPEC_INDEX.json`
    - `.spec/WORKFLOWS_INDEX.yaml` (canonical workflow catalogue)
 
-2) **Registries**
+3) **Registries**
    - `.spec/registry/**`
    - plus any `--registry-roots` (read-only)
 
-3) **Specs & local artifacts**
+4) **Specs & local artifacts**
    - `specs/<category>/<spec-id>/spec.md`
    - `plan.md`, `tasks.md` alongside `spec.md`
    - `ui.json` (if used by the project)
 
-4) **Reports**
+5) **Reports**
    - `.spec/reports/**`
 
-5) **Workflow specs/manuals**
+6) **Workflow specs/manuals**
    - `.smartspec/workflows/smartspec_*.md`
    - optional user manuals under `.smartspec-docs/workflows/**` (when present)
 
@@ -155,7 +162,7 @@ Instead, it MUST route to the canonical verifier:
 ### Kilo Code
 
 ```bash
-/smartspec_project_copilot.md "<question>" --kilocode \
+/smartspec_project_copilot.md "<question>" --platform kilo \
   [--domain <name>] [--spec-id <id>] [--spec-path <path>] [--aspect ...] \
   [--report <path>] [--format ...] [--short] \
   [--repos-config <path>] [--workspace-roots ...] [--registry-roots ...] \
@@ -195,7 +202,7 @@ Notes:
 
 ### Orchestrator/meta notes (not user flags)
 
-- `--kilocode` is a platform mode indicator and is shown only in Kilo examples.
+- `--platform kilo` is a platform mode indicator and is shown only in Kilo examples.
 - `--nosubtasks` (if supported) is an orchestrator hint and MUST NOT change semantics.
 
 No other flags in v6.
@@ -221,7 +228,7 @@ When recommending commands, the copilot MUST:
 1) Use `.spec/WORKFLOWS_INDEX.yaml` to choose valid workflow names.
 2) Confirm flags/usage by reading the workflow spec under `.smartspec/workflows/`.
 3) NEVER invent flags. If unsure, describe the action instead of outputting a command.
-4) Provide dual examples when `--kilocode` is relevant (CLI + Kilo forms).
+4) Provide dual examples when `--platform kilo` is relevant (CLI + Kilo forms).
 
 ---
 

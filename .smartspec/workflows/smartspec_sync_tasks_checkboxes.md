@@ -94,7 +94,7 @@ Hardening rules:
 
 ```bash
 /smartspec_sync_tasks_checkboxes.md <path/to/tasks.md> \
-  --kilocode \
+  --platform kilo \
   --verify-report <path/to/summary.json> \
   [--manual-policy leave|uncheck] \
   [--recompute-parents true|false] \

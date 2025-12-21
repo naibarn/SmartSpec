@@ -51,71 +51,71 @@ SmartSpec V6 ได้รวบรวมฟีเจอร์อันทรง�
 
 | คำสั่ง | คำอธิบาย |
 | :--- | :--- |
-| [`/smartspec_generate_spec`](.smartspec-docs/workflows/generate_spec_guide_th.md) | สร้างหรือปรับปรุง `spec.md` โดยใช้การกำกับดูแลแบบ **SPEC-first** |
-| [`/smartspec_generate_spec_from_prompt`](.smartspec-docs/workflows/generate_spec_from_prompt_guide_th.md) | สร้าง **spec เริ่มต้นหนึ่งรายการขึ้นไป** จาก prompt ที่เป็นภาษาธรรมชาติ **พร้อมความสามารถในการนำกลับมาใช้ใหม่** |
-| [`/smartspec_generate_plan`](.smartspec-docs/workflows/generate_plan_guide_th.md) | สร้างหรือปรับปรุง `plan.md` จาก `spec.md` ด้วยวิธีที่ **รับรู้ถึง dependency**, **นำกลับมาใช้ใหม่ก่อน** และ **ปลอดภัยเป็นค่าเริ่มต้น** |
-| [`/smartspec_generate_tasks`](.smartspec-docs/workflows/generate_tasks_guide_th.md) | สร้างหรือปรับปรุง `tasks.md` จาก `spec.md` (หรือ `plan.md`) ในรูปแบบที่ **พร้อมสำหรับการตรวจสอบ** |
-| [`/smartspec_implement_tasks`](.smartspec-docs/workflows/implement_tasks_guide_th.md) | นำการเปลี่ยนแปลงโค้ดไปใช้ตาม `tasks.md` อย่างเคร่งครัดด้วยการกำกับดูแลของ SmartSpec v6 |
+| [`/smartspec_generate_spec`](.smartspec-docs/workflows/generate_spec_th.md) | สร้างหรือปรับปรุง `spec.md` โดยใช้การกำกับดูแลแบบ **SPEC-first** |
+| [`/smartspec_generate_spec_from_prompt`](.smartspec-docs/workflows/generate_spec_from_prompt_th.md) | สร้าง **spec เริ่มต้นหนึ่งรายการขึ้นไป** จาก prompt ที่เป็นภาษาธรรมชาติ **พร้อมความสามารถในการนำกลับมาใช้ใหม่** |
+| [`/smartspec_generate_plan`](.smartspec-docs/workflows/generate_plan_th.md) | สร้างหรือปรับปรุง `plan.md` จาก `spec.md` ด้วยวิธีที่ **รับรู้ถึง dependency**, **นำกลับมาใช้ใหม่ก่อน** และ **ปลอดภัยเป็นค่าเริ่มต้น** |
+| [`/smartspec_generate_tasks`](.smartspec-docs/workflows/generate_tasks_th.md) | สร้างหรือปรับปรุง `tasks.md` จาก `spec.md` (หรือ `plan.md`) ในรูปแบบที่ **พร้อมสำหรับการตรวจสอบ** |
+| [`/smartspec_implement_tasks`](.smartspec-docs/workflows/implement_tasks_th.md) | นำการเปลี่ยนแปลงโค้ดไปใช้ตาม `tasks.md` อย่างเคร่งครัดด้วยการกำกับดูแลของ SmartSpec v6 |
 
 ### โปรดักชันและการปฏิบัติการ (8 Workflows)
 
 | คำสั่ง | คำอธิบาย |
 | :--- | :--- |
-| [`/smartspec_deployment_planner`](.smartspec-docs/workflows/deployment_planner_guide_th.md) | วางแผนกลยุทธ์การ deploy และสร้าง release artifacts |
-| [`/smartspec_release_tagger`](.smartspec-docs/workflows/release_tagger_guide_th.md) | สร้างและ push version tags สำหรับ release |
-| [`/smartspec_production_monitor`](.smartspec-docs/workflows/production_monitor_guide_th.md) | ตรวจสอบสถานะของโปรดักชันและแจ้งเตือนเมื่อมีการละเมิด SLO |
-| [`/smartspec_observability_configurator`](.smartspec-docs/workflows/observability_configurator_guide_th.md) | กำหนดค่าการ monitoring, logging และ tracing |
-| [`/smartspec_incident_response`](.smartspec-docs/workflows/incident_response_guide_th.md) | จัดการเหตุการณ์ไม่คาดฝันในโปรดักชันตั้งแต่การคัดแยกจนถึง post-mortem |
-| [`/smartspec_hotfix_assistant`](.smartspec-docs/workflows/hotfix_assistant_guide_th.md) | แนะนำการสร้างและ deploy hotfix ฉุกเฉิน |
-| [`/smartspec_rollback`](.smartspec-docs/workflows/rollback_guide_th.md) | วางแผนและดำเนินการย้อนกลับการ deploy อย่างปลอดภัยและอัตโนมัติ |
-| [`/smartspec_feedback_aggregator`](.smartspec-docs/workflows/feedback_aggregator_guide_th.md) | รวบรวมข้อเสนอแนะจากโปรดักชันกลับเข้าสู่วงจรการพัฒนา |
+| [`/smartspec_deployment_planner`](.smartspec-docs/workflows/deployment_planner_th.md) | วางแผนกลยุทธ์การ deploy และสร้าง release artifacts |
+| [`/smartspec_release_tagger`](.smartspec-docs/workflows/release_tagger_th.md) | สร้างและ push version tags สำหรับ release |
+| [`/smartspec_production_monitor`](.smartspec-docs/guides/PRODUCTION_MONITOR_GUIDE_TH.md) | ตรวจสอบสถานะของโปรดักชันและแจ้งเตือนเมื่อมีการละเมิด SLO |
+| [`/smartspec_observability_configurator`](.smartspec-docs/workflows/observability_configurator_th.md) | กำหนดค่าการ monitoring, logging และ tracing |
+| [`/smartspec_incident_response`](.smartspec-docs/guides/INCIDENT_RESPONSE_GUIDE_TH.md) | จัดการเหตุการณ์ไม่คาดฝันในโปรดักชันตั้งแต่การคัดแยกจนถึง post-mortem |
+| [`/smartspec_hotfix_assistant`](.smartspec-docs/workflows/hotfix_assistant_th.md) | แนะนำการสร้างและ deploy hotfix ฉุกเฉิน |
+| [`/smartspec_rollback`](.smartspec-docs/guides/ROLLBACK_GUIDE_TH.md) | วางแผนและดำเนินการย้อนกลับการ deploy อย่างปลอดภัยและอัตโนมัติ |
+| [`/smartspec_feedback_aggregator`](.smartspec-docs/guides/FEEDBACK_AGGREGATOR_GUIDE_TH.md) | รวบรวมข้อเสนอแนะจากโปรดักชันกลับเข้าสู่วงจรการพัฒนา |
 
 ### การบำรุงรักษาและการเพิ่มประสิทธิภาพ (8 Workflows)
 
 | คำสั่ง | คำอธิบาย |
 | :--- | :--- |
-| [`/smartspec_dependency_updater`](.smartspec-docs/workflows/dependency_updater_guide_th.md) | สแกนหา dependency ที่ล้าสมัยและวางแผนการอัปเดตที่ปลอดภัย |
-| [`/smartspec_refactor_planner`](.smartspec-docs/workflows/refactor_planner_guide_th.md) | ตรวจจับ code smell และวางแผนการทำ refactoring |
-| [`/smartspec_performance_profiler`](.smartspec-docs/workflows/performance_profiler_guide_th.md) | ทำโปรไฟล์โค้ดเพื่อค้นหาและวางแผนการเพิ่มประสิทธิภาพ |
-| [`/smartspec_data_migration_generator`](.smartspec-docs/workflows/data_migration_generator_guide_th.md) | สร้างสคริปต์การย้ายฐานข้อมูลจากการเปลี่ยนแปลง data model |
-| [`/smartspec_design_system_migration_assistant`](.smartspec-docs/workflows/design_system_migration_assistant_guide_th.md) | ช่วยในการย้ายไปยัง design system หรือ component library ใหม่ |
-| [`/smartspec_reindex_specs`](.smartspec-docs/workflows/reindex_specs_guide_th.md) | สร้างดัชนี spec ใหม่เพื่อการค้นหาและการนำกลับมาใช้ใหม่ที่ดีขึ้น |
-| [`/smartspec_reindex_workflows`](.smartspec-docs/workflows/reindex_workflows_guide_th.md) | สร้างดัชนี workflow ใหม่สำหรับ copilot |
-| [`/smartspec_validate_index`](.smartspec-docs/workflows/validate_index_guide_th.md) | ตรวจสอบความสมบูรณ์ของดัชนี spec และ workflow |
+| [`/smartspec_dependency_updater`](.smartspec-docs/guides/DEPENDENCY_UPDATER_GUIDE_TH.md) | สแกนหา dependency ที่ล้าสมัยและวางแผนการอัปเดตที่ปลอดภัย |
+| [`/smartspec_refactor_planner`](.smartspec-docs/guides/REFACTOR_PLANNER_GUIDE_TH.md) | ตรวจจับ code smell และวางแผนการทำ refactoring |
+| [`/smartspec_performance_profiler`](.smartspec-docs/guides/PERFORMANCE_PROFILER_GUIDE_TH.md) | ทำโปรไฟล์โค้ดเพื่อค้นหาและวางแผนการเพิ่มประสิทธิภาพ |
+| [`/smartspec_data_migration_generator`](.smartspec-docs/workflows/data_migration_generator_th.md) | สร้างสคริปต์การย้ายฐานข้อมูลจากการเปลี่ยนแปลง data model |
+| [`/smartspec_design_system_migration_assistant`](.smartspec-docs/workflows/design_system_migration_assistant_th.md) | ช่วยในการย้ายไปยัง design system หรือ component library ใหม่ |
+| [`/smartspec_reindex_specs`](.smartspec-docs/workflows/reindex_specs_th.md) | สร้างดัชนี spec ใหม่เพื่อการค้นหาและการนำกลับมาใช้ใหม่ที่ดีขึ้น |
+| [`/smartspec_reindex_workflows`](.smartspec-docs/workflows/smartspec_reindex_workflows_th.md) | สร้างดัชนี workflow ใหม่สำหรับ copilot |
+| [`/smartspec_validate_index`](.smartspec-docs/workflows/validate_index_th.md) | ตรวจสอบความสมบูรณ์ของดัชนี spec และ workflow |
 
 ### คุณภาพและการทดสอบ (12 Workflows)
 
 | คำสั่ง | คำอธิบาย |
 | :--- | :--- |
-| [`/smartspec_generate_tests`](.smartspec-docs/workflows/generate_tests_guide_th.md) | สร้าง test artifacts/ข้อเสนอแนะ (prompts/scripts/reports) |
-| [`/smartspec_test_suite_runner`](.smartspec-docs/workflows/test_suite_runner_guide_th.md) | รัน test suite ของโปรเจกต์และสร้างรายงานที่เป็นมาตรฐาน |
-| [`/smartspec_test_report_analyzer`](.smartspec-docs/workflows/test_report_analyzer_guide_th.md) | วิเคราะห์ผลการทดสอบและสร้างรายงานการวินิจฉัยระดับสูง |
-| [`/smartspec_quality_gate`](.smartspec-docs/workflows/ci_quality_gate_guide_th.md) | workflow quality gate แบบรวมสำหรับ CI pipelines |
-| [`/smartspec_verify_tasks_progress_strict`](.smartspec-docs/workflows/verify_tasks_progress_strict_guide_th.md) | ตรวจสอบความคืบหน้าของ `tasks.md` โดยใช้ **การตรวจสอบจากหลักฐานเท่านั้น** |
-| [`/smartspec_sync_tasks_checkboxes`](.smartspec-docs/workflows/tasks_checkboxes_guide_th.md) | ซิงโครไนซ์เครื่องหมาย checkbox (`[x]` / `[ ]`) ใน `tasks.md` ให้ตรงกับ **รายงานการตรวจสอบล่าสุด** |
-| [`/smartspec_api_contract_validator`](.smartspec-docs/workflows/api_contract_validator_guide_th.md) | ตรวจสอบการ implement API กับ contract ของ OpenAPI/Swagger |
-| [`/smartspec_data_model_validator`](.smartspec-docs/workflows/data_model_validator_guide_th.md) | ตรวจสอบ schema ของฐานข้อมูลกับ data model ที่กำหนดไว้ |
-| [`/smartspec_ui_component_audit`](.smartspec-docs/workflows/ui_component_audit_guide_th.md) | ตรวจสอบ UI components เพื่อความสอดคล้องและเป็นไปตาม design system |
-| [`/smartspec_ui_validation`](.smartspec-docs/workflows/ui_validation_guide_th.md) | ตรวจสอบการ implement UI กับ design mockups หรือ specs |
-| [`/smartspec_nfr_perf_planner`](.smartspec-docs/workflows/nfr_perf_planner_guide_th.md) | วางแผนการทดสอบประสิทธิภาพตาม Non-Functional Requirements |
-| [`/smartspec_nfr_perf_verifier`](.smartspec-docs/workflows/nfr_perf_verifier_guide_th.md) | ตรวจสอบประสิทธิภาพของระบบเทียบกับ NFRs |
+| [`/smartspec_generate_tests`](.smartspec-docs/workflows/generate_tests_th.md) | สร้าง test artifacts/ข้อเสนอแนะ (prompts/scripts/reports) |
+| [`/smartspec_test_suite_runner`](.smartspec-docs/workflows/test_suite_runner_th.md) | รัน test suite ของโปรเจกต์และสร้างรายงานที่เป็นมาตรฐาน |
+| [`/smartspec_test_report_analyzer`](.smartspec-docs/workflows/test_report_analyzer_th.md) | วิเคราะห์ผลการทดสอบและสร้างรายงานการวินิจฉัยระดับสูง |
+| [`/smartspec_quality_gate`](.smartspec-docs/workflows/ci_quality_gate_th.md) | workflow quality gate แบบรวมสำหรับ CI pipelines |
+| [`/smartspec_verify_tasks_progress_strict`](.smartspec-docs/workflows/verify_tasks_progress_strict_th.md) | ตรวจสอบความคืบหน้าของ `tasks.md` โดยใช้ **การตรวจสอบจากหลักฐานเท่านั้น** |
+| [`/smartspec_sync_tasks_checkboxes`](.smartspec-docs/workflows/tasks_checkboxes_th.md) | ซิงโครไนซ์เครื่องหมาย checkbox (`[x]` / `[ ]`) ใน `tasks.md` ให้ตรงกับ **รายงานการตรวจสอบล่าสุด** |
+| [`/smartspec_api_contract_validator`](.smartspec-docs/workflows/api_contract_validator_th.md) | ตรวจสอบการ implement API กับ contract ของ OpenAPI/Swagger |
+| [`/smartspec_data_model_validator`](.smartspec-docs/workflows/data_model_validator_th.md) | ตรวจสอบ schema ของฐานข้อมูลกับ data model ที่กำหนดไว้ |
+| [`/smartspec_ui_component_audit`](.smartspec-docs/workflows/ui_component_audit_th.md) | ตรวจสอบ UI components เพื่อความสอดคล้องและเป็นไปตาม design system |
+| [`/smartspec_ui_validation`](.smartspec-docs/workflows/ui_validation_manual_th.md) | ตรวจสอบการ implement UI กับ design mockups หรือ specs |
+| [`/smartspec_nfr_perf_planner`](.smartspec-docs/workflows/nfr_perf_planner_th.md) | วางแผนการทดสอบประสิทธิภาพตาม Non-Functional Requirements |
+| [`/smartspec_nfr_perf_verifier`](.smartspec-docs/workflows/nfr_perf_verifier_th.md) | ตรวจสอบประสิทธิภาพของระบบเทียบกับ NFRs |
 
 ### ความปลอดภัย (2 Workflows)
 
 | คำสั่ง | คำอธิบาย |
 | :--- | :--- |
-| [`/smartspec_security_audit_reporter`](.smartspec-docs/workflows/security_audit_reporter_guide_th.md) | รันการตรวจสอบความปลอดภัยและสร้างรายงาน |
-| [`/smartspec_security_threat_modeler`](.smartspec-docs/workflows/security_threat_modeler_guide_th.md) | วิเคราะห์ specs เพื่อระบุและสร้างแบบจำลองภัยคุกคามความปลอดภัยที่อาจเกิดขึ้น |
+| [`/smartspec_security_audit_reporter`](.smartspec-docs/workflows/security_audit_reporter_th.md) | รันการตรวจสอบความปลอดภัยและสร้างรายงาน |
+| [`/smartspec_security_threat_modeler`](.smartspec-docs/workflows/security_threat_modeler_th.md) | วิเคราะห์ specs เพื่อระบุและสร้างแบบจำลองภัยคุกคามความปลอดภัยที่อาจเกิดขึ้น |
 
 ### การจัดการโครงการและการสนับสนุน (5 Workflows)
 
 | คำสั่ง | คำอธิบาย |
 | :--- | :--- |
-| [`/smartspec_project_copilot`](.smartspec-docs/workflows/project_copilot_guide_th.md) | **ประตูหน้าแบบอ่านอย่างเดียว** สู่ repo ที่เปิดใช้งาน SmartSpec |
-| [`/smartspec_code_assistant`](.smartspec-docs/workflows/code_assistant_guide_th.md) | workflow ผู้ช่วยแบบรวมสำหรับงานช่วยเหลือต่างๆ |
-| [`/smartspec_report_implement_prompter`](.smartspec-docs/workflows/report_implement_prompter_guide_th.md) | สร้าง **ชุด prompt สำหรับการ implement** จากรายงานการตรวจสอบ |
-| [`/smartspec_docs_generator`](.smartspec-docs/workflows/docs_generator_guide_th.md) | สร้างเอกสารโปรเจกต์จาก specs และ code comments |
-| [`/smartspec_docs_publisher`](.smartspec-docs/workflows/docs_publisher_guide_th.md) | เผยแพร่เอกสารที่สร้างขึ้นไปยัง static site หรือ wiki |
+| [`/smartspec_project_copilot`](.smartspec-docs/workflows/project_copilot_manual_th.md) | **ประตูหน้าแบบอ่านอย่างเดียว** สู่ repo ที่เปิดใช้งาน SmartSpec |
+| [`/smartspec_code_assistant`](.smartspec-docs/workflows/code_assistant_th.md) | workflow ผู้ช่วยแบบรวมสำหรับงานช่วยเหลือต่างๆ |
+| [`/smartspec_report_implement_prompter`](.smartspec-docs/workflows/report_implement_prompter_th.md) | สร้าง **ชุด prompt สำหรับการ implement** จากรายงานการตรวจสอบ |
+| [`/smartspec_docs_generator`](.smartspec-docs/workflows/docs_generator_th.md) | สร้างเอกสารโปรเจกต์จาก specs และ code comments |
+| [`/smartspec_docs_publisher`](.smartspec-docs/workflows/docs_publisher_th.md) | เผยแพร่เอกสารที่สร้างขึ้นไปยัง static site หรือ wiki |
 
 ---
 

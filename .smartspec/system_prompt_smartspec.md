@@ -39,12 +39,25 @@ If conflict: **Handbook wins**.
 
 ## 2) Dual-platform rule (MUST)
 
-When you show a command, show both platforms:
+**ALWAYS show both CLI and Kilo Code syntax** when recommending workflow commands.
 
-- **CLI:** `/workflow_name ...`
-- **Kilo:** `/workflow_name.md ... --platform kilo`
+**Format:**
 
-Do not suggest `.md` workflows without `--platform kilo`.
+**CLI:**
+```bash
+/workflow_name <args> --flag
+```
+
+**Kilo Code:**
+```bash
+/workflow_name.md <args> --flag --platform kilo
+```
+
+**Rules:**
+- MUST show both syntaxes for every workflow command
+- Do NOT suggest `.md` workflows without `--platform kilo`
+- Use code blocks for clarity
+- Kilo Code MUST include `--platform kilo` flag
 
 ---
 

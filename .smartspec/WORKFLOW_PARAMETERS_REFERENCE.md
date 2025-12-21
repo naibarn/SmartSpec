@@ -17,7 +17,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_api_contract_validator \
   --contract <path/to/openapi.yaml> \
@@ -29,7 +29,7 @@ These flags are supported by this workflow:
   [--strict]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_api_contract_validator.md \
   --contract <path/to/openapi.yaml> \
@@ -38,7 +38,8 @@ These flags are supported by this workflow:
   [--spec-id <id>] \
   [--out <output-root>] \
   [--json] \
-  [--strict]
+  [--strict] \
+  --platform kilo
 ```
 
 ---
@@ -56,7 +57,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_code_assistant \
   --mode <implement|fix|refactor> \
@@ -67,7 +68,7 @@ These flags are supported by this workflow:
   [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_code_assistant.md \
   --mode <implement|fix|refactor> \
@@ -75,7 +76,8 @@ These flags are supported by this workflow:
   [--tasks <path/to/tasks.md>] \
   [--context <path/to/log-or-error.txt>] \
   [--out <output-root>] \
-  [--json]
+  [--json] \
+  --platform kilo
 ```
 
 ---
@@ -93,7 +95,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_data_migration_generator \
   --report <path/to/validation-report.json> \
@@ -103,12 +105,13 @@ These flags are supported by this workflow:
   [--apply]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_data_migration_generator.md \
   --report .spec/reports/data-model-validation/<run-id>/summary.json \
   --migration-tool flyway \
-  --output-dir db/migrations
+  --output-dir db/migrations \
+  --platform kilo
 ```
 
 ---
@@ -126,7 +129,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_data_model_validator \
   specs/<category>/<spec-id>/spec.md \
@@ -140,7 +143,7 @@ These flags are supported by this workflow:
   [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_data_model_validator.md \
   specs/<category>/<spec-id>/spec.md \
@@ -151,7 +154,8 @@ These flags are supported by this workflow:
   [--orm <prisma|typeorm|sequelize|django|rails|sqlalchemy|other>] \
   [--strict] \
   [--out <output-root>] \
-  [--json]
+  [--json] \
+  --platform kilo
 ```
 
 ---
@@ -180,7 +184,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_deployment_planner \
   specs/<category>/<spec-id>/spec.md \
@@ -190,7 +194,7 @@ These flags are supported by this workflow:
   --json
 ```
 
-**Example 2:**
+**CLI:**
 ```bash
 /smartspec_deployment_planner \
   specs/<category>/<spec-id>/spec.md \
@@ -210,7 +214,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_design_system_migration_assistant \
   --source-root <path/to/ui> \
@@ -226,7 +230,7 @@ These flags are supported by this workflow:
   [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_design_system_migration_assistant.md \
   --source-root <path/to/ui> \
@@ -258,7 +262,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_docs_generator \
   --mode api-docs \
@@ -267,7 +271,7 @@ These flags are supported by this workflow:
   --json
 ```
 
-**Example 2:**
+**CLI:**
 ```bash
 /smartspec_docs_generator \
   --mode user-guide \
@@ -294,7 +298,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_docs_publisher \
   --docs-dir .spec/reports/docs-generator/<run-id>/bundle.preview \
@@ -306,7 +310,7 @@ These flags are supported by this workflow:
   --json
 ```
 
-**Example 2:**
+**CLI:**
 ```bash
 /smartspec_docs_publisher \
   --docs-dir .spec/reports/docs-generator/<run-id>/bundle.preview \
@@ -340,7 +344,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_feedback_aggregator \
   --run-once
@@ -361,12 +365,12 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_generate_plan <spec_md> [--apply] [--ui-mode auto|json|inline] [--safety-mode strict|dev] [--plan-layout per-spec|consolidated] [--run-label "..."] [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_generate_plan.md \
   specs/<category>/<spec-id>/spec.md \
@@ -430,7 +434,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_generate_tests \
   specs/<category>/<spec-id>/spec.md \
@@ -441,7 +445,7 @@ These flags are supported by this workflow:
   [--json]
 ```
 
-**Example 2:**
+**CLI:**
 ```bash
 /smartspec_generate_tests \
   specs/<category>/<spec-id>/spec.md \
@@ -466,7 +470,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_hotfix_assistant \
   --base-tag v1.2.3 \
@@ -482,7 +486,7 @@ These flags are supported by this workflow:
   --json
 ```
 
-**Example 2:**
+**CLI:**
 ```bash
 /smartspec_hotfix_assistant \
   --base-tag v1.2.3 \
@@ -534,7 +538,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_incident_response \
   --alert-payload <json-payload>
@@ -555,7 +559,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_nfr_perf_planner \
   [--spec-ids <csv>] \
@@ -574,7 +578,7 @@ These flags are supported by this workflow:
   [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_nfr_perf_planner.md \
   [--spec-ids <csv>] \
@@ -609,7 +613,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_nfr_perf_verifier \
   specs/<category>/<spec-id>/spec.md \
@@ -623,7 +627,7 @@ These flags are supported by this workflow:
   [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_nfr_perf_verifier.md \
   specs/<category>/<spec-id>/spec.md \
@@ -653,7 +657,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_observability_configurator \
   --spec specs/<category>/<spec-id>/spec.md \
@@ -662,7 +666,7 @@ These flags are supported by this workflow:
   --json
 ```
 
-**Example 2:**
+**CLI:**
 ```bash
 /smartspec_observability_configurator \
   --spec specs/<category>/<spec-id>/spec.md \
@@ -707,7 +711,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_production_monitor \
   --spec-id <spec-id> \
@@ -730,7 +734,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_project_copilot "<question>" \
   [--domain <name>] \
@@ -747,7 +751,7 @@ These flags are supported by this workflow:
   [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_project_copilot.md "<question>" --platform kilo \
   [--domain <name>] [--spec-id <id>] [--spec-path <path>] [--aspect ...] \
@@ -772,7 +776,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_quality_gate \
   --profile <ci|release> \
@@ -782,14 +786,15 @@ These flags are supported by this workflow:
   [--strict]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_quality_gate.md \
   --profile <ci|release> \
   [--spec <path/to/spec.md>|--spec-id <id>] \
   [--out <output-root>] \
   [--json] \
-  [--strict]
+  [--strict] \
+  --platform kilo
 ```
 
 ---
@@ -818,14 +823,15 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_reindex_specs [--apply] [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
-/smartspec_reindex_specs.md [--apply] [--json]
+/smartspec_reindex_specs.md [--apply] [--json] \
+  --platform kilo
 ```
 
 ---
@@ -843,14 +849,15 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_reindex_workflows [--apply] [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
-/smartspec_reindex_workflows.md [--apply] [--json]
+/smartspec_reindex_workflows.md [--apply] [--json] \
+  --platform kilo
 ```
 
 ---
@@ -868,7 +875,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_release_tagger \
   --version v1.2.3 \
@@ -881,7 +888,7 @@ These flags are supported by this workflow:
   --json
 ```
 
-**Example 2:**
+**CLI:**
 ```bash
 /smartspec_release_tagger \
   --version v1.2.3 \
@@ -913,7 +920,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 python3 .spec/scripts/validate_prompts.py \
   --prompts .smartspec/prompts/<spec-id>/<target>/<run-id>/ \
@@ -943,7 +950,7 @@ python3 .spec/scripts/validate_prompts.py \
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_rollback \
   --failed-deployment-id <id> \
@@ -966,7 +973,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_security_audit_reporter \
   <path/to/spec.md> \
@@ -976,14 +983,15 @@ These flags are supported by this workflow:
   [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_security_audit_reporter.md \
   specs/<category>/<spec-id>/spec.md \
   [--report-format detailed] \
   [--verify-summary .spec/reports/verify-tasks-progress-strict/<run-id>/summary.json] \
   [--out <output-root>] \
-  [--json]
+  [--json] \
+  --platform kilo
 ```
 
 ---
@@ -1001,7 +1009,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_security_threat_modeler \
   <path/to/spec.md> \
@@ -1010,13 +1018,14 @@ These flags are supported by this workflow:
   [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_security_threat_modeler.md \
   specs/<category>/<spec-id>/spec.md \
   [--framework <STRIDE>] \
   [--apply] \
-  [--json]
+  [--json] \
+  --platform kilo
 ```
 
 ---
@@ -1042,7 +1051,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_sync_tasks_checkboxes <path/to/tasks.md> \
   --verify-report <path/to/summary.json> \
@@ -1052,7 +1061,7 @@ These flags are supported by this workflow:
   [--apply] [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_sync_tasks_checkboxes.md <path/to/tasks.md> \
   --platform kilo \
@@ -1078,7 +1087,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_test_report_analyzer \
   --test-report .spec/reports/test-suite-runner/<run-id> \
@@ -1090,7 +1099,7 @@ These flags are supported by this workflow:
   [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_test_report_analyzer.md \
   --test-report .spec/reports/test-suite-runner/<run-id> \
@@ -1115,7 +1124,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_test_suite_runner \
   --test-script <npm-script-name> \
@@ -1126,7 +1135,7 @@ These flags are supported by this workflow:
   [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_test_suite_runner.md \
   --test-script test:unit \
@@ -1152,7 +1161,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_ui_component_audit \
   --source-root <path/to/src> \
@@ -1164,7 +1173,7 @@ These flags are supported by this workflow:
   [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_ui_component_audit.md \
   --source-root <path/to/src> \
@@ -1192,7 +1201,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_ui_validation \
   --mode <validation|consistency> \
@@ -1203,7 +1212,7 @@ These flags are supported by this workflow:
   [--strict]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_ui_validation.md \
   --mode <validation|consistency> \
@@ -1211,7 +1220,8 @@ These flags are supported by this workflow:
   [--scope <global|spec|ui-registry>] \
   [--out <output-root>] \
   [--json] \
-  [--strict]
+  [--strict] \
+  --platform kilo
 ```
 
 ---
@@ -1229,7 +1239,7 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_validate_index \
   [--out <output-root>] \
@@ -1237,12 +1247,13 @@ These flags are supported by this workflow:
   [--strict]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
 /smartspec_validate_index.md \
   [--out <output-root>] \
   [--json] \
-  [--strict]
+  [--strict] \
+  --platform kilo
 ```
 
 ---
@@ -1260,14 +1271,15 @@ These flags are supported by this workflow:
 
 ### Usage Examples
 
-**Example 1:**
+**CLI:**
 ```bash
 /smartspec_verify_tasks_progress_strict <path/to/tasks.md> [--report-format <md|json|both>] [--json]
 ```
 
-**Example 2:**
+**Kilo Code:**
 ```bash
-/smartspec_verify_tasks_progress_strict.md <path/to/tasks.md> [--report-format <md|json|both>] [--json]
+/smartspec_verify_tasks_progress_strict.md <path/to/tasks.md> [--report-format <md|json|both>] [--json] \
+  --platform kilo
 ```
 
 ---

@@ -49,6 +49,45 @@ Forbidden writes (must hard-fail):
 
 ---
 
+## Flags
+
+### Universal flags (must support)
+
+All SmartSpec workflows support these universal flags:
+
+| Flag | Required | Description |
+|---|---|---|
+| `--config` | No | Path to custom config file (default: `.spec/smartspec.config.yaml`) |
+| `--lang` | No | Output language (`th` for Thai, `en` for English, `auto` for automatic detection) |
+| `--platform` | No | Platform mode (`cli` for CLI, `kilo` for Kilo Code, `ci` for CI/CD, `other` for custom integrations) |
+| `--out` | No | Base output directory for reports and generated files (must pass safety checks) |
+| `--json` | No | Output results in JSON format for machine parsing and automation |
+| `--quiet` | No | Suppress non-essential output, showing only errors and critical information |
+
+### Workflow-specific flags
+
+Flags specific to `/smartspec_report_implement_prompter`:
+
+| Flag | Required | Description |
+|---|---|---|
+| `--spec` | Yes | Path to the spec.md file (e.g., `specs/feature/spec-001/spec.md`) |
+| `--tasks` | Yes | Path to the tasks.md file (e.g., `specs/feature/spec-001/tasks.md`) |
+| `--apply` | No | Accepted for compatibility but has no effect (prompts are safe outputs) |
+| `--skip-duplication-check` | No | Skip pre-generation duplication validation (not recommended) |
+| `--registry-roots` | No | Additional registry directories to check for duplicates (comma-separated) |
+| `--prompt-style` | No | Style of generated prompts (detailed|concise|structured, default: detailed) |
+
+### Flag usage notes
+
+- **Config-first approach:** Prefer setting defaults in `.spec/smartspec.config.yaml` to minimize command-line flags
+- **Boolean flags:** Flags without values are boolean (presence = true, absence = false)
+- **Path safety:** All path arguments must pass safety validation (no directory traversal, symlink escape, or absolute paths outside project)
+- **Secret handling:** Never pass secrets as flag values; use `env:VAR_NAME` references or config file
+- **Duplication prevention:** Never use `--skip-duplication-check` unless explicitly instructed
+- **Safe outputs:** This workflow only writes to `.smartspec/prompts/**`, no `--apply` gate needed
+
+---
+
 ## Behavior
 
 ### 1) Pre-Generation Validation (MANDATORY)

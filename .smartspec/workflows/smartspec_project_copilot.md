@@ -90,6 +90,7 @@ The copilot treats these as primary evidence, in this priority order:
    - `knowledge_base_smartspec_handbook.md` (governance + security)
    - `knowledge_base_smartspec_install_and_usage.md` (usage patterns)
    - `.smartspec/WORKFLOW_PARAMETERS_REFERENCE.md` (parameter reference)
+   - `.smartspec/WORKFLOW_SCENARIOS_GUIDE.md` (scenarios + best practices)
 
 2) **Indexes**
    - `.spec/SPEC_INDEX.json`

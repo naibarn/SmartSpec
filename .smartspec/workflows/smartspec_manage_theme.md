@@ -223,6 +223,9 @@ smartspec_manage_theme(
 - `smartspec_generate_ui_spec`: Generate UI specs that use theme variants
 - `smartspec_ui_validation`: Validate that UI specs use valid theme variants
 
+## Implementation
+Implemented in: `.smartspec/scripts/manage_theme.py`
+
 ## Notes
 - Theme tokens use a reference syntax: `{path.to.token}` (e.g., `{colors.primary.500}`)
 - Component variants should reference tokens, not hardcode values, for consistency

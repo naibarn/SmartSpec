@@ -243,6 +243,9 @@ smartspec_refine_agent_prompts(
 - `smartspec_ui_accessibility_audit`: Audit accessibility compliance
 - `smartspec_generate_ui_spec`: Generate UI specs with refined prompts
 
+## Implementation
+Implemented in: `.smartspec/scripts/refine_agent_prompts.py`
+
 ## Notes
 - This workflow implements a **closed feedback loop** for continuous improvement
 - Refinement suggestions are based on statistical analysis, not manual review

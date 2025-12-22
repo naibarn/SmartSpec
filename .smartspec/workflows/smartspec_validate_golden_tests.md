@@ -278,6 +278,9 @@ smartspec_validate_golden_tests(
 - `smartspec_manage_theme`: Manage theme for theme token validation
 - `smartspec_ui_validation`: Validate individual UI specs
 
+## Implementation
+Implemented in: `.smartspec/scripts/validate_golden_tests.py`
+
 ## Notes
 - Golden tests are located in `.spec/golden_tests/`
 - Tests with `expected_valid: false` should fail validation

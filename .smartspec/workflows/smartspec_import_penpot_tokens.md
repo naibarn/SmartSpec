@@ -234,6 +234,9 @@ For API access:
 - `smartspec_generate_ui_spec`: Use imported theme in UI specs
 - `smartspec_export_catalog`: Export theme with catalog
 
+## Implementation
+Implemented in: `.smartspec/scripts/import_penpot_tokens.py`
+
 ## Notes
 - Penpot color names are automatically mapped to SmartSpec color scales (50-900)
 - Custom mapping files allow you to control how Penpot tokens map to SmartSpec

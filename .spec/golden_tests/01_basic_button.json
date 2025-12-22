@@ -1,0 +1,58 @@
+{
+  "test_id": "01_basic_button",
+  "name": "Basic Button Component",
+  "description": "Tests a simple button component with primary variant",
+  "category": "basic_components",
+  "a2ui_version": "0.8",
+  "expected_valid": true,
+  "input": {
+    "component": "button",
+    "variant": "primary",
+    "label": "Click Me",
+    "action": "submit"
+  },
+  "expected_output": {
+    "version": "0.8",
+    "type": "component",
+    "component": {
+      "type": "button",
+      "id": "btn_001",
+      "properties": {
+        "variant": "primary",
+        "label": "Click Me",
+        "action": "submit"
+      },
+      "accessibility": {
+        "role": "button",
+        "label": "Click Me"
+      }
+    }
+  },
+  "validation_rules": [
+    {
+      "rule": "has_version",
+      "description": "Must have version field"
+    },
+    {
+      "rule": "has_type",
+      "description": "Must have type field"
+    },
+    {
+      "rule": "has_component",
+      "description": "Must have component object"
+    },
+    {
+      "rule": "has_accessibility",
+      "description": "Must have accessibility object"
+    },
+    {
+      "rule": "valid_button_variant",
+      "description": "Button variant must be valid (primary, secondary, ghost, danger)"
+    }
+  ],
+  "metadata": {
+    "created_at": "2025-12-22",
+    "author": "SmartSpec Team",
+    "tags": ["button", "basic", "component"]
+  }
+}

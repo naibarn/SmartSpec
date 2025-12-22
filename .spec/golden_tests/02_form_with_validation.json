@@ -1,0 +1,121 @@
+{
+  "test_id": "02_form_with_validation",
+  "name": "Form with Input Validation",
+  "description": "Tests a form with multiple inputs and validation rules",
+  "category": "forms",
+  "a2ui_version": "0.8",
+  "expected_valid": true,
+  "input": {
+    "component": "form",
+    "fields": [
+      {
+        "type": "text",
+        "name": "email",
+        "label": "Email Address",
+        "validation": {
+          "required": true,
+          "pattern": "email"
+        }
+      },
+      {
+        "type": "password",
+        "name": "password",
+        "label": "Password",
+        "validation": {
+          "required": true,
+          "minLength": 8
+        }
+      }
+    ],
+    "submit_button": {
+      "label": "Sign In",
+      "variant": "primary"
+    }
+  },
+  "expected_output": {
+    "version": "0.8",
+    "type": "component",
+    "component": {
+      "type": "form",
+      "id": "form_001",
+      "properties": {
+        "fields": [
+          {
+            "type": "input",
+            "id": "input_email",
+            "properties": {
+              "inputType": "email",
+              "name": "email",
+              "label": "Email Address",
+              "required": true,
+              "validation": {
+                "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+                "message": "Please enter a valid email address"
+              }
+            },
+            "accessibility": {
+              "role": "textbox",
+              "label": "Email Address",
+              "required": true
+            }
+          },
+          {
+            "type": "input",
+            "id": "input_password",
+            "properties": {
+              "inputType": "password",
+              "name": "password",
+              "label": "Password",
+              "required": true,
+              "validation": {
+                "minLength": 8,
+                "message": "Password must be at least 8 characters"
+              }
+            },
+            "accessibility": {
+              "role": "textbox",
+              "label": "Password",
+              "required": true
+            }
+          }
+        ],
+        "submitButton": {
+          "type": "button",
+          "id": "btn_submit",
+          "properties": {
+            "variant": "primary",
+            "label": "Sign In",
+            "action": "submit"
+          }
+        }
+      },
+      "accessibility": {
+        "role": "form",
+        "label": "Sign in form"
+      }
+    }
+  },
+  "validation_rules": [
+    {
+      "rule": "has_form_structure",
+      "description": "Must have proper form structure with fields array"
+    },
+    {
+      "rule": "has_validation",
+      "description": "Each field must have validation rules"
+    },
+    {
+      "rule": "has_accessibility_labels",
+      "description": "All inputs must have accessibility labels"
+    },
+    {
+      "rule": "has_submit_button",
+      "description": "Form must have a submit button"
+    }
+  ],
+  "metadata": {
+    "created_at": "2025-12-22",
+    "author": "SmartSpec Team",
+    "tags": ["form", "validation", "input", "accessibility"]
+  }
+}

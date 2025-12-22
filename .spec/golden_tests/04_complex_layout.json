@@ -1,0 +1,190 @@
+{
+  "test_id": "04_complex_layout",
+  "name": "Complex Dashboard Layout",
+  "description": "Tests a complex layout with nested components and interactions",
+  "category": "complex_layouts",
+  "a2ui_version": "0.8",
+  "expected_valid": true,
+  "input": {
+    "component": "layout",
+    "type": "dashboard",
+    "sections": [
+      {
+        "type": "header",
+        "title": "Analytics Dashboard"
+      },
+      {
+        "type": "grid",
+        "columns": 3,
+        "items": [
+          {
+            "type": "metric_card",
+            "label": "Total Users",
+            "value": "1,234"
+          },
+          {
+            "type": "metric_card",
+            "label": "Revenue",
+            "value": "$45,678"
+          },
+          {
+            "type": "metric_card",
+            "label": "Conversion",
+            "value": "3.2%"
+          }
+        ]
+      },
+      {
+        "type": "chart",
+        "chartType": "line",
+        "data": "revenue_over_time"
+      }
+    ]
+  },
+  "expected_output": {
+    "version": "0.8",
+    "type": "layout",
+    "layout": {
+      "type": "dashboard",
+      "id": "layout_001",
+      "sections": [
+        {
+          "type": "header",
+          "id": "header_001",
+          "component": {
+            "type": "text",
+            "properties": {
+              "text": "Analytics Dashboard",
+              "variant": "title"
+            }
+          }
+        },
+        {
+          "type": "grid",
+          "id": "grid_001",
+          "properties": {
+            "columns": 3,
+            "gap": "{spacing.4}"
+          },
+          "children": [
+            {
+              "type": "card",
+              "id": "card_001",
+              "properties": {
+                "variant": "default",
+                "content": {
+                  "label": {
+                    "text": "Total Users",
+                    "style": {
+                      "fontSize": "{typography.fontSize.sm}",
+                      "color": "{colors.neutral.600}"
+                    }
+                  },
+                  "value": {
+                    "text": "1,234",
+                    "style": {
+                      "fontSize": "{typography.fontSize.3xl}",
+                      "fontWeight": "{typography.fontWeight.bold}",
+                      "color": "{colors.neutral.900}"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "type": "card",
+              "id": "card_002",
+              "properties": {
+                "variant": "default",
+                "content": {
+                  "label": {
+                    "text": "Revenue",
+                    "style": {
+                      "fontSize": "{typography.fontSize.sm}",
+                      "color": "{colors.neutral.600}"
+                    }
+                  },
+                  "value": {
+                    "text": "$45,678",
+                    "style": {
+                      "fontSize": "{typography.fontSize.3xl}",
+                      "fontWeight": "{typography.fontWeight.bold}",
+                      "color": "{colors.neutral.900}"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "type": "card",
+              "id": "card_003",
+              "properties": {
+                "variant": "default",
+                "content": {
+                  "label": {
+                    "text": "Conversion",
+                    "style": {
+                      "fontSize": "{typography.fontSize.sm}",
+                      "color": "{colors.neutral.600}"
+                    }
+                  },
+                  "value": {
+                    "text": "3.2%",
+                    "style": {
+                      "fontSize": "{typography.fontSize.3xl}",
+                      "fontWeight": "{typography.fontWeight.bold}",
+                      "color": "{colors.neutral.900}"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "chart",
+          "id": "chart_001",
+          "properties": {
+            "chartType": "line",
+            "dataSource": "revenue_over_time",
+            "accessibility": {
+              "role": "img",
+              "label": "Revenue over time chart"
+            }
+          }
+        }
+      ],
+      "accessibility": {
+        "role": "main",
+        "label": "Analytics Dashboard"
+      }
+    }
+  },
+  "validation_rules": [
+    {
+      "rule": "has_layout_structure",
+      "description": "Must have proper layout structure with sections"
+    },
+    {
+      "rule": "has_nested_components",
+      "description": "Must support nested components"
+    },
+    {
+      "rule": "has_grid_layout",
+      "description": "Grid must have columns and children"
+    },
+    {
+      "rule": "uses_theme_tokens",
+      "description": "All components must use theme tokens for styling"
+    },
+    {
+      "rule": "has_accessibility_roles",
+      "description": "All sections must have appropriate accessibility roles"
+    }
+  ],
+  "metadata": {
+    "created_at": "2025-12-22",
+    "author": "SmartSpec Team",
+    "tags": ["layout", "dashboard", "complex", "nested", "grid"]
+  }
+}

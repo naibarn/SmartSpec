@@ -201,9 +201,9 @@ cat .spec/reports/generate-spec/<run-id>/preview/spec.md
 
 ---
 
-## 🗂️ All 51 Workflows & Commands
+## 🗂️ All 55 Workflows & Commands
 
-SmartSpec V6 consolidates its powerful features into a comprehensive set of 51 workflows, organized by function. These commands form the backbone of the **SPEC → PLAN → TASKS → IMPLEMENT** lifecycle, including advanced A2UI (Automated to UI) workflows for UI automation and optimization.
+SmartSpec V6 consolidates its powerful features into a comprehensive set of 55 workflows, organized by function. These commands form the backbone of the **SPEC → PLAN → TASKS → IMPLEMENT** lifecycle, including advanced A2UI (Automated to UI) workflows for UI automation and optimization.
 
 **⚠️ Remember:** Most workflows follow the **preview-first pattern** — run without `--apply` first to review, then run with `--apply` to apply changes.
 
@@ -265,7 +265,7 @@ SmartSpec V6 consolidates its powerful features into a comprehensive set of 51 w
 | [`/smartspec_security_audit_reporter`](.smartspec-docs/workflows/security_audit_reporter.md) | Run security audits and generate reports. |
 | [`/smartspec_security_threat_modeler`](.smartspec-docs/workflows/security_threat_modeler.md) | Analyze specs to identify and model potential security threats. |
 
-### A2UI: UI Automation & Optimization (11 Workflows)
+### A2UI: UI Automation & Optimization (15 Workflows)
 
 | Command | Description |
 | :--- | :--- |
@@ -280,6 +280,10 @@ SmartSpec V6 consolidates its powerful features into a comprehensive set of 51 w
 | [`/smartspec_ui_performance_test`](.smartspec-docs/workflows/ui_performance_test.md) | Test UI component performance and Core Web Vitals. |
 | [`/smartspec_ui_analytics_reporter`](.smartspec-docs/workflows/ui_analytics_reporter.md) | Track UI component usage, adoption, and quality metrics. |
 | [`/smartspec_export_catalog`](.smartspec-docs/workflows/export_catalog.md) | Export SmartSpec UI catalog to standard A2UI v0.8 format for interoperability. |
+| [`/smartspec_manage_theme`](.smartspec/workflows/smartspec_manage_theme.md) | Manage design system theme (colors, typography, spacing, component variants) for A2UI applications. |
+| [`/smartspec_import_penpot_tokens`](.smartspec/workflows/smartspec_import_penpot_tokens.md) | Import design tokens from Penpot design files into SmartSpec theme system. |
+| [`/smartspec_refine_agent_prompts`](.smartspec/workflows/smartspec_refine_agent_prompts.md) | Analyze UI analytics data and suggest improvements to AI agent prompts for better A2UI output quality. |
+| [`/smartspec_validate_golden_tests`](.smartspec/workflows/smartspec_validate_golden_tests.md) | Validate A2UI JSON output against golden test cases to ensure quality and compliance. |
 
 ### Project Management & Support (5 Workflows)
 

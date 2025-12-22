@@ -326,6 +326,31 @@ These flags are supported by this workflow:
 
 ---
 
+## smartspec_export_catalog
+
+### Parameters
+
+| Parameter | Status | Description |
+|---|---|---|
+| `--catalog-id` | Optional | Unique catalog identifier (URL) |
+| `--include-metadata` | Optional | Include SmartSpec metadata (optional) |
+| `--input-catalog` | Optional | Source SmartSpec catalog path |
+| `--output-file` | Optional | Destination A2UI catalog path |
+| `--output-format` | Optional | Target format (a2ui-v0.8) |
+| `--platform` | Optional | Platform filter (optional) |
+
+### Usage Examples
+
+**CLI:**
+```bash
+/smartspec_export_catalog \
+  --output-file public/web-catalog.json \
+  --catalog-id "https://my-app.com/web-catalog-v1" \
+  --output-format a2ui-v0.8
+```
+
+---
+
 ## smartspec_feedback_aggregator
 
 **Description:** Aggregate feedback from multiple sources to drive continuous improvement.

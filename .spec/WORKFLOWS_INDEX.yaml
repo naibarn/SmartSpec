@@ -295,3 +295,12 @@ workflows:
     write_scopes: [reports]
     status: active
     version: "6.0.0"
+
+  - name: /smartspec_export_catalog
+    purpose: Export SmartSpec UI catalog to standard A2UI v0.8 format for interoperability.
+    category: ui_optimization_and_analytics
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [none]
+    status: active
+    version: "6.2.0"

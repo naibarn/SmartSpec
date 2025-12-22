@@ -48,7 +48,7 @@ Miscellaneous documentation for features and enhancements.
 - [Main README](../README.md) - Project overview
 - [Thai README](../README_th.md) - คู่มือภาษาไทย
 - [Changelog](../CHANGELOG.md) - Version history
-- [Workflow Parameters Reference](../WORKFLOW_PARAMETERS_REFERENCE.md) - All workflow parameters
+- [Workflow Parameters Reference](../.smartspec/WORKFLOW_PARAMETERS_REFERENCE.md) - All workflow parameters
 
 ### A2UI Documentation
 - [A2UI Main Guide](a2ui/README-A2UI.md)

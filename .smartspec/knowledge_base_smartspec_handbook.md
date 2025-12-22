@@ -339,4 +339,65 @@ Before implementation, run validation to verify all cross-spec references:
 
 ---
 
+## Section 13: A2UI Catalog Export
+
+### 13.1 Overview
+
+SmartSpec uses a **server-side, centrally-governed component catalog** for stronger governance and simpler developer experience. The `smartspec_export_catalog` workflow allows you to export this catalog to **standard A2UI v0.8 format** for interoperability with other A2UI renderers.
+
+### 13.2 Export Workflow
+
+**Command:**
+```bash
+/smartspec_export_catalog \
+  --input-catalog .spec/ui-catalog.json \
+  --output-file public/web-catalog.json \
+  --catalog-id "https://my-app.com/web-catalog-v1" \
+  --platform web
+```
+
+**What it does:**
+1. Reads SmartSpec UI catalog (`.spec/ui-catalog.json`)
+2. Transforms components to A2UI v0.8 format
+3. Maps SmartSpec properties to A2UI properties
+4. Generates catalog with specified `catalogId`
+5. Outputs standard A2UI catalog JSON
+
+### 13.3 Use Cases
+
+**1. Multi-Platform Deployment**
+- Export web catalog for browser renderer
+- Export Flutter catalog for mobile renderer
+- Maintain single source of truth in SmartSpec
+
+**2. Third-Party Integration**
+- Share catalog with external teams
+- Enable A2UI-compatible tools to consume your components
+- Preserve SmartSpec governance internally
+
+**3. Build Pipeline Integration**
+```bash
+# In CI/CD pipeline
+/smartspec_export_catalog \
+  --input-catalog .spec/ui-catalog.json \
+  --output-file dist/catalog.json \
+  --catalog-id "https://cdn.example.com/catalog-v1"
+```
+
+### 13.4 SmartSpec-Flavored A2UI
+
+SmartSpec implements **SmartSpec-Flavored A2UI**, which means:
+- **Design Time**: Use SmartSpec governance (duplicate prevention, validation)
+- **Build Time**: Export to standard A2UI format
+- **Runtime**: Use A2UI protocol for catalog negotiation
+
+**Benefits:**
+- ✅ Stronger governance at design time
+- ✅ Simpler developer experience
+- ✅ Standard A2UI interoperability at runtime
+
+**For detailed design and concepts, see:** `docs/guides/A2UI_EXPORT_UTILITY_DESIGN.md`
+
+---
+
 # End of Canonical Handbook

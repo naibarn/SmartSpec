@@ -244,6 +244,19 @@ To make SmartSpec truly compatible with A2UI v0.8, the following changes are nee
 
 **Answer:** **Partially, but with significant gaps.**
 
+## ✅ Decision: SmartSpec-Flavored A2UI
+
+**Date:** December 22, 2025
+
+After careful analysis, the decision has been made to **maintain SmartSpec's current approach** and position it as a "SmartSpec-Flavored A2UI" implementation. This means:
+
+1. **No major workflow changes** are required.
+2. SmartSpec will continue to use a **server-side, centrally-governed component catalog**.
+3. This approach prioritizes **governance, simplicity, and duplicate prevention** over full protocol compliance.
+4. Documentation will be updated to clearly explain the differences and benefits of this approach.
+
+**See:** [SmartSpec-Flavored A2UI Guide](./A2UI_SMARTSPEC_FLAVOR.md) for a detailed explanation of this design choice.
+
 SmartSpec's approach to UI generation is **philosophically aligned** with A2UI (declarative, governed, validated), but the **implementation details diverge** in critical ways:
 
 1. **Catalog Model:** SmartSpec uses a server-side governance catalog, while A2UI uses client-side capability declaration.

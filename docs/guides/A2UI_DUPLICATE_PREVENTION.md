@@ -10,6 +10,8 @@
 
 SmartSpec's A2UI workflows have a **multi-layered approach** to prevent the creation of redundant or duplicate UI components. The core principle is to **promote reuse over reinvention**.
 
+**Important Note:** SmartSpec uses a "SmartSpec-Flavored" approach to A2UI that prioritizes governance and duplicate prevention. This is a deliberate design choice that extends the A2UI protocol with a server-side, centrally-governed component catalog. See [SmartSpec-Flavored A2UI Guide](./A2UI_SMARTSPEC_FLAVOR.md) for details.
+
 This is achieved through a combination of:
 
 1.  **Centralized Component Catalog** - A single source of truth for all approved UI components.
@@ -135,8 +137,10 @@ While the current system is robust, it could be enhanced with:
 
 ---
 
-## 🎊 Conclusion
+## 🏊 Conclusion
 
 SmartSpec has a **strong, multi-layered system** for preventing duplicate UI components. It is built on the principles of a **single source of truth (the UI catalog)** and **strict validation at every stage** of the development lifecycle.
 
 By enforcing the use of a centralized catalog and providing a library of reusable patterns, A2UI workflows effectively guide developers to reuse existing components rather than creating redundant new, redundant ones.
+
+**This approach is a key feature of SmartSpec-Flavored A2UI**, which prioritizes governance and quality control over the official A2UI v0.8 protocol's interoperability model. For more information on this design choice, see [SmartSpec-Flavored A2UI Guide](./A2UI_SMARTSPEC_FLAVOR.md).

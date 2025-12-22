@@ -120,10 +120,10 @@ SmartSpec V6 ได้รวบรวมฟีเจอร์อันทรง�
 | [`/smartspec_ui_performance_test`](.smartspec-docs/workflows/ui_performance_test_th.md) | ทดสอบประสิทธิภาพ UI component และ Core Web Vitals |
 | [`/smartspec_ui_analytics_reporter`](.smartspec-docs/workflows/ui_analytics_reporter_th.md) | ติดตามการใช้งาน, adoption และ quality metrics ของ UI component |
 | [`/smartspec_export_catalog`](.smartspec-docs/workflows/export_catalog_th.md) | ส่งออก SmartSpec UI catalog เป็นรูปแบบ A2UI v0.8 มาตรฐานเพื่อการทำงานร่วมกัน |
-| [`/smartspec_manage_theme`](.smartspec/workflows/smartspec_manage_theme.md) | จัดการ design system theme (สี, typography, spacing, component variants) สำหรับ A2UI applications |
-| [`/smartspec_import_penpot_tokens`](.smartspec/workflows/smartspec_import_penpot_tokens.md) | นำเข้า design tokens จากไฟล์ Penpot เข้าสู่ระบบ theme ของ SmartSpec |
-| [`/smartspec_refine_agent_prompts`](.smartspec/workflows/smartspec_refine_agent_prompts.md) | วิเคราะห์ข้อมูล UI analytics และแนะนำการปรับปรุง AI agent prompts เพื่อคุณภาพ A2UI output ที่ดีขึ้น |
-| [`/smartspec_validate_golden_tests`](.smartspec/workflows/smartspec_validate_golden_tests.md) | ตรวจสอบ A2UI JSON output กับ golden test cases เพื่อความถูกต้องและคุณภาพ |
+| [`/smartspec_manage_theme`](.smartspec-docs/workflows/manage_theme_th.md) | จัดการ design system theme (สี, typography, spacing, component variants) สำหรับ A2UI applications |
+| [`/smartspec_import_penpot_tokens`](.smartspec-docs/workflows/import_penpot_tokens_th.md) | นำเข้า design tokens จากไฟล์ Penpot เข้าสู่ระบบ theme ของ SmartSpec |
+| [`/smartspec_refine_agent_prompts`](.smartspec-docs/workflows/refine_agent_prompts_th.md) | วิเคราะห์ข้อมูล UI analytics และแนะนำการปรับปรุง AI agent prompts เพื่อคุณภาพ A2UI output ที่ดีขึ้น |
+| [`/smartspec_validate_golden_tests`](.smartspec-docs/workflows/validate_golden_tests_th.md) | ตรวจสอบ A2UI JSON output กับ golden test cases เพื่อความถูกต้องและคุณภาพ |
 
 ### การจัดการโครงการและการสนับสนุน (5 Workflows)
 

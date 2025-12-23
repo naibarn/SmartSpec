@@ -1,3 +1,14 @@
+---
+workflow_id: smartspec_migrate_evidence_hooks
+version: "6.3.0"
+status: active
+category: a2ui
+platform_support:
+  - cli
+  - kilo
+requires_apply: true
+---
+
 # /smartspec_migrate_evidence_hooks
 
 ## 1. Description

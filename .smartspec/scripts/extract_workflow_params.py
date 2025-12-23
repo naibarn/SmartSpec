@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 workflow_dir = Path(".smartspec/workflows")
-output_file = Path("WORKFLOW_PARAMETERS_REFERENCE.md")
+output_file = Path(".smartspec/WORKFLOW_PARAMETERS_REFERENCE.md")
 
 def extract_workflow_info(filepath):
     """Extract key information from a workflow file"""

@@ -1,0 +1,119 @@
+{
+  "test_id": "08_data_driven_list",
+  "name": "Data-Driven List with Pagination",
+  "description": "Tests a list component with data binding and pagination",
+  "category": "data_binding",
+  "a2ui_version": "0.8",
+  "expected_valid": true,
+  "input": {
+    "component": "list",
+    "dataSource": "users",
+    "itemTemplate": {
+      "type": "card",
+      "fields": ["name", "email", "role"]
+    },
+    "pagination": {
+      "pageSize": 10,
+      "showControls": true
+    }
+  },
+  "expected_output": {
+    "version": "0.8",
+    "type": "component",
+    "component": {
+      "type": "list",
+      "id": "list_001",
+      "properties": {
+        "dataSource": {
+          "type": "dynamic",
+          "source": "users",
+          "pagination": {
+            "pageSize": 10,
+            "currentPage": 1
+          }
+        },
+        "itemTemplate": {
+          "type": "card",
+          "id": "card_template",
+          "properties": {
+            "variant": "default",
+            "content": {
+              "name": {
+                "binding": "{{item.name}}",
+                "style": {
+                  "fontSize": "{typography.fontSize.lg}",
+                  "fontWeight": "{typography.fontWeight.semibold}"
+                }
+              },
+              "email": {
+                "binding": "{{item.email}}",
+                "style": {
+                  "fontSize": "{typography.fontSize.sm}",
+                  "color": "{colors.neutral.600}"
+                }
+              },
+              "role": {
+                "binding": "{{item.role}}",
+                "style": {
+                  "fontSize": "{typography.fontSize.sm}",
+                  "color": "{colors.neutral.500}"
+                }
+              }
+            }
+          }
+        },
+        "pagination": {
+          "type": "pagination",
+          "id": "pagination_001",
+          "properties": {
+            "pageSize": 10,
+            "showControls": true,
+            "controls": {
+              "previous": {
+                "type": "button",
+                "label": "Previous",
+                "variant": "ghost"
+              },
+              "next": {
+                "type": "button",
+                "label": "Next",
+                "variant": "ghost"
+              }
+            }
+          },
+          "accessibility": {
+            "role": "navigation",
+            "label": "Pagination controls"
+          }
+        }
+      },
+      "accessibility": {
+        "role": "list",
+        "label": "User list"
+      }
+    }
+  },
+  "validation_rules": [
+    {
+      "rule": "has_data_source",
+      "description": "List must have a data source"
+    },
+    {
+      "rule": "has_item_template",
+      "description": "List must have an item template"
+    },
+    {
+      "rule": "has_data_binding",
+      "description": "Template must use data binding syntax ({{}})"
+    },
+    {
+      "rule": "has_pagination",
+      "description": "List must have pagination controls"
+    }
+  ],
+  "metadata": {
+    "created_at": "2025-12-22",
+    "author": "SmartSpec Team",
+    "tags": ["list", "data-binding", "pagination", "dynamic"]
+  }
+}

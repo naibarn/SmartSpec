@@ -1,0 +1,115 @@
+{
+  "test_id": "07_interactive_modal",
+  "name": "Interactive Modal with Actions",
+  "description": "Tests a modal component with interactive elements and state management",
+  "category": "interactions",
+  "a2ui_version": "0.8",
+  "expected_valid": true,
+  "input": {
+    "component": "modal",
+    "title": "Confirm Action",
+    "content": "Are you sure you want to delete this item?",
+    "actions": [
+      {
+        "label": "Cancel",
+        "variant": "secondary",
+        "action": "close"
+      },
+      {
+        "label": "Delete",
+        "variant": "danger",
+        "action": "confirm"
+      }
+    ]
+  },
+  "expected_output": {
+    "version": "0.8",
+    "type": "component",
+    "component": {
+      "type": "modal",
+      "id": "modal_001",
+      "properties": {
+        "title": "Confirm Action",
+        "content": "Are you sure you want to delete this item?",
+        "state": {
+          "isOpen": false
+        },
+        "actions": [
+          {
+            "type": "button",
+            "id": "btn_cancel",
+            "properties": {
+              "variant": "secondary",
+              "label": "Cancel"
+            },
+            "events": {
+              "onClick": {
+                "action": "setState",
+                "target": "modal_001",
+                "value": {
+                  "isOpen": false
+                }
+              }
+            },
+            "accessibility": {
+              "role": "button",
+              "label": "Cancel"
+            }
+          },
+          {
+            "type": "button",
+            "id": "btn_delete",
+            "properties": {
+              "variant": "danger",
+              "label": "Delete"
+            },
+            "events": {
+              "onClick": {
+                "action": "confirm",
+                "then": {
+                  "action": "setState",
+                  "target": "modal_001",
+                  "value": {
+                    "isOpen": false
+                  }
+                }
+              }
+            },
+            "accessibility": {
+              "role": "button",
+              "label": "Delete"
+            }
+          }
+        ]
+      },
+      "accessibility": {
+        "role": "dialog",
+        "label": "Confirm Action",
+        "modal": true
+      }
+    }
+  },
+  "validation_rules": [
+    {
+      "rule": "has_state_management",
+      "description": "Modal must have state management for open/close"
+    },
+    {
+      "rule": "has_event_handlers",
+      "description": "Buttons must have event handlers"
+    },
+    {
+      "rule": "has_dialog_role",
+      "description": "Modal must have dialog role for accessibility"
+    },
+    {
+      "rule": "has_action_buttons",
+      "description": "Modal must have action buttons"
+    }
+  ],
+  "metadata": {
+    "created_at": "2025-12-22",
+    "author": "SmartSpec Team",
+    "tags": ["modal", "interactive", "state", "events", "accessibility"]
+  }
+}

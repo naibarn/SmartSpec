@@ -1,0 +1,82 @@
+{
+  "test_id": "03_themed_card",
+  "name": "Card Component with Theme Tokens",
+  "description": "Tests a card component that uses theme token references",
+  "category": "theming",
+  "a2ui_version": "0.8",
+  "expected_valid": true,
+  "input": {
+    "component": "card",
+    "variant": "elevated",
+    "content": {
+      "title": "Product Card",
+      "description": "A beautiful product description",
+      "image": "product.jpg"
+    }
+  },
+  "expected_output": {
+    "version": "0.8",
+    "type": "component",
+    "component": {
+      "type": "card",
+      "id": "card_001",
+      "properties": {
+        "variant": "elevated",
+        "content": {
+          "title": {
+            "text": "Product Card",
+            "style": {
+              "fontSize": "{typography.fontSize.2xl}",
+              "fontWeight": "{typography.fontWeight.bold}",
+              "color": "{colors.neutral.900}"
+            }
+          },
+          "description": {
+            "text": "A beautiful product description",
+            "style": {
+              "fontSize": "{typography.fontSize.base}",
+              "color": "{colors.neutral.700}"
+            }
+          },
+          "image": {
+            "src": "product.jpg",
+            "alt": "Product image"
+          }
+        },
+        "style": {
+          "backgroundColor": "#ffffff",
+          "boxShadow": "{shadows.md}",
+          "borderRadius": "{borderRadius.lg}",
+          "padding": "{spacing.6}"
+        }
+      },
+      "accessibility": {
+        "role": "article",
+        "label": "Product Card"
+      }
+    }
+  },
+  "validation_rules": [
+    {
+      "rule": "has_theme_references",
+      "description": "Must use theme token references (e.g., {colors.primary.500})"
+    },
+    {
+      "rule": "valid_theme_tokens",
+      "description": "All theme token references must be valid"
+    },
+    {
+      "rule": "has_image_alt",
+      "description": "Images must have alt text for accessibility"
+    },
+    {
+      "rule": "has_variant",
+      "description": "Component must specify a variant"
+    }
+  ],
+  "metadata": {
+    "created_at": "2025-12-22",
+    "author": "SmartSpec Team",
+    "tags": ["card", "theming", "tokens", "accessibility"]
+  }
+}

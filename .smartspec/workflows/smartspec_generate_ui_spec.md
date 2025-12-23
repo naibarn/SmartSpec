@@ -400,7 +400,7 @@ When answering questions, the agent MUST read:
 2) **A2UI Resources**
    - A2UI Specification v0.8
    - `.spec/ui-catalog.json` or `.spec/ui-catalog.template.json`
-   - `A2UI_SmartSpec_Integration_Report.md`
+   - `docs/a2ui/A2UI_SmartSpec_Integration_Report.md`
    - `a2ui_workflow_specifications.md`
 
 3) **Configuration**

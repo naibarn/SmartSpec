@@ -1,0 +1,55 @@
+{
+  "test_id": "06_error_invalid_theme_token",
+  "name": "Error: Invalid Theme Token Reference",
+  "description": "Tests validation failure when theme token reference is invalid",
+  "category": "error_scenarios",
+  "a2ui_version": "0.8",
+  "expected_valid": false,
+  "input": {
+    "component": "button",
+    "variant": "primary",
+    "label": "Click Me",
+    "style": {
+      "backgroundColor": "{colors.nonexistent.500}"
+    }
+  },
+  "expected_output": {
+    "version": "0.8",
+    "type": "component",
+    "component": {
+      "type": "button",
+      "id": "btn_001",
+      "properties": {
+        "variant": "primary",
+        "label": "Click Me",
+        "style": {
+          "backgroundColor": "{colors.nonexistent.500}"
+        }
+      },
+      "accessibility": {
+        "role": "button",
+        "label": "Click Me"
+      }
+    }
+  },
+  "expected_errors": [
+    {
+      "code": "INVALID_THEME_TOKEN",
+      "message": "Theme token reference '{colors.nonexistent.500}' does not exist in theme",
+      "severity": "error",
+      "path": "component.properties.style.backgroundColor"
+    }
+  ],
+  "validation_rules": [
+    {
+      "rule": "valid_theme_tokens",
+      "description": "All theme token references must exist in theme",
+      "should_fail": true
+    }
+  ],
+  "metadata": {
+    "created_at": "2025-12-22",
+    "author": "SmartSpec Team",
+    "tags": ["error", "theming", "validation", "tokens"]
+  }
+}

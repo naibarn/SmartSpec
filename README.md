@@ -201,9 +201,9 @@ cat .spec/reports/generate-spec/<run-id>/preview/spec.md
 
 ---
 
-## 🗂️ All 50 Workflows & Commands
+## 🗂️ All 58 Workflows & Commands
 
-SmartSpec V6 consolidates its powerful features into a comprehensive set of 50 workflows, organized by function. These commands form the backbone of the **SPEC → PLAN → TASKS → IMPLEMENT** lifecycle, including advanced A2UI (Automated to UI) workflows for UI automation and optimization.
+SmartSpec V6 consolidates its powerful features into a comprehensive set of 58 workflows, organized by function. These commands form the backbone of the **SPEC → PLAN → TASKS → IMPLEMENT** lifecycle, including advanced A2UI (Automated to UI) workflows for UI automation and optimization.
 
 **⚠️ Remember:** Most workflows follow the **preview-first pattern** — run without `--apply` first to review, then run with `--apply` to apply changes.
 
@@ -265,7 +265,7 @@ SmartSpec V6 consolidates its powerful features into a comprehensive set of 50 w
 | [`/smartspec_security_audit_reporter`](.smartspec-docs/workflows/security_audit_reporter.md) | Run security audits and generate reports. |
 | [`/smartspec_security_threat_modeler`](.smartspec-docs/workflows/security_threat_modeler.md) | Analyze specs to identify and model potential security threats. |
 
-### A2UI: UI Automation & Optimization (10 Workflows)
+### A2UI: UI Automation & Optimization (18 Workflows)
 
 | Command | Description |
 | :--- | :--- |
@@ -279,6 +279,14 @@ SmartSpec V6 consolidates its powerful features into a comprehensive set of 50 w
 | [`/smartspec_ui_accessibility_audit`](.smartspec-docs/workflows/ui_accessibility_audit.md) | Audit UI components for WCAG 2.1 accessibility compliance. |
 | [`/smartspec_ui_performance_test`](.smartspec-docs/workflows/ui_performance_test.md) | Test UI component performance and Core Web Vitals. |
 | [`/smartspec_ui_analytics_reporter`](.smartspec-docs/workflows/ui_analytics_reporter.md) | Track UI component usage, adoption, and quality metrics. |
+| [`/smartspec_export_catalog`](.smartspec-docs/workflows/export_catalog.md) | Export SmartSpec UI catalog to standard A2UI v0.8 format for interoperability. |
+| [`/smartspec_manage_theme`](.smartspec-docs/workflows/manage_theme.md) | Manage design system theme (colors, typography, spacing, component variants) for A2UI applications. |
+| [`/smartspec_import_penpot_tokens`](.smartspec-docs/workflows/import_penpot_tokens.md) | Import design tokens from Penpot design files into SmartSpec theme system. |
+| [`/smartspec_refine_agent_prompts`](.smartspec-docs/workflows/refine_agent_prompts.md) | Analyze UI analytics data and suggest improvements to AI agent prompts for better A2UI output quality. |
+| [`/smartspec_validate_golden_tests`](.smartspec-docs/workflows/validate_golden_tests.md) | Validate A2UI JSON output against golden test cases to ensure quality and compliance. |
+| [`/smartspec_generate_rjsf_schema`](.smartspec-docs/workflows/generate_rjsf_schema.md) | Generate JSON Schema and UI Schema for React JSON Schema Form (RJSF) from natural language prompts. |
+| [`/smartspec_resolve_themes`](.smartspec-docs/workflows/resolve_themes.md) | Merge multiple theme files into a single resolved theme based on hierarchy (System > Company > User). |
+| [`/smartspec_generate_component_registry`](.smartspec-docs/workflows/generate_component_registry.md) | Automatically scan component library and generate component registry file for JSON-driven UI renderer. |
 
 ### Project Management & Support (5 Workflows)
 

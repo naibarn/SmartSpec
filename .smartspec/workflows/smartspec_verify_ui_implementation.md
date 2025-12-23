@@ -526,7 +526,7 @@ When answering questions, the agent MUST read:
 2) **A2UI Resources**
    - A2UI Specification v0.8
    - `.spec/ui-catalog.json`
-   - `A2UI_SmartSpec_Integration_Report.md`
+   - `docs/a2ui/A2UI_SmartSpec_Integration_Report.md`
 
 3) **Configuration**
    - `.spec/smartspec.config.yaml` (a2ui section)

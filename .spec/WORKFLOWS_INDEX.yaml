@@ -295,3 +295,84 @@ workflows:
     write_scopes: [reports]
     status: active
     version: "6.0.0"
+
+  - name: /smartspec_export_catalog
+    purpose: Export SmartSpec UI catalog to standard A2UI v0.8 format for interoperability.
+    category: ui_optimization_and_analytics
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [none]
+    status: active
+    version: "6.2.0"
+
+  # ---------------------------------------------------------------------------
+  # UI Theming & Design (A2UI Phase 6) (5)
+  # ---------------------------------------------------------------------------
+  - name: /smartspec_manage_theme
+    purpose: Manage design system theme (colors, typography, spacing, component variants) for A2UI applications.
+    category: ui_theming_and_design
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [theme, reports]
+    status: active
+    version: "6.2.0"
+
+  - name: /smartspec_import_penpot_tokens
+    purpose: Import design tokens from Penpot design files into SmartSpec theme system.
+    category: ui_theming_and_design
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [theme, reports]
+    status: active
+    version: "6.2.0"
+
+  - name: /smartspec_generate_rjsf_schema
+    purpose: Generate JSON Schema and UI Schema for React JSON Schema Form (RJSF) from natural language prompts.
+    category: ui_generation
+    requires_a2ui: false
+    platform_support: [cli, kilo]
+    write_scopes: [none]
+    status: active
+    version: "6.3.0"
+
+  - name: /smartspec_resolve_themes
+    purpose: Merge multiple theme files into a single resolved theme based on hierarchy (System > Company > User).
+    category: ui_theming_and_design
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [theme]
+    status: active
+    version: "6.3.0"
+
+  - name: /smartspec_generate_component_registry
+    purpose: Automatically scan component library and generate component registry file for JSON-driven UI renderer.
+    category: project_management_and_support
+    requires_a2ui: false
+    platform_support: [cli, kilo]
+    write_scopes: [code]
+    status: active
+    version: "6.3.0"
+
+  # ---------------------------------------------------------------------------
+  # AI Feedback & Optimization (A2UI Phase 6) (1)
+  # ---------------------------------------------------------------------------
+  - name: /smartspec_refine_agent_prompts
+    purpose: Analyze UI analytics data and suggest improvements to AI agent prompts for better A2UI output quality.
+    category: ai_feedback_and_optimization
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [reports, prompts]
+    status: active
+    version: "6.2.0"
+
+  # ---------------------------------------------------------------------------
+  # Testing & Validation (A2UI Phase 6) (1)
+  # ---------------------------------------------------------------------------
+  - name: /smartspec_validate_golden_tests
+    purpose: Validate A2UI JSON output against golden test cases to ensure quality and compliance.
+    category: testing_and_validation
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [reports]
+    status: active
+    version: "6.2.0"

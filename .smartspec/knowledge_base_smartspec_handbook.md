@@ -261,4 +261,143 @@ All workflow files (`.smartspec/workflows/*.md`) MUST include proper YAML frontm
 
 ---
 
+## 12) A2UI Cross-Spec Binding
+
+### 12.1 Overview
+
+A2UI (Agent-to-User Interface) specifications are declarative and self-contained for implementation, but they must interact with other parts of the system. Cross-spec binding is the declarative method for defining these interactions.
+
+### 12.2 Four Types of Cross-Spec Binding
+
+| Binding Type | Purpose | Keywords |
+|:---|:---|:---|
+| **Data Binding** | Connect to backend APIs | `data_bindings`, `endpoint_ref` |
+| **Action Binding** | Connect to business logic services | `logic_bindings`, `service_ref`, `function_ref` |
+| **Component Reference** | Reuse UI components from other specs | `imports`, `component_ref` |
+| **State Binding** | Connect to global application state | `state_bindings`, `state_ref` |
+
+### 12.3 Data Binding Example
+
+**API Spec** (`specs/api/booking-api.json`):
+```json
+{
+  "spec_id": "booking-api",
+  "endpoints": [
+    {
+      "id": "get_available_times",
+      "path": "/api/bookings/available-times",
+      "method": "GET"
+    }
+  ]
+}
+```
+
+**UI Spec** (`specs/ui/booking-form.json`):
+```json
+{
+  "metadata": {
+    "api_spec": "specs/api/booking-api.json"
+  },
+  "components": [
+    {
+      "id": "booking-form",
+      "data_bindings": {
+        "load_times": {
+          "source": "api",
+          "endpoint_ref": "booking-api:get_available_times",
+          "trigger": "date_field.onChange",
+          "target": "time_field.options"
+        }
+      }
+    }
+  ]
+}
+```
+
+### 12.4 Validation Workflow
+
+Before implementation, run validation to verify all cross-spec references:
+
+```bash
+/smartspec_validate_cross_spec_bindings --spec specs/ui/booking-form.json
+```
+
+**Checks performed:**
+- Existence of referenced spec files
+- Availability of referenced resources (endpoints, functions, components)
+- Version compatibility between specs
+- Schema matching for parameters and outputs
+
+### 12.5 Governance Principles
+
+1. **Explicit Dependencies**: All dependencies between specs must be declared
+2. **Spec-as-API**: Every spec is treated as a contract that others can consume
+3. **Declarative Bindings**: Bindings use consistent JSON structure for code generation
+4. **Type Safety**: Generated code includes type checking for cross-spec interactions
+
+**For detailed examples and concepts, see:** `docs/a2ui/A2UI_CROSS_SPEC_BINDING_GUIDE.md`
+
+---
+
+## Section 13: A2UI Catalog Export
+
+### 13.1 Overview
+
+SmartSpec uses a **server-side, centrally-governed component catalog** for stronger governance and simpler developer experience. The `smartspec_export_catalog` workflow allows you to export this catalog to **standard A2UI v0.8 format** for interoperability with other A2UI renderers.
+
+### 13.2 Export Workflow
+
+**Command:**
+```bash
+/smartspec_export_catalog \
+  --input-catalog .spec/ui-catalog.json \
+  --output-file public/web-catalog.json \
+  --catalog-id "https://my-app.com/web-catalog-v1" \
+  --platform web
+```
+
+**What it does:**
+1. Reads SmartSpec UI catalog (`.spec/ui-catalog.json`)
+2. Transforms components to A2UI v0.8 format
+3. Maps SmartSpec properties to A2UI properties
+4. Generates catalog with specified `catalogId`
+5. Outputs standard A2UI catalog JSON
+
+### 13.3 Use Cases
+
+**1. Multi-Platform Deployment**
+- Export web catalog for browser renderer
+- Export Flutter catalog for mobile renderer
+- Maintain single source of truth in SmartSpec
+
+**2. Third-Party Integration**
+- Share catalog with external teams
+- Enable A2UI-compatible tools to consume your components
+- Preserve SmartSpec governance internally
+
+**3. Build Pipeline Integration**
+```bash
+# In CI/CD pipeline
+/smartspec_export_catalog \
+  --input-catalog .spec/ui-catalog.json \
+  --output-file dist/catalog.json \
+  --catalog-id "https://cdn.example.com/catalog-v1"
+```
+
+### 13.4 SmartSpec-Flavored A2UI
+
+SmartSpec implements **SmartSpec-Flavored A2UI**, which means:
+- **Design Time**: Use SmartSpec governance (duplicate prevention, validation)
+- **Build Time**: Export to standard A2UI format
+- **Runtime**: Use A2UI protocol for catalog negotiation
+
+**Benefits:**
+- ✅ Stronger governance at design time
+- ✅ Simpler developer experience
+- ✅ Standard A2UI interoperability at runtime
+
+**For detailed design and concepts, see:** `docs/guides/A2UI_EXPORT_UTILITY_DESIGN.md`
+
+---
+
 # End of Canonical Handbook

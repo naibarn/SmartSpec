@@ -326,6 +326,31 @@ These flags are supported by this workflow:
 
 ---
 
+## smartspec_export_catalog
+
+### Parameters
+
+| Parameter | Status | Description |
+|---|---|---|
+| `--catalog-id` | Optional | Unique catalog identifier (URL) |
+| `--include-metadata` | Optional | Include SmartSpec metadata (optional) |
+| `--input-catalog` | Optional | Source SmartSpec catalog path |
+| `--output-file` | Optional | Destination A2UI catalog path |
+| `--output-format` | Optional | Target format (a2ui-v0.8) |
+| `--platform` | Optional | Platform filter (optional) |
+
+### Usage Examples
+
+**CLI:**
+```bash
+/smartspec_export_catalog \
+  --output-file public/web-catalog.json \
+  --catalog-id "https://my-app.com/web-catalog-v1" \
+  --output-format a2ui-v0.8
+```
+
+---
+
 ## smartspec_feedback_aggregator
 
 **Description:** Aggregate feedback from multiple sources to drive continuous improvement.
@@ -776,6 +801,38 @@ These flags are supported by this workflow:
   --apply \
   --out .spec/reports/observability-configurator \
   --json
+```
+
+---
+
+## smartspec_optimize_ui_catalog
+
+**Description:** Optimize and cache UI component catalog for faster lookup and improved performance
+
+**Version:** 1.0.0
+
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--apply`, `--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
+
+### Usage Examples
+
+**CLI:**
+```bash
+/smartspec_optimize_ui_catalog \
+  --catalog .spec/ui-catalog.json \
+  [--apply] \
+  [--json]
+```
+
+**Kilo Code:**
+```bash
+/smartspec_optimize_ui_catalog.md \
+  --catalog .spec/ui-catalog.json \
+  --platform kilo \
+  [--apply] \
+  [--json]
 ```
 
 ---
@@ -1248,6 +1305,38 @@ These flags are supported by this workflow:
 
 ---
 
+## smartspec_ui_accessibility_audit
+
+**Description:** Automated accessibility audit for A2UI implementations against WCAG 2.1 AA standards
+
+**Version:** 1.0.0
+
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
+
+### Usage Examples
+
+**CLI:**
+```bash
+/smartspec_ui_accessibility_audit \
+  --spec specs/feature/spec-003-profile/ui-spec.json \
+  --implementation src/ui/profile/ \
+  [--json]
+```
+
+**Kilo Code:**
+```bash
+/smartspec_ui_accessibility_audit.md \
+  --spec specs/feature/spec-003-profile/ui-spec.json \
+  --implementation src/ui/profile/ \
+  --platform kilo \
+  [--json]
+```
+
+---
+
 ## smartspec_ui_agent
 
 ### Usage Examples
@@ -1265,6 +1354,38 @@ These flags are supported by this workflow:
   --mode interactive \
   --context specs/feature/spec-002-contact \
   --platform kilo
+```
+
+---
+
+## smartspec_ui_analytics_reporter
+
+**Description:** Track UI component usage, adoption metrics, and quality indicators across the project
+
+**Version:** 1.0.0
+
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
+
+### Usage Examples
+
+**CLI:**
+```bash
+/smartspec_ui_analytics_reporter \
+  --catalog .spec/ui-catalog.json \
+  --implementation src/ui/ \
+  [--json]
+```
+
+**Kilo Code:**
+```bash
+/smartspec_ui_analytics_reporter.md \
+  --catalog .spec/ui-catalog.json \
+  --implementation src/ui/ \
+  --platform kilo \
+  [--json]
 ```
 
 ---
@@ -1305,6 +1426,38 @@ These flags are supported by this workflow:
   [--out <output-root>] \
   [--json] \
   --platform kilo
+```
+
+---
+
+## smartspec_ui_performance_test
+
+**Description:** Performance testing for UI implementations with metrics and benchmarks
+
+**Version:** 1.0.0
+
+### Universal Flags (Supported)
+
+These flags are supported by this workflow:
+`--config`, `--json`, `--lang`, `--out`, `--platform`, `--quiet`
+
+### Usage Examples
+
+**CLI:**
+```bash
+/smartspec_ui_performance_test \
+  --spec specs/feature/spec-003-profile/ui-spec.json \
+  --implementation src/ui/profile/ \
+  [--json]
+```
+
+**Kilo Code:**
+```bash
+/smartspec_ui_performance_test.md \
+  --spec specs/feature/spec-003-profile/ui-spec.json \
+  --implementation src/ui/profile/ \
+  --platform kilo \
+  [--json]
 ```
 
 ---

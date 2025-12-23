@@ -11,6 +11,7 @@ import re
 import json
 import sys
 import argparse
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple, Any, Optional
@@ -22,6 +23,30 @@ VALID_EVIDENCE_TYPES = {'code', 'test', 'ui', 'docs'}
 # Non-compliant types that should be rejected  
 NON_COMPLIANT_TYPES = {'file_exists', 'test_exists', 'command'}
 
+# Verification scopes
+class VerificationScope:
+    OK = "ok"
+    NOT_FOUND = "not_found"
+    INVALID_SCOPE = "invalid_scope"
+    CONTENT_NOT_FOUND = "content_not_found"
+    FILE_TOO_LARGE = "file_too_large"
+    READ_ERROR = "read_error"
+    ERROR = "error"
+
+# Resource limits
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_FILES_TO_SCAN = 10000
+MAX_VERIFICATION_TIME = 300  # 5 minutes
+
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger(__name__)
+
 class EvidenceVerifier:
     def __init__(self, tasks_path: str, project_root: str, output_dir: str):
         self.tasks_path = Path(tasks_path)
@@ -31,7 +56,7 @@ class EvidenceVerifier:
         # Verification results
         self.results = {
             "workflow": "smartspec_verify_tasks_progress_strict",
-            "version": "6.0.3-fixed",
+            "version": "6.0.4-enhanced",
             "run_id": datetime.now().strftime("%Y%m%d_%H%M%S"),
             "inputs": {
                 "tasks_path": str(tasks_path),
@@ -77,22 +102,22 @@ class EvidenceVerifier:
     def _check_file_exists(self, file_path: str) -> Tuple[bool, str]:
         """Check if file exists and is safe to access"""
         if not self._is_safe_path(file_path):
-            return False, "invalid_scope"
+            return False, VerificationScope.INVALID_SCOPE
         
         full_path = self.workspace_root / file_path
         if full_path.exists() and full_path.is_file():
-            return True, "ok"
-        return False, "not_found"
+            return True, VerificationScope.OK
+        return False, VerificationScope.NOT_FOUND
 
     def _check_directory_exists(self, dir_path: str) -> Tuple[bool, str]:
         """Check if directory exists and is safe to access"""
         if not self._is_safe_path(dir_path):
-            return False, "invalid_scope"
+            return False, VerificationScope.INVALID_SCOPE
         
         full_path = self.workspace_root / dir_path
         if full_path.exists() and full_path.is_dir():
-            return True, "ok"
-        return False, "not_found"
+            return True, VerificationScope.OK
+        return False, VerificationScope.NOT_FOUND
 
     def _search_in_file(self, file_path: str, content: str) -> Tuple[bool, str]:
         """Search for specific content in a file"""
@@ -104,8 +129,8 @@ class EvidenceVerifier:
             with open(self.workspace_root / file_path, 'r', encoding='utf-8') as f:
                 file_content = f.read()
                 if content in file_content:
-                    return True, "ok"
-                return False, "content_not_found"
+                    return True, VerificationScope.OK
+                return False, VerificationScope.CONTENT_NOT_FOUND
         except Exception as e:
             return False, f"read_error: {str(e)}"
 

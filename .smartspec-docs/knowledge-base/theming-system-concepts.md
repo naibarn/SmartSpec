@@ -88,7 +88,36 @@ Component variants are a powerful feature that allows you to define reusable sty
 
 When generating a UI specification, you can simply use `variant: "primary"` to apply this style, ensuring consistency and reducing redundancy.
 
-## 4. The Theming Workflow
+## 4. Multi-Level Theming with `/smartspec_resolve_themes`
+
+While a single `theme.json` is powerful, real-world applications often require multiple layers of theming to support white-labeling, company-specific branding, and user personalization. The `/smartspec_resolve_themes` workflow is designed for this exact purpose.
+
+### The Hierarchy
+
+The workflow operates on a clear hierarchy, where themes are merged in a specific order, with later themes overriding earlier ones:
+
+**System Theme (Base) < Company Theme < User Theme (Highest Precedence)**
+
+This allows you to:
+1.  **Define a robust base theme** with system-wide defaults.
+2.  **Apply company-specific branding** (e.g., Acme Corp's primary color is red) that overrides the base.
+3.  **Allow user personalization** (e.g., User 123 prefers dark mode) that overrides both the company and system themes.
+
+### How It Works
+
+The `/smartspec_resolve_themes` workflow performs a **deep merge** on the theme files. This means it recursively merges nested objects, allowing for fine-grained overrides. For example, a user theme can change just the `colors.primary.500` token without needing to redefine the entire `colors` object.
+
+```bash
+# Example of resolving a theme for a specific user
+/smartspec_resolve_themes \
+  --base-theme "src/config/themes/system.theme.json" \
+  --override-themes '["src/config/themes/company-acme.theme.json", "src/config/themes/user-123.theme.json"]' \
+  --output-file ".spec/resolved-theme.json"
+```
+
+This resolved theme then becomes the single source of truth for the UI renderer for that specific user session.
+
+## 5. Core Theming Workflows
 
 SmartSpec provides two key workflows for managing your theme:
 
@@ -105,7 +134,7 @@ This is your primary tool for interacting with the `theme.json` file. It allows 
 
 This workflow automates the process of synchronizing your design system from **Penpot**. It can import tokens directly from a Penpot file or via its API, mapping Penpot's color libraries and text styles to the `theme.json` structure. This creates a seamless bridge between your design tool and your development environment.
 
-## 5. Best Practices
+## 6. Best Practices
 
 - **Start with a Strong Foundation:** Use the `init` action to create a well-structured default theme. It is easier to customize an existing structure than to build one from scratch.
 - **Embrace Semantic Naming:** Use meaningful names for your tokens (e.g., `colors.action.primary` instead of `colors.blue.500`). This makes the system more intuitive and resilient to changes.

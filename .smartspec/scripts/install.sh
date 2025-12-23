@@ -35,6 +35,7 @@ SMARTSPEC_DIR=".smartspec"
 SMARTSPEC_DOCS_DIR=".smartspec-docs"
 WORKFLOWS_DIR="$SMARTSPEC_DIR/workflows"
 WORKFLOW_DOCS_DIR="$SMARTSPEC_DOCS_DIR/workflows"
+WORKFLOW_SCRIPTS="$SMARTSPEC_DIR/scripts"
 
 # Project-local platform directories
 KILOCODE_DIR=".kilocode/workflows"
@@ -134,6 +135,7 @@ fi
 
 SRC_SMARTSPEC="${TMP_DIR}/.smartspec"
 SRC_SMARTSPEC_DOCS="${TMP_DIR}/.smartspec-docs"
+SRC_SMARTSPECSCRIPTS="${TMP_DIR}/.smartspec/scripts"
 
 if [ ! -d "$SRC_SMARTSPEC" ]; then
   log "❌ Source repo does not contain .smartspec/. Please ensure the distribution repo layout is correct."
@@ -153,6 +155,24 @@ if [ -d "$SRC_SMARTSPEC_DOCS" ]; then
 else
   log "ℹ️ No .smartspec-docs/ directory found in repo; skipping docs copy."
 fi
+
+WORKFLOW_SCRIPTS
+
+log "📂 Installing/Updating .smartspec/scripts"
+backup_dir_if_exists "$WORKFLOW_SCRIPTS"
+mkdir -p "$WORKFLOW_SCRIPTS"
+copy_dir "$SRC_SMARTSPECSCRIPTS" "$WORKFLOW_SCRIPTS"
+
+if [ -d "$SRC_SMARTSPECSCRIPTS" ]; then
+  log "📂 Installing/Updating .smartspec/scripts/"
+  backup_dir_if_exists "$WORKFLOW_SCRIPTS"
+  mkdir -p "$WORKFLOW_SCRIPTS"
+  copy_dir "$SRC_SMARTSPECSCRIPTS" "$WORKFLOW_SCRIPTS"
+else
+  log "ℹ️ No .smartspec/scripts/ directory found in repo; skipping scripts copy."
+fi
+
+
 
 ###############################
 # Step 3: Sanity check core files

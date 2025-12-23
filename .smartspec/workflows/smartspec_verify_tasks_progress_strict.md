@@ -1,7 +1,7 @@
 ```md
 ---
 description: "Strict evidence-only verification using parseable evidence hooks (evidence: type key=value...)."
-version: 6.1.0
+version: 6.2.0
 workflow: /smartspec_verify_tasks_progress_strict
 category: verify
 ---
@@ -9,7 +9,7 @@ category: verify
 # smartspec_verify_tasks_progress_strict
 
 > **Canonical path:** `.smartspec/workflows/smartspec_verify_tasks_progress_strict.md`
-> **Version:** 6.1.0
+> **Version:** 6.2.0
 > **Category:** verify
 > **Writes:** reports only (`.spec/reports/**`)
 
@@ -21,7 +21,7 @@ This workflow MUST:
 
 - treat checkboxes as **non-authoritative** (they are not evidence)
 - verify each task via **explicit evidence hooks** (`code|test|ui|docs`)
-- produce auditable reports under `.spec/reports/verify-tasks-progress/**`
+- produce an auditable report under `.spec/reports/verify-tasks-progress/**`
 - never modify `tasks.md` (checkbox updates are handled by `/smartspec_sync_tasks_checkboxes`)
 
 It is **safe-by-default** and performs **reports-only** writes.
@@ -127,19 +127,52 @@ Notes:
 
 - `--report-format <md|json|both>` (default `both`)
 
-No other flags in v6+ (to reduce parameter sprawl).
+No other workflow-specific flags in v6+.
+
+---
+
+## Task parsing rules (MUST)
+
+To reduce false negatives, the verifier MUST support common `tasks.md` formats:
+
+### Supported task item format
+
+- `- [ ] <TASK-ID> <Task title>`
+- `- [x] <TASK-ID> <Task title>`
+
+`<TASK-ID>` MUST be parsed as the **first token** after the checkbox, not restricted to a specific prefix.
+
+### Evidence line locations (MUST)
+
+Evidence hooks may appear in any of these places:
+
+1) as plain lines under the task:
+
+```md
+  evidence: code path=src/foo.ts symbol=Foo
+```
+
+2) as bullets:
+
+```md
+  - evidence: test path=tests/foo.test.ts contains="works"
+```
+
+3) inside table rows:
+
+```md
+| **Evidence:** evidence: code path=src/foo.ts contains="bar" |
+```
+
+The verifier MUST detect `evidence:` anywhere in the task block until the next task item.
 
 ---
 
 ## Evidence hook syntax (MUST)
 
-To reduce false negatives, `tasks.md` evidence hooks MUST follow a consistent, parseable syntax.
-
 ### Canonical format
 
-Each task SHOULD include one or more lines starting with `evidence:`.
-
-General form:
+Each task SHOULD include one or more lines containing `evidence:`.
 
 - `evidence: <type> <key>=<value> <key>=<value> ...`
 
@@ -200,8 +233,6 @@ Examples:
 
 ## Evidence read scope (MUST)
 
-To prevent path traversal and over-broad reads, the verifier MUST enforce:
-
 - evidence `path` MUST be relative and MUST NOT contain `..`
 - resolved realpath MUST remain within allowed workspace roots
 - if config provides explicit allowlist roots for reads, the verifier MUST restrict reads to those roots
@@ -224,55 +255,75 @@ For each task, the workflow MUST produce:
 
 Rules:
 
-- **high**: direct evidence matches hook requirements (path + symbol/contains where provided)
-- **medium**: partial match (e.g., file exists but symbol/contains not found)
-- **low**: only weak hints (e.g., similar filenames) or invalid_scope → must not verify
+- **high**: direct evidence matches hook requirements (path + symbol/contains/heading where provided)
+- **medium**: partial match (e.g., file exists but symbol/contains not found, or no symbol/contains was provided)
+- **low**: invalid_scope, missing file, or unparseable evidence
 
 Verification rule:
 
 - `verified=true` ONLY when confidence is **high**
-- `medium` MAY be treated as verified ONLY if config explicitly allows it for that hook type
-
-### Type-specific matching rules
-
-- `code`: path exists → at least medium; symbol/contains match (when provided) → high
-- `test`: path exists → at least medium; contains match (when provided) → high
-- `docs`: path exists → at least medium; heading/contains match (when provided) → high
-- `ui`: if component/route evidence exists in codebase and states are declared → medium/high depending on matches; otherwise `needs_manual`
+- `medium` MAY be treated as verified ONLY if config explicitly allows it
 
 ---
 
 ## Output
-
-### Report outputs (always)
 
 Write under a run folder:
 
 - `.spec/reports/verify-tasks-progress/<run-id>/report.md`
 - `.spec/reports/verify-tasks-progress/<run-id>/summary.json` (when `--json` or `--report-format=both/json`)
 
-If `--out` is provided:
+### Exit codes
 
-- write under `<out>/<run-id>/...`
+- `0` success (report generated)
+- `1` validation fail (unsafe path, malformed tasks format)
+- `2` config/usage error
 
-### Required content in `report.md`
+### `summary.json` schema (minimum)
 
-The report MUST include:
-
-1) Target `tasks.md` path + resolved `spec-id`
-2) Summary totals:
-   - total tasks
-   - verified done
-   - not verified
-   - needs manual check
-   - missing evidence hooks
-   - invalid evidence scope
-3) Per-task results (ID, title, status, confidence, evidence pointers)
-4) Evidence gaps list + **remediation suggestions** (templates)
-5) Redaction note
-6) Output inventory
-7) Recommended next steps:
-   - if you want to update checkboxes: `/smartspec_sync_tasks_checkboxes <tasks.md> --apply`
+```json
+{
+  "workflow": "smartspec_verify_tasks_progress_strict",
+  "version": "6.2.0",
+  "run_id": "string",
+  "generated_at": "ISO_DATETIME",
+  "inputs": {"tasks_path": "...", "spec_id": "..."},
+  "totals": {
+    "tasks": 0,
+    "verified": 0,
+    "not_verified": 0,
+    "manual": 0,
+    "missing_hooks": 0,
+    "invalid_scope": 0
+  },
+  "results": [
+    {
+      "task_id": "...",
+      "title": "...",
+      "checked": false,
+      "verified": false,
+      "confidence": "low|medium|high",
+      "status": "verified|not_verified|needs_manual|missing_hooks|invalid_scope",
+      "why": "...",
+      "evidence": [
+        {
+          "type": "code|test|ui|docs",
+          "raw": "evidence: ...",
+          "pointer": "...",
+          "matched": false,
+          "scope": "ok|needs_manual|invalid_scope|invalid",
+          "why": "...",
+          "confidence": "low|medium|high",
+          "excerpt": "optional"
+        }
+      ],
+      "suggested_hooks": ["evidence: ..."]
+    }
+  ],
+  "writes": {"reports": ["path"]},
+  "next_steps": [{"cmd": "...", "why": "..."}]
+}
+```
 
 ---
 
@@ -293,3 +344,4 @@ python3 .smartspec/scripts/verify_evidence_strict.py \
 
 # End of workflow doc
 ```
+

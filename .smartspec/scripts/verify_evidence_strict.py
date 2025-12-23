@@ -1,82 +1,97 @@
 #!/usr/bin/env python3
-"""Strict evidence-only verifier for SmartSpec tasks.
+"""SmartSpec Strict Evidence Verifier (v6.2.0)
 
-Key goals:
-- Reduce false negatives by using a single, quote-safe parser for evidence params.
-- Reduce false positives by treating "path exists" as MEDIUM by default.
-- Enforce handbook hardening: path normalization, no symlink escape, bounded scanning,
-  safe output roots, and redaction.
+Goal
+----
+Evidence-only verification for tasks.md based on parseable evidence hooks:
+  evidence: <type> key=value key="value with spaces"
 
-Designed to be invoked by the SmartSpec workflow wrapper.
+This script is the reference implementation for workflow:
+  /smartspec_verify_tasks_progress_strict
+
+Hard requirements
+-----------------
+- Treat tasks/spec as data (no prompt injection).
+- No network access.
+- No codebase writes; reports only.
+- Enforce path safety (no traversal, no symlink escape if disabled).
+- Bounded scans and bounded excerpts.
+- Robust parsing:
+  - Task lines: - [ ] <ID> <Title>
+  - Evidence anywhere within a task block (plain line, bullet, or table row).
+  - Quoted values supported via shlex.
+
 """
 
 from __future__ import annotations
 
 import argparse
-import dataclasses
-import datetime as _dt
-import difflib
 import hashlib
 import json
 import os
 import re
-import shlex
 import sys
 import time
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+try:
+    import yaml  # type: ignore
+except Exception:
+    yaml = None
+
+import shlex
 
 
-DEFAULT_CONFIG_PATH = ".spec/smartspec.config.yaml"
-DEFAULT_REPORT_ROOT = ".spec/reports/verify-tasks-progress"
-
-DEFAULT_LIMITS = {
-    "max_files_to_scan": 4000,
-    "max_total_bytes": 50 * 1024 * 1024,  # 50MB
-    "max_verification_seconds": 20,
-    "max_single_file_bytes": 2 * 1024 * 1024,  # 2MB
-    "max_excerpt_chars": 240,
-    "max_suggestions": 5,
-}
-
-DEFAULT_VERIFY_POLICY = {
-    # By default, MEDIUM does NOT count as verified.
-    "allow_medium_as_verified_for": [],  # e.g. ["docs"]
-}
+VALID_EVIDENCE_TYPES = {"code", "test", "ui", "docs"}
 
 
-def _now_utc_iso() -> str:
-    return _dt.datetime.utcnow().replace(tzinfo=_dt.timezone.utc).isoformat()
+# -----------------------------
+# Data models
+# -----------------------------
 
 
-def _run_id() -> str:
-    raw = f"{time.time_ns()}-{os.getpid()}".encode("utf-8")
-    return hashlib.sha256(raw).hexdigest()[:12]
+@dataclass
+class SafetyConfig:
+    allow_writes_only_under: List[str]
+    deny_writes_under: List[str]
+    allow_reads_only_under: List[str]
+    disallow_symlink_reads: bool
+    max_file_bytes: int
+    max_excerpt_chars: int
+    max_scan_bytes_total: int
 
 
-def _has_control_chars(s: str) -> bool:
-    return any((ord(ch) < 32 and ch not in ("\t", "\n", "\r")) or ord(ch) == 127 for ch in s)
+@dataclass
+class EvidenceHook:
+    raw: str
+    type: str
+    params: Dict[str, str]
 
 
-def _is_relative_safe_path(p: str) -> Tuple[bool, str]:
-    if not p or _has_control_chars(p):
-        return False, "invalid_path"
-    if os.path.isabs(p) or re.match(r"^[a-zA-Z]:\\", p):
-        return False, "absolute_path"
-    parts = Path(p).parts
-    if any(seg == ".." for seg in parts):
-        return False, "path_traversal"
-    return True, "ok"
+@dataclass
+class TaskBlock:
+    task_id: str
+    title: str
+    checked: bool
+    start_line: int
+    evidence_raw_lines: List[str]
 
 
-def _is_binary_bytes(b: bytes) -> bool:
-    return b"\x00" in b
+# -----------------------------
+# Config
+# -----------------------------
 
 
-def _try_load_yaml(path: Path) -> Dict[str, Any]:
+def _load_yaml(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {}
+    if yaml is None:
+        # Minimal safe fallback: treat as empty
+        return {}
     try:
-        import yaml  # type: ignore
-
         with path.open("r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
         return data if isinstance(data, dict) else {}
@@ -84,907 +99,762 @@ def _try_load_yaml(path: Path) -> Dict[str, Any]:
         return {}
 
 
-def _deep_get(d: Dict[str, Any], dotted: str, default: Any) -> Any:
-    cur: Any = d
-    for key in dotted.split("."):
-        if not isinstance(cur, dict) or key not in cur:
-            return default
-        cur = cur[key]
-    return cur
+def load_safety_config(project_root: Path, config_path: Path) -> SafetyConfig:
+    cfg = _load_yaml(config_path)
+    safety = cfg.get("safety", {}) if isinstance(cfg.get("safety", {}), dict) else {}
 
-
-def _as_list(x: Any) -> List[str]:
-    if x is None:
+    def _get_list(key: str) -> List[str]:
+        v = safety.get(key, [])
+        if isinstance(v, list):
+            return [str(x) for x in v]
+        if isinstance(v, str) and v.strip():
+            return [v.strip()]
         return []
-    if isinstance(x, list):
-        return [str(i) for i in x]
-    return [str(x)]
+
+    # Conservative defaults
+    content_limits = safety.get("content_limits", {}) if isinstance(safety.get("content_limits", {}), dict) else {}
+
+    max_file_bytes = int(content_limits.get("max_file_bytes", 2_000_000))  # 2MB
+    max_excerpt_chars = int(content_limits.get("max_excerpt_chars", 400))
+    max_scan_bytes_total = int(content_limits.get("max_scan_bytes_total", 10_000_000))  # 10MB
+
+    disallow_symlink_reads = bool(safety.get("disallow_symlink_reads", True))
+
+    return SafetyConfig(
+        allow_writes_only_under=_get_list("allow_writes_only_under"),
+        deny_writes_under=_get_list("deny_writes_under"),
+        allow_reads_only_under=_get_list("allow_reads_only_under"),
+        disallow_symlink_reads=disallow_symlink_reads,
+        max_file_bytes=max_file_bytes,
+        max_excerpt_chars=max_excerpt_chars,
+        max_scan_bytes_total=max_scan_bytes_total,
+    )
 
 
-def _compile_redactors(patterns: List[str]) -> List[re.Pattern[str]]:
-    out: List[re.Pattern[str]] = []
-    for p in patterns:
-        try:
-            out.append(re.compile(p))
-        except re.error:
-            continue
-    return out
+# -----------------------------
+# Path safety
+# -----------------------------
 
 
-def _redact_text(text: str, redactors: List[re.Pattern[str]]) -> str:
-    out = text
-    for rx in redactors:
-        out = rx.sub("[REDACTED]", out)
-    return out
-
-
-def _ensure_under_allowlist(path: Path, allow_roots: List[Path], deny_roots: List[Path]) -> Tuple[bool, str]:
-    rp = path.resolve()
-
-    for dr in deny_roots:
-        drp = dr.resolve()
-        if str(rp).startswith(str(drp) + os.sep) or rp == drp:
-            return False, "denylist"
-
-    if not allow_roots:
-        return True, "ok"
-
-    for ar in allow_roots:
-        arp = ar.resolve()
-        if str(rp).startswith(str(arp) + os.sep) or rp == arp:
-            return True, "ok"
-
-    return False, "not_under_allowlist"
-
-
-@dataclasses.dataclass
-class EvidenceResult:
-    type: str
-    raw: str
-    matched: bool
-    scope: str
-    why: str
-    pointer: str
-    confidence: str
-    excerpt: Optional[str] = None
-
-
-@dataclasses.dataclass
-class TaskResult:
-    task_id: str
-    title: str
-    checked: bool
-    status: str
-    verified: bool
-    confidence: str
-    why: str
-    evidence: List[EvidenceResult]
-    suggested_hooks: List[str]
-
-
-class StrictVerifier:
-    def __init__(
-        self,
-        project_root: Path,
-        tasks_path: Path,
-        out_root: Path,
-        report_format: str,
-        want_json: bool,
-        quiet: bool,
-        config: Dict[str, Any],
-    ) -> None:
-        self.project_root = project_root.resolve()
-        self.tasks_path = tasks_path
-        self.out_root = out_root
-        self.report_format = report_format
-        self.want_json = want_json
-        self.quiet = quiet
-
-        self.limits = {
-            **DEFAULT_LIMITS,
-            **(_deep_get(config, "safety.content_limits", {}) or {}),
-        }
-
-        self.verify_policy = {
-            **DEFAULT_VERIFY_POLICY,
-            **(_deep_get(config, "verification.policy", {}) or {}),
-        }
-
-        self.allow_reads_only_under = [Path(p) for p in _as_list(_deep_get(config, "safety.allow_reads_only_under", []))]
-        self.disallow_symlink_reads = bool(_deep_get(config, "safety.disallow_symlink_reads", True))
-
-        redaction_patterns = _as_list(_deep_get(config, "safety.redaction", []))
-        self.redactors = _compile_redactors(redaction_patterns)
-
-        self._scan_files = 0
-        self._scan_bytes = 0
-        self._start_time = time.time()
-        self.run_id = _run_id()
-
-    def _budget_ok(self) -> Tuple[bool, str]:
-        if self._scan_files > int(self.limits["max_files_to_scan"]):
-            return False, "max_files"
-        if self._scan_bytes > int(self.limits["max_total_bytes"]):
-            return False, "max_bytes"
-        if (time.time() - self._start_time) > float(self.limits["max_verification_seconds"]):
-            return False, "timeout"
-        return True, "ok"
-
-    def _resolve_repo_path(self, rel: str) -> Tuple[Optional[Path], str]:
-        ok, why = _is_relative_safe_path(rel)
-        if not ok:
-            return None, why
-
-        candidate = self.project_root / rel
-        try:
-            resolved = candidate.resolve(strict=False)
-        except Exception:
-            return None, "resolve_failed"
-
-        # must stay under project root
-        if not (str(resolved).startswith(str(self.project_root) + os.sep) or resolved == self.project_root):
-            return None, "invalid_scope"
-
-        # optional read allowlist
-        if self.allow_reads_only_under:
-            allow_roots = [
-                (self.project_root / p).resolve() if not os.path.isabs(str(p)) else p.resolve() for p in self.allow_reads_only_under
-            ]
-            ok2, why2 = _ensure_under_allowlist(resolved, allow_roots, [])
-            if not ok2:
-                return None, "invalid_scope"
-
-        # symlink safety
-        if self.disallow_symlink_reads:
-            cur = self.project_root
-            for part in Path(rel).parts:
-                cur = cur / part
-                try:
-                    if cur.exists() and cur.is_symlink():
-                        return None, "symlink_refused"
-                except Exception:
-                    return None, "symlink_check_failed"
-
-        return resolved, "ok"
-
-    def parse_evidence_line(self, line: str) -> Tuple[Optional[str], Dict[str, str], str]:
-        raw = line.strip()
-        m = re.search(r"\bevidence:\s*(.+)$", raw)
-        if not m:
-            return None, {}, "not_evidence"
-
-        payload = m.group(1).strip()
-        if not payload:
-            return None, {}, "empty"
-
-        try:
-            tokens = shlex.split(payload)
-        except ValueError:
-            return None, {}, "malformed_quotes"
-
-        if not tokens:
-            return None, {}, "empty"
-
-        ev_type = tokens[0].strip().lower()
-        params: Dict[str, str] = {}
-        for t in tokens[1:]:
-            if "=" not in t:
-                continue
-            k, v = t.split("=", 1)
-            params[k.strip().lower()] = v.strip()
-
-        return ev_type, params, "ok"
-
-    def _read_file_text(self, p: Path) -> Tuple[Optional[str], str]:
-        try:
-            st = p.stat()
-            if st.st_size > int(self.limits["max_single_file_bytes"]):
-                return None, "file_too_large"
-
-            with p.open("rb") as f:
-                b = f.read(int(self.limits["max_single_file_bytes"]) + 1)
-
-            if _is_binary_bytes(b):
-                return None, "binary_file"
-
-            self._scan_bytes += len(b)
-            ok, why = self._budget_ok()
-            if not ok:
-                return None, why
-
-            return b.decode("utf-8", errors="ignore"), "ok"
-        except FileNotFoundError:
-            return None, "not_found"
-        except PermissionError:
-            return None, "permission"
-        except Exception:
-            return None, "read_error"
-
-    def _search_in_path(self, p: Path, needle: str) -> Tuple[bool, str, Optional[str]]:
-        if p.is_dir():
-            for root, _, files in os.walk(p):
-                ok, why = self._budget_ok()
-                if not ok:
-                    return False, why, None
-                for fn in files:
-                    ok, why = self._budget_ok()
-                    if not ok:
-                        return False, why, None
-                    fp = Path(root) / fn
-                    self._scan_files += 1
-                    text, reason = self._read_file_text(fp)
-                    if text is None:
-                        continue
-                    idx = text.find(needle)
-                    if idx >= 0:
-                        start = max(0, idx - int(self.limits["max_excerpt_chars"]) // 2)
-                        end = min(len(text), start + int(self.limits["max_excerpt_chars"]))
-                        excerpt = text[start:end]
-                        return True, "ok", excerpt
-            return False, "not_found", None
-
-        text, reason = self._read_file_text(p)
-        if text is None:
-            return False, reason, None
-        idx = text.find(needle)
-        if idx >= 0:
-            start = max(0, idx - int(self.limits["max_excerpt_chars"]) // 2)
-            end = min(len(text), start + int(self.limits["max_excerpt_chars"]))
-            excerpt = text[start:end]
-            return True, "ok", excerpt
-        return False, "not_found", None
-
-    def _suggest_paths(self, missing_rel_path: str) -> List[str]:
-        ok, _ = self._budget_ok()
-        if not ok:
-            return []
-
-        basename = Path(missing_rel_path).name
-        if not basename:
-            return []
-
-        candidates: List[str] = []
-        max_sugs = int(self.limits["max_suggestions"])
-
-        for root, _, files in os.walk(self.project_root):
-            ok, _ = self._budget_ok()
-            if not ok:
-                break
-            for fn in files:
-                ok, _ = self._budget_ok()
-                if not ok:
-                    break
-                self._scan_files += 1
-                if fn == basename:
-                    try:
-                        rel = str(Path(root).joinpath(fn).resolve().relative_to(self.project_root))
-                    except Exception:
-                        continue
-                    candidates.append(rel)
-                    if len(candidates) >= max_sugs * 6:
-                        break
-            if len(candidates) >= max_sugs * 6:
-                break
-
-        ranked = sorted(
-            candidates,
-            key=lambda c: difflib.SequenceMatcher(a=missing_rel_path, b=c).ratio(),
-            reverse=True,
-        )
-
-        out: List[str] = []
-        for c in ranked:
-            if c not in out:
-                out.append(c)
-            if len(out) >= max_sugs:
-                break
-        return out
-
-    def _confidence_to_verified(self, conf: str, ev_type: str) -> bool:
-        if conf == "high":
-            return True
-        if conf == "medium" and ev_type in set(self.verify_policy.get("allow_medium_as_verified_for", []) or []):
-            return True
+def _is_subpath(child: Path, parent: Path) -> bool:
+    try:
+        child.resolve().relative_to(parent.resolve())
+        return True
+    except Exception:
         return False
 
-    def verify_evidence(self, ev_type: str, params: Dict[str, str], raw_line: str) -> Tuple[EvidenceResult, List[str]]:
-        suggested_hooks: List[str] = []
 
-        ev_type = (ev_type or "").strip().lower()
-        if ev_type not in ("code", "test", "docs", "ui"):
-            return (
-                EvidenceResult(
-                    type=ev_type or "unknown",
-                    raw=raw_line,
-                    matched=False,
-                    scope="invalid",
-                    why=f"Unsupported evidence type: {ev_type}",
-                    pointer="",
-                    confidence="low",
-                ),
-                [],
-            )
+def _safe_relpath(p: str) -> str:
+    p = (p or "").strip().strip('"\'')
+    p = p.replace("\\", "/")
+    p = re.sub(r"/{2,}", "/", p)
+    return p
 
-        if ev_type in ("code", "test", "docs"):
-            rel_path = params.get("path", "")
-            if not rel_path:
-                return (
-                    EvidenceResult(
-                        type=ev_type,
-                        raw=raw_line,
-                        matched=False,
-                        scope="invalid",
-                        why="Missing required param: path",
-                        pointer="",
-                        confidence="low",
-                    ),
-                    [],
-                )
 
-            resolved, scope = self._resolve_repo_path(rel_path)
-            if resolved is None:
-                for s in self._suggest_paths(rel_path):
-                    sug = f"evidence: {ev_type} path={s}"
-                    if "contains" in params:
-                        sug += f" contains=\"{params['contains']}\""
-                    if "symbol" in params:
-                        sug += f" symbol={params['symbol']}"
-                    if "heading" in params:
-                        sug += f" heading=\"{params['heading']}\""
-                    suggested_hooks.append(sug)
+def validate_tasks_path(tasks_path: Path, project_root: Path) -> None:
+    if not tasks_path.exists():
+        raise ValueError(f"tasks.md not found: {tasks_path}")
 
-                return (
-                    EvidenceResult(
-                        type=ev_type,
-                        raw=raw_line,
-                        matched=False,
-                        scope=scope,
-                        why=f"Invalid/unsafe path scope: {rel_path}",
-                        pointer=rel_path,
-                        confidence="low",
-                    ),
-                    suggested_hooks,
-                )
+    # Must be under specs/**
+    specs_root = project_root / "specs"
+    if not _is_subpath(tasks_path, specs_root):
+        raise ValueError("tasks.md must be under specs/**")
 
-            if not resolved.exists():
-                for s in self._suggest_paths(rel_path):
-                    sug = f"evidence: {ev_type} path={s}"
-                    if "contains" in params:
-                        sug += f" contains=\"{params['contains']}\""
-                    if "symbol" in params:
-                        sug += f" symbol={params['symbol']}"
-                    if "heading" in params:
-                        sug += f" heading=\"{params['heading']}\""
-                    suggested_hooks.append(sug)
+    # No symlink escape
+    if tasks_path.is_symlink():
+        raise ValueError("tasks.md must not be a symlink")
 
-                return (
-                    EvidenceResult(
-                        type=ev_type,
-                        raw=raw_line,
-                        matched=False,
-                        scope="ok",
-                        why=f"Path not found: {rel_path}",
-                        pointer=str(resolved.relative_to(self.project_root)),
-                        confidence="low",
-                    ),
-                    suggested_hooks,
-                )
 
-            contains = params.get("contains")
-            symbol = params.get("symbol")
-            heading = params.get("heading")
+def validate_out_dir(out_dir: Path, project_root: Path, safety: SafetyConfig) -> None:
+    # Normalize to project root
+    out_dir = out_dir if out_dir.is_absolute() else (project_root / out_dir)
 
-            search_token: Optional[str] = None
-            if ev_type == "code":
-                search_token = symbol or contains
-            elif ev_type == "test":
-                search_token = contains
-            elif ev_type == "docs":
-                search_token = heading or contains
+    # Must be inside project root
+    if not _is_subpath(out_dir, project_root):
+        raise ValueError("out dir must be under project root")
 
-            # path exists => MEDIUM at least
-            if search_token:
-                found, reason, excerpt = self._search_in_path(resolved, search_token)
-                if found:
-                    ex = _redact_text(excerpt or "", self.redactors) if excerpt else None
-                    return (
-                        EvidenceResult(
-                            type=ev_type,
-                            raw=raw_line,
-                            matched=True,
-                            scope="ok",
-                            why=f"Matched content: {search_token}",
-                            pointer=str(resolved.relative_to(self.project_root)),
-                            confidence="high",
-                            excerpt=ex,
-                        ),
-                        [],
-                    )
+    # Denylist
+    for deny in safety.deny_writes_under:
+        deny_path = project_root / deny
+        if _is_subpath(out_dir, deny_path):
+            raise ValueError(f"out dir under denylist: {deny}")
 
-                return (
-                    EvidenceResult(
-                        type=ev_type,
-                        raw=raw_line,
-                        matched=False,
-                        scope=reason if reason != "ok" else "ok",
-                        why=f"Path exists but content not found: {search_token}",
-                        pointer=str(resolved.relative_to(self.project_root)),
-                        confidence="medium",
-                    ),
-                    [],
-                )
-
-            return (
-                EvidenceResult(
-                    type=ev_type,
-                    raw=raw_line,
-                    matched=True,
-                    scope="ok",
-                    why="Path exists (no contains/symbol/heading provided)",
-                    pointer=str(resolved.relative_to(self.project_root)),
-                    confidence="medium",
-                ),
-                [],
-            )
-
-        # UI evidence
-        screen = params.get("screen", "")
-        route = params.get("route")
-        component = params.get("component")
-        states = params.get("states")
-
-        if not screen:
-            return (
-                EvidenceResult(
-                    type="ui",
-                    raw=raw_line,
-                    matched=False,
-                    scope="invalid",
-                    why="Missing required param: screen",
-                    pointer="ui",
-                    confidence="low",
-                ),
-                [],
-            )
-
-        def repo_search_literal(token: str) -> Tuple[bool, Optional[str]]:
-            ok, _ = self._budget_ok()
-            if not ok:
-                return False, None
-            for root, _, files in os.walk(self.project_root):
-                ok, _ = self._budget_ok()
-                if not ok:
-                    return False, None
-                for fn in files:
-                    ok, _ = self._budget_ok()
-                    if not ok:
-                        return False, None
-                    fp = Path(root) / fn
-                    self._scan_files += 1
-                    text, _ = self._read_file_text(fp)
-                    if text is None:
-                        continue
-                    if token in text:
-                        try:
-                            rel = str(fp.resolve().relative_to(self.project_root))
-                        except Exception:
-                            rel = str(fp)
-                        return True, rel
-            return False, None
-
-        static_hits: List[str] = []
-        route_ptr = None
-        comp_ptr = None
-
-        route_ok = True
-        if route:
-            route_ok, route_ptr = repo_search_literal(route)
-            if route_ok and route_ptr:
-                static_hits.append(f"route:{route} in {route_ptr}")
-
-        component_ok = False
-        if component:
-            component_ok, comp_ptr = repo_search_literal(component)
-            if component_ok and comp_ptr:
-                static_hits.append(f"component:{component} in {comp_ptr}")
-
-        if component_ok and route_ok and states:
-            pointer = comp_ptr or route_ptr or f"screen:{screen}"
-            return (
-                EvidenceResult(
-                    type="ui",
-                    raw=raw_line,
-                    matched=True,
-                    scope="ok",
-                    why=f"Static UI signals found ({', '.join(static_hits)})",
-                    pointer=pointer,
-                    confidence="high",
-                ),
-                [],
-            )
-
-        pointer = comp_ptr or route_ptr or f"screen:{screen}"
-        return (
-            EvidenceResult(
-                type="ui",
-                raw=raw_line,
-                matched=False,
-                scope="needs_manual",
-                why="UI evidence requires manual verification (insufficient static signals)",
-                pointer=pointer,
-                confidence="low",
-            ),
-            [],
-        )
-
-    def parse_tasks(self) -> Tuple[str, List[Dict[str, Any]]]:
-        text, reason = self._read_file_text(self.tasks_path)
-        if text is None:
-            raise RuntimeError(f"Failed to read tasks: {reason}")
-
-        lines = text.splitlines()
-
-        spec_id = "unknown"
-        for ln in lines[:40]:
-            m = re.search(r"\b(spec[-_ ]?id)\s*[:=]\s*([a-z0-9_\-]{3,64})\b", ln, re.IGNORECASE)
-            if m:
-                spec_id = m.group(2)
+    # Allowlist (if present)
+    if safety.allow_writes_only_under:
+        ok = False
+        for allow in safety.allow_writes_only_under:
+            allow_path = project_root / allow
+            if _is_subpath(out_dir, allow_path):
+                ok = True
                 break
-        if spec_id == "unknown":
-            spec_id = self.tasks_path.parent.name
+        if not ok:
+            raise ValueError("out dir not under allowlist")
 
-        tasks: List[Dict[str, Any]] = []
-        current: Optional[Dict[str, Any]] = None
 
-        # More permissive: any non-space token as ID
-        task_re = re.compile(r"^\s*-\s*\[([ xX])\]\s+(\S+)\s+(.+?)\s*$")
+def validate_read_path(rel_path: str, project_root: Path, safety: SafetyConfig) -> Tuple[Path, str]:
+    rel = _safe_relpath(rel_path)
+    if not rel:
+        raise ValueError("empty path")
+    if rel.startswith("/") or re.match(r"^[a-zA-Z]:/", rel):
+        raise ValueError("absolute paths are not allowed")
+    if ".." in Path(rel).parts:
+        raise ValueError("path traversal is not allowed")
 
-        for i, ln in enumerate(lines, start=1):
-            m = task_re.match(ln)
-            if m:
-                checked = (m.group(1).lower() == "x")
-                task_id = m.group(2)
-                title = m.group(3)
-                current = {
-                    "line": i,
-                    "task_id": task_id,
-                    "title": title,
-                    "checked": checked,
-                    "evidence_lines": [],
-                }
-                tasks.append(current)
-                continue
+    p = (project_root / rel).resolve()
+    if not _is_subpath(p, project_root):
+        raise ValueError("resolved path escapes project root")
 
-            if current and re.search(r"\bevidence:\s*", ln):
-                current["evidence_lines"].append(ln.strip())
+    if safety.allow_reads_only_under:
+        ok = False
+        for allow in safety.allow_reads_only_under:
+            allow_path = (project_root / allow).resolve()
+            if _is_subpath(p, allow_path):
+                ok = True
+                break
+        if not ok:
+            raise ValueError("read path not under allowlist")
 
-        return spec_id, tasks
+    # symlink check: refuse if any component is a symlink
+    if safety.disallow_symlink_reads:
+        cur = project_root.resolve()
+        for part in Path(rel).parts:
+            cur = (cur / part)
+            if cur.exists() and cur.is_symlink():
+                raise ValueError("symlink reads are disallowed")
 
-    def _render_report_md(self, summary: Dict[str, Any]) -> str:
-        t = summary["totals"]
-        lines: List[str] = []
+    return p, rel
 
-        lines.append("# Verify Tasks Progress (Strict)\n\n")
-        lines.append(f"- workflow: `{summary['workflow']}`\n")
-        lines.append(f"- version: `{summary['version']}`\n")
-        lines.append(f"- run_id: `{summary['run_id']}`\n")
-        lines.append(f"- generated_at: `{summary['generated_at']}`\n")
-        lines.append(f"- tasks: `{summary['inputs']['tasks_path']}`\n")
-        lines.append(f"- spec_id: `{summary['inputs']['spec_id']}`\n")
-        lines.append("\n---\n\n")
 
-        lines.append("## Summary\n")
-        lines.append(f"- total tasks: **{t['tasks']}**\n")
-        lines.append(f"- verified done: **{t['verified']}**\n")
-        lines.append(f"- not verified: **{t['not_verified']}**\n")
-        lines.append(f"- needs manual check: **{t['manual']}**\n")
-        lines.append(f"- missing evidence hooks: **{t['missing_hooks']}**\n")
-        lines.append(f"- invalid evidence scope: **{t['invalid_scope']}**\n")
-        lines.append("\n---\n\n")
+# -----------------------------
+# Parsing helpers
+# -----------------------------
 
-        lines.append("## Per-task results\n")
-        for r in summary["results"]:
-            lines.append(f"### {r['task_id']} — {r['title']}\n")
-            lines.append(f"- status: `{r['status']}`\n")
-            lines.append(f"- confidence: `{r['confidence']}`\n")
-            lines.append(f"- verified: `{r['verified']}`\n")
-            if r.get("why"):
-                lines.append(f"- why: {r['why']}\n")
 
-            if r.get("evidence"):
-                lines.append("\n**Evidence**\n")
-                for e in r["evidence"]:
-                    lines.append(
-                        f"- `{e['type']}` `{e['confidence']}` matched={e['matched']} scope=`{e['scope']}`\n"
-                        f"  - pointer: `{e.get('pointer','')}`\n"
-                        f"  - why: {e.get('why','')}\n"
-                    )
-                    if e.get("excerpt"):
-                        lines.append(f"  - excerpt: `{e['excerpt']}`\n")
+_TASK_LINE_RE = re.compile(r"^\s*-\s*\[([ xX])\]\s+(\S+)(?:\s+(.*?))?\s*$")
 
-            if r.get("suggested_hooks"):
-                lines.append("\n**Suggested hooks**\n")
-                for s in r["suggested_hooks"]:
-                    lines.append(f"- {s}\n")
 
-            lines.append("\n---\n")
+def parse_spec_id(tasks_text: str, tasks_path: Path) -> str:
+    # 1) Table header: | spec-id | ... | then next row contains value
+    lines = tasks_text.splitlines()
+    for i, line in enumerate(lines[:-1]):
+        if "|" in line and "spec-id" in line.lower():
+            # try next row
+            nxt = lines[i + 1]
+            cells = [c.strip() for c in nxt.strip().strip("|").split("|")]
+            if cells and cells[0] and cells[0] != "<spec-id>":
+                return cells[0].strip("` ")
 
-        lines.append("\n## Remediation tips\n")
-        lines.append("- If many tasks are `missing_hooks` or have placeholders, run: `/smartspec_migrate_evidence_hooks <tasks.md>`\n")
-        lines.append("- Only update checkboxes via: `/smartspec_sync_tasks_checkboxes <tasks.md> --apply`\n")
-        lines.append("\n---\n\n")
+    # 2) YAML-ish: spec_id: xxx
+    m = re.search(r"^\s*spec[_-]id\s*:\s*([a-zA-Z0-9_\-]+)\s*$", tasks_text, re.MULTILINE)
+    if m:
+        return m.group(1)
 
-        lines.append("## Redaction note\n")
-        lines.append("Report content may be redacted based on config safety.redaction patterns.\n")
+    # 3) from folder name specs/<cat>/<spec-id>/tasks.md
+    try:
+        return tasks_path.parent.name
+    except Exception:
+        return "unknown"
 
-        return "".join(lines)
 
-    def run(self) -> Tuple[Dict[str, Any], str]:
-        spec_id, parsed = self.parse_tasks()
+def extract_task_blocks(tasks_text: str) -> List[TaskBlock]:
+    lines = tasks_text.splitlines()
+    blocks: List[TaskBlock] = []
 
-        totals = {
-            "tasks": 0,
-            "verified": 0,
-            "not_verified": 0,
-            "manual": 0,
-            "missing_hooks": 0,
-            "invalid_scope": 0,
-        }
+    current: Optional[TaskBlock] = None
 
-        results: List[TaskResult] = []
+    def _flush() -> None:
+        nonlocal current
+        if current:
+            blocks.append(current)
+        current = None
 
-        for t in parsed:
-            totals["tasks"] += 1
+    for idx, line in enumerate(lines, 1):
+        m = _TASK_LINE_RE.match(line)
+        if m:
+            _flush()
+            checked = m.group(1).lower() == "x"
+            task_id = m.group(2)
+            title = (m.group(3) or "").strip()
+            current = TaskBlock(task_id=task_id, title=title, checked=checked, start_line=idx, evidence_raw_lines=[])
+            continue
 
-            if not t["evidence_lines"]:
-                totals["missing_hooks"] += 1
-                results.append(
-                    TaskResult(
-                        task_id=t["task_id"],
-                        title=t["title"],
-                        checked=bool(t["checked"]),
-                        status="missing_hooks",
-                        verified=False,
-                        confidence="low",
-                        why="No evidence hooks found",
-                        evidence=[],
-                        suggested_hooks=[],
-                    )
-                )
-                continue
+        if current is None:
+            continue
 
-            ev_results: List[EvidenceResult] = []
-            suggested: List[str] = []
+        # Evidence can appear anywhere in the task block: bullet, plain, or in tables.
+        if "evidence:" in line.lower():
+            # May contain multiple evidence occurrences; capture each starting at evidence:
+            low = line.lower()
+            start = 0
+            while True:
+                pos = low.find("evidence:", start)
+                if pos < 0:
+                    break
+                frag = line[pos:].strip()
+                # Strip common table trailing pipes
+                frag = frag.rstrip().rstrip("|").rstrip()
+                current.evidence_raw_lines.append(frag)
+                start = pos + len("evidence:")
 
-            for ln in t["evidence_lines"]:
-                ev_type, params, parse_status = self.parse_evidence_line(ln)
-                if parse_status != "ok" or ev_type is None:
-                    ev_results.append(
-                        EvidenceResult(
-                            type="unknown",
-                            raw=ln,
-                            matched=False,
-                            scope="invalid",
-                            why=f"Evidence parse failed: {parse_status}",
-                            pointer="",
-                            confidence="low",
-                        )
-                    )
+    _flush()
+    return blocks
+
+
+def parse_evidence_hook(raw: str) -> EvidenceHook:
+    raw = raw.strip()
+    if not raw.lower().startswith("evidence:"):
+        raise ValueError("not an evidence hook")
+
+    payload = raw[len("evidence:") :].strip()
+    if not payload:
+        raise ValueError("empty evidence")
+
+    # Use shlex to support quotes.
+    tokens = shlex.split(payload)
+    if not tokens:
+        raise ValueError("cannot parse")
+
+    ev_type = tokens[0]
+    if ev_type not in VALID_EVIDENCE_TYPES:
+        raise ValueError(f"invalid evidence type: {ev_type}")
+
+    params: Dict[str, str] = {}
+    for t in tokens[1:]:
+        if "=" not in t:
+            continue
+        k, v = t.split("=", 1)
+        params[k.strip()] = v.strip()
+
+    return EvidenceHook(raw=raw, type=ev_type, params=params)
+
+
+# -----------------------------
+# Matching
+# -----------------------------
+
+
+def _read_text_bounded(path: Path, max_bytes: int) -> str:
+    # Read as bytes then decode, bounded.
+    data = path.read_bytes()[:max_bytes]
+    try:
+        return data.decode("utf-8", errors="ignore")
+    except Exception:
+        return ""
+
+
+def match_code_evidence(hook: EvidenceHook, project_root: Path, safety: SafetyConfig, scan_budget: Dict[str, int]) -> Dict[str, Any]:
+    params = hook.params
+    if "path" not in params:
+        return {"matched": False, "scope": "invalid", "why": "missing path"}
+
+    rel_path = params["path"]
+    try:
+        abs_path, rel_norm = validate_read_path(rel_path, project_root, safety)
+    except Exception as e:
+        return {"matched": False, "scope": "invalid_scope", "why": str(e)}
+
+    if not abs_path.exists():
+        return {"matched": False, "scope": "ok", "why": f"file not found: {rel_norm}"}
+
+    if abs_path.is_dir():
+        # Bounded directory scan for contains/symbol.
+        contains = params.get("contains")
+        symbol = params.get("symbol")
+        if not (contains or symbol):
+            return {"matched": False, "scope": "ok", "why": "path is a directory; provide contains= or symbol= for strict match", "confidence": "low"}
+
+        matched = False
+        excerpt = None
+        scanned_bytes = 0
+
+        for root, _, files in os.walk(abs_path):
+            for fn in files:
+                p = Path(root) / fn
+                # Budget
+                if scan_budget["bytes"] <= 0:
+                    return {"matched": False, "scope": "ok", "why": "scan budget exceeded", "confidence": "low"}
+
+                try:
+                    if p.stat().st_size > safety.max_file_bytes:
+                        continue
+                    text = _read_text_bounded(p, min(safety.max_file_bytes, scan_budget["bytes"]))
+                    scanned_bytes += min(len(text.encode("utf-8", errors="ignore")), scan_budget["bytes"])
+                    scan_budget["bytes"] -= scanned_bytes
+                except Exception:
                     continue
 
-                evr, sugs = self.verify_evidence(ev_type, params, ln)
-                ev_results.append(evr)
-                suggested.extend(sugs)
+                if symbol and re.search(rf"\b{re.escape(symbol)}\b", text):
+                    matched = True
+                    excerpt = f"symbol '{symbol}' found in {p.relative_to(project_root).as_posix()}"
+                    break
+                if contains and contains in text:
+                    matched = True
+                    excerpt = f"contains match in {p.relative_to(project_root).as_posix()}"
+                    break
 
-            conf = "low"
-            if any(e.confidence == "high" for e in ev_results):
-                conf = "high"
-            elif any(e.confidence == "medium" for e in ev_results):
-                conf = "medium"
+            if matched:
+                break
 
-            verified = any(self._confidence_to_verified(e.confidence, e.type) for e in ev_results)
+        if matched:
+            return {"matched": True, "scope": "ok", "why": "matched", "confidence": "high", "excerpt": excerpt}
+        return {"matched": False, "scope": "ok", "why": "no match in directory scan", "confidence": "low"}
 
-            if any(e.scope == "invalid_scope" for e in ev_results):
-                totals["invalid_scope"] += 1
-                status = "invalid_scope"
-            elif any(e.scope == "needs_manual" for e in ev_results):
-                totals["manual"] += 1
-                status = "needs_manual"
-            elif verified:
-                totals["verified"] += 1
-                status = "verified"
-            else:
-                totals["not_verified"] += 1
-                status = "not_verified"
+    # File
+    try:
+        size = abs_path.stat().st_size
+    except Exception:
+        size = 0
 
-            why = ""
-            if status == "verified":
-                why = "At least one evidence hook matched strongly (high confidence)"
-            elif status == "needs_manual":
-                why = "UI evidence requires manual confirmation"
-            elif status == "invalid_scope":
-                why = "One or more evidence hooks point outside allowed scope"
-            else:
-                strong = [e for e in ev_results if e.confidence in ("high", "medium")]
-                why = "; ".join(f"{e.type}:{e.confidence}" for e in strong[:3]) if strong else "No evidence matched"
+    if size > safety.max_file_bytes:
+        return {"matched": False, "scope": "ok", "why": f"file too large (> {safety.max_file_bytes} bytes)", "confidence": "low"}
 
-            red_evidence: List[EvidenceResult] = []
-            for e in ev_results:
-                red_evidence.append(
-                    EvidenceResult(
-                        type=e.type,
-                        raw=_redact_text(e.raw, self.redactors),
-                        matched=e.matched,
-                        scope=e.scope,
-                        why=_redact_text(e.why, self.redactors),
-                        pointer=_redact_text(e.pointer, self.redactors),
-                        confidence=e.confidence,
-                        excerpt=_redact_text(e.excerpt, self.redactors) if e.excerpt else None,
-                    )
-                )
+    # If no contains/symbol, we treat as medium (exists only)
+    symbol = params.get("symbol")
+    contains = params.get("contains")
+    if not symbol and not contains:
+        return {"matched": True, "scope": "ok", "why": "file exists (no symbol/contains provided)", "confidence": "medium"}
 
-            results.append(
-                TaskResult(
-                    task_id=t["task_id"],
-                    title=t["title"],
-                    checked=bool(t["checked"]),
-                    status=status,
-                    verified=verified,
-                    confidence=conf,
-                    why=_redact_text(why, self.redactors),
-                    evidence=red_evidence,
-                    suggested_hooks=[_redact_text(s, self.redactors) for s in suggested[: int(self.limits["max_suggestions"]) ]],
-                )
-            )
+    # Bounded read
+    if scan_budget["bytes"] <= 0:
+        return {"matched": False, "scope": "ok", "why": "scan budget exceeded", "confidence": "low"}
 
-        summary = {
-            "workflow": "smartspec_verify_tasks_progress_strict",
-            "version": "6.1.0",
-            "run_id": self.run_id,
-            "generated_at": _now_utc_iso(),
-            "inputs": {
-                "tasks_path": str(self.tasks_path),
-                "spec_id": spec_id,
-            },
-            "totals": totals,
-            "results": [
-                {
-                    "task_id": r.task_id,
-                    "title": r.title,
-                    "checked": r.checked,
-                    "verified": r.verified,
-                    "confidence": r.confidence,
-                    "status": r.status,
-                    "why": r.why,
-                    "evidence": [dataclasses.asdict(e) for e in r.evidence],
-                    "suggested_hooks": r.suggested_hooks,
-                }
-                for r in results
-            ],
-            "writes": {"reports": []},
-            "next_steps": [
-                {
-                    "cmd": f"/smartspec_sync_tasks_checkboxes {self.tasks_path}",
-                    "why": "Update checkboxes based on latest verification report (governed; requires --apply).",
-                }
-            ],
-        }
+    text = _read_text_bounded(abs_path, min(safety.max_file_bytes, scan_budget["bytes"]))
+    scan_budget["bytes"] -= min(len(text.encode("utf-8", errors="ignore")), scan_budget["bytes"])  # conservative
 
-        report_md = self._render_report_md(summary)
-        return summary, report_md
+    if symbol and re.search(rf"\b{re.escape(symbol)}\b", text):
+        return {"matched": True, "scope": "ok", "why": f"symbol '{symbol}' found", "confidence": "high"}
+    if contains and contains in text:
+        return {"matched": True, "scope": "ok", "why": "contains found", "confidence": "high"}
 
-    def write_outputs(self, summary: Dict[str, Any], report_md: str) -> List[Path]:
-        run_dir = self.out_root / self.run_id
-        run_dir.mkdir(parents=True, exist_ok=True)
-
-        written: List[Path] = []
-
-        report_path = run_dir / "report.md"
-        report_path.write_text(report_md, encoding="utf-8")
-        written.append(report_path)
-
-        if self.want_json or self.report_format in ("json", "both"):
-            summary_path = run_dir / "summary.json"
-            summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-            written.append(summary_path)
-
-        return written
+    return {"matched": False, "scope": "ok", "why": "file exists but symbol/contains not found", "confidence": "medium"}
 
 
-def main(argv: List[str]) -> int:
-    ap = argparse.ArgumentParser(description="SmartSpec strict evidence-only tasks verifier")
+def match_test_evidence(hook: EvidenceHook, project_root: Path, safety: SafetyConfig, scan_budget: Dict[str, int]) -> Dict[str, Any]:
+    # Same semantics as code, but default path existence is medium.
+    params = hook.params
+    if "path" not in params:
+        return {"matched": False, "scope": "invalid", "why": "missing path"}
 
-    ap.add_argument("tasks_md", help="Path to tasks.md")
+    rel_path = params["path"]
+    try:
+        abs_path, rel_norm = validate_read_path(rel_path, project_root, safety)
+    except Exception as e:
+        return {"matched": False, "scope": "invalid_scope", "why": str(e)}
 
-    # Universal flags
-    ap.add_argument("--config", default=DEFAULT_CONFIG_PATH)
-    ap.add_argument("--lang", choices=["th", "en"], default="en")
-    ap.add_argument("--platform", default="cli")
-    ap.add_argument("--out", default=DEFAULT_REPORT_ROOT)
-    ap.add_argument("--json", action="store_true")
-    ap.add_argument("--quiet", action="store_true")
-
-    # Workflow-specific
-    ap.add_argument("--report-format", choices=["md", "json", "both"], default="both")
-
-    # Internal
-    ap.add_argument("--project-root", default=".")
-
-    args = ap.parse_args(argv)
-
-    tasks_path = Path(args.tasks_md)
-    project_root = Path(args.project_root)
-
-    config_path = Path(args.config)
-    config = _try_load_yaml(config_path) if config_path.exists() else {}
+    if not abs_path.exists() or abs_path.is_dir():
+        return {"matched": False, "scope": "ok", "why": f"test file not found: {rel_norm}", "confidence": "low"}
 
     try:
-        tasks_real = tasks_path.resolve(strict=True)
+        size = abs_path.stat().st_size
     except Exception:
-        print("ERROR: tasks.md not found or unreadable", file=sys.stderr)
-        return 1
+        size = 0
+
+    if size > safety.max_file_bytes:
+        return {"matched": False, "scope": "ok", "why": f"file too large (> {safety.max_file_bytes} bytes)", "confidence": "low"}
+
+    contains = params.get("contains")
+    if not contains:
+        return {"matched": True, "scope": "ok", "why": "file exists (no contains provided)", "confidence": "medium"}
+
+    if scan_budget["bytes"] <= 0:
+        return {"matched": False, "scope": "ok", "why": "scan budget exceeded", "confidence": "low"}
+
+    text = _read_text_bounded(abs_path, min(safety.max_file_bytes, scan_budget["bytes"]))
+    scan_budget["bytes"] -= min(len(text.encode("utf-8", errors="ignore")), scan_budget["bytes"])
+
+    if contains in text:
+        return {"matched": True, "scope": "ok", "why": "contains found", "confidence": "high"}
+
+    return {"matched": False, "scope": "ok", "why": "file exists but contains not found", "confidence": "medium"}
+
+
+def match_docs_evidence(hook: EvidenceHook, project_root: Path, safety: SafetyConfig, scan_budget: Dict[str, int]) -> Dict[str, Any]:
+    params = hook.params
+    if "path" not in params:
+        return {"matched": False, "scope": "invalid", "why": "missing path"}
+
+    rel_path = params["path"]
+    try:
+        abs_path, rel_norm = validate_read_path(rel_path, project_root, safety)
+    except Exception as e:
+        return {"matched": False, "scope": "invalid_scope", "why": str(e)}
+
+    if not abs_path.exists() or abs_path.is_dir():
+        return {"matched": False, "scope": "ok", "why": f"docs file not found: {rel_norm}", "confidence": "low"}
 
     try:
-        pr = project_root.resolve(strict=True)
+        size = abs_path.stat().st_size
     except Exception:
-        print("ERROR: project root not found or unreadable", file=sys.stderr)
-        return 2
+        size = 0
 
-    if not (str(tasks_real).startswith(str(pr) + os.sep) or tasks_real == pr):
-        print("ERROR: tasks.md must be within project-root", file=sys.stderr)
-        return 1
+    if size > safety.max_file_bytes:
+        return {"matched": False, "scope": "ok", "why": f"file too large (> {safety.max_file_bytes} bytes)", "confidence": "low"}
 
-    rel_to_root = Path(".")
+    heading = params.get("heading")
+    contains = params.get("contains")
+
+    if not heading and not contains:
+        return {"matched": True, "scope": "ok", "why": "file exists (no heading/contains provided)", "confidence": "medium"}
+
+    if scan_budget["bytes"] <= 0:
+        return {"matched": False, "scope": "ok", "why": "scan budget exceeded", "confidence": "low"}
+
+    text = _read_text_bounded(abs_path, min(safety.max_file_bytes, scan_budget["bytes"]))
+    scan_budget["bytes"] -= min(len(text.encode("utf-8", errors="ignore")), scan_budget["bytes"])
+
+    if heading:
+        # naive heading match: markdown heading line contains heading text
+        pat = re.compile(rf"^\s*#+\s+.*{re.escape(heading)}.*$", re.IGNORECASE | re.MULTILINE)
+        if pat.search(text):
+            return {"matched": True, "scope": "ok", "why": "heading found", "confidence": "high"}
+
+    if contains and contains in text:
+        return {"matched": True, "scope": "ok", "why": "contains found", "confidence": "high"}
+
+    return {"matched": False, "scope": "ok", "why": "file exists but heading/contains not found", "confidence": "medium"}
+
+
+def match_ui_evidence(hook: EvidenceHook, project_root: Path, safety: SafetyConfig, scan_budget: Dict[str, int]) -> Dict[str, Any]:
+    # UI evidence is generally manual unless component can be found in code.
+    params = hook.params
+    screen = params.get("screen")
+    component = params.get("component")
+
+    if not screen:
+        return {"matched": False, "scope": "invalid", "why": "missing screen"}
+
+    if not component:
+        return {"matched": False, "scope": "needs_manual", "why": "UI evidence requires manual validation (no component provided)", "confidence": "low"}
+
+    # Bounded repo scan for component symbol. Prefer shallow scan to avoid big repos.
+    # Only scan common UI roots if present.
+    candidate_roots = [
+        project_root / "apps",
+        project_root / "packages",
+        project_root / "src",
+    ]
+
+    def _iter_files() -> Iterable[Path]:
+        for root in candidate_roots:
+            if not root.exists() or not root.is_dir():
+                continue
+            for r, dirs, files in os.walk(root):
+                # prune heavy dirs
+                dirs[:] = [d for d in dirs if d not in {"node_modules", "dist", "build", ".next", "coverage"}]
+                for fn in files:
+                    if fn.endswith((".tsx", ".ts", ".jsx", ".js")):
+                        yield Path(r) / fn
+
+    sym_pat = re.compile(rf"\b{re.escape(component)}\b")
+
+    for p in _iter_files():
+        if scan_budget["bytes"] <= 0:
+            return {"matched": False, "scope": "needs_manual", "why": "scan budget exceeded", "confidence": "low"}
+        try:
+            if p.stat().st_size > safety.max_file_bytes:
+                continue
+            text = _read_text_bounded(p, min(safety.max_file_bytes, scan_budget["bytes"]))
+            scan_budget["bytes"] -= min(len(text.encode("utf-8", errors="ignore")), scan_budget["bytes"])
+        except Exception:
+            continue
+
+        if sym_pat.search(text):
+            rel = p.relative_to(project_root).as_posix()
+            return {"matched": True, "scope": "ok", "why": f"component symbol '{component}' found in {rel}", "confidence": "medium"}
+
+    return {"matched": False, "scope": "needs_manual", "why": f"component '{component}' not found in bounded scan", "confidence": "low"}
+
+
+# -----------------------------
+# Suggestions
+# -----------------------------
+
+
+def suggest_hooks(task: TaskBlock) -> List[str]:
+    # Minimal, conservative suggestions.
+    # (Real improvements should be done in tasks.md via generator or migration workflow.)
+    base = task.task_id
+    if "ui" in task.title.lower():
+        return [f"evidence: ui screen={base} states=loading,error,success"]
+    return [
+        f"evidence: code path=<repo/rel/file> contains=\"{base}\"",
+        f"evidence: test path=<repo/rel/test-file> contains=\"{base}\"",
+    ]
+
+
+# -----------------------------
+# Reporting
+# -----------------------------
+
+
+def _run_id(tasks_path: Path) -> str:
+    h = hashlib.sha256(str(tasks_path).encode("utf-8")).hexdigest()[:8]
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return f"verify_{ts}_{h}"
+
+
+def write_report_md(out_dir: Path, results: Dict[str, Any]) -> None:
+    lines: List[str] = []
+    lines.append(f"# SmartSpec Strict Verify Report\n")
+    lines.append(f"- **Workflow:** {results['workflow']}\n")
+    lines.append(f"- **Version:** {results['version']}\n")
+    lines.append(f"- **Generated:** {results['generated_at']}\n")
+    lines.append(f"- **Run ID:** {results['run_id']}\n")
+    lines.append(f"- **Tasks:** `{results['inputs']['tasks_path']}`\n")
+    lines.append(f"- **Spec ID:** `{results['inputs']['spec_id']}`\n\n")
+
+    t = results["totals"]
+    lines.append("## Summary\n\n")
+    lines.append("| Metric | Count |\n|---|---:|\n")
+    lines.append(f"| Total Tasks | {t['tasks']} |\n")
+    lines.append(f"| Verified Done | {t['verified']} |\n")
+    lines.append(f"| Not Verified | {t['not_verified']} |\n")
+    lines.append(f"| Needs Manual | {t['manual']} |\n")
+    lines.append(f"| Missing Hooks | {t['missing_hooks']} |\n")
+    lines.append(f"| Invalid Scope | {t['invalid_scope']} |\n\n")
+
+    def _section(title: str, items: List[Dict[str, Any]]) -> None:
+        if not items:
+            return
+        lines.append(f"## {title}\n\n")
+        for it in items:
+            lines.append(f"### {it['task_id']} — {it['title']}\n\n")
+            lines.append(f"- Checked: `{it['checked']}`\n")
+            lines.append(f"- Status: `{it['status']}`\n")
+            lines.append(f"- Confidence: `{it['confidence']}`\n")
+            lines.append(f"- Why: {it['why']}\n")
+            if it.get("evidence"):
+                lines.append("- Evidence:\n")
+                for ev in it["evidence"]:
+                    lines.append(f"  - `{ev['raw']}` → matched={ev['matched']} scope={ev['scope']} confidence={ev['confidence']}\n")
+                    if ev.get("why"):
+                        lines.append(f"    - why: {ev['why']}\n")
+                    if ev.get("excerpt"):
+                        lines.append(f"    - excerpt: {ev['excerpt']}\n")
+            if it.get("suggested_hooks"):
+                lines.append("- Suggested hooks:\n")
+                for h in it["suggested_hooks"]:
+                    lines.append(f"  - `{h}`\n")
+            lines.append("\n")
+
+    res = results["results"]
+    _section("✅ Verified", [x for x in res if x["status"] == "verified"])
+    _section("❌ Not Verified", [x for x in res if x["status"] == "not_verified"])
+    _section("👁️ Needs Manual", [x for x in res if x["status"] == "needs_manual"])
+    _section("⚠️ Missing Hooks", [x for x in res if x["status"] == "missing_hooks"])
+    _section("⛔ Invalid Scope", [x for x in res if x["status"] == "invalid_scope"])
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "report.md").write_text("".join(lines), encoding="utf-8")
+
+
+# -----------------------------
+# Main
+# -----------------------------
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="SmartSpec strict evidence-only verifier")
+    ap.add_argument("tasks", help="Path to tasks.md (must be under specs/**)")
+    ap.add_argument("--project-root", default=".", help="Project root (default: .)")
+    ap.add_argument("--config", default=".spec/smartspec.config.yaml", help="Config path")
+    ap.add_argument("--out", default=".spec/reports/verify-tasks-progress", help="Output root (reports)")
+    ap.add_argument("--report-format", default="both", choices=["md", "json", "both"], help="Report format")
+    ap.add_argument("--json", action="store_true", help="Emit summary.json")
+    ap.add_argument("--quiet", action="store_true", help="Reduce logs")
+
+    args = ap.parse_args()
+
+    project_root = Path(args.project_root).resolve()
+    tasks_path = Path(args.tasks).resolve()
+    config_path = (project_root / args.config).resolve() if not Path(args.config).is_absolute() else Path(args.config).resolve()
+
+    safety = load_safety_config(project_root, config_path)
+
     try:
-        rel_to_root = tasks_real.relative_to(pr)
-    except Exception:
-        pass
-
-    if "specs" not in rel_to_root.parts:
-        print("ERROR: tasks.md must resolve under specs/**", file=sys.stderr)
+        validate_tasks_path(tasks_path, project_root)
+    except Exception as e:
+        print(f"ERROR: {e}", file=sys.stderr)
         return 1
 
     out_root = Path(args.out)
-    out_root_abs = (pr / out_root).resolve() if not os.path.isabs(str(out_root)) else out_root.resolve()
-
-    allow_writes = [Path(p) for p in _as_list(_deep_get(config, "safety.allow_writes_only_under", []))]
-    deny_writes = [Path(p) for p in _as_list(_deep_get(config, "safety.deny_writes_under", []))]
-
-    allow_roots_abs = [(pr / p).resolve() if not os.path.isabs(str(p)) else p.resolve() for p in allow_writes]
-    deny_roots_abs = [(pr / p).resolve() if not os.path.isabs(str(p)) else p.resolve() for p in deny_writes]
-
-    ok_out, why_out = _ensure_under_allowlist(out_root_abs, allow_roots_abs, deny_roots_abs)
-    if not ok_out:
-        print(f"ERROR: unsafe --out (reason={why_out}): {out_root_abs}", file=sys.stderr)
-        return 1
-
-    verifier = StrictVerifier(
-        project_root=pr,
-        tasks_path=tasks_real,
-        out_root=out_root_abs,
-        report_format=args.report_format,
-        want_json=bool(args.json),
-        quiet=bool(args.quiet),
-        config=config,
-    )
+    out_root_abs = (project_root / out_root).resolve() if not out_root.is_absolute() else out_root.resolve()
 
     try:
-        summary, report_md = verifier.run()
-        written = verifier.write_outputs(summary, report_md)
-        summary["writes"]["reports"] = [str(p) for p in written]
-
-        if not args.quiet:
-            print(f"Wrote report: {written[0]}")
-            if len(written) > 1:
-                print(f"Wrote summary: {written[1]}")
-
-        return 0
-
+        validate_out_dir(out_root_abs, project_root, safety)
     except Exception as e:
-        if not args.quiet:
-            print(f"ERROR: {e}", file=sys.stderr)
-        return 2
+        print(f"ERROR: {e}", file=sys.stderr)
+        return 1
+
+    tasks_text = tasks_path.read_text(encoding="utf-8", errors="ignore")
+    spec_id = parse_spec_id(tasks_text, tasks_path)
+
+    blocks = extract_task_blocks(tasks_text)
+
+    scan_budget = {"bytes": safety.max_scan_bytes_total}
+
+    results: List[Dict[str, Any]] = []
+    totals = {"tasks": 0, "verified": 0, "not_verified": 0, "manual": 0, "missing_hooks": 0, "invalid_scope": 0}
+
+    allow_medium_verified = False
+    # Optional config override: safety.verify.allow_medium
+    cfg = _load_yaml(config_path)
+    try:
+        allow_medium_verified = bool(cfg.get("safety", {}).get("verify", {}).get("allow_medium_verified", False))
+    except Exception:
+        allow_medium_verified = False
+
+    for tb in blocks:
+        totals["tasks"] += 1
+
+        task_res: Dict[str, Any] = {
+            "task_id": tb.task_id,
+            "title": tb.title,
+            "checked": tb.checked,
+            "verified": False,
+            "confidence": "low",
+            "status": "not_verified",
+            "why": "",
+            "evidence": [],
+            "suggested_hooks": [],
+        }
+
+        if not tb.evidence_raw_lines:
+            task_res["status"] = "missing_hooks"
+            task_res["why"] = "no evidence hooks found in task block"
+            task_res["suggested_hooks"] = suggest_hooks(tb)
+            totals["missing_hooks"] += 1
+            results.append(task_res)
+            continue
+
+        matched_any = False
+        any_invalid_scope = False
+        any_needs_manual = False
+        best_conf = "low"
+
+        def _conf_rank(c: str) -> int:
+            return {"low": 0, "medium": 1, "high": 2}.get(c, 0)
+
+        for raw_ev in tb.evidence_raw_lines:
+            ev_item: Dict[str, Any] = {
+                "raw": raw_ev,
+                "type": "",
+                "pointer": "",
+                "matched": False,
+                "scope": "invalid",
+                "why": "",
+                "confidence": "low",
+            }
+
+            try:
+                hook = parse_evidence_hook(raw_ev)
+                ev_item["type"] = hook.type
+            except Exception as e:
+                ev_item["scope"] = "invalid"
+                ev_item["why"] = str(e)
+                task_res["evidence"].append(ev_item)
+                continue
+
+            # pointer
+            if hook.type in {"code", "test", "docs"}:
+                ev_item["pointer"] = hook.params.get("path", "")
+            else:
+                ev_item["pointer"] = hook.params.get("screen", "")
+
+            if hook.type == "code":
+                m = match_code_evidence(hook, project_root, safety, scan_budget)
+            elif hook.type == "test":
+                m = match_test_evidence(hook, project_root, safety, scan_budget)
+            elif hook.type == "docs":
+                m = match_docs_evidence(hook, project_root, safety, scan_budget)
+            else:
+                m = match_ui_evidence(hook, project_root, safety, scan_budget)
+
+            ev_item.update({k: v for k, v in m.items() if k in {"matched", "scope", "why", "confidence", "excerpt"}})
+
+            if ev_item.get("scope") == "invalid_scope":
+                any_invalid_scope = True
+            if ev_item.get("scope") == "needs_manual":
+                any_needs_manual = True
+
+            if ev_item.get("matched"):
+                matched_any = True
+
+            if _conf_rank(ev_item.get("confidence", "low")) > _conf_rank(best_conf):
+                best_conf = ev_item.get("confidence", "low")
+
+            task_res["evidence"].append(ev_item)
+
+        task_res["confidence"] = best_conf
+
+        if any_invalid_scope:
+            task_res["status"] = "invalid_scope"
+            task_res["why"] = "one or more evidence hooks point outside allowed scope"
+            totals["invalid_scope"] += 1
+            results.append(task_res)
+            continue
+
+        if best_conf == "high" and matched_any:
+            task_res["verified"] = True
+            task_res["status"] = "verified"
+            task_res["why"] = "at least one evidence hook matched with high confidence"
+            totals["verified"] += 1
+            results.append(task_res)
+            continue
+
+        if allow_medium_verified and best_conf == "medium" and matched_any:
+            task_res["verified"] = True
+            task_res["status"] = "verified"
+            task_res["why"] = "verified by medium confidence (config override)"
+            totals["verified"] += 1
+            results.append(task_res)
+            continue
+
+        if any_needs_manual and not matched_any:
+            task_res["status"] = "needs_manual"
+            task_res["why"] = "UI evidence could not be verified statically"
+            totals["manual"] += 1
+            results.append(task_res)
+            continue
+
+        task_res["status"] = "not_verified"
+        task_res["why"] = "no evidence hook satisfied with high confidence"
+        task_res["suggested_hooks"] = suggest_hooks(tb)
+        totals["not_verified"] += 1
+        results.append(task_res)
+
+    run_id = _run_id(tasks_path)
+    run_dir = out_root_abs / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    summary: Dict[str, Any] = {
+        "workflow": "smartspec_verify_tasks_progress_strict",
+        "version": "6.2.0",
+        "run_id": run_id,
+        "generated_at": datetime.now().isoformat(),
+        "inputs": {"tasks_path": str(tasks_path), "spec_id": spec_id},
+        "totals": totals,
+        "results": results,
+        "writes": {"reports": [str(run_dir / "report.md"), str(run_dir / "summary.json")]},
+        "next_steps": [
+            {
+                "cmd": f"/smartspec_sync_tasks_checkboxes {tasks_path} --apply",
+                "why": "Sync checkboxes after reviewing the verification report",
+            }
+        ],
+    }
+
+    if args.report_format in {"md", "both"}:
+        write_report_md(run_dir, summary)
+
+    if args.json or args.report_format in {"json", "both"}:
+        (run_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    if not args.quiet:
+        print(f"Wrote reports to: {run_dir}")
+
+    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    raise SystemExit(main())

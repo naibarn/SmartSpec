@@ -1,89 +1,91 @@
+```md
 ---
 workflow_id: smartspec_migrate_evidence_hooks
-version: "6.3.0"
+version: "6.4.1"
 status: active
 category: a2ui
 platform_support:
   - cli
   - kilo
-requires_apply: true
+requires_apply: false
 ---
 
 # /smartspec_migrate_evidence_hooks
 
 ## 1. Description
 
-**Migrates descriptive evidence in a `tasks.md` file to standardized evidence hooks.**
+Migrates descriptive evidence in a `tasks.md` file to standardized evidence hooks.
 
-This workflow addresses a critical gap in legacy `tasks.md` files where the "Evidence" section contains natural language descriptions instead of the standardized `evidence: type key=value` format. It uses AI to parse the descriptive text and the task description, then intelligently converts it into a structured evidence hook.
+This workflow addresses a critical gap in legacy `tasks.md` files where the evidence section contains natural language descriptions instead of the standardized `evidence: type key=value` format.
 
-This is a crucial step for enabling automated verification with workflows like `/smartspec_verify_tasks_progress_strict`.
+**Primary target:** compatibility with `/smartspec_verify_tasks_progress_strict`.
+
+---
 
 ## 2. Why It's Important
 
--   **Enables Automation:** Standardized hooks are machine-readable, allowing for automated verification of task completion.
--   **Improves Accuracy:** Eliminates the ambiguity of natural language, leading to more reliable progress tracking.
--   **Reduces Manual Effort:** Automates the tedious process of manually converting hundreds of evidence descriptions.
--   **Maintains Consistency:** Enforces a single, consistent format for evidence across all `tasks.md` files.
+- **Enables Automation:** Standardized hooks are machine-readable, allowing automated verification.
+- **Improves Accuracy:** Reduces ambiguity of natural language; reduces false negatives.
+- **Reduces Manual Effort:** Automates conversion of many tasks.
+- **Maintains Consistency:** Enforces a single consistent evidence format.
+
+---
 
 ## 3. How It Works
 
 The workflow operates in two modes: **preview** and **apply**.
 
-1.  **Parsing:** It reads the target `tasks.md` file and identifies all tasks.
-2.  **Identification:** For each task, it checks if the "Evidence" section contains free-form text instead of a standardized hook.
-3.  **AI-Powered Conversion:** If descriptive evidence is found, it sends the following to an AI model:
-    -   The task description
-    -   The descriptive evidence text
-    -   A prompt asking it to generate the most appropriate `evidence:` hook.
-4.  **Suggestion Generation:** The AI returns a suggested evidence hook. The workflow supports common types like `file_exists`, `file_contains`, `api_route`, `db_schema`, `gh_commit`, etc.
-5.  **Preview Mode (Default):**
-    -   It generates a diff-like output showing the proposed changes for each task.
-    -   It does **not** modify the original file.
-    -   This allows the user to review the changes before applying them.
-6.  **Apply Mode (`--apply`):**
-    -   It directly modifies the `tasks.md` file, replacing the descriptive text with the generated evidence hooks.
-    -   It is highly recommended to run in preview mode first.
+1) **Parsing:** Reads the target `tasks.md` and identifies tasks.
+2) **Identification:** Finds evidence that is free-form text or legacy evidence that is not strict-verifier compatible.
+3) **AI-Powered Conversion:** Converts descriptive evidence + task text into one or more standardized hooks.
+4) **Suggestion Generation:** Emits **strict-verifier-compatible evidence lines** by default.
+5) **Preview Mode (Default):** Shows a diff-like output; does **not** modify the original file.
+6) **Apply Mode (`--apply`):** Modifies `tasks.md` by replacing descriptive evidence with standardized hooks.
 
-## 4. Parameters
+---
+
+## 4. Evidence Compatibility Policy (MUST)
+
+To prevent “implement แล้ว แต่ verify ไม่เจอ”, the migrated hooks MUST default to strict verifier types:
+
+- `code`
+- `test`
+- `docs`
+- `ui`
+
+### Mapping legacy concepts to strict types
+
+If the AI would otherwise return evidence like `file_exists`, `api_route`, `db_schema`, etc., it MUST map them to strict-verifier hooks:
+
+- `file_exists path=docs/openapi.yaml` → `evidence: docs path=docs/openapi.yaml`
+- `api_route path=src/routes/auth.ts route=/auth/register` → `evidence: code path=src/routes/auth.ts contains="/auth/register"`
+- `db_schema path=prisma/schema.prisma model=User` → `evidence: code path=prisma/schema.prisma contains="model User"`
+- `file_contains path=README.md content=...` → `evidence: docs path=README.md contains="..."`
+
+**Rule:** never emit placeholders like `path=???` or `COMMAND_NOT_SUPPORTED`.
+
+---
+
+## 5. Parameters
 
 | Parameter | Type | Description | Required |
 | :--- | :--- | :--- | :--- |
-| `--tasks-file` | `string` | The path to the `tasks.md` file to be migrated. | Yes |
-| `--apply` | `boolean` | If `true`, applies the changes directly to the file. Defaults to `false` (preview mode). | No |
-| `--model` | `string` | The AI model to use for conversion (e.g., `gpt-4.1-mini`). Defaults to `gpt-4.1-mini`. | No |
+| `--tasks-file` | `string` | Path to the `tasks.md` file to migrate. | Yes |
+| `--apply` | `boolean` | If true, applies changes directly to the file. Defaults to false (preview). | No |
+| `--model` | `string` | AI model for conversion (e.g., `gpt-4.1-mini`). Defaults to `gpt-4.1-mini`. | No |
 
-## 5. Example Usage
+---
+
+## 6. Example Usage
 
 ### Preview Changes
-
-This command will analyze the file and show what changes it *would* make without modifying the file.
 
 ```bash
 /smartspec_migrate_evidence_hooks \
   --tasks-file "specs/core/spec-core-001-authentication/tasks.md"
 ```
 
-**Example Output (Preview):**
-
-```diff
---- a/specs/core/spec-core-001-authentication/tasks.md
-+++ b/specs/core/spec-core-001-authentication/tasks.md
-@@ -150,7 +150,7 @@
- | TSK-AUTH-020 | Create OpenAPI Specification | The full OpenAPI 3.0 specification for all authentication endpoints. |
--| **Evidence:** The openapi.yaml file should be present in the /docs directory. |
-+| **Evidence:** evidence: file_exists path=docs/openapi.yaml |
- --------------------------------------------------------------------------------
- | TSK-AUTH-021 | Implement User Registration Endpoint | The main /auth/register endpoint should be implemented. |
--| **Evidence:** Check the main router file for the /auth/register route definition. |
-+| **Evidence:** evidence: file_contains path=src/routes/auth.ts content=/auth/register |
- --------------------------------------------------------------------------------
-
-```
-
 ### Apply Changes
-
-This command will directly modify the `tasks.md` file after a 5-second countdown.
 
 ```bash
 /smartspec_migrate_evidence_hooks \
@@ -91,12 +93,28 @@ This command will directly modify the `tasks.md` file after a 5-second countdown
   --apply
 ```
 
-## 6. Manual
+---
 
-For more detailed information, please refer to the full manual:
-- [English Manual](/.smartspec-docs/workflows/migrate_evidence_hooks.md)
-- [Thai Manual](/.smartspec-docs/workflows/migrate_evidence_hooks_th.md)
+## 7. Output expectations
 
-## 7. Implementation
+### Preview
+
+- Prints a diff-like summary.
+- Writes preview artifacts only under `.spec/reports/migrate-evidence-hooks/<run-id>/**`.
+
+### Apply
+
+- Updates the governed `tasks.md` file.
+- Must be atomic (temp + rename).
+
+---
+
+## 8. Implementation
 
 Implemented in: `.smartspec/scripts/migrate_evidence_hooks.py`
+
+---
+
+# End of workflow doc
+```
+

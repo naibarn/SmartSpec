@@ -1,809 +1,326 @@
 #!/usr/bin/env python3
-"""SmartSpec Migrate Evidence Hooks (Enhanced - Kilo/Antigravity Compatible)
+"""SmartSpec Evidence Hook Migration (v6.4.1)
 
-Purpose
--------
-Convert legacy/descriptive evidence and non-compliant evidence types in a tasks.md
-into verifier-friendly, parseable evidence hooks.
+This script upgrades legacy/descriptive evidence into strict-verifier-compatible hooks.
 
-Key improvements in this version
--------------------------------
-1) Evidence line parsing is more tolerant:
-   - Accepts both "- evidence: ..." and "evidence: ..." (dash optional)
-   - Accepts "- **Evidence:** ..." legacy bullet format
-   - Task ID no longer requires "TSK-" prefix (uses first token after checkbox)
+Primary target compatibility:
+  - /smartspec_verify_tasks_progress_strict
+  - evidence types must be one of: code|test|docs|ui
 
-2) Safer non-compliant conversions:
-   - Only converts `command` evidence when we can map it to a real, existing file.
-   - If conversion cannot be done safely, we DO NOT modify that line (prevents
-     generating misleading hooks that might cause false positives).
+Design goals
+------------
+- Preview-first (default): show what would change without modifying tasks.md
+- Apply mode (--apply): rewrite tasks.md in-place (atomic) to standardized evidence lines
+- Preserve formatting where possible (indent, bullets, tables)
+- Avoid false evidence: only auto-convert when we can extract a plausible repo-relative path
 
-3) Apply step preserves the original list marker style:
-   - Keeps indentation and whether the original evidence line had a leading "- "
-
-Notes
------
-- This tool is for migrating tasks.md formatting/evidence strings. It does NOT run
-  tests/commands (strict verifier should be evidence-only).
-- Use preview mode first (default). Use --apply to modify the file.
+NOTE
+----
+The official workflow may use an AI model for higher-fidelity conversion.
+This script implements safe heuristics so you always get deterministic migrations.
 
 """
 
 from __future__ import annotations
 
 import argparse
+import difflib
+import json
 import os
 import re
 import shutil
 import sys
-import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
-
-try:
-    import shlex
-except Exception:  # pragma: no cover
-    shlex = None
+from typing import Dict, List, Optional, Tuple
 
 
-NON_COMPLIANT_TYPES: Set[str] = {"file_exists", "test_exists", "command"}
+VALID_TYPES = {"code", "test", "docs", "ui"}
 
 
-def _now_stamp() -> str:
-    return datetime.now().strftime("%Y%m%d_%H%M%S")
+_TASK_RE = re.compile(r"^\s*-\s*\[[ xX]\]\s+(\S+)(?:\s+.*)?$")
 
+# Detect evidence blocks and legacy patterns
+_EVIDENCE_INLINE_RE = re.compile(r"(?i)\bevidence\s*:\s*(.+)$")
+_LEGACY_TYPES = {
+    "file_exists",
+    "file_contains",
+    "test_exists",
+    "command",
+    "api_route",
+    "db_schema",
+    "gh_commit",
+}
 
-def _norm_rel_path(p: str) -> str:
-    """Normalize a likely-relative path to POSIX style (for markdown hooks)."""
-    p = (p or "").strip().strip('"\'')
-    p = p.replace("\\", "/")
-    # collapse duplicate slashes
-    p = re.sub(r"/+$", "", p)
-    p = re.sub(r"/{2,}", "/", p)
-    return p
+# Path-ish tokens often present in descriptive evidence
+_PATH_TOKEN_RE = re.compile(
+    r"(?P<path>(?:[a-zA-Z0-9_\-]+/)*[a-zA-Z0-9_\-]+\.(?:ts|tsx|js|jsx|py|go|rs|java|kt|cs|rb|php|md|yaml|yml|json|toml|sql|prisma))"
+)
 
-
-class ProjectContext:
-    """Scans and indexes project files for evidence validation/correction."""
-
-    def __init__(self, project_root: Path):
-        self.project_root = project_root
-        self.all_files: Set[str] = set()  # POSIX relpaths
-        self.symbol_index: Dict[str, List[str]] = {}
-        self.package_index: Dict[str, List[str]] = {}
-        self._scan_project()
-
-    def _scan_project(self) -> None:
-        print("🔍 Scanning project files.")
-
-        ignore_dirs = {
-            ".git",
-            "node_modules",
-            ".next",
-            "dist",
-            "build",
-            "out",
-            "coverage",
-            "__pycache__",
-            ".venv",
-            "venv",
-            ".spec/reports",
-            ".smartspec/cache",
-            ".smartspec/logs",
-        }
-
-        file_count = 0
-        for root, dirs, files in os.walk(self.project_root):
-            # Remove ignored directories from search
-            rel_root = Path(root).resolve()
-            try:
-                rel = rel_root.relative_to(self.project_root.resolve()).as_posix()
-            except Exception:
-                rel = ""
-
-            # Filter dirs
-            filtered = []
-            for d in dirs:
-                cand = (Path(rel) / d).as_posix() if rel else d
-                if cand in ignore_dirs or d in ignore_dirs:
-                    continue
-                filtered.append(d)
-            dirs[:] = filtered
-
-            for file in files:
-                file_path = Path(root) / file
-                try:
-                    rel_path = file_path.relative_to(self.project_root).as_posix()
-                except Exception:
-                    continue
-
-                self.all_files.add(rel_path)
-                file_count += 1
-
-                # Index selected source files for symbols/packages
-                if file.endswith((".ts", ".tsx", ".js", ".jsx", ".py")):
-                    self._index_file(file_path, rel_path)
-
-        print(f"✅ Indexed {file_count} files")
-        print(f"✅ Found {len(self.symbol_index)} unique symbols")
-        print(f"✅ Found {len(self.package_index)} package references")
-
-    def _index_file(self, file_path: Path, rel_path: str) -> None:
-        try:
-            content = file_path.read_text(encoding="utf-8", errors="ignore")
-
-            # TS/JS exports
-            for match in re.finditer(
-                r"(?:export\s+)?(?:async\s+)?(?:function|class|const|let|var)\s+(\w+)",
-                content,
-            ):
-                sym = match.group(1)
-                self.symbol_index.setdefault(sym, []).append(rel_path)
-
-            # Python defs/classes
-            for match in re.finditer(r"(?:def|class)\s+(\w+)", content):
-                sym = match.group(1)
-                self.symbol_index.setdefault(sym, []).append(rel_path)
-
-            # Package imports (small, useful subset)
-            packages = [
-                "bcrypt",
-                "jsonwebtoken",
-                "jose",
-                "redis",
-                "ioredis",
-                "bull",
-                "bullmq",
-                "winston",
-                "pino",
-                "express",
-                "fastify",
-                "koa",
-            ]
-            for pkg in packages:
-                # JS/TS imports
-                if re.search(rf"from\s+['\"]{re.escape(pkg)}['\"]", content) or re.search(
-                    rf"require\(['\"]{re.escape(pkg)}['\"]\)",
-                    content,
-                ):
-                    self.package_index.setdefault(pkg, []).append(rel_path)
-                # Python imports
-                if re.search(rf"(?:import|from)\s+{re.escape(pkg)}\b", content):
-                    self.package_index.setdefault(pkg, []).append(rel_path)
-        except Exception:
-            return
-
-    def _prefer_root_level(self, candidates: List[str]) -> Optional[str]:
-        if not candidates:
-            return None
-        # Prefer root-level files (no slash), then shortest path
-        root_level = [c for c in candidates if "/" not in c]
-        if root_level:
-            return sorted(root_level, key=len)[0]
-        return sorted(candidates, key=len)[0]
-
-    def find_file(self, partial_path: str) -> Optional[str]:
-        """Find a file by path or basename; returns normalized relpath if found."""
-        partial_path = _norm_rel_path(partial_path)
-        if not partial_path:
-            return None
-
-        # Exact match
-        if partial_path in self.all_files:
-            return partial_path
-
-        # Try with common extensions (if user provided no ext)
-        base = partial_path
-        if Path(base).suffix == "":
-            for ext in [
-                ".ts",
-                ".tsx",
-                ".js",
-                ".jsx",
-                ".py",
-                ".json",
-                ".yaml",
-                ".yml",
-                ".md",
-                ".toml",
-                ".ini",
-            ]:
-                cand = f"{base}{ext}"
-                if cand in self.all_files:
-                    return cand
-
-        # Basename match
-        basename = Path(partial_path).name
-        basename_matches = [f for f in self.all_files if Path(f).name == basename]
-        chosen = self._prefer_root_level(basename_matches)
-        if chosen:
-            return chosen
-
-        # Suffix match (endswith)
-        suffix_matches = [f for f in self.all_files if f.endswith(partial_path)]
-        chosen = self._prefer_root_level(suffix_matches)
-        if chosen:
-            return chosen
-
-        return None
-
-    def find_any(self, basenames: List[str]) -> Optional[str]:
-        """Find first existing file among candidate basenames."""
-        for name in basenames:
-            hit = self.find_file(name)
-            if hit:
-                return hit
-        return None
-
-    def find_symbol_file(self, symbol: str) -> Optional[str]:
-        symbol = (symbol or "").strip()
-        if not symbol:
-            return None
-        if symbol in self.symbol_index and self.symbol_index[symbol]:
-            return self.symbol_index[symbol][0]
-        return None
-
-    def find_package_file(self, package: str) -> Optional[str]:
-        package = (package or "").strip()
-        if not package:
-            return None
-        for pkg, files in self.package_index.items():
-            if pkg.lower() == package.lower() and files:
-                return files[0]
-        return None
+_ROUTE_RE = re.compile(r"(?P<route>/[a-zA-Z0-9_\-/]+)")
 
 
 @dataclass
-class EvidenceLineStyle:
-    indent: str
-    list_marker: str  # "- " or "" (dash optional)
+class Replacement:
+    line_no: int
+    original: str
+    updated: str
 
 
-@dataclass
-class TaskEvidence:
-    task_id: str
-    title: str
-    description: str
-    evidence_text: str  # WITHOUT leading "evidence:" prefix for standardized evidence lines
-    line_num: int
-    raw_line: str
-    style: EvidenceLineStyle
-    is_non_compliant: bool = False
-
-    suggested_hook: Optional[str] = None  # FULL hook, e.g. "evidence: code path=..."
-    validation_reason: Optional[str] = None
+def _read_text(p: Path) -> str:
+    return p.read_text(encoding="utf-8", errors="ignore")
 
 
-def _extract_style(line: str) -> EvidenceLineStyle:
-    m = re.match(r"^(\s*)(-\s+)?", line)
-    indent = m.group(1) if m else ""
-    list_marker = m.group(2) or ""
-    return EvidenceLineStyle(indent=indent, list_marker=list_marker)
+def _write_atomic(path: Path, content: str) -> None:
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(content, encoding="utf-8")
+    tmp.replace(path)
 
 
-def parse_tasks_file(file_path: Path) -> List[TaskEvidence]:
-    """Parse tasks.md file and collect evidence entries requiring migration."""
-
-    lines = file_path.read_text(encoding="utf-8").splitlines(keepends=True)
-
-    tasks: List[TaskEvidence] = []
-
-    current_task_id: Optional[str] = None
-    current_title: Optional[str] = None
-    current_description: Optional[str] = None
-
-    # Task line: - [ ] <ID> <Title>
-    # (ID is the first token after checkbox; not restricted to TSK-)
-    task_pattern = re.compile(r"^\s*-\s*\[[ xX]\]\s+(\S+)\s+(.+?)\s*$")
-
-    # Evidence lines:
-    #   - evidence: <type> key=value ...
-    #   evidence: <type> ...
-    # Dash is optional.
-    evidence_pattern = re.compile(r"^\s*(?:-\s*)?evidence:\s*(.+?)\s*$", re.IGNORECASE)
-
-    # Legacy descriptive evidence bullet:
-    #   - **Evidence:** <free text>
-    descriptive_pattern = re.compile(r"^\s*(?:-\s*)?\*\*Evidence:\*\*\s*(.+?)\s*$")
-
-    for i, line in enumerate(lines, 1):
-        task_match = task_pattern.match(line)
-        if task_match:
-            current_task_id = task_match.group(1).strip()
-            current_title = task_match.group(2).strip()
-            current_description = current_title
-            continue
-
-        if not current_task_id:
-            continue
-
-        # Standard evidence line
-        ev_match = evidence_pattern.match(line)
-        if ev_match:
-            ev_body = ev_match.group(1).strip()
-
-            # If the file already had a full hook (unlikely here), strip it
-            if ev_body.lower().startswith("evidence:"):
-                ev_body = ev_body[9:].strip()
-
-            parts = ev_body.split(maxsplit=1)
-            ev_type = parts[0] if parts else ""
-
-            style = _extract_style(line)
-            tasks.append(
-                TaskEvidence(
-                    task_id=current_task_id,
-                    title=current_title or "",
-                    description=current_description or "",
-                    evidence_text=ev_body,
-                    line_num=i,
-                    raw_line=line,
-                    style=style,
-                    is_non_compliant=(ev_type in NON_COMPLIANT_TYPES),
-                )
-            )
-            continue
-
-        # Legacy descriptive evidence
-        desc_match = descriptive_pattern.match(line)
-        if desc_match:
-            desc = desc_match.group(1).strip()
-            # Only capture if it's NOT already a standardized hook
-            if not desc.lower().startswith("evidence:"):
-                style = _extract_style(line)
-                tasks.append(
-                    TaskEvidence(
-                        task_id=current_task_id,
-                        title=current_title or "",
-                        description=current_description or "",
-                        evidence_text=desc,
-                        line_num=i,
-                        raw_line=line,
-                        style=style,
-                        is_non_compliant=False,
-                    )
-                )
-
-    return tasks
+def _guess_strict_type_from_path(path: str) -> str:
+    low = path.lower()
+    if "/test" in low or low.endswith((".spec.ts", ".test.ts", ".spec.js", ".test.js")):
+        return "test"
+    if low.endswith((".md", ".rst")):
+        return "docs"
+    return "code"
 
 
-def _parse_kv(params_str: str) -> Dict[str, str]:
-    """Parse key=value pairs; tolerates quoted values."""
-    params_str = (params_str or "").strip()
-    if not params_str:
-        return {}
+def _normalize_evidence_line(raw: str) -> Optional[str]:
+    """Return canonical 'evidence: <type> key=value ...' or None if cannot normalize."""
 
-    # Prefer shlex for quotes if available
-    if shlex is not None:
-        try:
-            tokens = shlex.split(params_str)
-            out: Dict[str, str] = {}
-            for tok in tokens:
-                if "=" not in tok:
-                    continue
-                k, v = tok.split("=", 1)
-                out[k.strip()] = v.strip().strip('"\'')
-            if out:
-                return out
-        except Exception:
-            pass
+    raw = raw.strip()
 
-    # Fallback regex
-    out: Dict[str, str] = {}
-    for match in re.finditer(r"(\w+)=([^\s]+(?:\s+[^\s=]+)*?)(?=\s+\w+=|$)", params_str):
-        k = match.group(1)
-        v = match.group(2).strip().strip('"\'')
-        out[k] = v
-    return out
+    # Support lines like:
+    # - evidence: ...
+    # evidence: ...
+    # | **Evidence:** evidence: ... |
+    m = _EVIDENCE_INLINE_RE.search(raw)
+    if not m:
+        return None
 
+    payload = m.group(1).strip().rstrip("|").strip()
 
-def convert_non_compliant_evidence(
-    evidence_text: str, context: ProjectContext
-) -> Tuple[Optional[str], str]:
-    """Convert non-compliant evidence types into verifier-friendly hooks.
-
-    Returns:
-      (suggested_hook | None, reason)
-
-    If None is returned, caller should NOT modify the file for that line.
-    """
-
-    evidence_text = (evidence_text or "").strip()
-    if not evidence_text:
-        return None, "Empty evidence"
-
-    parts = evidence_text.split(maxsplit=1)
-    ev_type = parts[0]
-    params_str = parts[1] if len(parts) > 1 else ""
-    params = _parse_kv(params_str)
-
-    # --- file_exists ---
-    if ev_type == "file_exists":
-        path = _norm_rel_path(params.get("path", ""))
-        if not path:
-            return None, "file_exists missing path="
-
-        actual = context.find_file(path)
-        if actual:
-            path = actual
-        # Heuristic: test folder implies test
-        if "test" in path.lower() or "__tests__" in path.lower() or path.lower().endswith((".spec.ts", ".test.ts", ".spec.tsx", ".test.tsx", ".spec.js", ".test.js")):
-            return f"evidence: test path={path}", "Converted file_exists → test"
-        # Docs files
-        if path.lower().endswith((".md", ".rst")):
-            return f"evidence: docs path={path}", "Converted file_exists → docs"
-        return f"evidence: code path={path}", "Converted file_exists → code"
-
-    # --- test_exists ---
-    if ev_type == "test_exists":
-        path = _norm_rel_path(params.get("path", ""))
-        if not path:
-            return None, "test_exists missing path="
-
-        actual = context.find_file(path)
-        if actual:
-            path = actual
-
-        hook = f"evidence: test path={path}"
-        name = (params.get("name") or "").strip()
-        if name:
-            hook += f" contains=\"{name}\""
-        return hook, "Converted test_exists → test (name → contains)"
-
-    # --- command ---
-    if ev_type == "command":
-        cmd = (params.get("cmd") or "").strip()
-        if not cmd:
-            return None, "command missing cmd="
-
-        cmd_l = cmd.lower()
-
-        # TypeScript compile
-        if "tsc" in cmd_l or "typescript" in cmd_l:
-            hit = context.find_any(["tsconfig.json", "tsconfig.base.json", "tsconfig.build.json"])
-            if hit:
-                return f"evidence: code path={hit}", f"Converted command → code ({hit})"
-            return None, "No tsconfig found to safely convert tsc command"
-
-        # ESLint
-        if "eslint" in cmd_l or re.search(r"\blint\b", cmd_l):
-            hit = context.find_any(
-                [
-                    "eslint.config.js",
-                    "eslint.config.mjs",
-                    ".eslintrc.js",
-                    ".eslintrc.cjs",
-                    ".eslintrc.json",
-                    ".eslintrc.yaml",
-                    ".eslintrc.yml",
-                ]
-            )
-            if hit:
-                return f"evidence: code path={hit}", f"Converted command → code ({hit})"
-            # fallback to package.json (node lint script)
-            pkg = context.find_file("package.json")
-            if pkg:
-                return f"evidence: code path={pkg} contains=\"scripts\"", "Converted command → code (package.json scripts)"
-            return None, "No eslint config/package.json found to safely convert lint command"
-
-        # Prettier
-        if "prettier" in cmd_l:
-            hit = context.find_any(
-                [
-                    ".prettierrc",
-                    ".prettierrc.json",
-                    ".prettierrc.yml",
-                    ".prettierrc.yaml",
-                    "prettier.config.js",
-                    "prettier.config.cjs",
-                ]
-            )
-            if hit:
-                return f"evidence: code path={hit}", f"Converted command → code ({hit})"
-            return None, "No prettier config found to safely convert prettier command"
-
-        # Jest / Vitest / Pytest
-        if "jest" in cmd_l:
-            hit = context.find_any(["jest.config.js", "jest.config.ts", "jest.config.cjs", "package.json"])
-            if hit:
-                return f"evidence: code path={hit}", f"Converted command → code ({hit})"
-            return None, "No jest config found to safely convert"
-
-        if "vitest" in cmd_l:
-            hit = context.find_any(["vitest.config.ts", "vitest.config.js", "package.json"])
-            if hit:
-                return f"evidence: code path={hit}", f"Converted command → code ({hit})"
-            return None, "No vitest config found to safely convert"
-
-        if "pytest" in cmd_l:
-            hit = context.find_any(["pytest.ini", "pyproject.toml", "tox.ini"])
-            if hit:
-                return f"evidence: code path={hit}", f"Converted command → code ({hit})"
-            return None, "No pytest config found to safely convert"
-
-        # Go / Rust / Java
-        if re.search(r"\bgo\s+test\b", cmd_l):
-            hit = context.find_any(["go.mod"])
-            if hit:
-                return f"evidence: code path={hit}", "Converted go test → code (go.mod)"
-            return None, "No go.mod found to safely convert go test"
-
-        if "cargo test" in cmd_l:
-            hit = context.find_any(["Cargo.toml"])
-            if hit:
-                return f"evidence: code path={hit}", "Converted cargo test → code (Cargo.toml)"
-            return None, "No Cargo.toml found to safely convert cargo test"
-
-        if "mvn" in cmd_l or "maven" in cmd_l:
-            hit = context.find_any(["pom.xml"])
-            if hit:
-                return f"evidence: code path={hit}", "Converted mvn → code (pom.xml)"
-            return None, "No pom.xml found to safely convert mvn"
-
-        if "gradle" in cmd_l:
-            hit = context.find_any(["build.gradle", "build.gradle.kts"])
-            if hit:
-                return f"evidence: code path={hit}", "Converted gradle → code (build.gradle*)"
-            return None, "No build.gradle found to safely convert gradle"
-
-        # Markdownlint (docs)
-        if "markdownlint" in cmd_l:
-            # If a path param exists, use it; else fall back to README.md if present
-            p = _norm_rel_path(params.get("path", ""))
-            if p:
-                actual = context.find_file(p)
-                if actual:
-                    return f"evidence: docs path={actual}", "Converted markdownlint → docs (path)"
-            readme = context.find_any(["README.md", "readme.md"])
-            if readme:
-                return f"evidence: docs path={readme}", "Converted markdownlint → docs (README)"
-            return None, "No docs file found to safely convert markdownlint"
-
-        # Unknown/unsafe
-        return None, "Cannot safely convert command evidence (requires manual migration)"
-
-    return None, f"Unknown non-compliant type: {ev_type}"
-
-
-def validate_evidence_hook(
-    hook: str, context: ProjectContext
-) -> Tuple[bool, str, Optional[str]]:
-    """Validate an evidence hook and suggest corrections if needed.
-
-    Returns: (is_valid, reason, corrected_hook)
-    """
-
-    hook = (hook or "").strip()
-    if not hook.startswith("evidence:"):
-        return False, "Hook must start with 'evidence:'", None
-
-    parts = hook[9:].strip().split(maxsplit=1)
+    # If payload already starts with strict types, keep it
+    parts = payload.split()
     if not parts:
-        return False, "Missing evidence type", None
+        return None
 
-    hook_type = parts[0]
-    params_str = parts[1] if len(parts) > 1 else ""
+    first = parts[0]
 
-    if hook_type in NON_COMPLIANT_TYPES:
-        return False, f"Non-compliant type: {hook_type} (not supported by verifier)", None
+    # If already strict type
+    if first in VALID_TYPES:
+        return f"evidence: {payload}"
 
-    params = _parse_kv(params_str)
+    # Legacy hook style like: file_exists path=...
+    if first in _LEGACY_TYPES:
+        # Try to map to strict types
+        # Prefer existing path=... token
+        path_m = re.search(r"\bpath=(\S+)", payload)
+        if path_m:
+            p = path_m.group(1).strip('"\'')
+            strict_t = _guess_strict_type_from_path(p)
+            # Map file_exists/test_exists to just existence (medium in verifier)
+            if first in {"file_exists", "test_exists"}:
+                if strict_t == "test":
+                    return f"evidence: test path={p}"
+                if strict_t == "docs":
+                    return f"evidence: docs path={p}"
+                return f"evidence: code path={p}"
 
-    # Helper: rewrite with corrected path
-    def _rewrite_with_path(new_path: str) -> str:
-        new_path = _norm_rel_path(new_path)
-        corrected = f"evidence: {hook_type} path={new_path}"
-        # preserve optional fields
-        for k in ("contains", "heading", "component"):
-            if k in params:
-                v = params[k]
-                if " " in v or "\t" in v:
-                    corrected += f" {k}=\"{v}\""
-                else:
-                    corrected += f" {k}={v}"
-        return corrected
+            # Map file_contains to contains
+            if first == "file_contains":
+                content_m = re.search(r"\b(content|contains)=([^\n]+)$", payload)
+                contains_val = None
+                if content_m:
+                    contains_val = content_m.group(2).strip().strip('"\'')
+                if strict_t == "test":
+                    if contains_val:
+                        return f"evidence: test path={p} contains=\"{contains_val}\""
+                    return f"evidence: test path={p}"
+                if strict_t == "docs":
+                    if contains_val:
+                        return f"evidence: docs path={p} contains=\"{contains_val}\""
+                    return f"evidence: docs path={p}"
+                if contains_val:
+                    return f"evidence: code path={p} contains=\"{contains_val}\""
+                return f"evidence: code path={p}"
 
-    if hook_type in {"code", "test", "docs"}:
-        if "path" not in params:
-            return False, "Missing required 'path' parameter", None
+            # Map api_route/db_schema to code contains
+            if first in {"api_route", "db_schema"}:
+                # route=/foo or model=User etc.
+                if first == "api_route":
+                    r_m = re.search(r"\b(route|path_route)=([^\s]+)", payload)
+                    if r_m:
+                        rv = r_m.group(2).strip().strip('"\'')
+                        return f"evidence: code path={p} contains=\"{rv}\""
+                if first == "db_schema":
+                    mdl_m = re.search(r"\b(model|table)=([^\s]+)", payload)
+                    if mdl_m:
+                        mv = mdl_m.group(2).strip().strip('"\'')
+                        return f"evidence: code path={p} contains=\"{mv}\""
+                return f"evidence: code path={p}"
 
-        orig = _norm_rel_path(params["path"])
-        actual = context.find_file(orig)
-        if not actual:
-            return False, f"File not found: {orig}", None
+        # If no path=, attempt to extract a path-like token
+        p2 = _PATH_TOKEN_RE.search(payload)
+        if p2:
+            p = p2.group("path")
+            strict_t = _guess_strict_type_from_path(p)
+            if strict_t == "test":
+                return f"evidence: test path={p}"
+            if strict_t == "docs":
+                return f"evidence: docs path={p}"
+            return f"evidence: code path={p}"
 
-        if actual != orig:
-            return False, f"Path corrected: {orig} -> {actual}", _rewrite_with_path(actual)
+        return None
 
-        return True, "Valid", None
+    # If payload is free text, attempt heuristic extraction
+    p = _PATH_TOKEN_RE.search(payload)
+    if not p:
+        return None
 
-    if hook_type == "ui":
-        # UI verification often needs manual; we can still validate referenced component
-        if "component" in params:
-            comp = params["component"].strip()
-            actual = context.find_symbol_file(comp)
-            if not actual:
-                return False, f"Component not found: {comp}", None
-        return True, "Valid (UI may require manual verification)", None
+    path = p.group("path")
+    strict_t = _guess_strict_type_from_path(path)
 
-    # Unknown types are not validated here (the verifier may still support more types)
-    return True, "Not validated by migrator (type-specific checks not implemented)", None
+    # If a route is mentioned, add contains
+    route_m = _ROUTE_RE.search(payload)
+    if route_m and strict_t == "code":
+        route = route_m.group("route")
+        return f"evidence: code path={path} contains=\"{route}\""
 
-
-def _rewrite_evidence_line(original_line: str, style: EvidenceLineStyle, new_hook: str) -> str:
-    """Rewrite a single evidence line while preserving indentation and dash style."""
-    # Always write as standardized evidence hook line (not **Evidence:**)
-    # Preserve whether original had list marker.
-    new_hook = new_hook.strip()
-    if not new_hook.startswith("evidence:"):
-        new_hook = f"evidence: {new_hook}"
-    return f"{style.indent}{style.list_marker}{new_hook}\n"
+    if strict_t == "test":
+        return f"evidence: test path={path}"
+    if strict_t == "docs":
+        return f"evidence: docs path={path}"
+    return f"evidence: code path={path}"
 
 
-def apply_changes(file_path: Path, tasks: List[TaskEvidence]) -> None:
-    """Apply suggested hook replacements to the tasks file."""
+def _preserve_prefix(original_line: str) -> Tuple[str, str, str]:
+    """Return (leading_ws, bullet_prefix, core_text)
 
-    ts = _now_stamp()
-    backup_path = file_path.parent / f"{file_path.stem}.backup.{ts}{file_path.suffix}"
-    shutil.copy2(file_path, backup_path)
-    print(f"✅ Backup created: {backup_path}")
+    bullet_prefix includes '- ' if present.
+    """
+    m = re.match(r"^(\s*)(-\s+)?(.*)$", original_line)
+    if not m:
+        return "", "", original_line
+    return m.group(1) or "", m.group(2) or "", m.group(3) or ""
 
-    try:
-        lines = file_path.read_text(encoding="utf-8").splitlines(keepends=True)
 
-        replacements: Dict[int, str] = {}
-        styles: Dict[int, EvidenceLineStyle] = {}
-        originals: Dict[int, str] = {}
+def migrate_tasks_text(tasks_text: str) -> Tuple[str, List[Replacement]]:
+    lines = tasks_text.splitlines(True)
+    reps: List[Replacement] = []
 
-        for t in tasks:
-            if t.suggested_hook:
-                replacements[t.line_num] = t.suggested_hook
-                styles[t.line_num] = t.style
-                originals[t.line_num] = t.raw_line
+    for i, line in enumerate(lines):
+        if "evidence" not in line.lower():
+            continue
 
-        modified: List[str] = []
-        for idx, line in enumerate(lines, 1):
-            if idx in replacements:
-                modified.append(_rewrite_evidence_line(line, styles[idx], replacements[idx]))
+        normalized = _normalize_evidence_line(line)
+        if not normalized:
+            continue
+
+        lead, bullet, _ = _preserve_prefix(line.rstrip("\n"))
+
+        # Keep table rows intact: if line starts with '|', don't force bullet
+        if line.lstrip().startswith("|"):
+            # Replace only the evidence substring inside the row, keep other cells
+            low = line.lower()
+            pos = low.find("evidence:")
+            if pos >= 0:
+                prefix = line[:pos]
+                suffix = "\n" if line.endswith("\n") else ""
+                new_line = prefix + normalized + suffix
             else:
-                modified.append(line)
+                new_line = line
+        else:
+            # Use same bullet marker style as original
+            prefix = f"{lead}{bullet}" if bullet else f"{lead}"
+            new_line = f"{prefix}{normalized}\n"
 
-        file_path.write_text("".join(modified), encoding="utf-8")
-        print(f"✅ Applied {len(replacements)} changes to {file_path}")
-        print(f"✅ Backup available at: {backup_path}")
+        if new_line != line:
+            reps.append(Replacement(line_no=i + 1, original=line.rstrip("\n"), updated=new_line.rstrip("\n")))
+            lines[i] = new_line
 
-    except Exception as e:
-        print(f"❌ Error applying changes: {e}")
-        print("🔄 Restoring from backup.")
-        shutil.copy2(backup_path, file_path)
-        print("✅ File restored from backup")
-        raise
+    return "".join(lines), reps
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Migrate descriptive evidence and fix non-compliant evidence types"
-    )
-    parser.add_argument("--tasks-file", required=True, help="Path to tasks.md file")
-    parser.add_argument(
-        "--project-root",
-        default=".",
-        help="Project root directory for file validation (default: current directory)",
-    )
-    parser.add_argument(
-        "--apply",
-        action="store_true",
-        help="Apply changes to the file (default: preview only)",
-    )
-    parser.add_argument(
-        "--auto-convert",
-        action="store_true",
-        help="Automatically convert non-compliant evidence types (no LLM needed)",
+def make_diff(old: str, new: str, filename: str) -> str:
+    return "".join(
+        difflib.unified_diff(
+            old.splitlines(True),
+            new.splitlines(True),
+            fromfile=f"a/{filename}",
+            tofile=f"b/{filename}",
+        )
     )
 
-    args = parser.parse_args()
 
-    tasks_file = Path(args.tasks_file)
-    project_root = Path(args.project_root).resolve()
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Migrate tasks.md evidence to strict-verifier-compatible evidence hooks")
+    ap.add_argument("--tasks-file", required=True, help="Path to tasks.md")
+    ap.add_argument("--apply", action="store_true", help="Apply changes to tasks.md (default: preview)")
+    ap.add_argument("--model", default="gpt-4.1-mini", help="(Workflow) AI model name for conversion")
+    ap.add_argument("--out", default=".spec/reports/migrate-evidence-hooks", help="Output root for preview artifacts")
+    ap.add_argument("--json", action="store_true", help="Write summary.json")
+    ap.add_argument("--quiet", action="store_true", help="Reduce logs")
 
-    if not tasks_file.exists():
-        print(f"❌ Error: File not found: {tasks_file}")
-        sys.exit(1)
-    if not project_root.exists():
-        print(f"❌ Error: Project root not found: {project_root}")
-        sys.exit(1)
+    args = ap.parse_args()
 
-    print(f"📁 Project root: {project_root}")
+    tasks_path = Path(args.tasks_file).resolve()
+    if not tasks_path.exists():
+        print(f"ERROR: tasks file not found: {tasks_path}", file=sys.stderr)
+        return 2
 
-    context = ProjectContext(project_root)
+    old_text = _read_text(tasks_path)
+    new_text, reps = migrate_tasks_text(old_text)
 
-    print(f"📖 Reading tasks from: {tasks_file}")
-    entries = parse_tasks_file(tasks_file)
+    run_id = datetime.now().strftime("migrate_%Y%m%d_%H%M%S")
+    out_root = Path(args.out).resolve() if Path(args.out).is_absolute() else (Path(".") / args.out).resolve()
+    run_dir = out_root / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
 
-    if not entries:
-        print("✅ No evidence lines found to migrate.")
-        sys.exit(0)
+    diff_text = make_diff(old_text, new_text, tasks_path.as_posix())
+    (run_dir / "preview.diff").write_text(diff_text, encoding="utf-8")
 
-    non_compliant = [e for e in entries if e.is_non_compliant]
-    descriptive = [e for e in entries if not e.is_non_compliant and not e.evidence_text.lower().startswith(tuple(["code ", "test ", "docs ", "ui "]))]
+    summary = {
+        "workflow": "smartspec_migrate_evidence_hooks",
+        "version": "6.4.1",
+        "run_id": run_id,
+        "generated_at": datetime.now().isoformat(),
+        "inputs": {"tasks_file": str(tasks_path), "apply": bool(args.apply), "model": args.model},
+        "changes": [{"line": r.line_no, "from": r.original, "to": r.updated} for r in reps],
+        "counts": {"replacements": len(reps)},
+        "writes": {
+            "reports": [str(run_dir / "preview.diff")] + ([str(run_dir / "summary.json")] if args.json else [])
+        },
+    }
 
-    print(f"Found {len(non_compliant)} non-compliant evidence hooks")
-    print(f"Found {len(descriptive)} descriptive evidence entries")
+    if args.json:
+        (run_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    proposed: List[TaskEvidence] = []
+    if not reps:
+        if not args.quiet:
+            print("No changes suggested.")
+        return 0
 
-    # Convert non-compliant evidence
-    if non_compliant:
-        print("\n🔧 Converting non-compliant evidence types")
-        for i, task in enumerate(non_compliant, 1):
-            print(f"  [{i}/{len(non_compliant)}] {task.task_id}", end=" ")
+    if not args.quiet:
+        print(f"Suggested replacements: {len(reps)}")
+        print(f"Preview diff: {run_dir / 'preview.diff'}")
 
-            suggested, reason = convert_non_compliant_evidence(task.evidence_text, context)
-            if not suggested:
-                task.suggested_hook = None
-                task.validation_reason = reason
-                print("(skip)")
-                continue
+    if not args.apply:
+        return 0
 
-            # Validate and attempt path correction
-            ok, v_reason, corrected = validate_evidence_hook(suggested, context)
-            if corrected:
-                suggested = corrected
-            task.suggested_hook = suggested
-            task.validation_reason = f"{reason}; {v_reason}" if v_reason else reason
+    # Apply: backup then atomic write
+    backup = tasks_path.with_suffix(tasks_path.suffix + f".backup.{run_id}")
+    shutil.copy2(tasks_path, backup)
 
-            if ok:
-                proposed.append(task)
-                print("✓")
-            else:
-                # If invalid after correction attempts, do not apply automatically
-                task.suggested_hook = None
-                print("(invalid)")
+    _write_atomic(tasks_path, new_text)
 
-    # Descriptive evidence conversion requires an LLM; this script does not implement it.
-    if descriptive and not args.auto_convert:
-        print("\nℹ️  Descriptive evidence requires AI conversion (not implemented in this script).")
-        print("    Use the SmartSpec workflow /smartspec_migrate_evidence_hooks for AI-assisted conversion.")
+    if not args.quiet:
+        print(f"Applied changes. Backup: {backup}")
 
-    # Preview
-    if proposed:
-        print("\n" + "=" * 80)
-        print("PROPOSED CHANGES (showing up to first 20)")
-        print("=" * 80)
-
-        for t in proposed[:20]:
-            print(f"\nTask: {t.task_id} - {t.title}")
-            print("─" * 80)
-            print(f"- OLD: evidence: {t.evidence_text}")
-            print(f"+ NEW: {t.suggested_hook}")
-            if t.validation_reason:
-                print(f"  Reason: {t.validation_reason}")
-            print("─" * 80)
-
-        if len(proposed) > 20:
-            print(f"\n... and {len(proposed) - 20} more changes")
-
-        print(f"\nTotal changes proposed: {len(proposed)}")
-    else:
-        print("\n✅ No safe changes proposed.")
-
-    # Apply
-    if args.apply and proposed:
-        print("\n⚠️  You are about to modify the file!")
-        print("Countdown: ", end="", flush=True)
-        for j in range(3, 0, -1):
-            print(f"{j}...", end="", flush=True)
-            time.sleep(1)
-        print("GO!")
-
-        apply_changes(tasks_file, proposed)
-        print("\n✅ Done! Changes applied.")
-
-    elif not args.apply and proposed:
-        print("\nTo apply these changes, run with --apply flag")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

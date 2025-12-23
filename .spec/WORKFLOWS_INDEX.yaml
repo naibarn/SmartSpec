@@ -366,8 +366,17 @@ workflows:
     version: "6.2.0"
 
   # ---------------------------------------------------------------------------
-  # Testing & Validation (A2UI Phase 6) (1)
+  # Testing & Validation (A2UI Phase 6) (2)
   # ---------------------------------------------------------------------------
+  - name: /smartspec_migrate_evidence_hooks
+    purpose: Convert descriptive evidence in tasks.md to standardized evidence hooks using AI.
+    category: testing_and_validation
+    requires_a2ui: false
+    platform_support: [cli, kilo]
+    write_scopes: [specs]
+    status: active
+    version: "6.3.0"
+
   - name: /smartspec_validate_golden_tests
     purpose: Validate A2UI JSON output against golden test cases to ensure quality and compliance.
     category: testing_and_validation

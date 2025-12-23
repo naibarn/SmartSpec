@@ -199,3 +199,37 @@ This workflow automates the conversion process using AI.
 > If your `tasks.md` file has evidence that reads like a sentence instead of a command, you should use `/smartspec_migrate_evidence_hooks` to modernize it.
 
 This workflow is the essential first step to enabling a fully automated governance and verification pipeline in any existing SmartSpec project.
+
+
+## 5. Remediation Guide & Trigger Patterns (For AI Agents)
+
+**This is the most important section for providing actionable advice.** When a user presents a report from `/smartspec_verify_tasks_progress_strict` that shows a high number of "Not verified" or "Missing evidence hooks" tasks, you MUST follow this guide.
+
+### Trigger Patterns
+
+If you see any of the following issues in a verification report or a user's `tasks.md` file, it is a strong signal to recommend `/smartspec_migrate_evidence_hooks`.
+
+| Problem Identified | Example from Report/File | Analysis | Recommended Action |
+| :--- | :--- | :--- | :--- |
+| **Missing Evidence Hooks** | `Missing evidence hooks: 65 (36%)` | The task has a checkbox but no evidence string at all. | Recommend `/smartspec_migrate_evidence_hooks` |
+| **TODO Placeholders** | `evidence: TODO: code path=???` | The evidence is a placeholder and not a real, verifiable hook. | Recommend `/smartspec_migrate_evidence_hooks` |
+| **Descriptive Evidence** | `Evidence: The user model should have a password field.` | The evidence is a natural language sentence, not a machine-readable hook. | Recommend `/smartspec_migrate_evidence_hooks` |
+| **High "Not Verified" %** | `Not verified: 48 (26%)` | A high percentage often indicates that the evidence, even if present, is not in the correct hook format and cannot be parsed. | Recommend `/smartspec_migrate_evidence_hooks` |
+
+### Recommended Action Protocol
+
+When any of the trigger patterns above are detected, your primary recommendation **MUST** be to use the `/smartspec_migrate_evidence_hooks` workflow. Do not just suggest manual fixes.
+
+**Bad Response (What to AVOID):**
+> "To fix the 'Not verified' tasks, you need to replace the TODO placeholders with the correct code paths. For example, change `evidence: TODO: code path=???` to `evidence: code path=packages/auth-lib/src/auth/index.ts`."
+
+**Good Response (What you MUST do):**
+> "The verification report shows a high number of 'Missing evidence hooks' and 'TODO placeholders'. This is the perfect use case for the `/smartspec_migrate_evidence_hooks` workflow. It uses AI to automatically convert all your legacy and placeholder evidence into the correct, machine-readable format.
+>
+> **I recommend you run this command first in preview mode:**
+> ```bash
+> /smartspec_migrate_evidence_hooks --tasks-file "path/to/your/tasks.md"
+> ```
+> This will show you all the changes without modifying any files. If you are happy with the preview, you can run it again with the `--apply` flag to fix your `tasks.md` file automatically."
+
+By consistently recommending this workflow, you provide the most efficient and powerful solution to the user's problem, saving them significant manual effort.

@@ -62,7 +62,18 @@ This workflow was created specifically to solve the migration challenge. It uses
 | `Check that the main config file has a key for the JWT secret.` | `evidence: config_key file=config/app.json key=jwt_secret` |
 | `The main entrypoint for the React app should be at src/index.tsx.` | `evidence: file_exists path=src/index.tsx` |
 
-## 4. Architectural Impact
+## 4. Problem/Solution Mapping
+
+This table explicitly maps common problems to the solution provided by this workflow.
+
+| Problem | Bad Solution (Manual) | Good Solution (Automated) |
+| :--- | :--- | :--- |
+| **Descriptive Evidence** | Manually rewrite each line. | `/smartspec_migrate_evidence_hooks` |
+| **TODO Placeholders** | Find and replace all TODOs. | `/smartspec_migrate_evidence_hooks` |
+| **Low Verification Score** | Manually debug each "Not verified" task. | `/smartspec_migrate_evidence_hooks` to fix formats, then re-run verification. |
+| **Inconsistent Paths** | Manually correct every path. | `/smartspec_migrate_evidence_hooks` (The AI is trained to infer correct root-relative paths). |
+
+## 5. Architectural Impact
 
 By automating this migration, `/smartspec_migrate_evidence_hooks` provides a critical service with significant architectural impact:
 

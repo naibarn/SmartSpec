@@ -148,3 +148,54 @@ Remember that each workflow produces a different output for a different renderer
     -   **For:** A2UI Renderer
 
 Choosing the correct workflow from the start will prevent compatibility issues and ensure a smooth development process. When in doubt, refer to this guide and the [UI JSON Formats Comparison](ui-json-formats-comparison.md) guide.
+
+
+---
+
+# Knowledge Base: Evidence Hooks and Automated Migration
+
+## 1. The Problem: Legacy Evidence is Not Machine-Readable
+
+In older SmartSpec projects, the `Evidence` field in `tasks.md` was a simple text description.
+
+-   **Example:** `The login API endpoint should be available.`
+-   **Problem:** This is ambiguous and cannot be automatically verified by a machine.
+
+## 2. The Solution: Standardized Evidence Hooks
+
+Modern SmartSpec uses **evidence hooks**, a machine-readable format: `evidence: <type> [key=value]`
+
+-   **Example:** `evidence: api_route method=POST path=/api/v1/auth/login`
+-   **Benefit:** This can be parsed and verified automatically by workflows like `/smartspec_verify_tasks_progress_strict`.
+
+## 3. The Challenge: Manual Migration is Painful
+
+Manually converting hundreds of legacy evidence descriptions into hooks is slow, tedious, and error-prone.
+
+## 4. The Workflow: `/smartspec_migrate_evidence_hooks`
+
+This workflow automates the conversion process using AI.
+
+### How It Works
+
+1.  **Analyzes** the task description and the legacy evidence text.
+2.  **Determines** the correct hook type (e.g., `file_exists`, `db_schema`).
+3.  **Extracts** the required parameters (e.g., `path`, `table`).
+4.  **Generates** the standardized evidence hook.
+
+### Key Features
+
+-   **Preview Mode (Default):** Shows a `diff` of proposed changes for safe review. No files are changed.
+-   **Apply Mode (`--apply`):** Applies the changes directly to the `tasks.md` file.
+
+### When to Use It
+
+-   You have a legacy project with descriptive evidence.
+-   You want to enable automated verification with `/smartspec_verify_tasks_progress_strict`.
+-   You need to standardize your project's task metadata.
+
+### Rule of Thumb
+
+> If your `tasks.md` file has evidence that reads like a sentence instead of a command, you should use `/smartspec_migrate_evidence_hooks` to modernize it.
+
+This workflow is the essential first step to enabling a fully automated governance and verification pipeline in any existing SmartSpec project.

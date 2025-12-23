@@ -4,8 +4,10 @@ SmartSpec Migrate Evidence Hooks (Enhanced - Kilo/Antigravity Compatible)
 Converts descriptive evidence to standardized evidence hooks using AI
 with file system validation and path correction
 
-This version expects LLM to be called externally (via Kilo/Antigravity)
-and reads prompts/responses through a simple interface.
+This version:
+1. Detects non-compliant evidence types (file_exists, test_exists, command)
+2. Automatically converts them to verifier-compliant formats
+3. Works in Kilo/Antigravity environments (interactive mode)
 """
 
 import argparse
@@ -170,15 +172,20 @@ class Task:
         self.task_id = task_id
         self.title = title
         self.description = description
-        self.evidence = evidence
+        self.evidence = evidence  # Can be descriptive text OR existing evidence hook
         self.line_num = line_num
         self.suggested_hook: Optional[str] = None
         self.validation_status: Optional[str] = None
         self.validation_reason: Optional[str] = None
+        self.is_non_compliant = False  # Flag for non-compliant types
 
 
 def parse_tasks_file(file_path: Path) -> List[Task]:
-    """Parse tasks.md file and extract tasks with descriptive evidence"""
+    """
+    Parse tasks.md file and extract tasks with:
+    1. Descriptive evidence (needs AI conversion)
+    2. Non-compliant evidence types (needs automatic conversion)
+    """
     with open(file_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     
@@ -186,44 +193,136 @@ def parse_tasks_file(file_path: Path) -> List[Task]:
     current_task_id = None
     current_title = None
     current_description = None
-    current_evidence = None
+    current_evidence_lines = []
     current_line = None
     
     # Pattern to match task lines: - [x] TSK-XXX-NNN Title
     task_pattern = re.compile(r'^\s*-\s*\[[ x]\]\s+(TSK-[\w-]+)\s+(.+?)$')
-    # Pattern to match evidence lines that are NOT standardized
-    evidence_pattern = re.compile(r'^\s*-\s*\*\*Evidence:\*\*\s+(.+?)$')
+    # Pattern to match evidence lines (both standardized and descriptive)
+    evidence_pattern = re.compile(r'^\s*-\s*evidence:\s+(.+)$', re.IGNORECASE)
+    descriptive_evidence_pattern = re.compile(r'^\s*-\s*\*\*Evidence:\*\*\s+(.+?)$')
+    
+    # Non-compliant evidence types
+    NON_COMPLIANT_TYPES = {'file_exists', 'test_exists', 'command'}
     
     for i, line in enumerate(lines, 1):
         # Check for task line
         task_match = task_pattern.match(line)
         if task_match:
-            # Save previous task if it had descriptive evidence
-            if current_task_id and current_evidence:
-                tasks.append(Task(current_task_id, current_title, current_description, current_evidence, current_line))
+            # Save previous task if it had evidence
+            if current_task_id and current_evidence_lines:
+                for ev_line, ev_text, is_non_comp in current_evidence_lines:
+                    task = Task(current_task_id, current_title, current_description, ev_text, ev_line)
+                    task.is_non_compliant = is_non_comp
+                    tasks.append(task)
             
             # Start new task
             current_task_id = task_match.group(1)
             current_title = task_match.group(2).strip()
             current_description = current_title
-            current_evidence = None
+            current_evidence_lines = []
             current_line = i
             continue
         
-        # Check for descriptive evidence
+        # Check for standardized evidence
         evidence_match = evidence_pattern.match(line)
         if evidence_match and current_task_id:
             evidence_text = evidence_match.group(1).strip()
+            
+            # Check if it's a non-compliant type
+            parts = evidence_text.split(maxsplit=1)
+            if parts:
+                ev_type = parts[0]
+                if ev_type in NON_COMPLIANT_TYPES:
+                    # Mark as non-compliant
+                    current_evidence_lines.append((i, evidence_text, True))
+                else:
+                    # Compliant but still track for potential path corrections
+                    current_evidence_lines.append((i, evidence_text, False))
+            continue
+        
+        # Check for descriptive evidence
+        desc_match = descriptive_evidence_pattern.match(line)
+        if desc_match and current_task_id:
+            evidence_text = desc_match.group(1).strip()
             # Only capture if it's NOT already a standardized hook
             if not evidence_text.startswith('evidence:'):
-                current_evidence = evidence_text
-                current_line = i
+                current_evidence_lines.append((i, evidence_text, False))
     
     # Don't forget the last task
-    if current_task_id and current_evidence:
-        tasks.append(Task(current_task_id, current_title, current_description, current_evidence, current_line))
+    if current_task_id and current_evidence_lines:
+        for ev_line, ev_text, is_non_comp in current_evidence_lines:
+            task = Task(current_task_id, current_title, current_description, ev_text, ev_line)
+            task.is_non_compliant = is_non_comp
+            tasks.append(task)
     
     return tasks
+
+
+def convert_non_compliant_evidence(evidence: str, context: ProjectContext) -> Tuple[str, str]:
+    """
+    Convert non-compliant evidence types to verifier-compliant formats
+    Returns: (converted_hook, reason)
+    """
+    # Parse the evidence
+    if not evidence.startswith('evidence:'):
+        evidence = f"evidence: {evidence}"
+    
+    parts = evidence[9:].strip().split(maxsplit=1)
+    if not parts:
+        return evidence, "Cannot parse evidence"
+    
+    ev_type = parts[0]
+    params_str = parts[1] if len(parts) > 1 else ""
+    
+    # Parse parameters
+    params = {}
+    for match in re.finditer(r'(\w+)=([^\s]+(?:\s+[^\s=]+)*?)(?=\s+\w+=|$)', params_str):
+        key = match.group(1)
+        value = match.group(2).strip().strip('"\'')
+        params[key] = value
+    
+    # Convert based on type
+    if ev_type == 'file_exists':
+        # file_exists → code or test (based on path)
+        if 'path' in params:
+            path = params['path']
+            # Check if it's a test directory
+            if 'test' in path.lower():
+                return f"evidence: test path={path}", "Converted file_exists to test (test directory)"
+            else:
+                return f"evidence: code path={path}", "Converted file_exists to code"
+        return evidence, "file_exists missing path parameter"
+    
+    elif ev_type == 'test_exists':
+        # test_exists → test (name → contains)
+        if 'path' in params:
+            new_hook = f"evidence: test path={params['path']}"
+            if 'name' in params:
+                new_hook += f" contains=\"{params['name']}\""
+            return new_hook, "Converted test_exists to test (name → contains)"
+        return evidence, "test_exists missing path parameter"
+    
+    elif ev_type == 'command':
+        # command → code (point to config file) or remove
+        if 'cmd' in params:
+            cmd = params['cmd']
+            # Try to infer the file being validated
+            if 'tsc' in cmd:
+                return "evidence: code path=tsconfig.json", "Converted command to code (tsc → tsconfig.json)"
+            elif 'eslint' in cmd or 'lint' in cmd:
+                return "evidence: code path=.eslintrc.js", "Converted command to code (eslint → .eslintrc.js)"
+            elif 'prettier' in cmd:
+                return "evidence: code path=.prettierrc", "Converted command to code (prettier → .prettierrc)"
+            elif 'yamllint' in cmd and 'path' in params:
+                return f"evidence: code path={params['path']}", "Converted command to code (yamllint → file)"
+            elif 'markdownlint' in cmd and 'path' in params:
+                return f"evidence: docs path={params['path']}", "Converted command to docs (markdownlint → file)"
+            else:
+                return f"evidence: code path=COMMAND_NOT_SUPPORTED contains=\"{cmd}\"", "Command evidence not supported by verifier"
+        return evidence, "command missing cmd parameter"
+    
+    return evidence, "Unknown non-compliant type"
 
 
 def validate_evidence_hook(hook: str, context: ProjectContext) -> Tuple[bool, str, Optional[str]]:
@@ -243,6 +342,11 @@ def validate_evidence_hook(hook: str, context: ProjectContext) -> Tuple[bool, st
     
     hook_type = parts[0]
     params_str = parts[1] if len(parts) > 1 else ""
+    
+    # Check for non-compliant types
+    NON_COMPLIANT_TYPES = {'file_exists', 'test_exists', 'command'}
+    if hook_type in NON_COMPLIANT_TYPES:
+        return False, f"Non-compliant type: {hook_type} (not supported by verifier)", None
     
     # Parse parameters (key=value format)
     params = {}
@@ -356,96 +460,6 @@ def validate_evidence_hook(hook: str, context: ProjectContext) -> Tuple[bool, st
         return False, f"Unknown evidence type: {hook_type}", None
 
 
-def build_prompt(task: Task, context: ProjectContext) -> str:
-    """Build the prompt for LLM"""
-    return f"""You are an expert at converting natural language evidence descriptions into standardized evidence hooks for SmartSpec verification.
-
-PROJECT CONTEXT:
-{context.get_project_summary()}
-
-TASK:
-ID: {task.task_id}
-Title: {task.title}
-Description: {task.description}
-
-CURRENT EVIDENCE (descriptive):
-{task.evidence}
-
-EVIDENCE HOOK FORMATS (from smartspec_verify_tasks_progress_strict):
-
-1. code evidence - For implementation/source code:
-   evidence: code path=<file-path> [symbol=<function/class>] [contains=<text>]
-   Example: evidence: code path=src/auth/login.ts symbol=validatePassword
-
-2. test evidence - For test files:
-   evidence: test path=<test-file> [contains=<test-description>]
-   Example: evidence: test path=tests/auth.test.ts contains="validates password"
-   IMPORTANT: NEVER use 'command' in test evidence (verifier doesn't execute commands)
-
-3. ui evidence - For UI components:
-   evidence: ui screen=<screen-name> [route=<path>] [component=<name>] [states=<list>]
-   Example: evidence: ui screen=LoginScreen component=PasswordInput
-
-4. docs evidence - For documentation:
-   evidence: docs path=<doc-file> [heading=<section>] [contains=<text>]
-   Example: evidence: docs path=README.md heading="Authentication"
-
-CRITICAL RULES:
-1. Use REAL file paths that exist in the project (see PROJECT CONTEXT above)
-2. For packages like bcrypt/JWT/Vault/Redis/BullMQ/Winston, find the ACTUAL file that imports them
-3. NEVER use placeholder paths like "???" or "TODO"
-4. NEVER use 'command' in test evidence (verifier doesn't execute commands)
-5. All paths must be repo-relative (no absolute paths)
-6. Choose the most appropriate evidence type based on what's being verified
-
-RESPONSE FORMAT:
-Return ONLY the evidence hook, nothing else:
-evidence: <type> <key>=<value> <key>=<value>
-"""
-
-
-def generate_evidence_hook_interactive(task: Task, context: ProjectContext) -> str:
-    """
-    Generate evidence hook by writing prompt to file and waiting for response
-    This allows external LLM (Kilo/Antigravity) to process it
-    """
-    prompt = build_prompt(task, context)
-    
-    # Write prompt to file
-    prompt_file = Path(f"/tmp/evidence_prompt_{task.task_id}.txt")
-    response_file = Path(f"/tmp/evidence_response_{task.task_id}.txt")
-    
-    prompt_file.write_text(prompt)
-    
-    print(f"\n{'='*80}")
-    print(f"PROMPT for {task.task_id}:")
-    print(f"{'='*80}")
-    print(f"Prompt written to: {prompt_file}")
-    print(f"\nPlease:")
-    print(f"1. Read the prompt from: {prompt_file}")
-    print(f"2. Generate the evidence hook using your LLM")
-    print(f"3. Write the response to: {response_file}")
-    print(f"4. Press Enter when done...")
-    print(f"{'='*80}")
-    
-    input()  # Wait for user
-    
-    # Read response
-    if response_file.exists():
-        hook = response_file.read_text().strip()
-        response_file.unlink()  # Clean up
-        prompt_file.unlink()
-        
-        # Ensure it starts with "evidence:"
-        if not hook.startswith('evidence:'):
-            hook = f"evidence: {hook}"
-        
-        return hook
-    else:
-        print(f"⚠️  No response file found, using fallback")
-        return f"evidence: code path=MANUAL_INPUT_REQUIRED contains=check_task_{task.task_id}"
-
-
 def apply_changes(file_path: Path, tasks: List[Task]):
     """Apply the suggested evidence hooks to the tasks file"""
     # Create backup
@@ -492,7 +506,7 @@ def apply_changes(file_path: Path, tasks: List[Task]):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Migrate descriptive evidence to standardized evidence hooks"
+        description="Migrate descriptive evidence and fix non-compliant evidence types"
     )
     parser.add_argument(
         "--tasks-file",
@@ -510,9 +524,9 @@ def main():
         help="Apply changes to the file (default: preview only)"
     )
     parser.add_argument(
-        "--interactive",
+        "--auto-convert",
         action="store_true",
-        help="Interactive mode: write prompts to files for external LLM processing"
+        help="Automatically convert non-compliant evidence types (no LLM needed)"
     )
     
     args = parser.parse_args()
@@ -538,77 +552,93 @@ def main():
     tasks = parse_tasks_file(tasks_file)
     
     if not tasks:
-        print("✅ No tasks with descriptive evidence found. All evidence is already standardized!")
+        print("✅ No tasks with descriptive or non-compliant evidence found!")
         sys.exit(0)
     
-    print(f"Found {len(tasks)} tasks with descriptive evidence")
+    # Separate non-compliant from descriptive
+    non_compliant_tasks = [t for t in tasks if t.is_non_compliant]
+    descriptive_tasks = [t for t in tasks if not t.is_non_compliant]
     
-    # Generate evidence hooks
-    if args.interactive:
-        print("\n🤖 Interactive mode: You will be prompted to provide LLM responses")
-        for i, task in enumerate(tasks, 1):
-            print(f"\n[{i}/{len(tasks)}] Processing {task.task_id}...")
-            task.suggested_hook = generate_evidence_hook_interactive(task, context)
-    else:
-        print("\n⚠️  This script requires --interactive mode in Kilo/Antigravity environment")
-        print("Or you need to have OpenAI API key configured.")
-        print("\nRun with: --interactive flag")
-        sys.exit(1)
+    print(f"Found {len(non_compliant_tasks)} non-compliant evidence hooks")
+    print(f"Found {len(descriptive_tasks)} descriptive evidence entries")
     
-    # Validate generated hooks
-    print(f"\n🔍 Validating generated hooks...")
-    valid_count = 0
-    corrected_count = 0
-    manual_count = 0
+    # Convert non-compliant evidence
+    if non_compliant_tasks:
+        print(f"\n🔧 Converting non-compliant evidence types...")
+        for i, task in enumerate(non_compliant_tasks, 1):
+            print(f"  [{i}/{len(non_compliant_tasks)}] Converting {task.task_id}...", end=" ")
+            converted, reason = convert_non_compliant_evidence(task.evidence, context)
+            task.suggested_hook = converted
+            task.validation_reason = reason
+            print("✓")
     
-    for i, task in enumerate(tasks, 1):
-        print(f"  [{i}/{len(tasks)}] Validating {task.task_id}...", end=" ")
-        is_valid, reason, corrected = validate_evidence_hook(task.suggested_hook, context)
+    # For descriptive evidence, we would need LLM (not implemented in auto-convert mode)
+    if descriptive_tasks and not args.auto_convert:
+        print(f"\n⚠️  {len(descriptive_tasks)} descriptive evidence entries require LLM conversion")
+        print("Run with --auto-convert to only fix non-compliant types")
+    
+    # Combine all tasks
+    all_tasks = non_compliant_tasks + descriptive_tasks
+    
+    # Validate converted hooks
+    if non_compliant_tasks:
+        print(f"\n🔍 Validating converted hooks...")
+        valid_count = 0
+        corrected_count = 0
+        manual_count = 0
         
-        task.validation_status = "valid" if is_valid else "needs_review"
-        task.validation_reason = reason
+        for i, task in enumerate(non_compliant_tasks, 1):
+            print(f"  [{i}/{len(non_compliant_tasks)}] Validating {task.task_id}...", end=" ")
+            is_valid, reason, corrected = validate_evidence_hook(task.suggested_hook, context)
+            
+            if is_valid:
+                print("✅")
+                task.validation_status = "valid"
+                valid_count += 1
+            elif corrected:
+                print("🔧")
+                task.suggested_hook = corrected
+                task.validation_status = "corrected"
+                task.validation_reason = reason
+                corrected_count += 1
+            else:
+                print("⚠️")
+                task.validation_status = "needs_review"
+                task.validation_reason = reason
+                manual_count += 1
         
-        if is_valid:
-            print("✅")
-            valid_count += 1
-        elif corrected:
-            print("🔧")
-            task.suggested_hook = corrected
-            task.validation_status = "corrected"
-            corrected_count += 1
-        else:
-            print("⚠️")
-            manual_count += 1
-    
-    # Print statistics
-    print("\n" + "="*80)
-    print(f"STATISTICS for {tasks_file.name}")
-    print("="*80)
-    print(f"Total tasks with descriptive evidence: {len(tasks)}")
-    print(f"\nValidation results:")
-    print(f"  ✅ Valid hooks: {valid_count}")
-    print(f"  🔧 Auto-corrected: {corrected_count}")
-    print(f"  ⚠️  Needs manual review: {manual_count}")
-    print("="*80)
+        # Print statistics
+        print("\n" + "="*80)
+        print(f"STATISTICS for {tasks_file.name}")
+        print("="*80)
+        print(f"Non-compliant evidence converted: {len(non_compliant_tasks)}")
+        print(f"\nValidation results:")
+        print(f"  ✅ Valid hooks: {valid_count}")
+        print(f"  🔧 Auto-corrected: {corrected_count}")
+        print(f"  ⚠️  Needs manual review: {manual_count}")
+        print("="*80)
     
     # Preview changes
     print("\n" + "="*80)
     print(f"PREVIEW: Proposed changes for {tasks_file.name}")
     print("="*80)
     
-    for task in tasks:
+    for task in non_compliant_tasks[:20]:  # Show first 20
         print(f"\nTask: {task.task_id} - {task.title}")
         print("─" * 80)
-        print(f"- OLD: {task.evidence}")
+        print(f"- OLD: evidence: {task.evidence}")
         print(f"+ NEW: {task.suggested_hook}")
-        if task.validation_status != "valid":
-            print(f"  Status: {task.validation_status.upper()} - {task.validation_reason}")
+        if task.validation_reason:
+            print(f"  Reason: {task.validation_reason}")
         print("─" * 80)
     
-    print(f"\nTotal changes proposed: {len(tasks)}")
+    if len(non_compliant_tasks) > 20:
+        print(f"\n... and {len(non_compliant_tasks) - 20} more changes")
+    
+    print(f"\nTotal changes proposed: {len(non_compliant_tasks)}")
     
     # Apply changes if requested
-    if args.apply:
+    if args.apply and non_compliant_tasks:
         print("\n⚠️  You are about to modify the file!")
         print("Countdown: ", end="", flush=True)
         for i in range(3, 0, -1):
@@ -616,9 +646,9 @@ def main():
             time.sleep(1)
         print("GO!")
         
-        apply_changes(tasks_file, tasks)
+        apply_changes(tasks_file, non_compliant_tasks)
         print("\n✅ Done! Changes applied.")
-    else:
+    elif not args.apply:
         print("\nTo apply these changes, run with --apply flag")
 
 

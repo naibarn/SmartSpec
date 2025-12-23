@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
-"""validate_tasks_enhanced.py (v7.2.4)
+"""validate_tasks_enhanced.py (v7.2.6)
 
 Strict-ish validator for SmartSpec tasks.md.
 
-This version blocks common root causes of strict-verifier false-negatives:
-- Evidence tokenization errors (shlex parsing): stray tokens / unbalanced quotes
-- contains=exists (placeholder matcher)
-- Glob paths in path= (* ? [ ])
-- Legacy evidence blocks: Evidence Hooks / Evidence / Code: bullets
-- Duplicate '## Tasks' headings (normalization bug indicator)
-- Stray noise lines in Tasks section (e.g. '$/a')
+New in v7.2.6
+-------------
+- Explicitly flags bullet evidence lines (`- evidence: ...`) as invalid, because strict verifiers
+  typically require the line to start with `evidence:`.
+
+Retains v7.2.4 protections
+-------------------------
+- shlex-based evidence payload parsing (quote/space safety)
+- blocks contains=exists
+- blocks glob characters in path= (* ? [ ])
+- blocks legacy Evidence Hooks / Evidence / Code: bullets
+- blocks duplicate '## Tasks'
+- blocks noise lines like '$/a' inside Tasks section
 
 Exit code:
 - 0 if valid
@@ -26,7 +32,6 @@ import dataclasses
 import json
 import re
 import shlex
-import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -75,6 +80,7 @@ RE_TASK_LINE = re.compile(
     r"^\s*-\s*\[(?P<chk>[ xX])\]\s+(?P<id>[A-Za-z0-9][A-Za-z0-9._:-]*)(\s+|\s*$)(?P<title>.*)$"
 )
 RE_EVIDENCE = re.compile(r"^\s*evidence:\s+(?P<payload>.*)$", re.IGNORECASE)
+RE_BULLET_EVIDENCE = re.compile(r"^\s*[-*]\s+evidence:\s+.+$", re.IGNORECASE)
 
 # legacy patterns to hard-fail
 RE_LEGACY_EVIDENCE_HOOKS = re.compile(r"^\s*\*\*?Evidence Hooks\*\*?:\s*$", re.IGNORECASE)
@@ -219,7 +225,6 @@ def parse_evidence(line: str, line_no: int) -> Tuple[Optional[Evidence], Optiona
 
 
 def _find_tasks_section_bounds(lines: List[str]) -> Tuple[Optional[int], Optional[int]]:
-    # returns (start_idx, end_idx) inclusive start, exclusive end
     start = None
     for i, l in enumerate(lines):
         if l.strip() == "## Tasks":
@@ -254,6 +259,13 @@ def parse_tasks_md(text: str) -> Tuple[List[Task], List[str], List[str]]:
         errors.append("Missing required section heading: '## Tasks'.")
     elif len(tasks_headers) > 1:
         errors.append(f"Duplicate '## Tasks' headings found at lines: {tasks_headers}. Normalize to a single section.")
+
+    # explicit error for '- evidence:' lines
+    for idx, l in enumerate(lines, start=1):
+        if RE_BULLET_EVIDENCE.match(l):
+            errors.append(
+                f"Line {idx}: bullet evidence '- evidence:' is not allowed. Use an indented 'evidence:' line (no leading '-')."
+            )
 
     # hard-fail legacy patterns
     for idx, l in enumerate(lines, start=1):
@@ -311,17 +323,6 @@ def parse_tasks_md(text: str) -> Tuple[List[Task], List[str], List[str]]:
 
         if not t.evidence:
             errors.append(f"Task '{t.task_id}' (line {t.line_no}) has no canonical evidence lines. Add 'evidence:' hooks.")
-
-    # sanity check: if an Evidence Mapping Summary exists and claims zeros, warn
-    if "Evidence Mapping Summary" in text:
-        m = re.search(r"Evidence Mapping Summary[\s\S]{0,2000}\|\s*Total Evidence Hooks\s*\|\s*(\d+)\s*\|", text)
-        if m:
-            try:
-                total = int(m.group(1))
-                if total == 0 and any(t.evidence for t in tasks):
-                    warnings.append("Evidence Mapping Summary reports 0 hooks, but evidence lines were detected. Recompute or remove the summary.")
-            except Exception:
-                pass
 
     return tasks, errors, warnings
 

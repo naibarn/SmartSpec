@@ -1,6 +1,6 @@
 ---
 workflow_id: smartspec_migrate_evidence_hooks
-version: "6.4.3"
+version: "6.4.4"
 status: active
 category: a2ui
 platform_support:
@@ -11,7 +11,7 @@ requires_apply: false
 
 # /smartspec_migrate_evidence_hooks
 
-## 1. Description
+## Description
 
 Migrates legacy/descriptive evidence in a `tasks.md` file to **strict-verifier-compatible** evidence hooks:
 
@@ -20,17 +20,11 @@ Migrates legacy/descriptive evidence in a `tasks.md` file to **strict-verifier-c
 - `evidence: docs ...`
 - `evidence: ui ...`
 
-This workflow exists because legacy `tasks.md` files often include ambiguous text like:
-
-- `**Evidence Hooks:**\n- Code: ...` (not machine-parseable)
-- `Code: <path> contains <text>` (not in `evidence:` grammar)
-- `**Evidence:** ...` (free text)
-
-**Primary target:** make `tasks.md` compatible with `/smartspec_verify_tasks_progress_strict` and reduce false-negatives.
+Also performs **safe structural normalization** to reduce validation/verification false-negatives.
 
 ---
 
-## 2. Governance contract
+## Governance contract
 
 - Preview-first by default.
 - Governed file writes require `--apply`.
@@ -52,7 +46,7 @@ Forbidden writes:
 
 ---
 
-## 3. Invocation
+## Invocation
 
 ### CLI
 
@@ -68,7 +62,7 @@ Forbidden writes:
 
 ---
 
-## 4. Parameters
+## Parameters
 
 | Parameter | Type | Description | Required |
 | :--- | :--- | :--- | :--- |
@@ -78,77 +72,95 @@ Forbidden writes:
 
 ---
 
-## 5. Evidence compatibility policy (MUST)
+## Structural normalization (NEW in 6.4.4)
 
-### 5.1 Types
+These fixes are deterministic and safe:
 
-To prevent “implement แล้ว แต่ verify ไม่เจอ”, migrated hooks MUST use strict verifier types:
+1) **YAML front-matter → Header table**
+
+If the file begins with:
+
+```md
+---
+spec_id: ...
+source: ...
+---
+```
+
+…it is converted into the canonical header table:
+
+```md
+| spec-id | source | generated_by | updated_at |
+|---|---|---|---|
+| <spec-id> | <source> | <generated_by> | <updated_at> |
+```
+
+2) **Ensure exactly one `## Tasks`**
+
+- If missing: insert `## Tasks` after the header.
+- If duplicated: keep the first, remove later duplicates.
+
+3) **Remove noise lines inside Tasks section**
+
+- Lines like `$/a` inside Tasks are removed.
+
+---
+
+## Evidence normalization (NEW in 6.4.4)
+
+1) **Bullet-evidence normalization**
+
+Convert:
+
+```md
+- evidence: code path=... contains="..."
+```
+
+to:
+
+```md
+evidence: code path=... contains="..."
+```
+
+This is critical because strict verifier/validator only counts lines that start with `evidence:`.
+
+---
+
+## Evidence compatibility policy
+
+### Types
 
 - `code`
 - `test`
 - `docs`
 - `ui`
 
-### 5.2 Key rules
+### Key rules
 
 - `path=` is REQUIRED.
 - `heading=` is ONLY allowed for `docs`.
 - Values with spaces MUST be quoted.
 - Never emit placeholders like `path=???`.
 
-### 5.3 Quote-safe rules (CRITICAL)
+### Quote-safe rules
 
-If the value contains quotes/spaces (e.g. JSON fragment), migration MUST rewrite it so it becomes a single token.
+If a value contains quotes/spaces (JSON fragment), migration MUST rewrite it so it becomes a single token.
 
-Preferred pattern:
+Preferred:
 
 ```md
 evidence: code path=package.json contains='"node": "22.x"'
 ```
 
-### 5.4 Fix rules for known false-negative patterns
+### Fix rules for known false-negative patterns
 
-The workflow MUST detect and fix these patterns:
-
-- `contains=exists` or `contains="exists"`
-  - Replace with `regex="."` (existence-only proof) and drop `contains`.
-
-- Glob paths in `path=` (e.g. `**/*.test.ts`)
-  - Mark as invalid and emit a remediation note (glob expansion is verifier-specific).
-  - Preferred fix: replace with concrete file(s) or adjust to folder + matcher only if verifier supports directory scans.
-
-- `heading=` on evidence types other than `docs`
-  - Convert to `evidence: docs ... heading="..."` when safe.
+- `contains=exists` → replace with `regex="."` (existence-only proof)
+- Glob characters in `path=` → keep but flag as needing manual remediation (do not guess file list)
+- `heading=` on non-docs → convert to docs when safe, otherwise flag
 
 ---
 
-## 6. Legacy formats the workflow MUST convert
-
-### 6.1 Legacy block header
-
-If the task contains something like:
-
-- `Evidence Hooks:`
-- `**Evidence Hooks:**`
-- `Evidence:`
-- `**Evidence:**`
-
-the workflow MUST remove the legacy header and replace the contents with canonical `evidence:` lines.
-
-### 6.2 Legacy bullet patterns (deterministic conversions)
-
-The workflow MUST detect and convert these patterns even without AI:
-
-- `- Code: <path> contains "<text>"` → `evidence: code path=<path> contains="<text>"`
-- `- Test: <path> contains "<text>"` → `evidence: test path=<path> contains="<text>"`
-- `- Docs: <path> heading "<h>"` → `evidence: docs path=<path> heading="<h>"`
-- `- UI: <path> contains "<text>"` → `evidence: ui path=<path> contains="<text>"`
-
-If the legacy line is ambiguous (missing path, missing matcher), it MUST be preserved as a note and the report MUST flag it for manual remediation.
-
----
-
-## 7. Outputs
+## Outputs
 
 ### Preview (default)
 
@@ -163,9 +175,9 @@ If the legacy line is ambiguous (missing path, missing matcher), it MUST be pres
 
 ---
 
-## 8. Implementation
+## Implementation
 
-Implemented in: `.smartspec/scripts/migrate_evidence_hooks.py`
+Implemented in: `.smartspec/scripts/migrate_evidence_hooks.py` (v6.4.4)
 
 ---
 

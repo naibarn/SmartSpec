@@ -156,7 +156,6 @@ else
   log "ℹ️ No .smartspec-docs/ directory found in repo; skipping docs copy."
 fi
 
-WORKFLOW_SCRIPTS
 
 log "📂 Installing/Updating .smartspec/scripts"
 backup_dir_if_exists "$WORKFLOW_SCRIPTS"

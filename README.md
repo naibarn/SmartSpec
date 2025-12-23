@@ -201,9 +201,9 @@ cat .spec/reports/generate-spec/<run-id>/preview/spec.md
 
 ---
 
-## 🗂️ All 55 Workflows & Commands
+## 🗂️ All 58 Workflows & Commands
 
-SmartSpec V6 consolidates its powerful features into a comprehensive set of 55 workflows, organized by function. These commands form the backbone of the **SPEC → PLAN → TASKS → IMPLEMENT** lifecycle, including advanced A2UI (Automated to UI) workflows for UI automation and optimization.
+SmartSpec V6 consolidates its powerful features into a comprehensive set of 58 workflows, organized by function. These commands form the backbone of the **SPEC → PLAN → TASKS → IMPLEMENT** lifecycle, including advanced A2UI (Automated to UI) workflows for UI automation and optimization.
 
 **⚠️ Remember:** Most workflows follow the **preview-first pattern** — run without `--apply` first to review, then run with `--apply` to apply changes.
 

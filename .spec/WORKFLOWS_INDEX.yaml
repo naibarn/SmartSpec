@@ -306,7 +306,7 @@ workflows:
     version: "6.2.0"
 
   # ---------------------------------------------------------------------------
-  # UI Theming & Design (A2UI Phase 6) (2)
+  # UI Theming & Design (A2UI Phase 6) (5)
   # ---------------------------------------------------------------------------
   - name: /smartspec_manage_theme
     purpose: Manage design system theme (colors, typography, spacing, component variants) for A2UI applications.
@@ -325,6 +325,33 @@ workflows:
     write_scopes: [theme, reports]
     status: active
     version: "6.2.0"
+
+  - name: /smartspec_generate_rjsf_schema
+    purpose: Generate JSON Schema and UI Schema for React JSON Schema Form (RJSF) from natural language prompts.
+    category: ui_generation
+    requires_a2ui: false
+    platform_support: [cli, kilo]
+    write_scopes: [none]
+    status: active
+    version: "6.3.0"
+
+  - name: /smartspec_resolve_themes
+    purpose: Merge multiple theme files into a single resolved theme based on hierarchy (System > Company > User).
+    category: ui_theming_and_design
+    requires_a2ui: true
+    platform_support: [cli, kilo]
+    write_scopes: [theme]
+    status: active
+    version: "6.3.0"
+
+  - name: /smartspec_generate_component_registry
+    purpose: Automatically scan component library and generate component registry file for JSON-driven UI renderer.
+    category: project_management_and_support
+    requires_a2ui: false
+    platform_support: [cli, kilo]
+    write_scopes: [code]
+    status: active
+    version: "6.3.0"
 
   # ---------------------------------------------------------------------------
   # AI Feedback & Optimization (A2UI Phase 6) (1)

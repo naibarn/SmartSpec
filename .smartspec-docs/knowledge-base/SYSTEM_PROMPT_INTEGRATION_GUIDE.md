@@ -2,72 +2,151 @@
 
 ## 1. Overview
 
-To ensure that AI agents have the most accurate and up-to-date information, it is essential to integrate key knowledge base articles directly into their system prompts. This guide outlines which files to use and how to structure them for optimal performance.
+To ensure that AI agents have the most accurate and up-to-date information about SmartSpec workflows, critical knowledge base files have been placed in the `.smartspec/` directory where system prompts can access them.
 
-## 2. The Consolidated Knowledge Base File
+## 2. The Critical Knowledge Base Files
 
-A new, consolidated file has been created specifically for this purpose:
+The following files in `.smartspec/` are essential for preventing user confusion:
 
-**File:** `.smartspec-docs/knowledge-base/SYSTEM_PROMPT_KNOWLEDGE_BASE.md`
+### Primary File for System Prompts
 
-This file is a concatenation of the most critical knowledge base articles, ordered by importance, to provide a comprehensive but concise context for the AI.
+**File:** `.smartspec/knowledge_base_a2ui_workflows.md`
 
-### Source Files Included
+This is the **most critical file** for resolving the confusion about UI JSON formats. It contains:
 
-The consolidated file is created by combining the following articles in this specific order:
+1. **ui-json-formats-comparison:** Clear comparison between RJSF and A2UI formats
+2. **workflow-selection-guide:** Decision tree for choosing the right workflow
 
-1.  **ui-json-formats-comparison.md:** The most critical document for resolving user confusion. It directly addresses the core problem of the two UI JSON formats.
-2.  **workflow-selection-guide.md:** Provides a clear decision-making framework, which is essential for guiding users to the correct workflow.
-3.  **rjsf-schema-generation-concepts.md:** Details the specifics of the RJSF workflow, including its scope and limitations.
-4.  **spec-ui-001-integration-guide.md:** Explains how the A2UI workflows fit together, providing a high-level architectural view.
-5.  **theming-system-concepts.md:** Covers the foundational concepts of the theming system.
-6.  **component-registry-concepts.md:** Explains the automation behind component mapping.
+**Why this file is critical:**
+- Directly addresses the core problem: users don't know there are two UI JSON formats
+- Provides clear warnings about renderer compatibility
+- Includes decision trees and comparison tables
+- Prevents the exact confusion shown in the user's screenshots
 
-### Files Excluded and Rationale
+### Supporting Files
 
--   **ai-feedback-loop-concepts.md** and **golden-tests-concepts.md:** These are important but less frequently confused topics. They can be retrieved by the AI via standard retrieval-augmented generation (RAG) when needed, rather than occupying valuable context space in every prompt.
--   **multi-level-theming-concepts.md:** The core concepts are already covered in the updated `theming-system-concepts.md`. This more detailed article can be retrieved via RAG.
+**File:** `.smartspec/ui-json-formats-comparison.md`
+- Standalone comparison guide
+- Can be referenced separately if needed
+
+**File:** `.smartspec/workflow-selection-guide.md`
+- Standalone decision tree
+- Can be referenced separately if needed
 
 ## 3. Integration Strategy
 
-To integrate this knowledge into your AI agents, follow this strategy:
+### For System Prompts
 
-1.  **Load the Content:** In your agent initialization process, load the full content of `SYSTEM_PROMPT_KNOWLEDGE_BASE.md`.
+Load the consolidated file into your AI agent's system prompt:
 
-2.  **Inject into System Prompt:** Structure your system prompt to include this content under a clear heading. For example:
+```python
+# Python example
+with open('.smartspec/knowledge_base_a2ui_workflows.md', 'r') as f:
+    a2ui_knowledge = f.read()
 
-    ```
-    You are a helpful AI assistant for the SmartSpec framework.
+system_prompt = f"""
+You are a helpful AI assistant for the SmartSpec framework.
 
-    <KnowledgeBase>
-    {content of SYSTEM_PROMPT_KNOWLEDGE_BASE.md}
-    </KnowledgeBase>
+<A2UIKnowledgeBase>
+{a2ui_knowledge}
+</A2UIKnowledgeBase>
 
-    Please answer the user's questions based on the provided knowledge base and your general expertise.
-    ```
+CRITICAL INSTRUCTIONS:
+1. When users ask about UI JSON or form generation, ALWAYS check this knowledge base first
+2. Make it clear that there are TWO distinct UI JSON formats: RJSF and A2UI
+3. Guide users to the correct workflow based on their renderer
+4. Warn about compatibility issues if they choose the wrong format
 
-3.  **Prioritize the Knowledge Base:** Instruct the model to prioritize the information within the `<KnowledgeBase>` tags, as it is the most current and authoritative source.
+Please answer the user's questions based on the provided knowledge base.
+"""
+```
 
-## 4. Maintenance and Updates
+### Key Points to Emphasize in System Prompts
 
-This consolidated file should be treated as a build artifact. It should be regenerated whenever any of its source files are updated. This can be automated with a simple script in your CI/CD pipeline:
+1. **Two Formats Exist:** Always clarify that `/smartspec_generate_rjsf_schema` and `/smartspec_generate_ui_spec` produce different outputs
+2. **Renderer Matters:** The choice depends on whether the user has an RJSF renderer or an A2UI renderer
+3. **Not Interchangeable:** RJSF schemas won't work with A2UI renderers and vice versa
+4. **Decision Tree:** Guide users through the decision tree in the knowledge base
+
+## 4. File Locations
+
+### Core Framework Files (Downloaded to User's Machine)
+```
+.smartspec/
+├── knowledge_base_a2ui_workflows.md        ← PRIMARY FILE FOR SYSTEM PROMPTS
+├── ui-json-formats-comparison.md           ← Individual component
+├── workflow-selection-guide.md             ← Individual component
+├── Knowledge-Base.md                       ← General SmartSpec KB
+├── knowledge_base_smartspec_handbook.md    ← Handbook
+└── knowledge_base_smartspec_install_and_usage.md  ← Install guide
+```
+
+### Documentation Files (For Human Reading)
+```
+.smartspec-docs/
+└── knowledge-base/
+    ├── ui-json-formats-comparison.md
+    ├── workflow-selection-guide.md
+    ├── rjsf-schema-generation-concepts.md
+    ├── spec-ui-001-integration-guide.md
+    ├── theming-system-concepts.md
+    ├── component-registry-concepts.md
+    └── ... (other detailed articles)
+```
+
+## 5. Maintenance
+
+### When to Update
+
+Update `.smartspec/knowledge_base_a2ui_workflows.md` whenever:
+1. New UI-related workflows are added
+2. Format specifications change
+3. Renderer compatibility issues are discovered
+4. User confusion patterns emerge
+
+### How to Update
 
 ```bash
 #!/bin/bash
+# Regenerate the consolidated knowledge base
 
-KB_DIR=".smartspec-docs/knowledge-base"
-OUTPUT_FILE="$KB_DIR/SYSTEM_PROMPT_KNOWLEDGE_BASE.md"
+cd .smartspec
 
 cat \
-  "$KB_DIR/ui-json-formats-comparison.md" \
-  "$KB_DIR/workflow-selection-guide.md" \
-  "$KB_DIR/rjsf-schema-generation-concepts.md" \
-  "$KB_DIR/spec-ui-001-integration-guide.md" \
-  "$KB_DIR/theming-system-concepts.md" \
-  "$KB_DIR/component-registry-concepts.md" \
-  > "$OUTPUT_FILE"
+  ui-json-formats-comparison.md \
+  workflow-selection-guide.md \
+  > knowledge_base_a2ui_workflows.md
 
-echo "System prompt knowledge base updated."
+echo "A2UI knowledge base updated!"
 ```
 
-By following this guide, you can ensure that your AI agents are equipped with the necessary knowledge to provide clear, accurate, and helpful answers, preventing the kind of user confusion that was previously identified.
+## 6. Why This Structure?
+
+### `.smartspec/` vs `.smartspec-docs/`
+
+-   **`.smartspec/`** contains files that are:
+    -   Downloaded to the user's machine during installation
+    -   Accessed by AI agents via system prompts
+    -   Critical for runtime decision-making
+    -   Concise and focused
+
+-   **`.smartspec-docs/`** contains files that are:
+    -   For human reading and reference
+    -   More detailed and comprehensive
+    -   Not loaded into system prompts (too large)
+    -   Accessed via documentation websites or direct reading
+
+By keeping the critical knowledge in `.smartspec/`, we ensure that AI agents always have access to the most important information without overwhelming the system prompt with unnecessary details.
+
+## 7. Expected Outcome
+
+With this integration, AI agents will:
+
+1. ✅ Immediately recognize when a user is asking about UI generation
+2. ✅ Clarify that two distinct formats exist
+3. ✅ Ask about the user's renderer before recommending a workflow
+4. ✅ Provide clear warnings about compatibility
+5. ✅ Guide users through the decision tree
+6. ✅ Prevent the confusion shown in the original user screenshots
+
+This structure ensures that the knowledge base is both accessible to AI agents and maintainable by developers.

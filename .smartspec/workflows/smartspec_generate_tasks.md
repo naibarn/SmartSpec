@@ -1,8 +1,7 @@
-```md
 ---
 description: Convert spec.md (or plan.md) → tasks.md with duplication prevention and strict-verifier-compatible evidence hooks.
 version: 7.1.1
-workflow: /smartspec_generate_tasks
+workflow: smartspec_generate_tasks
 category: core
 ---
 
@@ -74,19 +73,6 @@ Forbidden writes (must hard-fail):
 
 ---
 
-## Invocation
-
-### CLI
-
-```bash
-/smartspec_generate_tasks <specs/<category>/<spec-id>/spec.md|.../plan.md|.../ui-spec.json> [--apply] [--validate-only] [--json]
-```
-
-### Kilo Code
-
-```bash
-/smartspec_generate_tasks.md <specs/<category>/<spec-id>/spec.md|.../plan.md|.../ui-spec.json> [--apply] [--validate-only] [--json] --platform kilo
-```
 
 ---
 
@@ -223,7 +209,7 @@ After generating preview and before applying, MUST validate tasks.
 **Validation Command:**
 
 ```bash
-python3 .spec/scripts/validate_tasks_enhanced.py \
+python3 .smartspec/scripts/validate_tasks_enhanced.py \
   --tasks .spec/reports/generate-tasks/<run-id>/preview/<spec-id>/tasks.md \
   --spec specs/<category>/<spec-id>/spec.md \
   --check-duplicates --threshold 0.8

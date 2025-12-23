@@ -1,21 +1,15 @@
 #!/usr/bin/env python3
-"""validate_tasks_enhanced.py (v7.2.3)
+"""validate_tasks_enhanced.py (v7.2.4)
 
-Why this version exists
-----------------------
-We saw tasks pass validation but fail strict verification because evidence lines contained
-unescaped quotes / multi-token values, e.g.:
+Strict-ish validator for SmartSpec tasks.md.
 
-  evidence: code path=package.json contains="node": "22.x"
-
-A strict verifier (shlex-style) will split this into multiple tokens and reject it.
-
-v7.2.3 fixes this by:
-- Parsing evidence payload with shlex (same class of parsing as strict verifier)
-- Requiring every token after the evidence type to be key=value (no stray tokens)
-- Enforcing: heading= only allowed for docs
-- Keeping legacy hard-fails (Evidence Hooks blocks, Code: bullets, bold task IDs)
-- Adding path sanity checks to prevent path=command and traversal
+This version blocks common root causes of strict-verifier false-negatives:
+- Evidence tokenization errors (shlex parsing): stray tokens / unbalanced quotes
+- contains=exists (placeholder matcher)
+- Glob paths in path= (* ? [ ])
+- Legacy evidence blocks: Evidence Hooks / Evidence / Code: bullets
+- Duplicate '## Tasks' headings (normalization bug indicator)
+- Stray noise lines in Tasks section (e.g. '$/a')
 
 Exit code:
 - 0 if valid
@@ -46,7 +40,6 @@ ALLOWED_KEYS = {
     "ui": {"path", "contains", "selector", "regex"},
 }
 
-# Evidence matcher keys: which ones count as "non-path" proof
 MATCHER_KEYS = {
     "code": {"symbol", "contains", "regex"},
     "test": {"contains", "regex"},
@@ -84,11 +77,13 @@ RE_TASK_LINE = re.compile(
 RE_EVIDENCE = re.compile(r"^\s*evidence:\s+(?P<payload>.*)$", re.IGNORECASE)
 
 # legacy patterns to hard-fail
-RE_LEGACY_EVIDENCE_HEADER = re.compile(r"^\s*\*\*?Evidence Hooks\*\*?:\s*$", re.IGNORECASE)
-RE_LEGACY_EVIDENCE_BULLET = re.compile(
-    r"^\s*-\s*(Code|Test|Docs|UI)\s*:\s*(?P<body>.+)$", re.IGNORECASE
-)
-RE_BOLD_TASK_ID = re.compile(r"^\s*-\s*\[[ xX]\]\s+\*\*(?P<id>[^*]+)\*\*\s+")
+RE_LEGACY_EVIDENCE_HOOKS = re.compile(r"^\s*\*\*?Evidence Hooks\*\*?:\s*$", re.IGNORECASE)
+RE_LEGACY_EVIDENCE = re.compile(r"^\s*\*\*?Evidence\*\*?:\s*.+$", re.IGNORECASE)
+RE_LEGACY_EVIDENCE_BULLET = re.compile(r"^\s*-\s*(Code|Test|Docs|UI)\s*:\s*.+$", re.IGNORECASE)
+RE_BOLD_TASK_ID = re.compile(r"^\s*-\s*\[[ xX]\]\s+\*\*[^*]+\*\*\s+")
+
+# noise lines
+RE_NOISE = re.compile(r"^\s*\$/.+\s*$")
 
 
 @dataclasses.dataclass
@@ -115,6 +110,10 @@ def _normalize_path(p: str) -> str:
         p = p[2:]
     p = re.sub(r"/{2,}", "/", p)
     return p
+
+
+def _has_glob(p: str) -> bool:
+    return any(ch in p for ch in ["*", "?", "[", "]"])
 
 
 def _is_rel_path(p: str) -> bool:
@@ -150,7 +149,7 @@ def parse_evidence(line: str, line_no: int) -> Tuple[Optional[Evidence], Optiona
     except Exception as e:
         return None, (
             f"Line {line_no}: evidence payload not parseable (quote error): {e}. "
-            "Tip: wrap JSON fragments in single quotes, e.g. contains='\"node\": \"22.x\"'"
+            "Tip: wrap JSON fragments in single quotes, e.g. contains='\\\"node\\\": \\\"22.x\\\"'"
         )
 
     if not tokens:
@@ -178,33 +177,37 @@ def parse_evidence(line: str, line_no: int) -> Tuple[Optional[Evidence], Optiona
     if stray:
         return None, (
             f"Line {line_no}: evidence has stray tokens {stray}. "
-            "This usually means your value contains quotes/spaces and must be quoted/escaped. "
-            "Example: contains='\"node\": \"22.x\"'"
+            "This usually means your value contains quotes/spaces and must be quoted/escaped."
         )
 
-    # Key validation
     allowed = ALLOWED_KEYS[etype]
 
     if "path" not in kv or not kv["path"].strip():
         return None, f"Line {line_no}: evidence '{etype}' missing required key 'path'"
 
-    # Unknown keys
     unknown = set(kv.keys()) - allowed
     if unknown:
         return None, f"Line {line_no}: evidence '{etype}' has unknown keys: {sorted(unknown)}"
 
-    # heading= rule
     if "heading" in kv and etype != "docs":
         return None, f"Line {line_no}: key 'heading' is only allowed for evidence type 'docs'"
 
-    # Path sanity
+    # placeholder matcher
+    if "contains" in kv:
+        cv = kv["contains"].strip().strip('"\'').lower()
+        if cv == "exists":
+            return None, f"Line {line_no}: contains=exists is not allowed (use regex=\".\" for existence-only proof)"
+
+    # path safety
     path = kv.get("path", "")
     if not _is_rel_path(path):
         return None, f"Line {line_no}: invalid path (must be repo-relative, no traversal/spaces): {path}"
     if _looks_like_command_path(path):
         return None, f"Line {line_no}: path looks like a command (use command= instead): path={path}"
+    if _has_glob(path):
+        return None, f"Line {line_no}: glob characters are not allowed in path= (use concrete file path): path={path}"
 
-    # Require at least one matcher key for code/test/ui to reduce false positives
+    # require matcher for code/test/ui
     if etype in {"code", "test", "ui"}:
         if not (MATCHER_KEYS[etype] & set(kv.keys())):
             return None, (
@@ -215,35 +218,60 @@ def parse_evidence(line: str, line_no: int) -> Tuple[Optional[Evidence], Optiona
     return Evidence(etype=etype, kv=kv, raw=line.rstrip("\n"), line_no=line_no), None
 
 
-def parse_tasks_md(text: str) -> Tuple[List[Task], List[str]]:
+def _find_tasks_section_bounds(lines: List[str]) -> Tuple[Optional[int], Optional[int]]:
+    # returns (start_idx, end_idx) inclusive start, exclusive end
+    start = None
+    for i, l in enumerate(lines):
+        if l.strip() == "## Tasks":
+            start = i
+            break
+    if start is None:
+        return None, None
+
+    end = len(lines)
+    for j in range(start + 1, len(lines)):
+        if re.match(r"^#\s+\S", lines[j]):
+            end = j
+            break
+    return start, end
+
+
+def parse_tasks_md(text: str) -> Tuple[List[Task], List[str], List[str]]:
     errors: List[str] = []
+    warnings: List[str] = []
     tasks: List[Task] = []
 
     lines = text.splitlines()
 
-    # Header table presence (simple heuristic)
+    # header table presence
     header_ok = any(l.strip().lower().startswith("| spec-id ") for l in lines[:25])
     if not header_ok:
         errors.append("Missing header table (expected a table starting with '| spec-id |' within top 25 lines).")
 
-    # Must contain '## Tasks'
-    if not any(l.strip() == "## Tasks" for l in lines):
+    # must contain '## Tasks' exactly once
+    tasks_headers = [i for i, l in enumerate(lines, start=1) if l.strip() == "## Tasks"]
+    if not tasks_headers:
         errors.append("Missing required section heading: '## Tasks'.")
+    elif len(tasks_headers) > 1:
+        errors.append(f"Duplicate '## Tasks' headings found at lines: {tasks_headers}. Normalize to a single section.")
 
-    # Hard fail legacy patterns
+    # hard-fail legacy patterns
     for idx, l in enumerate(lines, start=1):
         if RE_BOLD_TASK_ID.match(l):
-            errors.append(
-                f"Line {idx}: legacy format: task id is bolded (**ID**). Use '- [ ] ID Title' (no bold)."
-            )
-        if RE_LEGACY_EVIDENCE_HEADER.match(l):
-            errors.append(
-                f"Line {idx}: legacy evidence block header 'Evidence Hooks:' detected. Replace with canonical 'evidence:' lines."
-            )
+            errors.append(f"Line {idx}: legacy format: task id is bolded (**ID**). Use '- [ ] ID Title' (no bold).")
+        if RE_LEGACY_EVIDENCE_HOOKS.match(l):
+            errors.append(f"Line {idx}: legacy evidence block header 'Evidence Hooks:' detected. Replace with canonical 'evidence:' lines.")
+        if RE_LEGACY_EVIDENCE.match(l):
+            errors.append(f"Line {idx}: legacy '**Evidence:**' line detected. Replace with canonical 'evidence:' lines.")
         if RE_LEGACY_EVIDENCE_BULLET.match(l):
-            errors.append(
-                f"Line {idx}: legacy evidence bullet detected ('Code/Test/Docs/UI: ...'). Replace with canonical 'evidence:' line."
-            )
+            errors.append(f"Line {idx}: legacy evidence bullet detected ('Code/Test/Docs/UI: ...'). Replace with canonical 'evidence:' line.")
+
+    # noise lines inside Tasks section
+    s, e = _find_tasks_section_bounds(lines)
+    if s is not None:
+        for idx in range(s + 1, e):
+            if RE_NOISE.match(lines[idx]):
+                errors.append(f"Line {idx+1}: stray noise line in Tasks section: {lines[idx].strip()}")
 
     current: Optional[Task] = None
 
@@ -252,7 +280,6 @@ def parse_tasks_md(text: str) -> Tuple[List[Task], List[str]]:
         if tm:
             if current:
                 tasks.append(current)
-
             task_id = tm.group("id")
             title = (tm.group("title") or "").strip()
             checked = tm.group("chk").strip().lower() == "x"
@@ -274,22 +301,29 @@ def parse_tasks_md(text: str) -> Tuple[List[Task], List[str]]:
     if not tasks:
         errors.append("No tasks found. Expected lines like '- [ ] TSK-... Title'.")
 
-    # Duplicate IDs + require evidence per task
+    # duplicate IDs + require evidence per task
     seen: Dict[str, int] = {}
     for t in tasks:
         if t.task_id in seen:
-            errors.append(
-                f"Duplicate task id '{t.task_id}' at line {t.line_no} (previous at line {seen[t.task_id]})."
-            )
+            errors.append(f"Duplicate task id '{t.task_id}' at line {t.line_no} (previous at line {seen[t.task_id]}).")
         else:
             seen[t.task_id] = t.line_no
 
         if not t.evidence:
-            errors.append(
-                f"Task '{t.task_id}' (line {t.line_no}) has no canonical evidence lines. Add 'evidence:' hooks."
-            )
+            errors.append(f"Task '{t.task_id}' (line {t.line_no}) has no canonical evidence lines. Add 'evidence:' hooks.")
 
-    return tasks, errors
+    # sanity check: if an Evidence Mapping Summary exists and claims zeros, warn
+    if "Evidence Mapping Summary" in text:
+        m = re.search(r"Evidence Mapping Summary[\s\S]{0,2000}\|\s*Total Evidence Hooks\s*\|\s*(\d+)\s*\|", text)
+        if m:
+            try:
+                total = int(m.group(1))
+                if total == 0 and any(t.evidence for t in tasks):
+                    warnings.append("Evidence Mapping Summary reports 0 hooks, but evidence lines were detected. Recompute or remove the summary.")
+            except Exception:
+                pass
+
+    return tasks, errors, warnings
 
 
 def extract_t_refs_from_spec(spec_text: str) -> List[str]:
@@ -313,10 +347,9 @@ def main() -> int:
         return 1
 
     tasks_text = tasks_path.read_text(encoding="utf-8", errors="replace")
-    parsed_tasks, errors = parse_tasks_md(tasks_text)
+    parsed_tasks, errors, warnings = parse_tasks_md(tasks_text)
 
-    warnings: List[str] = []
-
+    # optional spec check
     if args.spec:
         spec_path = Path(args.spec)
         if not spec_path.exists():
@@ -344,7 +377,7 @@ def main() -> int:
         }
         print(json.dumps(out, ensure_ascii=False, indent=2))
     else:
-        print("Validate tasks against requirements (strict evidence parsing)")
+        print("Validate tasks against requirements (strict evidence + hygiene)")
         if warnings:
             print(f"\nWARNINGS ({len(warnings)}):")
             for w in warnings:

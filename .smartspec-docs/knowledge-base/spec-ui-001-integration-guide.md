@@ -4,7 +4,19 @@
 
 The three new workflows—`/smartspec_generate_rjsf_schema`, `/smartspec_resolve_themes`, and `/smartspec_generate_component_registry`—are not just standalone tools. They are designed to work together as a cohesive system to fully realize the vision of a JSON-driven UI architecture as laid out in `SPEC-UI-001`. This guide demonstrates how these workflows can be integrated to create a powerful, automated, and scalable UI development pipeline.
 
-## 2. The End-to-End Development Lifecycle
+## 2. Prerequisite: The A2UI Renderer
+
+This entire architecture relies on a central component: the **A2UI Renderer**. This is a custom component in your application that is responsible for taking an A2UI `ui-spec.json` and rendering the corresponding UI. The renderer must be able to:
+
+1.  **Parse the A2UI JSON:** Recursively traverse the JSON tree.
+2.  **Map Components:** Use the `component-registry.ts` to map a `type` string (e.g., `"card"`) to its actual React component.
+3.  **Apply Properties:** Pass the properties from the JSON (e.g., `title`, `children`) to the React component as props.
+4.  **Handle Bindings:** Resolve data bindings to connect the UI to application state and API data.
+5.  **Apply Themes:** Use the resolved theme to style the components.
+
+> **Crucial:** The workflows described here generate the *specifications*, but you must have a renderer capable of interpreting them. This is a one-time investment that enables the entire JSON-driven UI paradigm.
+
+## 3. The End-to-End Development Lifecycle
 
 Here is a practical, step-by-step look at how these workflows fit into the development lifecycle of a new feature that includes a dynamic form.
 
@@ -83,7 +95,7 @@ async function resolveUserTheme(user, company) {
 
 **Outcome:** A unique, fully resolved theme file is generated for the user's session. The path to this file is then passed to the frontend, which provides it to the A2UI renderer.
 
-## 3. The Big Picture: A Fully Automated Flow
+## 4. The Big Picture: A Fully Automated Flow
 
 When combined, these workflows create a powerful and elegant system:
 

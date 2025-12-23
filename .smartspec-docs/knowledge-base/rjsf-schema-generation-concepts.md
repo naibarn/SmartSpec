@@ -13,6 +13,8 @@ Modern web applications often require complex, dynamic forms for tasks like user
 
 ## 2. The SmartSpec Solution: `/smartspec_generate_rjsf_schema`
 
+> **Important:** This workflow is a specialized tool for generating form schemas for the **React JSON Schema Form (RJSF)** library. It does not produce a general-purpose A2UI specification. For a detailed comparison, please read the [UI JSON Formats Comparison Guide](ui-json-formats-comparison.md).
+
 SmartSpec introduces the `/smartspec_generate_rjsf_schema` workflow to completely automate the creation of RJSF-compatible schemas from a single, high-level command. This workflow bridges the gap between a natural language requirement and a fully functional, production-ready form.
 
 > By leveraging AI, this workflow allows developers to describe a form in plain English and receive the `schema.json` and `uiSchema.json` files needed to render it instantly.
@@ -54,7 +56,15 @@ Consider the command:
 
 This results in a robust, validated form configuration without the developer needing to write a single line of JSON.
 
-## 4. Use Cases and Best Practices
+## 4. Scope and Limitations
+
+It is critical to understand that `/smartspec_generate_rjsf_schema` is a **specialized tool**, not a general-purpose UI generator.
+
+-   **Renderer-Specific:** The output is only compatible with the RJSF library or a renderer that explicitly supports its `schema` and `uiSchema` format.
+-   **Form-Centric:** The workflow is designed exclusively for generating forms. It cannot be used to create other UI elements like cards, tables, or page layouts.
+-   **No Data Binding:** The generated schemas do not contain data binding information. Data handling must be managed by the application code that uses the RJSF component.
+
+## 5. Use Cases and Best Practices
 
 ### Ideal Use Cases
 

@@ -1,857 +1,990 @@
 #!/usr/bin/env python3
-"""
-SmartSpec Evidence Verification Script (Strict Mode)
+"""Strict evidence-only verifier for SmartSpec tasks.
 
-This script verifies evidence hooks in tasks.md using strict evidence-based verification.
-It treats checkboxes as non-authoritative and verifies each task via explicit evidence hooks.
+Key goals:
+- Reduce false negatives by using a single, quote-safe parser for evidence params.
+- Reduce false positives by treating "path exists" as MEDIUM by default.
+- Enforce handbook hardening: path normalization, no symlink escape, bounded scanning,
+  safe output roots, and redaction.
+
+Designed to be invoked by the SmartSpec workflow wrapper.
 """
 
+from __future__ import annotations
+
+import argparse
+import dataclasses
+import datetime as _dt
+import difflib
+import hashlib
+import json
 import os
 import re
-import json
+import shlex
 import sys
-import argparse
-import logging
-from datetime import datetime
+import time
 from pathlib import Path
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
-# Valid evidence types according to specification
-VALID_EVIDENCE_TYPES = {'code', 'test', 'ui', 'docs'}
+DEFAULT_CONFIG_PATH = ".spec/smartspec.config.yaml"
+DEFAULT_REPORT_ROOT = ".spec/reports/verify-tasks-progress"
 
-# Non-compliant types that should be rejected  
-NON_COMPLIANT_TYPES = {'file_exists', 'test_exists', 'command'}
+DEFAULT_LIMITS = {
+    "max_files_to_scan": 4000,
+    "max_total_bytes": 50 * 1024 * 1024,  # 50MB
+    "max_verification_seconds": 20,
+    "max_single_file_bytes": 2 * 1024 * 1024,  # 2MB
+    "max_excerpt_chars": 240,
+    "max_suggestions": 5,
+}
 
-# Verification scopes
-class VerificationScope:
-    OK = "ok"
-    NOT_FOUND = "not_found"
-    INVALID_SCOPE = "invalid_scope"
-    CONTENT_NOT_FOUND = "content_not_found"
-    FILE_TOO_LARGE = "file_too_large"
-    READ_ERROR = "read_error"
-    ERROR = "error"
-
-# Resource limits
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-MAX_FILES_TO_SCAN = 10000
-MAX_VERIFICATION_TIME = 300  # 5 minutes
+DEFAULT_VERIFY_POLICY = {
+    # By default, MEDIUM does NOT count as verified.
+    "allow_medium_as_verified_for": [],  # e.g. ["docs"]
+}
 
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
-)
-logger = logging.getLogger(__name__)
+def _now_utc_iso() -> str:
+    return _dt.datetime.utcnow().replace(tzinfo=_dt.timezone.utc).isoformat()
 
-class EvidenceVerifier:
-    def __init__(self, tasks_path: str, project_root: str, output_dir: str):
-        self.tasks_path = Path(tasks_path)
-        self.output_dir = Path(output_dir)
-        self.workspace_root = Path(project_root).resolve()
-        
-        # Verification results
-        self.results = {
-            "workflow": "smartspec_verify_tasks_progress_strict",
-            "version": "6.0.4-enhanced",
-            "run_id": datetime.now().strftime("%Y%m%d_%H%M%S"),
-            "inputs": {
-                "tasks_path": str(tasks_path),
-                "spec_id": self._extract_spec_id()
-            },
-            "totals": {
-                "tasks": 0,
-                "verified": 0,
-                "not_verified": 0,
-                "manual": 0,
-                "missing_hooks": 0,
-                "invalid_scope": 0
-            },
-            "results": [],
-            "writes": {"reports": []},
-            "next_steps": []
+
+def _run_id() -> str:
+    raw = f"{time.time_ns()}-{os.getpid()}".encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()[:12]
+
+
+def _has_control_chars(s: str) -> bool:
+    return any((ord(ch) < 32 and ch not in ("\t", "\n", "\r")) or ord(ch) == 127 for ch in s)
+
+
+def _is_relative_safe_path(p: str) -> Tuple[bool, str]:
+    if not p or _has_control_chars(p):
+        return False, "invalid_path"
+    if os.path.isabs(p) or re.match(r"^[a-zA-Z]:\\", p):
+        return False, "absolute_path"
+    parts = Path(p).parts
+    if any(seg == ".." for seg in parts):
+        return False, "path_traversal"
+    return True, "ok"
+
+
+def _is_binary_bytes(b: bytes) -> bool:
+    return b"\x00" in b
+
+
+def _try_load_yaml(path: Path) -> Dict[str, Any]:
+    try:
+        import yaml  # type: ignore
+
+        with path.open("r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _deep_get(d: Dict[str, Any], dotted: str, default: Any) -> Any:
+    cur: Any = d
+    for key in dotted.split("."):
+        if not isinstance(cur, dict) or key not in cur:
+            return default
+        cur = cur[key]
+    return cur
+
+
+def _as_list(x: Any) -> List[str]:
+    if x is None:
+        return []
+    if isinstance(x, list):
+        return [str(i) for i in x]
+    return [str(x)]
+
+
+def _compile_redactors(patterns: List[str]) -> List[re.Pattern[str]]:
+    out: List[re.Pattern[str]] = []
+    for p in patterns:
+        try:
+            out.append(re.compile(p))
+        except re.error:
+            continue
+    return out
+
+
+def _redact_text(text: str, redactors: List[re.Pattern[str]]) -> str:
+    out = text
+    for rx in redactors:
+        out = rx.sub("[REDACTED]", out)
+    return out
+
+
+def _ensure_under_allowlist(path: Path, allow_roots: List[Path], deny_roots: List[Path]) -> Tuple[bool, str]:
+    rp = path.resolve()
+
+    for dr in deny_roots:
+        drp = dr.resolve()
+        if str(rp).startswith(str(drp) + os.sep) or rp == drp:
+            return False, "denylist"
+
+    if not allow_roots:
+        return True, "ok"
+
+    for ar in allow_roots:
+        arp = ar.resolve()
+        if str(rp).startswith(str(arp) + os.sep) or rp == arp:
+            return True, "ok"
+
+    return False, "not_under_allowlist"
+
+
+@dataclasses.dataclass
+class EvidenceResult:
+    type: str
+    raw: str
+    matched: bool
+    scope: str
+    why: str
+    pointer: str
+    confidence: str
+    excerpt: Optional[str] = None
+
+
+@dataclasses.dataclass
+class TaskResult:
+    task_id: str
+    title: str
+    checked: bool
+    status: str
+    verified: bool
+    confidence: str
+    why: str
+    evidence: List[EvidenceResult]
+    suggested_hooks: List[str]
+
+
+class StrictVerifier:
+    def __init__(
+        self,
+        project_root: Path,
+        tasks_path: Path,
+        out_root: Path,
+        report_format: str,
+        want_json: bool,
+        quiet: bool,
+        config: Dict[str, Any],
+    ) -> None:
+        self.project_root = project_root.resolve()
+        self.tasks_path = tasks_path
+        self.out_root = out_root
+        self.report_format = report_format
+        self.want_json = want_json
+        self.quiet = quiet
+
+        self.limits = {
+            **DEFAULT_LIMITS,
+            **(_deep_get(config, "safety.content_limits", {}) or {}),
         }
-        
-        # Create output directory
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.run_dir = self.output_dir / self.results["run_id"]
-        self.run_dir.mkdir(parents=True, exist_ok=True)
 
-    def _extract_spec_id(self) -> str:
-        """Extract spec ID from tasks file header"""
+        self.verify_policy = {
+            **DEFAULT_VERIFY_POLICY,
+            **(_deep_get(config, "verification.policy", {}) or {}),
+        }
+
+        self.allow_reads_only_under = [Path(p) for p in _as_list(_deep_get(config, "safety.allow_reads_only_under", []))]
+        self.disallow_symlink_reads = bool(_deep_get(config, "safety.disallow_symlink_reads", True))
+
+        redaction_patterns = _as_list(_deep_get(config, "safety.redaction", []))
+        self.redactors = _compile_redactors(redaction_patterns)
+
+        self._scan_files = 0
+        self._scan_bytes = 0
+        self._start_time = time.time()
+        self.run_id = _run_id()
+
+    def _budget_ok(self) -> Tuple[bool, str]:
+        if self._scan_files > int(self.limits["max_files_to_scan"]):
+            return False, "max_files"
+        if self._scan_bytes > int(self.limits["max_total_bytes"]):
+            return False, "max_bytes"
+        if (time.time() - self._start_time) > float(self.limits["max_verification_seconds"]):
+            return False, "timeout"
+        return True, "ok"
+
+    def _resolve_repo_path(self, rel: str) -> Tuple[Optional[Path], str]:
+        ok, why = _is_relative_safe_path(rel)
+        if not ok:
+            return None, why
+
+        candidate = self.project_root / rel
         try:
-            with open(self.tasks_path, 'r') as f:
-                for line in f:
-                    if line.startswith('spec_id:'):
-                        return line.split(':')[1].strip()
+            resolved = candidate.resolve(strict=False)
         except Exception:
-            pass
-        return "unknown"
+            return None, "resolve_failed"
 
-    def _is_safe_path(self, path: str) -> bool:
-        """Check if path is within workspace bounds"""
+        # must stay under project root
+        if not (str(resolved).startswith(str(self.project_root) + os.sep) or resolved == self.project_root):
+            return None, "invalid_scope"
+
+        # optional read allowlist
+        if self.allow_reads_only_under:
+            allow_roots = [
+                (self.project_root / p).resolve() if not os.path.isabs(str(p)) else p.resolve() for p in self.allow_reads_only_under
+            ]
+            ok2, why2 = _ensure_under_allowlist(resolved, allow_roots, [])
+            if not ok2:
+                return None, "invalid_scope"
+
+        # symlink safety
+        if self.disallow_symlink_reads:
+            cur = self.project_root
+            for part in Path(rel).parts:
+                cur = cur / part
+                try:
+                    if cur.exists() and cur.is_symlink():
+                        return None, "symlink_refused"
+                except Exception:
+                    return None, "symlink_check_failed"
+
+        return resolved, "ok"
+
+    def parse_evidence_line(self, line: str) -> Tuple[Optional[str], Dict[str, str], str]:
+        raw = line.strip()
+        m = re.search(r"\bevidence:\s*(.+)$", raw)
+        if not m:
+            return None, {}, "not_evidence"
+
+        payload = m.group(1).strip()
+        if not payload:
+            return None, {}, "empty"
+
         try:
-            resolved = (self.workspace_root / path).resolve()
-            return str(resolved).startswith(str(self.workspace_root.resolve()))
+            tokens = shlex.split(payload)
+        except ValueError:
+            return None, {}, "malformed_quotes"
+
+        if not tokens:
+            return None, {}, "empty"
+
+        ev_type = tokens[0].strip().lower()
+        params: Dict[str, str] = {}
+        for t in tokens[1:]:
+            if "=" not in t:
+                continue
+            k, v = t.split("=", 1)
+            params[k.strip().lower()] = v.strip()
+
+        return ev_type, params, "ok"
+
+    def _read_file_text(self, p: Path) -> Tuple[Optional[str], str]:
+        try:
+            st = p.stat()
+            if st.st_size > int(self.limits["max_single_file_bytes"]):
+                return None, "file_too_large"
+
+            with p.open("rb") as f:
+                b = f.read(int(self.limits["max_single_file_bytes"]) + 1)
+
+            if _is_binary_bytes(b):
+                return None, "binary_file"
+
+            self._scan_bytes += len(b)
+            ok, why = self._budget_ok()
+            if not ok:
+                return None, why
+
+            return b.decode("utf-8", errors="ignore"), "ok"
+        except FileNotFoundError:
+            return None, "not_found"
+        except PermissionError:
+            return None, "permission"
         except Exception:
-            return False
+            return None, "read_error"
 
-    def _check_file_exists(self, file_path: str) -> Tuple[bool, str]:
-        """Check if file exists and is safe to access"""
-        if not self._is_safe_path(file_path):
-            return False, VerificationScope.INVALID_SCOPE
-        
-        full_path = self.workspace_root / file_path
-        if full_path.exists() and full_path.is_file():
-            return True, VerificationScope.OK
-        return False, VerificationScope.NOT_FOUND
+    def _search_in_path(self, p: Path, needle: str) -> Tuple[bool, str, Optional[str]]:
+        if p.is_dir():
+            for root, _, files in os.walk(p):
+                ok, why = self._budget_ok()
+                if not ok:
+                    return False, why, None
+                for fn in files:
+                    ok, why = self._budget_ok()
+                    if not ok:
+                        return False, why, None
+                    fp = Path(root) / fn
+                    self._scan_files += 1
+                    text, reason = self._read_file_text(fp)
+                    if text is None:
+                        continue
+                    idx = text.find(needle)
+                    if idx >= 0:
+                        start = max(0, idx - int(self.limits["max_excerpt_chars"]) // 2)
+                        end = min(len(text), start + int(self.limits["max_excerpt_chars"]))
+                        excerpt = text[start:end]
+                        return True, "ok", excerpt
+            return False, "not_found", None
 
-    def _check_directory_exists(self, dir_path: str) -> Tuple[bool, str]:
-        """Check if directory exists and is safe to access"""
-        if not self._is_safe_path(dir_path):
-            return False, VerificationScope.INVALID_SCOPE
-        
-        full_path = self.workspace_root / dir_path
-        if full_path.exists() and full_path.is_dir():
-            return True, VerificationScope.OK
-        return False, VerificationScope.NOT_FOUND
+        text, reason = self._read_file_text(p)
+        if text is None:
+            return False, reason, None
+        idx = text.find(needle)
+        if idx >= 0:
+            start = max(0, idx - int(self.limits["max_excerpt_chars"]) // 2)
+            end = min(len(text), start + int(self.limits["max_excerpt_chars"]))
+            excerpt = text[start:end]
+            return True, "ok", excerpt
+        return False, "not_found", None
 
-    def _search_in_file(self, file_path: str, content: str) -> Tuple[bool, str]:
-        """Search for specific content in a file"""
-        exists, scope = self._check_file_exists(file_path)
-        if not exists:
-            return False, scope
-        
-        try:
-            with open(self.workspace_root / file_path, 'r', encoding='utf-8') as f:
-                file_content = f.read()
-                if content in file_content:
-                    return True, VerificationScope.OK
-                return False, VerificationScope.CONTENT_NOT_FOUND
-        except Exception as e:
-            return False, f"read_error: {str(e)}"
+    def _suggest_paths(self, missing_rel_path: str) -> List[str]:
+        ok, _ = self._budget_ok()
+        if not ok:
+            return []
 
+        basename = Path(missing_rel_path).name
+        if not basename:
+            return []
 
-    def _parse_evidence_params(self, evidence_string: str) -> Dict[str, str]:
-        """Parse evidence parameters supporting quoted values"""
-        params = {}
-        
-        # Pattern: key=value or key="value with spaces"
-        pattern = r'(\w+)=(?:"([^"]*)"|(\S+))'
-        matches = re.findall(pattern, evidence_string)
-        
-        for match in matches:
-            key = match[0]
-            value = match[1] if match[1] else match[2]
-            params[key] = value
-        
-        return params
+        candidates: List[str] = []
+        max_sugs = int(self.limits["max_suggestions"])
 
-    def _verify_code_evidence(self, evidence: str, params: Dict[str, str] = None) -> Dict[str, Any]:
-        """Verify code evidence hook"""
-        # Parse evidence: code path=<path> [symbol=<symbol>] [contains=<content>]
-        parts = evidence.split()
-        evidence_dict = {"type": "code", "raw": evidence}
-        
-        path = None
-        symbol = None
-        contains = None
-        
-        for part in parts[1:]:  # Skip "code"
-            if part.startswith('path='):
-                path = part[5:]
-            elif part.startswith('symbol='):
-                symbol = part[7:]
-            elif part.startswith('contains='):
-                contains = part[9:]
-        
-        evidence_dict.update({"path": path, "symbol": symbol, "contains": contains})
-        
-        # Verify evidence
-        if not path:
-            evidence_dict.update({"matched": False, "scope": "invalid", "why": "Missing path parameter"})
-            return evidence_dict
-        
-        # Debug output
-        print(f"DEBUG: Checking path: {path}")
-        
-        # Check if path exists (file or directory)
-        exists, scope = self._check_file_exists(path)
-        if not exists:
-            dir_exists, dir_scope = self._check_directory_exists(path)
-            print(f"DEBUG: Directory check for {path}: exists={dir_exists}, scope={dir_scope}")
-            exists, scope = dir_exists, dir_scope
-        print(f"DEBUG: Final path check for {path}: exists={exists}, scope={scope}")
-        if not exists:
-            evidence_dict.update({"matched": False, "scope": scope, "why": f"Path not found or invalid scope: {path}"})
-            return evidence_dict
-        
-        # If symbol or contains specified, search for it
-        if symbol or contains:
-            search_content = symbol or contains
-            found, reason = self._search_in_file(path, search_content)
-            if found:
-                evidence_dict.update({"matched": True, "scope": "ok", "why": f"Found {search_content}"})
-            else:
-                evidence_dict.update({"matched": False, "scope": "ok", "why": f"Content not found: {search_content}"})
-        else:
-            evidence_dict.update({"matched": True, "scope": "ok", "why": "File exists"})
-        
-        evidence_dict["pointer"] = path
-        return evidence_dict
-
-    def _verify_test_evidence(self, evidence: str, params: Dict[str, str] = None) -> Dict[str, Any]:
-        """Verify test evidence hook"""
-        # Parse evidence: test path=<path> [contains=<content>] [command=<cmd>]
-        parts = evidence.split()
-        evidence_dict = {"type": "test", "raw": evidence}
-        
-        path = None
-        contains = None
-        command = None
-        
-        for part in parts[1:]:  # Skip "test"
-            if part.startswith('path='):
-                path = part[5:]
-            elif part.startswith('contains='):
-                contains = part[9:]
-            elif part.startswith('command='):
-                command = part[8:]
-        
-        evidence_dict.update({"path": path, "contains": contains, "command": command})
-        
-        # Verify evidence
-        if not path:
-            evidence_dict.update({"matched": False, "scope": "invalid", "why": "Missing path parameter"})
-            return evidence_dict
-        
-        # Check if path exists (file or directory)
-        exists, scope = self._check_file_exists(path)
-        if not exists:
-            # Try as directory
-            exists, scope = self._check_directory_exists(path)
-            if not exists:
-                evidence_dict.update({"matched": False, "scope": scope, "why": f"Path not found or invalid scope: {path}"})
-                return evidence_dict
-        
-        # If contains specified, search for it
-        if contains:
-            # If path is a directory, search in files within it
-            if (self.workspace_root / path).is_dir():
-                found = False
-                for root, dirs, files in os.walk(self.workspace_root / path):
-                    for file in files:
-                        if file.endswith('.ts') or file.endswith('.js') or file.endswith('.json'):
-                            file_path = os.path.join(root, file)
-                            rel_path = os.path.relpath(file_path, self.workspace_root)
-                            found_in_file, _ = self._search_in_file(rel_path, contains)
-                            if found_in_file:
-                                found = True
-                                break
-                    if found:
+        for root, _, files in os.walk(self.project_root):
+            ok, _ = self._budget_ok()
+            if not ok:
+                break
+            for fn in files:
+                ok, _ = self._budget_ok()
+                if not ok:
+                    break
+                self._scan_files += 1
+                if fn == basename:
+                    try:
+                        rel = str(Path(root).joinpath(fn).resolve().relative_to(self.project_root))
+                    except Exception:
+                        continue
+                    candidates.append(rel)
+                    if len(candidates) >= max_sugs * 6:
                         break
-                
+            if len(candidates) >= max_sugs * 6:
+                break
+
+        ranked = sorted(
+            candidates,
+            key=lambda c: difflib.SequenceMatcher(a=missing_rel_path, b=c).ratio(),
+            reverse=True,
+        )
+
+        out: List[str] = []
+        for c in ranked:
+            if c not in out:
+                out.append(c)
+            if len(out) >= max_sugs:
+                break
+        return out
+
+    def _confidence_to_verified(self, conf: str, ev_type: str) -> bool:
+        if conf == "high":
+            return True
+        if conf == "medium" and ev_type in set(self.verify_policy.get("allow_medium_as_verified_for", []) or []):
+            return True
+        return False
+
+    def verify_evidence(self, ev_type: str, params: Dict[str, str], raw_line: str) -> Tuple[EvidenceResult, List[str]]:
+        suggested_hooks: List[str] = []
+
+        ev_type = (ev_type or "").strip().lower()
+        if ev_type not in ("code", "test", "docs", "ui"):
+            return (
+                EvidenceResult(
+                    type=ev_type or "unknown",
+                    raw=raw_line,
+                    matched=False,
+                    scope="invalid",
+                    why=f"Unsupported evidence type: {ev_type}",
+                    pointer="",
+                    confidence="low",
+                ),
+                [],
+            )
+
+        if ev_type in ("code", "test", "docs"):
+            rel_path = params.get("path", "")
+            if not rel_path:
+                return (
+                    EvidenceResult(
+                        type=ev_type,
+                        raw=raw_line,
+                        matched=False,
+                        scope="invalid",
+                        why="Missing required param: path",
+                        pointer="",
+                        confidence="low",
+                    ),
+                    [],
+                )
+
+            resolved, scope = self._resolve_repo_path(rel_path)
+            if resolved is None:
+                for s in self._suggest_paths(rel_path):
+                    sug = f"evidence: {ev_type} path={s}"
+                    if "contains" in params:
+                        sug += f" contains=\"{params['contains']}\""
+                    if "symbol" in params:
+                        sug += f" symbol={params['symbol']}"
+                    if "heading" in params:
+                        sug += f" heading=\"{params['heading']}\""
+                    suggested_hooks.append(sug)
+
+                return (
+                    EvidenceResult(
+                        type=ev_type,
+                        raw=raw_line,
+                        matched=False,
+                        scope=scope,
+                        why=f"Invalid/unsafe path scope: {rel_path}",
+                        pointer=rel_path,
+                        confidence="low",
+                    ),
+                    suggested_hooks,
+                )
+
+            if not resolved.exists():
+                for s in self._suggest_paths(rel_path):
+                    sug = f"evidence: {ev_type} path={s}"
+                    if "contains" in params:
+                        sug += f" contains=\"{params['contains']}\""
+                    if "symbol" in params:
+                        sug += f" symbol={params['symbol']}"
+                    if "heading" in params:
+                        sug += f" heading=\"{params['heading']}\""
+                    suggested_hooks.append(sug)
+
+                return (
+                    EvidenceResult(
+                        type=ev_type,
+                        raw=raw_line,
+                        matched=False,
+                        scope="ok",
+                        why=f"Path not found: {rel_path}",
+                        pointer=str(resolved.relative_to(self.project_root)),
+                        confidence="low",
+                    ),
+                    suggested_hooks,
+                )
+
+            contains = params.get("contains")
+            symbol = params.get("symbol")
+            heading = params.get("heading")
+
+            search_token: Optional[str] = None
+            if ev_type == "code":
+                search_token = symbol or contains
+            elif ev_type == "test":
+                search_token = contains
+            elif ev_type == "docs":
+                search_token = heading or contains
+
+            # path exists => MEDIUM at least
+            if search_token:
+                found, reason, excerpt = self._search_in_path(resolved, search_token)
                 if found:
-                    evidence_dict.update({"matched": True, "scope": "ok", "why": f"Found {contains} in directory"})
-                else:
-                    evidence_dict.update({"matched": False, "scope": "ok", "why": f"Content not found in directory: {contains}"})
-            else:
-                # Search in specific file
-                found, reason = self._search_in_file(path, contains)
-                if found:
-                    evidence_dict.update({"matched": True, "scope": "ok", "why": f"Found {contains}"})
-                else:
-                    evidence_dict.update({"matched": False, "scope": "ok", "why": f"Content not found: {contains}"})
-        else:
-            evidence_dict.update({"matched": True, "scope": "ok", "why": "Test path exists"})
-        
-        evidence_dict["pointer"] = path
-        return evidence_dict
+                    ex = _redact_text(excerpt or "", self.redactors) if excerpt else None
+                    return (
+                        EvidenceResult(
+                            type=ev_type,
+                            raw=raw_line,
+                            matched=True,
+                            scope="ok",
+                            why=f"Matched content: {search_token}",
+                            pointer=str(resolved.relative_to(self.project_root)),
+                            confidence="high",
+                            excerpt=ex,
+                        ),
+                        [],
+                    )
 
-    def _verify_docs_evidence(self, evidence: str, params: Dict[str, str] = None) -> Dict[str, Any]:
-        """Verify docs evidence hook"""
-        # Parse evidence: docs path=<path> [heading=<heading>] [contains=<content>]
-        parts = evidence.split()
-        evidence_dict = {"type": "docs", "raw": evidence}
-        
-        path = None
-        heading = None
-        contains = None
-        
-        for part in parts[1:]:  # Skip "docs"
-            if part.startswith('path='):
-                path = part[5:]
-            elif part.startswith('heading='):
-                heading = part[8:]
-            elif part.startswith('contains='):
-                contains = part[9:]
-        
-        evidence_dict.update({"path": path, "heading": heading, "contains": contains})
-        
-        # Verify evidence
-        if not path:
-            evidence_dict.update({"matched": False, "scope": "invalid", "why": "Missing path parameter"})
-            return evidence_dict
-        
-        # Check if path exists (file or directory)
-        exists, scope = self._check_file_exists(path)
-        if not exists:
-            dir_exists, dir_scope = self._check_directory_exists(path)
-            print(f"DEBUG: Directory check for {path}: exists={dir_exists}, scope={dir_scope}")
-            exists, scope = dir_exists, dir_scope
-        # Debug log
-        print(f"DEBUG: Check exists for {path}: exists={exists}, scope={scope}")
-        if not exists:
-            evidence_dict.update({"matched": False, "scope": scope, "why": f"Path not found or invalid scope: {path}"})
-            return evidence_dict
-        
-        # If heading or contains specified, search for it
-        if heading or contains:
-            search_content = heading or contains
-            found, reason = self._search_in_file(path, search_content)
-            if found:
-                evidence_dict.update({"matched": True, "scope": "ok", "why": f"Found {search_content}"})
-            else:
-                evidence_dict.update({"matched": False, "scope": "ok", "why": f"Content not found: {search_content}"})
-        else:
-            evidence_dict.update({"matched": True, "scope": "ok", "why": "Documentation exists"})
-        
-        evidence_dict["pointer"] = path
-        return evidence_dict
+                return (
+                    EvidenceResult(
+                        type=ev_type,
+                        raw=raw_line,
+                        matched=False,
+                        scope=reason if reason != "ok" else "ok",
+                        why=f"Path exists but content not found: {search_token}",
+                        pointer=str(resolved.relative_to(self.project_root)),
+                        confidence="medium",
+                    ),
+                    [],
+                )
 
-    def _verify_ui_evidence(self, evidence: str, params: Dict[str, str] = None) -> Dict[str, Any]:
-        """Verify UI evidence hook"""
-        # Parse evidence: ui screen=<screen> [route=<route>] [component=<comp>] [states=<states>]
-        parts = evidence.split()
-        evidence_dict = {"type": "ui", "raw": evidence}
-        
-        screen = None
-        route = None
-        component = None
-        states = None
-        
-        for part in parts[1:]:  # Skip "ui"
-            if part.startswith('screen='):
-                screen = part[7:]
-            elif part.startswith('route='):
-                route = part[6:]
-            elif part.startswith('component='):
-                component = part[10:]
-            elif part.startswith('states='):
-                states = part[7:]
-        
-        evidence_dict.update({"screen": screen, "route": route, "component": component, "states": states})
-        
-        # UI evidence typically needs manual verification
-        evidence_dict.update({
-            "matched": False,
-            "scope": "needs_manual",
-            "why": "UI evidence requires manual verification",
-            "pointer": f"screen: {screen}" if screen else "ui_component"
-        })
-        
-        return evidence_dict
+            return (
+                EvidenceResult(
+                    type=ev_type,
+                    raw=raw_line,
+                    matched=True,
+                    scope="ok",
+                    why="Path exists (no contains/symbol/heading provided)",
+                    pointer=str(resolved.relative_to(self.project_root)),
+                    confidence="medium",
+                ),
+                [],
+            )
 
+        # UI evidence
+        screen = params.get("screen", "")
+        route = params.get("route")
+        component = params.get("component")
+        states = params.get("states")
 
-    def _suggest_conversion(self, evidence_type: str, params: Dict[str, str]) -> str:
-        """Suggest how to convert non-compliant evidence type"""
-        if evidence_type == 'file_exists':
-            path = params.get('path', '')
-            if 'test' in path.lower():
-                return f"Convert to: evidence: test path={path}"
-            else:
-                return f"Convert to: evidence: code path={path}"
-        
-        elif evidence_type == 'test_exists':
-            path = params.get('path', '')
-            name = params.get('name', '')
-            if name:
-                return f"Convert to: evidence: test path={path} contains=\"{name}\""
-            else:
-                return f"Convert to: evidence: test path={path}"
-        
-        elif evidence_type == 'command':
-            cmd = params.get('cmd', '')
-            if 'tsc' in cmd:
-                return "Convert to: evidence: code path=tsconfig.json"
-            elif 'eslint' in cmd or 'lint' in cmd:
-                return "Convert to: evidence: code path=.eslintrc.js"
-            else:
-                return "Convert to: evidence: code path=<relevant-file>"
-        
-        return "Use migrate_evidence_hooks.py to convert"
+        if not screen:
+            return (
+                EvidenceResult(
+                    type="ui",
+                    raw=raw_line,
+                    matched=False,
+                    scope="invalid",
+                    why="Missing required param: screen",
+                    pointer="ui",
+                    confidence="low",
+                ),
+                [],
+            )
 
-    def _verify_evidence_hook(self, evidence_line: str) -> Dict[str, Any]:
-        """Verify a single evidence hook - FIXED to reject non-compliant types"""
-        # Parse evidence line
-        # Strip list marker
-        evidence_line = evidence_line.strip().lstrip('- ').strip()
-        if not evidence_line.startswith('evidence:'):
-            return {
-                "matched": False,
-                "confidence": "low",
-                "scope": "invalid",
-                "why": "Invalid evidence format (must start with 'evidence:')",
-                "raw": evidence_line
-            }
-        
-        # Remove "evidence:" prefix
-        evidence_content = evidence_line.strip()[9:].strip()
-        
-        # Extract evidence type
-        parts = evidence_content.split(maxsplit=1)
-        if not parts:
-            return {
-                "matched": False,
-                "confidence": "low",
-                "scope": "invalid",
-                "why": "Missing evidence type",
-                "raw": evidence_line
-            }
-        
-        evidence_type = parts[0]
-        params_string = parts[1] if len(parts) > 1 else ""
-        
-        # Parse parameters
-        params = self._parse_evidence_params(params_string)
-        
-        # FIX #1: Check for non-compliant types
-        if evidence_type in NON_COMPLIANT_TYPES:
-            suggestion = self._suggest_conversion(evidence_type, params)
-            return {
-                "type": evidence_type,
-                "raw": evidence_line,
-                "matched": False,
-                "confidence": "low",
-                "scope": "invalid",
-                "why": f"Non-compliant evidence type '{evidence_type}' is not supported by verifier",
-                "suggestion": suggestion,
-                "pointer": params.get('path', evidence_type)
-            }
-        
-        # Check for valid types
-        if evidence_type not in VALID_EVIDENCE_TYPES:
-            return {
-                "type": evidence_type,
-                "raw": evidence_line,
-                "matched": False,
-                "confidence": "low",
-                "scope": "invalid",
-                "why": f"Unknown evidence type '{evidence_type}'. Valid types: {', '.join(VALID_EVIDENCE_TYPES)}",
-                "pointer": evidence_type
-            }
-        
-        # Route to type-specific verifier (simplified - use params dict)
-        if evidence_type == 'code':
-            return self._verify_code_evidence(evidence_line, params)
-        elif evidence_type == 'test':
-            return self._verify_test_evidence(evidence_line, params)
-        elif evidence_type == 'docs':
-            return self._verify_docs_evidence(evidence_line, params)
-        elif evidence_type == 'ui':
-            return self._verify_ui_evidence(evidence_line, params)
-        
-        return {
-            "type": evidence_type,
-            "raw": evidence_line,
-            "matched": False,
-            "confidence": "low",
-            "scope": "invalid",
-            "why": f"Unsupported evidence type: {evidence_type}"
-        }
+        def repo_search_literal(token: str) -> Tuple[bool, Optional[str]]:
+            ok, _ = self._budget_ok()
+            if not ok:
+                return False, None
+            for root, _, files in os.walk(self.project_root):
+                ok, _ = self._budget_ok()
+                if not ok:
+                    return False, None
+                for fn in files:
+                    ok, _ = self._budget_ok()
+                    if not ok:
+                        return False, None
+                    fp = Path(root) / fn
+                    self._scan_files += 1
+                    text, _ = self._read_file_text(fp)
+                    if text is None:
+                        continue
+                    if token in text:
+                        try:
+                            rel = str(fp.resolve().relative_to(self.project_root))
+                        except Exception:
+                            rel = str(fp)
+                        return True, rel
+            return False, None
 
+        static_hits: List[str] = []
+        route_ptr = None
+        comp_ptr = None
 
-    def _calculate_task_confidence(self, evidence_results: List[Dict[str, Any]]) -> Tuple[str, str]:
-        """Calculate confidence level and verification status for a task"""
-        if not evidence_results:
-            return "low", "missing_hooks"
-        
-        # Count matches by confidence level
-        high_confidence_matches = 0
-        medium_confidence_matches = 0
-        total_valid = 0
-        
-        for evidence in evidence_results:
-            if evidence["scope"] == "invalid_scope":
-                continue  # Skip invalid scope evidence
-            
-            total_valid += 1
-            if evidence["matched"] and evidence["scope"] == "ok":
-                high_confidence_matches += 1
-            elif not evidence["matched"] and evidence["scope"] == "ok":
-                medium_confidence_matches += 1
-        
-        if total_valid == 0:
-            return "low", "invalid_scope"
-        
-        # Calculate confidence
-        if high_confidence_matches > 0:
-            confidence = "high"
-            status = "verified"
-        elif medium_confidence_matches > 0:
-            confidence = "medium"
-            status = "not_verified"
-        else:
-            confidence = "low"
-            status = "not_verified"
-        
-        # Check for UI evidence that needs manual verification
-        has_ui_evidence = any(e.get("type") == "ui" for e in evidence_results)
-        if has_ui_evidence and confidence == "low":
-            status = "needs_manual"
-        
-        return confidence, status
+        route_ok = True
+        if route:
+            route_ok, route_ptr = repo_search_literal(route)
+            if route_ok and route_ptr:
+                static_hits.append(f"route:{route} in {route_ptr}")
 
+        component_ok = False
+        if component:
+            component_ok, comp_ptr = repo_search_literal(component)
+            if component_ok and comp_ptr:
+                static_hits.append(f"component:{component} in {comp_ptr}")
 
-    def _generate_suggested_hooks(self, task_title: str, task_id: str, failed_evidence: List[Dict[str, Any]]) -> List[str]:
-        """Generate suggested evidence hooks for not_verified tasks - IMPROVED"""
-        suggestions = []
-        
-        # Extract file path from title if present
-        path_match = re.search(r'`([^`]+)`', task_title)
-        if path_match:
-            path = path_match.group(1)
-            suggestions.append(f"evidence: code path={path}")
-            
-            # Extract symbol from title
-            symbol_match = re.search(r'(\w+Service|\w+Client|\w+Model|\w+Controller|\w+Handler|\w+Util)', task_title)
-            if symbol_match:
-                symbol = symbol_match.group(1)
-                suggestions.append(f"evidence: code path={path} symbol={symbol}")
-        
-        # Suggest test evidence
-        test_path_base = task_id.lower().replace('tsk-', '').replace('-', '_')
-        suggestions.append(f"evidence: test path=tests/unit/{test_path_base}.test.ts contains=\"{task_id}\"")
-        
-        # If there are failed evidence hooks with suggestions, include them
-        for ev in failed_evidence:
-            if 'suggestion' in ev and ev['suggestion']:
-                suggestions.append(ev['suggestion'])
-        
-        # Remove duplicates
-        seen = set()
-        unique_suggestions = []
-        for s in suggestions:
-            if s not in seen:
-                seen.add(s)
-                unique_suggestions.append(s)
-        
-        return unique_suggestions[:5]
+        if component_ok and route_ok and states:
+            pointer = comp_ptr or route_ptr or f"screen:{screen}"
+            return (
+                EvidenceResult(
+                    type="ui",
+                    raw=raw_line,
+                    matched=True,
+                    scope="ok",
+                    why=f"Static UI signals found ({', '.join(static_hits)})",
+                    pointer=pointer,
+                    confidence="high",
+                ),
+                [],
+            )
 
+        pointer = comp_ptr or route_ptr or f"screen:{screen}"
+        return (
+            EvidenceResult(
+                type="ui",
+                raw=raw_line,
+                matched=False,
+                scope="needs_manual",
+                why="UI evidence requires manual verification (insufficient static signals)",
+                pointer=pointer,
+                confidence="low",
+            ),
+            [],
+        )
 
-    def _parse_tasks_and_verify(self):
-        """Parse tasks file and verify all evidence hooks"""
-        try:
-            with open(self.tasks_path, 'r') as f:
-                content = f.read()
-        except Exception as e:
-            print(f"Error reading tasks file: {e}")
-            sys.exit(1)
-        
-        # Split into lines and process
-        lines = content.split('\n')
-        current_task = None
-        current_evidence = []
-        
-        for line in lines:
-            # Check for task line
-            task_match = re.match(r'^- \[([ x])\] (TSK-[A-Z]+-\d+) (.+)$', line)
-            if task_match:
-                # Process previous task
-                if current_task:
-                    self._process_task(current_task, current_evidence)
-                
-                # Start new task
-                checkbox, task_id, title = task_match.groups()
-                current_task = {
+    def parse_tasks(self) -> Tuple[str, List[Dict[str, Any]]]:
+        text, reason = self._read_file_text(self.tasks_path)
+        if text is None:
+            raise RuntimeError(f"Failed to read tasks: {reason}")
+
+        lines = text.splitlines()
+
+        spec_id = "unknown"
+        for ln in lines[:40]:
+            m = re.search(r"\b(spec[-_ ]?id)\s*[:=]\s*([a-z0-9_\-]{3,64})\b", ln, re.IGNORECASE)
+            if m:
+                spec_id = m.group(2)
+                break
+        if spec_id == "unknown":
+            spec_id = self.tasks_path.parent.name
+
+        tasks: List[Dict[str, Any]] = []
+        current: Optional[Dict[str, Any]] = None
+
+        # More permissive: any non-space token as ID
+        task_re = re.compile(r"^\s*-\s*\[([ xX])\]\s+(\S+)\s+(.+?)\s*$")
+
+        for i, ln in enumerate(lines, start=1):
+            m = task_re.match(ln)
+            if m:
+                checked = (m.group(1).lower() == "x")
+                task_id = m.group(2)
+                title = m.group(3)
+                current = {
+                    "line": i,
                     "task_id": task_id,
-                    "title": title.strip(),
-                    "checkbox": checkbox,
-                    "evidence": [],
-                    "status": "not_verified",
-                    "confidence": "low"
+                    "title": title,
+                    "checked": checked,
+                    "evidence_lines": [],
                 }
-                current_evidence = []
-            
-            # Check for evidence line
-            elif line.strip().startswith('- evidence:'):
-                if current_task:
-                    current_evidence.append(line.strip())
-                    print(f"DEBUG: Found evidence line: {line.strip()}")
-        
-        # Process last task
-        if current_task:
-            self._process_task(current_task, current_evidence)
-        
-        # Update totals
-        self.results["totals"]["tasks"] = len(self.results["results"])
+                tasks.append(current)
+                continue
 
-    def _process_task(self, task: Dict[str, Any], evidence_lines: List[str]):
-        """Process a single task and its evidence"""
-        evidence_results = []
-        print(f"DEBUG: Processing task {task['task_id']} with {len(evidence_lines)} evidence lines")
-        
-        for evidence_line in evidence_lines:
-            print(f"DEBUG: About to verify: {evidence_line}")
-            result = self._verify_evidence_hook(evidence_line)
-            print(f"DEBUG: Verification result: {result}")
-            evidence_results.append(result)
-        
-        # Calculate confidence and status
-        confidence, status = self._calculate_task_confidence(evidence_results)
-        
-        # Generate suggested hooks if needed
-        suggested_hooks = []
-        if status in ["missing_hooks", "needs_manual", "not_verified"]:
-            suggested_hooks = self._generate_suggested_hooks(task["title"], task["task_id"], [])
-            suggested_hooks.extend(self._generate_suggested_hooks(task["title"], task["task_id"], []))
-        
-        # Determine why
-        if status == "verified":
-            why = "Evidence hooks satisfied"
-        elif status == "missing_hooks":
-            why = "No evidence hooks found"
-        elif status == "needs_manual":
-            why = "UI evidence requires manual verification"
-        elif status == "invalid_scope":
-            why = "Evidence points outside workspace"
-        else:
-            why = "Evidence hooks not satisfied"
-        
-        task_result = {
-            "task_id": task["task_id"],
-            "title": task["title"],
-            "checkbox": task["checkbox"],
-            "verified": status == "verified",
-            "confidence": confidence,
-            "status": status,
-            "evidence": evidence_results,
-            "suggested_hooks": suggested_hooks,
-            "why": why
+            if current and re.search(r"\bevidence:\s*", ln):
+                current["evidence_lines"].append(ln.strip())
+
+        return spec_id, tasks
+
+    def _render_report_md(self, summary: Dict[str, Any]) -> str:
+        t = summary["totals"]
+        lines: List[str] = []
+
+        lines.append("# Verify Tasks Progress (Strict)\n\n")
+        lines.append(f"- workflow: `{summary['workflow']}`\n")
+        lines.append(f"- version: `{summary['version']}`\n")
+        lines.append(f"- run_id: `{summary['run_id']}`\n")
+        lines.append(f"- generated_at: `{summary['generated_at']}`\n")
+        lines.append(f"- tasks: `{summary['inputs']['tasks_path']}`\n")
+        lines.append(f"- spec_id: `{summary['inputs']['spec_id']}`\n")
+        lines.append("\n---\n\n")
+
+        lines.append("## Summary\n")
+        lines.append(f"- total tasks: **{t['tasks']}**\n")
+        lines.append(f"- verified done: **{t['verified']}**\n")
+        lines.append(f"- not verified: **{t['not_verified']}**\n")
+        lines.append(f"- needs manual check: **{t['manual']}**\n")
+        lines.append(f"- missing evidence hooks: **{t['missing_hooks']}**\n")
+        lines.append(f"- invalid evidence scope: **{t['invalid_scope']}**\n")
+        lines.append("\n---\n\n")
+
+        lines.append("## Per-task results\n")
+        for r in summary["results"]:
+            lines.append(f"### {r['task_id']} — {r['title']}\n")
+            lines.append(f"- status: `{r['status']}`\n")
+            lines.append(f"- confidence: `{r['confidence']}`\n")
+            lines.append(f"- verified: `{r['verified']}`\n")
+            if r.get("why"):
+                lines.append(f"- why: {r['why']}\n")
+
+            if r.get("evidence"):
+                lines.append("\n**Evidence**\n")
+                for e in r["evidence"]:
+                    lines.append(
+                        f"- `{e['type']}` `{e['confidence']}` matched={e['matched']} scope=`{e['scope']}`\n"
+                        f"  - pointer: `{e.get('pointer','')}`\n"
+                        f"  - why: {e.get('why','')}\n"
+                    )
+                    if e.get("excerpt"):
+                        lines.append(f"  - excerpt: `{e['excerpt']}`\n")
+
+            if r.get("suggested_hooks"):
+                lines.append("\n**Suggested hooks**\n")
+                for s in r["suggested_hooks"]:
+                    lines.append(f"- {s}\n")
+
+            lines.append("\n---\n")
+
+        lines.append("\n## Remediation tips\n")
+        lines.append("- If many tasks are `missing_hooks` or have placeholders, run: `/smartspec_migrate_evidence_hooks <tasks.md>`\n")
+        lines.append("- Only update checkboxes via: `/smartspec_sync_tasks_checkboxes <tasks.md> --apply`\n")
+        lines.append("\n---\n\n")
+
+        lines.append("## Redaction note\n")
+        lines.append("Report content may be redacted based on config safety.redaction patterns.\n")
+
+        return "".join(lines)
+
+    def run(self) -> Tuple[Dict[str, Any], str]:
+        spec_id, parsed = self.parse_tasks()
+
+        totals = {
+            "tasks": 0,
+            "verified": 0,
+            "not_verified": 0,
+            "manual": 0,
+            "missing_hooks": 0,
+            "invalid_scope": 0,
         }
-        
-        self.results["results"].append(task_result)
-        
-        # Update totals
-        if status == "verified":
-            self.results["totals"]["verified"] += 1
-        elif status == "needs_manual":
-            self.results["totals"]["manual"] += 1
-        elif status == "missing_hooks":
-            self.results["totals"]["missing_hooks"] += 1
-        elif status == "invalid_scope":
-            self.results["totals"]["invalid_scope"] += 1
-        else:
-            self.results["totals"]["not_verified"] += 1
 
-    def _generate_markdown_report(self) -> str:
-        """Generate markdown verification report"""
-        report = f"""# Task Verification Report: {self.results['inputs']['spec_id']}
+        results: List[TaskResult] = []
 
-**Generated:** {datetime.now().isoformat()}  
-**Run ID:** {self.results['run_id']}  
-**Tasks File:** {self.results['inputs']['tasks_path']}
+        for t in parsed:
+            totals["tasks"] += 1
 
-## Summary
+            if not t["evidence_lines"]:
+                totals["missing_hooks"] += 1
+                results.append(
+                    TaskResult(
+                        task_id=t["task_id"],
+                        title=t["title"],
+                        checked=bool(t["checked"]),
+                        status="missing_hooks",
+                        verified=False,
+                        confidence="low",
+                        why="No evidence hooks found",
+                        evidence=[],
+                        suggested_hooks=[],
+                    )
+                )
+                continue
 
-| Metric | Count |
-|--------|-------|
-| Total Tasks | {self.results['totals']['tasks']} |
-| Verified Done | {self.results['totals']['verified']} |
-| Not Verified | {self.results['totals']['not_verified']} |
-| Needs Manual Check | {self.results['totals']['manual']} |
-| Missing Evidence Hooks | {self.results['totals']['missing_hooks']} |
-| Invalid Evidence Scope | {self.results['totals']['invalid_scope']} |
+            ev_results: List[EvidenceResult] = []
+            suggested: List[str] = []
 
-## Task Details
+            for ln in t["evidence_lines"]:
+                ev_type, params, parse_status = self.parse_evidence_line(ln)
+                if parse_status != "ok" or ev_type is None:
+                    ev_results.append(
+                        EvidenceResult(
+                            type="unknown",
+                            raw=ln,
+                            matched=False,
+                            scope="invalid",
+                            why=f"Evidence parse failed: {parse_status}",
+                            pointer="",
+                            confidence="low",
+                        )
+                    )
+                    continue
 
-"""
-        
-        # Group tasks by status
-        verified_tasks = [t for t in self.results['results'] if t['status'] == 'verified']
-        not_verified_tasks = [t for t in self.results['results'] if t['status'] == 'not_verified']
-        manual_tasks = [t for t in self.results['results'] if t['status'] == 'needs_manual']
-        missing_hooks_tasks = [t for t in self.results['results'] if t['status'] == 'missing_hooks']
-        invalid_scope_tasks = [t for t in self.results['results'] if t['status'] == 'invalid_scope']
-        
-        if verified_tasks:
-            report += "### ✅ Verified Tasks\n\n"
-            for task in verified_tasks:
-                report += f"- **{task['task_id']}**: {task['title']} (confidence: {task['confidence']})\n"
-            report += "\n"
-        
-        if not_verified_tasks:
-            report += "### ❌ Not Verified Tasks\n\n"
-            for task in not_verified_tasks:
-                report += f"- **{task['task_id']}**: {task['title']} (confidence: {task['confidence']})\n"
-                report += f"  - Why: {task['why']}\n"
-                if task['suggested_hooks']:
-                    report += "  - Suggested hooks:\n"
-                    for hook in task['suggested_hooks']:
-                        report += f"    - {hook}\n"
-                report += "\n"
-        
-        if manual_tasks:
-            report += "### 👁️ Needs Manual Verification\n\n"
-            for task in manual_tasks:
-                report += f"- **{task['task_id']}**: {task['title']}\n"
-                report += f"  - Why: {task['why']}\n"
-                report += "\n"
-        
-        if missing_hooks_tasks:
-            report += "### ⚠️ Missing Evidence Hooks\n\n"
-            for task in missing_hooks_tasks:
-                report += f"- **{task['task_id']}**: {task['title']}\n"
-                if task['suggested_hooks']:
-                    report += "  - Suggested hooks:\n"
-                    for hook in task['suggested_hooks']:
-                        report += f"    - {hook}\n"
-                report += "\n"
-        
-        if invalid_scope_tasks:
-            report += "### 🚫 Invalid Evidence Scope\n\n"
-            for task in invalid_scope_tasks:
-                report += f"- **{task['task_id']}**: {task['title']}\n"
-                report += f"  - Why: {task['why']}\n"
-                report += "\n"
-        
-        # Evidence gaps and remediation
-        report += """## Evidence Gaps & Remediation
+                evr, sugs = self.verify_evidence(ev_type, params, ln)
+                ev_results.append(evr)
+                suggested.extend(sugs)
 
-### Common Issues
+            conf = "low"
+            if any(e.confidence == "high" for e in ev_results):
+                conf = "high"
+            elif any(e.confidence == "medium" for e in ev_results):
+                conf = "medium"
 
-1. **Missing Code Evidence**: Add `evidence: code path=<file_path>` for implementation files
-2. **Missing Test Evidence**: Add `evidence: test path=<test_file_path>` for test files
-3. **UI Components**: UI evidence requires manual verification
-4. **Invalid Paths**: Ensure evidence paths are within the workspace
+            verified = any(self._confidence_to_verified(e.confidence, e.type) for e in ev_results)
 
-### Remediation Templates
+            if any(e.scope == "invalid_scope" for e in ev_results):
+                totals["invalid_scope"] += 1
+                status = "invalid_scope"
+            elif any(e.scope == "needs_manual" for e in ev_results):
+                totals["manual"] += 1
+                status = "needs_manual"
+            elif verified:
+                totals["verified"] += 1
+                status = "verified"
+            else:
+                totals["not_verified"] += 1
+                status = "not_verified"
 
-```bash
-# For code implementation
-evidence: code path=packages/auth-lib/src/services/example.service.ts
+            why = ""
+            if status == "verified":
+                why = "At least one evidence hook matched strongly (high confidence)"
+            elif status == "needs_manual":
+                why = "UI evidence requires manual confirmation"
+            elif status == "invalid_scope":
+                why = "One or more evidence hooks point outside allowed scope"
+            else:
+                strong = [e for e in ev_results if e.confidence in ("high", "medium")]
+                why = "; ".join(f"{e.type}:{e.confidence}" for e in strong[:3]) if strong else "No evidence matched"
 
-# For tests
-evidence: test path=tests/unit/example.test.ts
+            red_evidence: List[EvidenceResult] = []
+            for e in ev_results:
+                red_evidence.append(
+                    EvidenceResult(
+                        type=e.type,
+                        raw=_redact_text(e.raw, self.redactors),
+                        matched=e.matched,
+                        scope=e.scope,
+                        why=_redact_text(e.why, self.redactors),
+                        pointer=_redact_text(e.pointer, self.redactors),
+                        confidence=e.confidence,
+                        excerpt=_redact_text(e.excerpt, self.redactors) if e.excerpt else None,
+                    )
+                )
 
-# For UI components
-evidence: ui screen=ExampleScreen states=loading,empty,error,success
+            results.append(
+                TaskResult(
+                    task_id=t["task_id"],
+                    title=t["title"],
+                    checked=bool(t["checked"]),
+                    status=status,
+                    verified=verified,
+                    confidence=conf,
+                    why=_redact_text(why, self.redactors),
+                    evidence=red_evidence,
+                    suggested_hooks=[_redact_text(s, self.redactors) for s in suggested[: int(self.limits["max_suggestions"]) ]],
+                )
+            )
 
-# For documentation
-evidence: docs path=docs/example.md heading="Example Section"
-```
-
-## Next Steps
-
-1. **Update Checkboxes** (optional):
-   ```bash
-   /smartspec_sync_tasks_checkboxes {tasks_path} --apply
-   ```
-
-2. **Generate Implementation Prompts**:
-   ```bash
-   /smartspec_report_implement_prompter --spec {spec_path} --tasks {tasks_path} --strict
-   ```
-
-3. **Address Evidence Gaps**: Add missing evidence hooks for unverified tasks
-
----
-
-**Report Generation:** smartspec_verify_tasks_progress_strict v6.0.3  
-**Platform:** kilo  
-**Mode:** strict evidence-based verification
-"""
-        
-        return report
-
-    def run(self):
-        """Run the verification process"""
-        print(f"Starting evidence verification for {self.tasks_path}")
-        
-        # Parse and verify
-        self._parse_tasks_and_verify()
-        
-        # Generate reports
-        markdown_report = self._generate_markdown_report()
-        
-        # Write reports
-        report_path = self.run_dir / "report.md"
-        summary_path = self.run_dir / "summary.json"
-        
-        with open(report_path, 'w') as f:
-            f.write(markdown_report)
-        
-        with open(summary_path, 'w') as f:
-            json.dump(self.results, f, indent=2)
-        
-        self.results["writes"]["reports"] = [str(report_path), str(summary_path)]
-        
-        # Add next steps
-        self.results["next_steps"] = [
-            {
-                "cmd": f"/smartspec_sync_tasks_checkboxes {self.tasks_path} --apply",
-                "why": "Update checkboxes based on verification results"
+        summary = {
+            "workflow": "smartspec_verify_tasks_progress_strict",
+            "version": "6.1.0",
+            "run_id": self.run_id,
+            "generated_at": _now_utc_iso(),
+            "inputs": {
+                "tasks_path": str(self.tasks_path),
+                "spec_id": spec_id,
             },
-            {
-                "cmd": f"/smartspec_report_implement_prompter --spec specs/core/{self.results['inputs']['spec_id']}/spec.md --tasks {self.tasks_path} --strict",
-                "why": "Generate implementation prompts for unverified tasks"
-            }
-        ]
-        
-        print(f"Verification complete. Reports written to {self.run_dir}")
-        print(f"Summary: {self.results['totals']['verified']}/{self.results['totals']['tasks']} tasks verified")
-        
-        return self.results
+            "totals": totals,
+            "results": [
+                {
+                    "task_id": r.task_id,
+                    "title": r.title,
+                    "checked": r.checked,
+                    "verified": r.verified,
+                    "confidence": r.confidence,
+                    "status": r.status,
+                    "why": r.why,
+                    "evidence": [dataclasses.asdict(e) for e in r.evidence],
+                    "suggested_hooks": r.suggested_hooks,
+                }
+                for r in results
+            ],
+            "writes": {"reports": []},
+            "next_steps": [
+                {
+                    "cmd": f"/smartspec_sync_tasks_checkboxes {self.tasks_path}",
+                    "why": "Update checkboxes based on latest verification report (governed; requires --apply).",
+                }
+            ],
+        }
+
+        report_md = self._render_report_md(summary)
+        return summary, report_md
+
+    def write_outputs(self, summary: Dict[str, Any], report_md: str) -> List[Path]:
+        run_dir = self.out_root / self.run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+
+        written: List[Path] = []
+
+        report_path = run_dir / "report.md"
+        report_path.write_text(report_md, encoding="utf-8")
+        written.append(report_path)
+
+        if self.want_json or self.report_format in ("json", "both"):
+            summary_path = run_dir / "summary.json"
+            summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+            written.append(summary_path)
+
+        return written
 
 
+def main(argv: List[str]) -> int:
+    ap = argparse.ArgumentParser(description="SmartSpec strict evidence-only tasks verifier")
 
-def main():
-    """Main entry point with argument parsing"""
-    parser = argparse.ArgumentParser(
-        description="SmartSpec Evidence Verification Script (Strict Mode - FIXED)"
-    )
-    parser.add_argument(
-        "tasks_md",
-        help="Path to tasks.md file"
-    )
-    parser.add_argument(
-        "--project-root",
-        default=".",
-        help="Project root directory (default: current directory)"
-    )
-    parser.add_argument(
-        "--out",
-        default=".spec/reports/verify-tasks-progress",
-        help="Output directory for reports (default: .spec/reports/verify-tasks-progress)"
-    )
-    
-    args = parser.parse_args()
-    
-    # Validate tasks file exists
-    if not os.path.exists(args.tasks_md):
-        print(f"Error: Tasks file not found: {args.tasks_md}")
+    ap.add_argument("tasks_md", help="Path to tasks.md")
+
+    # Universal flags
+    ap.add_argument("--config", default=DEFAULT_CONFIG_PATH)
+    ap.add_argument("--lang", choices=["th", "en"], default="en")
+    ap.add_argument("--platform", default="cli")
+    ap.add_argument("--out", default=DEFAULT_REPORT_ROOT)
+    ap.add_argument("--json", action="store_true")
+    ap.add_argument("--quiet", action="store_true")
+
+    # Workflow-specific
+    ap.add_argument("--report-format", choices=["md", "json", "both"], default="both")
+
+    # Internal
+    ap.add_argument("--project-root", default=".")
+
+    args = ap.parse_args(argv)
+
+    tasks_path = Path(args.tasks_md)
+    project_root = Path(args.project_root)
+
+    config_path = Path(args.config)
+    config = _try_load_yaml(config_path) if config_path.exists() else {}
+
+    try:
+        tasks_real = tasks_path.resolve(strict=True)
+    except Exception:
+        print("ERROR: tasks.md not found or unreadable", file=sys.stderr)
         return 1
-    
-    # Create verifier and run
-    verifier = EvidenceVerifier(
-        tasks_path=args.tasks_md,
-        project_root=args.project_root,
-        output_dir=args.out
+
+    try:
+        pr = project_root.resolve(strict=True)
+    except Exception:
+        print("ERROR: project root not found or unreadable", file=sys.stderr)
+        return 2
+
+    if not (str(tasks_real).startswith(str(pr) + os.sep) or tasks_real == pr):
+        print("ERROR: tasks.md must be within project-root", file=sys.stderr)
+        return 1
+
+    rel_to_root = Path(".")
+    try:
+        rel_to_root = tasks_real.relative_to(pr)
+    except Exception:
+        pass
+
+    if "specs" not in rel_to_root.parts:
+        print("ERROR: tasks.md must resolve under specs/**", file=sys.stderr)
+        return 1
+
+    out_root = Path(args.out)
+    out_root_abs = (pr / out_root).resolve() if not os.path.isabs(str(out_root)) else out_root.resolve()
+
+    allow_writes = [Path(p) for p in _as_list(_deep_get(config, "safety.allow_writes_only_under", []))]
+    deny_writes = [Path(p) for p in _as_list(_deep_get(config, "safety.deny_writes_under", []))]
+
+    allow_roots_abs = [(pr / p).resolve() if not os.path.isabs(str(p)) else p.resolve() for p in allow_writes]
+    deny_roots_abs = [(pr / p).resolve() if not os.path.isabs(str(p)) else p.resolve() for p in deny_writes]
+
+    ok_out, why_out = _ensure_under_allowlist(out_root_abs, allow_roots_abs, deny_roots_abs)
+    if not ok_out:
+        print(f"ERROR: unsafe --out (reason={why_out}): {out_root_abs}", file=sys.stderr)
+        return 1
+
+    verifier = StrictVerifier(
+        project_root=pr,
+        tasks_path=tasks_real,
+        out_root=out_root_abs,
+        report_format=args.report_format,
+        want_json=bool(args.json),
+        quiet=bool(args.quiet),
+        config=config,
     )
-    
-    results = verifier.run()
-    
-    # Exit with appropriate code
-    if results["totals"]["verified"] == results["totals"]["tasks"]:
-        return 0  # All verified
-    elif results["totals"]["invalid_scope"] > 0:
-        return 1  # Validation error
-    else:
-        return 0  # Success with some unverified
+
+    try:
+        summary, report_md = verifier.run()
+        written = verifier.write_outputs(summary, report_md)
+        summary["writes"]["reports"] = [str(p) for p in written]
+
+        if not args.quiet:
+            print(f"Wrote report: {written[0]}")
+            if len(written) > 1:
+                print(f"Wrote summary: {written[1]}")
+
+        return 0
+
+    except Exception as e:
+        if not args.quiet:
+            print(f"ERROR: {e}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main(sys.argv[1:]))

@@ -1,16 +1,17 @@
+```md
 ---
-description: 'Strict evidence-only verification using parseable evidence hooks (evidence:
-  type key=value...).'
-version: 6.0.0
+description: "Strict evidence-only verification using parseable evidence hooks (evidence: type key=value...)."
+version: 6.1.0
 workflow: /smartspec_verify_tasks_progress_strict
+category: verify
 ---
 
 # smartspec_verify_tasks_progress_strict
 
-> **Canonical path:** `.smartspec/workflows/smartspec_verify_tasks_progress_strict.md`  
-> **Version:** 6.0.3  
-> **Status:** Production Ready  
+> **Canonical path:** `.smartspec/workflows/smartspec_verify_tasks_progress_strict.md`
+> **Version:** 6.1.0
 > **Category:** verify
+> **Writes:** reports only (`.spec/reports/**`)
 
 ## Purpose
 
@@ -19,9 +20,9 @@ Verify progress for a given `tasks.md` using **evidence-only checks**.
 This workflow MUST:
 
 - treat checkboxes as **non-authoritative** (they are not evidence)
-- verify each task via **explicit evidence hooks** (code/test/ui/docs)
-- produce an auditable report under `.spec/reports/verify-tasks-progress/**`
-- never modify the codebase or tasks (checkbox updates are handled by `/smartspec_sync_tasks_checkboxes`)
+- verify each task via **explicit evidence hooks** (`code|test|ui|docs`)
+- produce auditable reports under `.spec/reports/verify-tasks-progress/**`
+- never modify `tasks.md` (checkbox updates are handled by `/smartspec_sync_tasks_checkboxes`)
 
 It is **safe-by-default** and performs **reports-only** writes.
 
@@ -31,8 +32,8 @@ It is **safe-by-default** and performs **reports-only** writes.
 
 This workflow MUST follow:
 
-- `knowledge_base_smartspec_handbook.md` (v6)
-- `.spec/smartspec.config.yaml`
+- `knowledge_base_smartspec_handbook.md`
+- `.spec/smartspec.config.yaml` (config-first)
 
 ### Write scopes (enforced)
 
@@ -87,7 +88,7 @@ This workflow must defend against:
 ### Kilo Code
 
 ```bash
-/smartspec_verify_tasks_progress_strict.md <path/to/tasks.md> [--report-format <md|json|both>] [--json]
+/smartspec_verify_tasks_progress_strict.md <path/to/tasks.md> [--report-format <md|json|both>] [--json] --platform kilo
 ```
 
 Notes:
@@ -104,7 +105,8 @@ Notes:
 
 ### Input validation (mandatory)
 
-- Must exist and resolve under `specs/**`.
+- Must exist.
+- Must resolve under `specs/**`.
 - Must not escape via symlink.
 - MUST identify `spec-id` from the tasks header or folder path.
 
@@ -125,7 +127,7 @@ Notes:
 
 - `--report-format <md|json|both>` (default `both`)
 
-No other flags in v6 (to reduce parameter sprawl).
+No other flags in v6+ (to reduce parameter sprawl).
 
 ---
 
@@ -233,10 +235,10 @@ Verification rule:
 
 ### Type-specific matching rules
 
-- `code`: path exists → at least medium; symbol/contains match → high
-- `test`: path exists → at least medium; contains match → high
-- `docs`: path exists → at least medium; heading/contains match → high
-- `ui`: if component/route evidence exists in codebase and states are declared → medium/high depending on matches; for A2UI specs, check ui-spec.json validity and component catalog adherence → high if valid; otherwise `needs_manual`
+- `code`: path exists → at least medium; symbol/contains match (when provided) → high
+- `test`: path exists → at least medium; contains match (when provided) → high
+- `docs`: path exists → at least medium; heading/contains match (when provided) → high
+- `ui`: if component/route evidence exists in codebase and states are declared → medium/high depending on matches; otherwise `needs_manual`
 
 ---
 
@@ -271,76 +273,6 @@ The report MUST include:
 6) Output inventory
 7) Recommended next steps:
    - if you want to update checkboxes: `/smartspec_sync_tasks_checkboxes <tasks.md> --apply`
-   - to generate prompts: `/smartspec_report_implement_prompter --spec <spec.md> --tasks <tasks.md> --strict`
-
-### Remediation templates (MUST)
-
-When a task is `missing_hooks` or `needs_manual`, the report MUST suggest at least one concrete hook template, e.g.:
-
-- `evidence: code path=<repo/path> symbol=<ComponentOrFn>`
-- `evidence: test path=<repo/path> contains="<test name>"`
-- `evidence: ui screen=<ScreenName> states=loading,empty,error,success component=<ComponentName>`
-- `evidence: docs path=<repo/path> heading="<Heading>"`
-
----
-
-## Non-destructive rule (MUST)
-
-- This workflow MUST NOT modify `tasks.md`.
-- It MUST NOT propose changing checkbox states directly.
-- Any checkbox updates must be done by `/smartspec_sync_tasks_checkboxes`.
-
----
-
-## Exit codes
-
-- `0` success (report generated)
-- `1` validation fail (unsafe path, malformed tasks format)
-- `2` config/usage error
-
----
-
-## `summary.json` schema (minimum)
-
-```json
-{
-  "workflow": "smartspec_verify_tasks_progress_strict",
-  "version": "6.0.3",
-  "run_id": "string",
-  "inputs": {"tasks_path": "...", "spec_id": "..."},
-  "totals": {
-    "tasks": 0,
-    "verified": 0,
-    "not_verified": 0,
-    "manual": 0,
-    "missing_hooks": 0,
-    "invalid_scope": 0
-  },
-  "results": [
-    {
-      "task_id": "TSK-...",
-      "title": "...",
-      "verified": false,
-      "confidence": "low|medium|high",
-      "status": "verified|not_verified|needs_manual|missing_hooks|invalid_scope",
-      "evidence": [
-        {
-          "type": "code|test|ui|docs",
-          "raw": "evidence: ...",
-          "pointer": "...",
-          "matched": false,
-          "scope": "ok|invalid_scope",
-          "why": "..."
-        }
-      ],
-      "suggested_hooks": ["evidence: ..."],
-      "why": "..."
-    }
-  ],
-  "writes": {"reports": ["path"]},
-  "next_steps": [{"cmd": "...", "why": "..."}]
-}
-```
 
 ---
 
@@ -348,7 +280,7 @@ When a task is `missing_hooks` or `needs_manual`, the report MUST suggest at lea
 
 Implemented in: `.smartspec/scripts/verify_evidence_strict.py`
 
-### Usage
+### Usage (internal)
 
 ```bash
 python3 .smartspec/scripts/verify_evidence_strict.py \
@@ -357,31 +289,7 @@ python3 .smartspec/scripts/verify_evidence_strict.py \
   --out <output-directory>
 ```
 
-### Arguments
-
-- `tasks_path` (required): Path to tasks.md file
-- `--project-root` (required): Workspace root directory for file verification
-- `--out` (optional): Output directory for reports (default: `.spec/reports/verify-tasks-progress`)
-
-### Output
-
-- `<out>/<run-id>/report.md` - Human-readable Markdown report
-- `<out>/<run-id>/summary.json` - Machine-readable JSON summary
-
-### Script Features
-
-- ✅ Rejects non-compliant evidence types (`file_exists`, `test_exists`, `command`)
-- ✅ Enhanced path validation (path traversal, symlinks, absolute paths)
-- ✅ Resource limits (10MB max file size)
-- ✅ Error handling and logging
-- ✅ Security audit trail
-- ✅ Remediation suggestions for failed tasks
-
-**Version:** 6.0.4-enhanced  
-**Quality Score:** 9.7/10  
-**Status:** Production-ready with enhanced security
-
 ---
 
 # End of workflow doc
-
+```

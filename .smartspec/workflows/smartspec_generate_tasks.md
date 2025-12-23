@@ -1,41 +1,33 @@
+```md
 ---
-description: Convert spec.md (or plan.md) → tasks.md with 100% duplication prevention.
-version: 7.0.0
+description: Convert spec.md (or plan.md) → tasks.md with duplication prevention and verifier-compatible evidence hooks.
+version: 7.1.0
 workflow: /smartspec_generate_tasks
+category: core
 ---
 
 # smartspec_generate_tasks
 
-> **Canonical path:** `.smartspec/workflows/smartspec_generate_tasks.md`  
-> **Version:** 7.0.0  
-> **Status:** Production Ready  
+> **Canonical path:** `.smartspec/workflows/smartspec_generate_tasks.md`
+> **Version:** 7.1.0
+> **Status:** Active
 > **Category:** core
 
 ## Purpose
 
-Generate or refine `tasks.md` from `spec.md` (or `plan.md`) or `ui-spec.json` (A2UI) with **100% duplication prevention** and **reuse-first** governance.
+Generate or refine `tasks.md` from `spec.md` (or `plan.md`) or `ui-spec.json` (A2UI) with:
 
-This workflow is the canonical source for creating tasks that downstream workflows can trust:
+- **reuse-first / duplication prevention**
+- **preview-first** governance
+- **verifier-compatible evidence hooks** (machine-parseable `evidence:` lines)
+
+This workflow is a canonical producer of `tasks.md` that downstream workflows can trust:
 
 - `/smartspec_verify_tasks_progress_strict`
 - `/smartspec_report_implement_prompter`
 - `/smartspec_quality_gate`
 
-It is **safe-by-default** and writes governed artifacts only when explicitly applied.
-
----
-
-## File Locations (Important for AI Agents)
-
-**All SmartSpec configuration and registry files are located in the `.spec/` folder:**
-
-- **Config:** `.spec/smartspec.config.yaml`
-- **Spec Index:** `.spec/SPEC_INDEX.json`
-- **Registry:** `.spec/registry/` (component registry, reuse index)
-- **Reports:** `.spec/reports/` (workflow outputs, previews, diffs)
-- **Scripts:** `.spec/scripts/` (automation scripts)
-
-**When searching for these files, ALWAYS use the `.spec/` prefix from project root.**
+**Critical requirement:** This workflow MUST generate tasks in a format that reduces false negatives in strict verification.
 
 ---
 
@@ -43,8 +35,8 @@ It is **safe-by-default** and writes governed artifacts only when explicitly app
 
 This workflow MUST follow:
 
-- `knowledge_base_smartspec_handbook.md` (v6)
-- `.spec/smartspec.config.yaml`
+- `knowledge_base_smartspec_handbook.md`
+- `.spec/smartspec.config.yaml` (config-first)
 
 ### Write scopes (enforced)
 
@@ -65,8 +57,42 @@ Forbidden writes (must hard-fail):
   - MUST NOT modify `specs/**/tasks.md`.
   - MUST write a deterministic preview bundle to `.spec/reports/`.
 - With `--apply`:
-  - MAY update or create `specs/**/tasks.md`.
-  - MUST NOT modify any other files.
+  - MAY create or update `specs/<category>/<spec-id>/tasks.md`.
+  - MUST NOT modify any other governed files.
+
+---
+
+## Invocation
+
+### CLI
+
+```bash
+/smartspec_generate_tasks <specs/<category>/<spec-id>/spec.md|.../plan.md|.../ui-spec.json> [--apply] [--validate-only] [--json]
+```
+
+### Kilo Code
+
+```bash
+/smartspec_generate_tasks.md <specs/<category>/<spec-id>/spec.md|.../plan.md|.../ui-spec.json> [--apply] [--validate-only] [--json] --platform kilo
+```
+
+---
+
+## Inputs
+
+### Positional
+
+- `--spec` (positional primary input):
+  - `specs/<category>/<spec-id>/spec.md`
+  - or `specs/<category>/<spec-id>/plan.md`
+  - or `specs/<category>/<spec-id>/ui-spec.json`
+
+### Input validation (mandatory)
+
+- Input MUST exist.
+- Must resolve under `specs/**`.
+- Must not escape via symlink.
+- Must derive `spec-id` from folder name or file header (`^[a-z0-9_\-]{3,64}$`).
 
 ---
 
@@ -74,48 +100,48 @@ Forbidden writes (must hard-fail):
 
 ### Universal flags (must support)
 
-All SmartSpec workflows support these universal flags:
-
 | Flag | Required | Description |
 |---|---|---|
-| `--config` | No | Path to custom config file (default: `.spec/smartspec.config.yaml`) |
-| `--lang` | No | Output language (`th` for Thai, `en` for English, `auto` for automatic detection) |
-| `--platform` | No | Platform mode (`cli` for CLI, `kilo` for Kilo Code, `ci` for CI/CD, `other` for custom integrations) |
-| `--out` | No | Base output directory for reports and generated files (must pass safety checks) |
-| `--json` | No | Output results in JSON format for machine parsing and automation |
-| `--quiet` | No | Suppress non-essential output, showing only errors and critical information |
+| `--config` | No | Config path (default: `.spec/smartspec.config.yaml`) |
+| `--lang` | No | `th` \| `en` \| `auto` |
+| `--platform` | No | `cli` \| `kilo` \| `ci` \| `other` |
+| `--out` | No | Base output directory for reports (must pass safety checks) |
+| `--json` | No | Emit machine-readable summary JSON |
+| `--quiet` | No | Reduce logs |
 
 ### Workflow-specific flags
 
-Flags specific to `/smartspec_generate_tasks`:
-
 | Flag | Required | Description |
 |---|---|---|
-| `--spec` | Yes (positional) | Path to the spec.md or ui-spec.json file to generate tasks from (e.g., `specs/feature/spec-001/spec.md` or `specs/feature/spec-002/ui-spec.json`) |
-| `--apply` | No | Enable writes to governed artifacts (tasks.md) |
-| `--validate-only` | No | Run validation and preview without writing any files |
+| `--apply` | No | Enable writes to governed artifacts (`tasks.md`) |
+| `--validate-only` | No | Run preview + validation only (no writes to `specs/**`) |
 | `--skip-duplication-check` | No | Skip pre-generation duplication validation (not recommended) |
-| `--registry-roots` | No | Additional registry directories to check for duplicates (comma-separated) |
+| `--registry-roots` | No | Additional registry dirs to check for duplicates (comma-separated) |
 
 ### Flag usage notes
 
-- **Config-first approach:** Prefer setting defaults in `.spec/smartspec.config.yaml` to minimize command-line flags
-- **Positional arguments:** Use positional argument for spec path: `/smartspec_generate_tasks specs/feature/spec-001/spec.md`
-- **Boolean flags:** Flags without values are boolean (presence = true, absence = false)
-- **Path safety:** All path arguments must pass safety validation (no directory traversal, symlink escape, or absolute paths outside project)
-- **Secret handling:** Never pass secrets as flag values; use `env:VAR_NAME` references or config file
-- **Preview-first:** Always run without `--apply` first to review changes
-- **Duplication prevention:** Never use `--skip-duplication-check` unless explicitly instructed
+- **Config-first:** prefer setting defaults in `.spec/smartspec.config.yaml`.
+- **Preview-first:** always run without `--apply` before applying.
+- **No secrets:** never pass tokens/keys as CLI args.
 
 ---
 
 ## Behavior
 
-### 1) Pre-Generation Validation (MANDATORY)
+### 0) Determine target paths
 
-Before generating tasks, the AI agent **MUST** check for existing similar tasks in other specs.
+Given `specs/<category>/<spec-id>/<input>`:
+
+- target governed file: `specs/<category>/<spec-id>/tasks.md`
+- preview file: `.spec/reports/generate-tasks/<run-id>/preview/<spec-id>/tasks.md`
+- best-effort patch: `.spec/reports/generate-tasks/<run-id>/diff/<spec-id>.patch`
+
+### 1) Pre-generation duplication validation (MANDATORY)
+
+Before generating tasks, the agent MUST check for existing similar tasks in other specs.
 
 **Validation Command:**
+
 ```bash
 python3 .spec/scripts/detect_duplicates.py \
   --registry-dir .spec/registry/ \
@@ -123,21 +149,70 @@ python3 .spec/scripts/detect_duplicates.py \
 ```
 
 **Validation Rules:**
-- **Exit Code `0` (Success):** No duplicates found. The agent may proceed.
-- **Exit Code `1` (Failure):** Potential duplicates found. The agent **MUST**:
-  - Present the duplicates to the user.
-  - Ask the user to:
-    a) Reuse existing components/tasks
-    b) Justify creating new tasks
-    c) Cancel and review existing specs
-  - **MUST NOT** proceed until the user confirms.
+
+- Exit `0`: proceed.
+- Exit `1`: present duplicates; user must decide reuse/justify/cancel; MUST NOT proceed without confirmation.
 
 ### 2) Produce task graph
 
 - Convert scope into milestones + tasks.
-- Ensure every milestone has verifiable outputs (evidence hooks).
+- Ensure every milestone has verifiable outputs.
+- Ensure every task has at least **one** machine-parseable evidence hook line (`evidence:`).
 
-### 3) Preview & report (always)
+### 3) Evidence hook policy (MUST)
+
+To prevent “implement แล้ว แต่ verify ไม่เจอ”, tasks MUST include evidence hooks that are:
+
+- **specific** (file path + symbol/contains/heading when applicable)
+- **repo-relative** (no absolute paths)
+- **quote-safe** (values with spaces MUST use double quotes)
+
+Canonical line syntax:
+
+- `evidence: <type> <key>=<value> <key>=<value> ...`
+
+Supported types MUST align with strict verifier:
+
+- `code` (required: `path`; optional: `symbol`, `contains`)
+- `test` (required: `path`; optional: `contains`, `command`)
+- `docs` (required: `path`; optional: `heading`, `contains`)
+- `ui` (required: `screen`; optional: `route`, `component`, `states`)
+
+**Rule:** generator SHOULD prefer `symbol=` or `contains=` over directory-only hooks to reduce ambiguity.
+
+### 4) Existing tasks.md merge + normalization (MANDATORY)
+
+If `specs/<category>/<spec-id>/tasks.md` already exists:
+
+The workflow MUST treat it as the starting point and produce a refined output that:
+
+1) **Preserves stable task IDs** (do not renumber existing tasks unless necessary)
+2) **Avoids duplication** (do not re-add already existing tasks)
+3) **Preserves human notes** that do not conflict with canonical format
+4) **Normalizes evidence format** to verifier-compatible lines
+
+#### 4.1 What counts as “non-canonical evidence”
+
+Any of the following patterns MUST be normalized in preview output:
+
+- `- **Evidence Hooks:**` blocks
+- `- **Evidence:** <free text>` bullets
+- `- evidence: file_exists ...` / `test_exists ...` / `command ...` (legacy / non-compliant)
+
+#### 4.2 Normalization rule
+
+- In preview output, convert non-canonical evidence into canonical `evidence:` lines wherever it is safe to do so.
+- If safe conversion is not possible, keep the original note AND add a clear remediation note in the report pointing to `/smartspec_migrate_evidence_hooks`.
+
+> IMPORTANT: The workflow MUST NOT generate placeholder paths like `COMMAND_NOT_SUPPORTED` or `path=???` because it causes systematic false negatives.
+
+#### 4.3 Apply semantics when file exists
+
+- With `--apply`, the workflow MUST write a **fully normalized** `tasks.md` that follows the templates in §10.
+- The workflow MUST generate a best-effort diff patch and include it in the report bundle.
+- Writes MUST be atomic (temp + rename) and must not escape via symlink.
+
+### 5) Preview & report (always)
 
 Write:
 
@@ -146,11 +221,12 @@ Write:
 - `.spec/reports/generate-tasks/<run-id>/report.md`
 - `.spec/reports/generate-tasks/<run-id>/summary.json` (if `--json`)
 
-### 4) Post-Generation Validation (MANDATORY)
+### 6) Post-generation validation (MANDATORY)
 
-After generating the preview and before applying, the AI agent **MUST** validate the generated task list.
+After generating the preview and before applying, the agent MUST validate the generated tasks.
 
 **Validation Command:**
+
 ```bash
 python3 .spec/scripts/validate_tasks_enhanced.py \
   --tasks .spec/reports/generate-tasks/<run-id>/preview/<spec-id>/tasks.md \
@@ -159,65 +235,134 @@ python3 .spec/scripts/validate_tasks_enhanced.py \
 ```
 
 **Validation Rules:**
-- **Exit Code `0` (Success):** The tasks file is valid and complete. The agent may proceed with `--apply`.
-- **Exit Code `1` (Failure):** The tasks file is invalid or incomplete. The agent **MUST NOT** use `--apply`.
-- The full output from the validation script **MUST** be included in `report.md`.
 
-### 5) Apply (only with `--apply` and if validation passes)
+- Exit `0`: may proceed with `--apply`.
+- Exit `1`: MUST NOT apply; report must include full validator output.
+
+**Additional MUST-checks** (validator responsibility):
+
+- Every task has ≥ 1 `evidence:` line
+- All `evidence:` lines parse as `type key=value ...`
+- Evidence `path=` is relative and does not contain `..`
+- Evidence type is in {`code`,`test`,`docs`,`ui`} (or explicitly allowed by config)
+
+### 7) Apply (only with `--apply` and if validation passes)
 
 - Update `specs/<category>/<spec-id>/tasks.md`.
+- MUST NOT modify other files.
+
+### 8) Recommended next steps (canonical chain)
+
+After tasks are generated:
+
+- implement: `/smartspec_implement_tasks <tasks.md>`
+- strict verify: `/smartspec_verify_tasks_progress_strict <tasks.md>`
+- sync checkboxes: `/smartspec_sync_tasks_checkboxes <tasks.md> --apply`
 
 ---
 
-## 10) `tasks.md` Content Templates (For AI Agent Implementation)
+## Implementation notes (for agents)
 
-To ensure consistent and complete output, the AI agent executing this workflow MUST use the following templates when generating `tasks.md`.
+- Duplication detection and tasks validation scripts are project-local and referenced explicitly in this workflow.
+- Any workflow-generated helper scripts (if needed) MUST be written under `.smartspec/generated-scripts/**`.
+
+---
+
+## 10) `tasks.md` Content Templates (MUST)
+
+The agent executing this workflow MUST output tasks using these templates.
 
 ### 10.1 Header Template
 
 ```markdown
 | spec-id | source | generated_by | updated_at |
 |---|---|---|---|
-| `<spec-id>` | `spec.md` | `smartspec_generate_tasks:7.0.0` | `<ISO_DATETIME>` |
+| `<spec-id>` | `<spec.md|plan.md|ui-spec.json>` | `smartspec_generate_tasks:7.1.0` | `<ISO_DATETIME>` |
 ```
 
-### 10.2 Task Item Template
-
-Each task item under the `## Tasks` section MUST follow this template.
+### 10.2 Tasks Section Skeleton
 
 ```markdown
-- [ ] **TSK-<spec-id>-001: Setup initial project structure**
-  - **Implements:** Feature - Project Scaffolding
-  - **T-Reference:** T001 (Project Setup)
-  - **Acceptance Criteria:**
-    - [ ] A new directory is created for the project.
-    - [ ] `package.json` is initialized.
-    - [ ] Basic folder structure (`src`, `tests`, `docs`) is present.
-  - **Evidence Hooks:**
-    - **Code:** `package.json`, `src/`, `tests/`
-    - **Verification:** Run `ls -lR` and check for directory structure.
+## Tasks
+
+> Notes:
+> - Checkbox [x] is not evidence. Evidence must be declared with `evidence:` lines.
+> - Evidence values with spaces must be quoted, e.g. contains="hello world".
 ```
 
-### 10.3 Requirement Traceability Matrix (RTM) Template
+### 10.3 Task Item Template (Verifier-compatible)
+
+Each task item under `## Tasks` MUST follow this template.
 
 ```markdown
-## Requirement Traceability Matrix
+- [ ] <TASK-ID> <Task title>
+  implements: <feature|story|component>
+  t_ref: <Txxx|REQ-xxx|NFR-xxx|UI-xxx>
+  acceptance:
+    - <bullet>
+    - <bullet>
+  evidence: code path=<repo/rel/file> symbol=<SymbolName>
+  evidence: test path=<repo/rel/test> contains="<assertion phrase>"
+  evidence: docs path=<repo/rel/doc.md> heading="<Heading>"
+```
 
-### Security Requirements Coverage
+Rules:
 
-| Requirement ID | Description | Implementing Tasks | Coverage Status |
-|---|---|---|---|
-| SEC-001 | Password Hashing (bcrypt, cost 12) | TSK-AUTH-025 | ✅ Complete |
-| SEC-002 | JWT Algorithm (RS256, JWKS endpoint) | TSK-AUTH-030, TSK-AUTH-031, TSK-AUTH-032 | ✅ Complete |
+- `<TASK-ID>` MUST be stable and unique within the spec (recommended: `TSK-<spec-id>-NNN`)
+- Do NOT wrap the task title in bold (keeps parsing simple)
+- Evidence lines MUST start with `evidence:` exactly
 
-### Functional Requirements Coverage
+### 10.4 Evidence patterns (examples)
 
-| T-ID | Description | TSK-ID | Coverage Status |
-|---|---|---|---|
-| T001 | User Model (Prisma schema) | TSK-AUTH-020 | ✅ Complete |
-| T010 | JWT Token Management (RS256) | TSK-AUTH-030 | ✅ Complete |
+#### Code
+
+```markdown
+evidence: code path=packages/api/src/auth/login_handler.ts symbol=loginWithPassword
+evidence: code path=packages/api/src/middleware/auth_jwt.ts contains="Authorization"
+```
+
+#### Tests
+
+```markdown
+evidence: test path=packages/api/test/auth/login.test.ts contains="returns 200 with access token"
+evidence: test path=packages/api/test/auth/login.test.ts command="pnpm test --filter auth"
+```
+
+> `command` is never executed by strict verification; it is recorded as context only.
+
+#### Docs
+
+```markdown
+evidence: docs path=docs/api/auth.md heading="POST /auth/login"
+```
+
+#### UI
+
+```markdown
+evidence: ui screen=Login route=/login component=LoginForm states=loading,error,success
 ```
 
 ---
 
+## 11) Existing file upgrade guarantees
+
+When the workflow is run against a spec that already has `tasks.md`, the preview output MUST:
+
+- rewrite legacy **Evidence Hooks** blocks into canonical `evidence:` lines
+- preserve the original intent and keep any human-readable notes as comments/notes
+- maintain task IDs and ordering as much as possible
+
+With `--apply`, the written `tasks.md` MUST conform to §10 templates.
+
+If the workflow cannot safely convert some legacy evidence, it MUST:
+
+- keep the original text
+- add a remediation block in report.md recommending:
+
+  - `/smartspec_migrate_evidence_hooks <tasks.md>`
+
+---
+
 # End of workflow doc
+```
+

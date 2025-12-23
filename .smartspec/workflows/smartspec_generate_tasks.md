@@ -1,14 +1,14 @@
 ---
 description: Convert spec.md (or plan.md) → tasks.md with duplication prevention and strict-verifier-compatible evidence hooks.
-version: 7.1.1
-workflow: smartspec_generate_tasks
+version: 7.1.2
+workflow: /smartspec_generate_tasks
 category: core
 ---
 
 # smartspec_generate_tasks
 
 > **Canonical path:** `.smartspec/workflows/smartspec_generate_tasks.md`
-> **Version:** 7.1.1
+> **Version:** 7.1.2
 > **Status:** Active
 > **Category:** core
 
@@ -30,18 +30,6 @@ This workflow is the canonical producer of `tasks.md` that downstream workflows 
 
 ---
 
-## File locations (Important)
-
-All SmartSpec configuration and registry files are located in the `.spec/` folder:
-
-- Config: `.spec/smartspec.config.yaml`
-- Spec Index: `.spec/SPEC_INDEX.json`
-- Registry: `.spec/registry/`
-- Reports: `.spec/reports/`
-- Scripts: `.spec/scripts/`
-
----
-
 ## Governance contract
 
 This workflow MUST follow:
@@ -59,20 +47,35 @@ Allowed writes:
 Forbidden writes (must hard-fail):
 
 - Any path outside config `safety.allow_writes_only_under`
-- Any path under config `safety.deny_writes_under` (e.g., `.spec/registry/**`, `.spec/cache/**`)
+- Any path under config `safety.deny_writes_under`
 - Any runtime source tree modifications
 
 ### `--apply` behavior
 
-- Without `--apply`:
-  - MUST NOT modify `specs/**/tasks.md`.
-  - MUST write a deterministic preview bundle to `.spec/reports/`.
+- Without `--apply` (or with `--validate-only`):
+  - MUST NOT modify any file under `specs/**`.
+  - MUST write a deterministic preview bundle to `.spec/reports/generate-tasks/**`.
+  - If validation fails, MUST NOT “auto-fix” by editing `specs/**/tasks.md`.
 - With `--apply`:
   - MAY update or create `specs/**/tasks.md`.
   - MUST NOT modify any other governed files.
+  - MUST write atomically (temp + rename) and must not escape via symlink.
 
 ---
 
+## Invocation
+
+### CLI
+
+```text
+/smartspec_generate_tasks <specs/<category>/<spec-id>/spec.md|.../plan.md|.../ui-spec.json> [--apply] [--validate-only] [--json]
+```
+
+### Kilo Code
+
+```text
+/smartspec_generate_tasks.md <specs/<category>/<spec-id>/spec.md|.../plan.md|.../ui-spec.json> [--apply] [--validate-only] [--json] --platform kilo
+```
 
 ---
 
@@ -80,10 +83,11 @@ Forbidden writes (must hard-fail):
 
 ### Positional
 
-- `--spec` (positional):
-  - `specs/<category>/<spec-id>/spec.md`
-  - or `specs/<category>/<spec-id>/plan.md`
-  - or `specs/<category>/<spec-id>/ui-spec.json`
+Primary input is positional:
+
+- `specs/<category>/<spec-id>/spec.md`
+- or `specs/<category>/<spec-id>/plan.md`
+- or `specs/<category>/<spec-id>/ui-spec.json`
 
 ### Input validation (mandatory)
 
@@ -111,40 +115,45 @@ Forbidden writes (must hard-fail):
 
 | Flag | Required | Description |
 |---|---|---|
-| `--spec` | Yes (positional) | Spec/plan/ui-spec path |
 | `--apply` | No | Enable writes to governed artifacts (`tasks.md`) |
-| `--validate-only` | No | Run validation + preview without writing governed files |
-| `--skip-duplication-check` | No | Skip pre-generation duplication check (not recommended) |
+| `--validate-only` | No | Run preview + validation only (no writes to `specs/**`) |
+| `--skip-duplication-check` | No | Skip duplication check (not recommended) |
 | `--registry-roots` | No | Extra registry directories to check (comma-separated) |
 
 ---
 
 ## Behavior
 
-### 1) Pre-generation duplication validation (MANDATORY)
+### 1) Determine target paths
 
-Before generating tasks, the agent MUST check for existing similar tasks in other specs.
+Given `specs/<category>/<spec-id>/<input>`:
 
-**Validation Command:**
+- target governed file: `specs/<category>/<spec-id>/tasks.md`
+- preview file: `.spec/reports/generate-tasks/<run-id>/preview/<spec-id>/tasks.md`
+- best-effort patch: `.spec/reports/generate-tasks/<run-id>/diff/<spec-id>.patch`
 
-```bash
-python3 .spec/scripts/detect_duplicates.py \
-  --registry-dir .spec/registry/ \
-  --threshold 0.8
+### 2) Pre-generation duplication validation (recommended)
+
+If project scripts exist, the agent SHOULD run duplication detection before generating tasks.
+
+Recommended command (if present):
+
+```text
+python3 .smartspec/scripts/detect_duplicates.py --registry-dir .spec/registry/ --threshold 0.8
 ```
 
-**Validation Rules:**
+Rules:
 
-- Exit `0`: proceed.
-- Exit `1`: duplicates found; MUST present duplicates and require explicit user decision before proceeding.
+- If the script is missing, log a warning and continue.
+- If duplicates are detected, MUST present duplicates and require explicit user decision before proceeding.
 
-### 2) Produce task graph
+### 3) Produce task graph
 
 - Convert scope into milestones + tasks.
 - Ensure every milestone has verifiable outputs.
 - Ensure every task has at least **one** machine-parseable evidence hook line (`evidence:`).
 
-### 3) Evidence hook policy (MUST)
+### 4) Evidence hook policy (MUST)
 
 To prevent “implement แล้ว แต่ verify ไม่เจอ”, tasks MUST include evidence hooks that are:
 
@@ -163,9 +172,12 @@ Evidence types MUST align with strict verifier:
 - `docs` (required: `path`; optional: `heading`, `contains`)
 - `ui` (required: `screen`; optional: `route`, `component`, `states`)
 
-**Rule:** generator SHOULD prefer `symbol=` or `contains=` over directory-only hooks.
+**Hard rule:**
 
-### 4) Existing `tasks.md` merge + normalization (MANDATORY)
+- `path=` MUST be a repo-relative path (no spaces). Do NOT put shell commands into `path=`.
+- If you want to record a command, use `command="..."` on `test` evidence.
+
+### 5) Existing `tasks.md` merge + normalization (MANDATORY)
 
 If `specs/<category>/<spec-id>/tasks.md` already exists:
 
@@ -174,17 +186,15 @@ The workflow MUST treat it as the starting point and produce a refined output th
 1) **Preserves stable task IDs** (do not renumber existing tasks unless unavoidable)
 2) **Avoids duplication** (do not re-add already existing tasks)
 3) **Preserves human notes** that do not conflict with canonical format
-4) **Normalizes evidence format** to strict-verifier-compatible lines
+4) **Normalizes evidence format** to strict-verifier-compatible `evidence:` lines
 
-#### 4.1 Non-canonical evidence that MUST be normalized
+Non-canonical evidence that MUST be normalized:
 
-Any of the following MUST be normalized in preview output:
+- `**Evidence Hooks:**` blocks
+- `**Evidence:** <free text>` bullets
+- legacy/non-compliant evidence types like `file_exists`, `test_exists`, `command`, `api_route`, `db_schema`
 
-- `- **Evidence Hooks:**` blocks
-- `- **Evidence:** <free text>` bullets
-- legacy/non-compliant evidence types like `file_exists`, `test_exists`, `command`
-
-#### 4.2 Normalization rule
+Normalization rule:
 
 - Convert non-canonical evidence into canonical `evidence:` lines wherever it is safe.
 - If safe conversion is not possible, keep the original note AND add a remediation note in the report recommending:
@@ -193,7 +203,7 @@ Any of the following MUST be normalized in preview output:
 
 > IMPORTANT: MUST NOT generate placeholders like `path=???` or `COMMAND_NOT_SUPPORTED`.
 
-### 5) Preview & report (always)
+### 6) Preview & report (always)
 
 Write:
 
@@ -202,25 +212,21 @@ Write:
 - `.spec/reports/generate-tasks/<run-id>/report.md`
 - `.spec/reports/generate-tasks/<run-id>/summary.json` (if `--json`)
 
-### 6) Post-generation validation (MANDATORY)
+### 7) Post-generation validation (MANDATORY)
 
-After generating preview and before applying, MUST validate tasks.
+After generating the preview and before applying, MUST validate the generated tasks using the project validator:
 
-**Validation Command:**
-
-```bash
-python3 .smartspec/scripts/validate_tasks_enhanced.py \
-  --tasks .spec/reports/generate-tasks/<run-id>/preview/<spec-id>/tasks.md \
-  --spec specs/<category>/<spec-id>/spec.md \
-  --check-duplicates --threshold 0.8
+```text
+python3 .smartspec/scripts/validate_tasks_enhanced.py --tasks .spec/reports/generate-tasks/<run-id>/preview/<spec-id>/tasks.md --spec specs/<category>/<spec-id>/spec.md
 ```
 
-**Validation Rules:**
+Notes:
 
-- Exit `0`: may proceed with `--apply`.
-- Exit `1`: MUST NOT apply; include validator output in `report.md`.
+- `--strict-sections` is OPTIONAL. If enabled, it requires legacy sections.
+- If validation fails, MUST NOT apply.
+- If validation fails, MUST NOT edit `specs/**/tasks.md` in preview mode. Emit fixes as report notes/patch.
 
-### 7) Apply (only with `--apply` and if validation passes)
+### 8) Apply (only with `--apply` and only if validation passes)
 
 - Update `specs/<category>/<spec-id>/tasks.md`.
 - MUST write atomically (temp + rename).
@@ -243,7 +249,7 @@ python3 .smartspec/scripts/validate_tasks_enhanced.py \
 ```md
 | spec-id | source | generated_by | updated_at |
 |---|---|---|---|
-| `<spec-id>` | `<spec.md|plan.md|ui-spec.json>` | `smartspec_generate_tasks:7.1.1` | `<ISO_DATETIME>` |
+| `<spec-id>` | `<spec.md|plan.md|ui-spec.json>` | `smartspec_generate_tasks:7.1.2` | `<ISO_DATETIME>` |
 ```
 
 ### Tasks Section Skeleton
@@ -266,7 +272,7 @@ python3 .smartspec/scripts/validate_tasks_enhanced.py \
     - <bullet>
     - <bullet>
   evidence: code path=<repo/rel/file> symbol=<SymbolName>
-  evidence: test path=<repo/rel/test> contains="<assertion phrase>"
+  evidence: test path=<repo/rel/test-file> contains="<assertion phrase>" command="<optional test command>"
   evidence: docs path=<repo/rel/doc.md> heading="<Heading>"
 ```
 
@@ -280,4 +286,3 @@ Rules:
 
 # End of workflow doc
 ```
-

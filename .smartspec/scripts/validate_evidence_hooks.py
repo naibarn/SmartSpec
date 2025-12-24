@@ -1,75 +1,72 @@
 #!/usr/bin/env python3
-"""validate_evidence_hooks.py (v2.0.0)
+"""validate_evidence_hooks.py (v2.1.0)
 
-Evidence Hook Validation Script (SmartSpec)
+Canonical Evidence Hook Validator
 
-This validator checks that evidence hooks in tasks.md follow a canonical,
-machine-parseable format that works with strict verification.
+Validates that evidence hooks in a SmartSpec tasks file follow the canonical,
+strict-verifier-compatible format.
 
-Canonical format (accepted):
-  evidence: <code|docs|test|ui> path=<repo-relative> [key=value ...]
+Canonical evidence line format (must be parseable by shlex):
+  evidence: <code|test|docs|ui> key=value key="value with spaces" ...
 
-Examples (valid):
-  evidence: code path=packages/auth-lib/tsconfig.json
-  evidence: code path=packages/auth-lib/src symbol=Directory
-  evidence: code path=packages/auth-service/src/routes/auth.routes.ts symbol=AuthRoutes
-  evidence: docs path=docs/deployment.md heading="Deployment"
-  evidence: test path=package.json command="npm run build"
-  evidence: ui path=apps/web/src/pages/login.tsx selector="#login-form"
+High-value guarantees this validator enforces:
+- No stray tokens (unquoted values with spaces cause shlex tokenization issues).
+- Only known evidence types.
+- `path=` is repo-relative (no absolute/traversal/globs).
+- Strong guidance on matcher keys to reduce verify false-negatives.
 
-Key differences vs legacy validators:
-- Allows path-only hooks (existence checks). Emits a WARNING (not ERROR)
-  because matcher-less hooks can cause false-negatives if the file is renamed.
-- Uses shlex parsing so quoted values with spaces are supported.
-- Flags common false-negative sources (command in path=, traversal/glob paths).
+Notes
+- This script does NOT access network.
+- This script does NOT execute commands found in evidence.
 
-Exit codes:
-- 0: no invalid hooks
-- 1: has invalid hooks
+Exit codes
+- 0: valid (or valid with warnings, unless --fail-on-warnings)
+- 1: invalid evidence found (or warnings treated as errors)
+- 2: usage / file errors
 """
 
 from __future__ import annotations
 
+import argparse
+import json
 import re
 import shlex
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 
-EVIDENCE_TYPES = {"code", "docs", "test", "ui"}
+STRICT_TYPES = {"code", "test", "docs", "ui"}
 
+# Keys allowed per type (superset is OK, but we warn on unknown keys).
 ALLOWED_KEYS = {
     "code": {"path", "symbol", "contains", "regex"},
-    "docs": {"path", "heading", "contains", "regex"},
     "test": {"path", "command", "contains", "regex"},
+    "docs": {"path", "heading", "contains", "regex"},
     "ui": {"path", "selector", "contains", "regex"},
 }
 
-MATCHER_KEYS = {
-    "code": {"symbol", "contains", "regex"},
-    "docs": {"heading", "contains", "regex"},
-    "test": {"command", "contains", "regex"},
-    "ui": {"selector", "contains", "regex"},
-}
+# Keys that act as a "matcher" beyond existence; lack of these is a warning.
+MATCHER_KEYS = {"contains", "symbol", "heading", "selector", "regex", "command"}
 
-COMMAND_PREFIXES = {
+# Values that should never be used as path prefixes (common commands).
+SUSPICIOUS_PATH_PREFIXES = {
     "npm",
     "pnpm",
     "yarn",
-    "npx",
     "bun",
+    "npx",
     "node",
     "python",
     "python3",
     "pip",
     "pip3",
-    "pytest",
-    "make",
     "docker",
     "docker-compose",
     "compose",
+    "make",
+    "pytest",
     "go",
     "cargo",
     "mvn",
@@ -79,218 +76,276 @@ COMMAND_PREFIXES = {
     "swagger-cli",
 }
 
-RE_EVIDENCE_LINE = re.compile(r"^\s*(?:-\s*)?evidence:\s+(?P<payload>.+?)\s*$", re.IGNORECASE)
+RE_EVIDENCE = re.compile(r"^\s*evidence:\s+(?P<payload>.*)$", re.IGNORECASE)
+RE_EVIDENCE_BULLET = re.compile(r"^\s*-\s*evidence:\s+(?P<payload>.*)$", re.IGNORECASE)
 
 
 @dataclass
-class Hook:
-    line_num: int
-    content: str
+class Issue:
+    severity: str  # "error" | "warning"
+    message: str
 
 
 @dataclass
 class HookResult:
-    hook: Hook
-    valid: bool
-    issues: List[str]
-    warnings: List[str]
+    line_no: int
+    content: str
+    issues: List[Issue]
+
+    @property
+    def is_valid(self) -> bool:
+        return not any(i.severity == "error" for i in self.issues)
+
+    @property
+    def has_warnings(self) -> bool:
+        return any(i.severity == "warning" for i in self.issues)
 
 
-def _shlex(payload: str) -> Tuple[List[str], str | None]:
-    try:
-        return shlex.split(payload), None
-    except ValueError as e:
-        return [], str(e)
-
-
-def _strip_quotes(v: str) -> str:
-    v = v.strip()
-    if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
-        return v[1:-1]
-    return v
-
-
-def _normalize_path(p: str) -> str:
-    p = _strip_quotes(p).replace("\\", "/")
+def _safe_rel_path(p: str) -> str:
+    p = p.strip().strip('"').strip("'").replace("\\", "/")
     if p.startswith("./"):
         p = p[2:]
     return p
 
 
-def parse_evidence_hooks(content: str) -> List[Hook]:
-    hooks: List[Hook] = []
-    for i, line in enumerate(content.split("\n"), 1):
-        m = RE_EVIDENCE_LINE.match(line)
-        if m:
-            hooks.append(Hook(line_num=i, content=line.strip()))
-    return hooks
+def _is_abs_or_traversal(p: str) -> bool:
+    if not p:
+        return True
+    p = _safe_rel_path(p)
+    if p.startswith("/") or re.match(r"^[A-Za-z]:/", p):
+        return True
+    if ".." in p.split("/"):
+        return True
+    return False
 
 
-def validate_one(hook: Hook) -> HookResult:
-    issues: List[str] = []
-    warnings: List[str] = []
+def _has_glob(p: str) -> bool:
+    return any(ch in p for ch in ["*", "?", "[", "]"])
 
-    # payload = everything after "evidence:"
-    payload = hook.content.split("evidence:", 1)[1].strip()
 
-    tokens, err = _shlex(payload)
-    if err:
-        return HookResult(hook, False, [f"Tokenization error: {err}"], [])
+def _split_payload_strict(payload: str) -> Tuple[List[str], Optional[str]]:
+    try:
+        return shlex.split(payload, posix=True), None
+    except Exception as e:
+        return [], f"shlex_error:{e}"
 
+
+def _parse_tokens(tokens: Sequence[str]) -> Tuple[str, Dict[str, str], List[str]]:
+    """Strict parse: every token after type must be key=value.
+
+    Returns (type, kv, stray_tokens)
+    """
     if not tokens:
-        return HookResult(hook, False, ["Empty evidence payload"], [])
+        return "", {}, []
 
-    etype = tokens[0].lower().strip()
-    if etype not in EVIDENCE_TYPES:
-        return HookResult(hook, False, [f"Invalid evidence type: {etype}"], [])
-
+    hook_type = tokens[0]
     kv: Dict[str, str] = {}
     stray: List[str] = []
+
     for t in tokens[1:]:
         if "=" not in t:
             stray.append(t)
             continue
         k, v = t.split("=", 1)
-        kv[k.strip()] = _strip_quotes(v.strip())
+        kv[k.strip()] = v.strip()
 
+    return hook_type, kv, stray
+
+
+def validate_hook_line(line_no: int, raw_line: str) -> Optional[HookResult]:
+    """Return HookResult if line is evidence-ish, else None."""
+
+    m = RE_EVIDENCE.match(raw_line)
+    bullet = False
+    if not m:
+        m = RE_EVIDENCE_BULLET.match(raw_line)
+        bullet = bool(m)
+    if not m:
+        return None
+
+    payload = m.group("payload").strip()
+    issues: List[Issue] = []
+
+    if not payload:
+        issues.append(Issue("error", "Empty evidence payload"))
+        return HookResult(line_no, raw_line.rstrip("\n"), issues)
+
+    if bullet:
+        # Not strictly invalid, but strong nudge for canonical formatting.
+        issues.append(Issue("warning", "Evidence is written as a list item (- evidence: ...). Prefer canonical 'evidence:' line."))
+
+    tokens, err = _split_payload_strict(payload)
+    if err:
+        issues.append(Issue("error", f"Does not parse with shlex ({err}). Quote values with spaces."))
+        return HookResult(line_no, raw_line.rstrip("\n"), issues)
+
+    hook_type, kv, stray = _parse_tokens(tokens)
+
+    # Stray tokens are the #1 cause of false-negatives.
     if stray:
-        # This is the most common failure when someone writes: path=npm run build
-        issues.append(f"Stray tokens not allowed (quote values with spaces): {stray}")
-
-    # key allowlist
-    for k in kv.keys():
-        if k not in ALLOWED_KEYS[etype]:
-            issues.append(f"Invalid key '{k}' for type '{etype}'")
-
-    if "path" not in kv:
-        issues.append("Missing required key: path=")
-        return HookResult(hook, False, issues, warnings)
-
-    path = _normalize_path(kv["path"])
-    kv["path"] = path
-
-    # path sanity checks
-    if not path:
-        issues.append("Empty path=")
-
-    if path.startswith("/") or re.match(r"^[A-Za-z]:/", path):
-        issues.append("Absolute path is not allowed")
-
-    if ".." in path.split("/"):
-        issues.append("Path traversal (..) is not allowed")
-
-    if any(ch in path for ch in ["*", "?", "[", "]"]):
-        issues.append("Glob patterns are not allowed in path=")
-
-    first = path.split("/", 1)[0].lower() if path else ""
-    if first in COMMAND_PREFIXES:
-        issues.append(f"Path appears to be a command; use command= and keep path= as an anchor file: {path}")
-
-    # command should be quoted if it contains spaces (shlex already handled quoting, but we warn if likely wrong)
-    if etype == "test" and "command" in kv:
-        if not kv["command"].strip():
-            issues.append("command= is empty")
-
-    # matcher policy: allow path-only but warn
-    if not (set(kv.keys()) & MATCHER_KEYS[etype]):
-        warnings.append(
-            "No matcher key (contains/symbol/heading/selector/regex/command). Allowed, but may cause false-negative if file moves."
+        issues.append(
+            Issue(
+                "error",
+                f"Stray tokens not allowed (quote values with spaces): {stray}",
+            )
         )
 
-    # code directory shorthand: allow, but recommend symbol=Directory
-    if etype == "code":
-        if path.endswith("/") and kv.get("symbol") != "Directory":
-            warnings.append("Directory path should set symbol=Directory for bounded scan/existence.")
+    ht = hook_type.strip().lower()
+    if ht not in STRICT_TYPES:
+        issues.append(Issue("error", f"Unknown evidence type: {hook_type} (allowed: code|test|docs|ui)"))
+        return HookResult(line_no, raw_line.rstrip("\n"), issues)
 
-    valid = len(issues) == 0
-    return HookResult(hook, valid, issues, warnings)
+    # Required key
+    if "path" not in kv or not kv.get("path"):
+        issues.append(Issue("error", "Missing required key: path"))
+        return HookResult(line_no, raw_line.rstrip("\n"), issues)
+
+    path_val = _safe_rel_path(kv.get("path", ""))
+    if _is_abs_or_traversal(path_val):
+        issues.append(Issue("error", f"Path must be repo-relative and not traversal/absolute: {kv.get('path')}"))
+
+    if _has_glob(path_val):
+        issues.append(Issue("error", f"Glob patterns not allowed in path=: {kv.get('path')}"))
+
+    # path should not look like a command
+    first = path_val.split("/", 1)[0].lower() if path_val else ""
+    if first in SUSPICIOUS_PATH_PREFIXES:
+        issues.append(Issue("error", f"Path looks like a command token. Put the command under command= and use a file under path=: {kv.get('path')}"))
+
+    # Key policy warnings
+    allowed = ALLOWED_KEYS.get(ht, set())
+    unknown_keys = sorted(k for k in kv.keys() if k not in allowed)
+    if unknown_keys:
+        issues.append(Issue("warning", f"Unknown keys for type={ht}: {unknown_keys}. Allowed keys: {sorted(allowed)}"))
+
+    # Matcher guidance to reduce false negatives
+    if not any(k in kv for k in MATCHER_KEYS):
+        issues.append(
+            Issue(
+                "warning",
+                "No matcher key (contains/symbol/heading/selector/regex/command). Allowed, but may cause false-negative if file moves.",
+            )
+        )
+
+    # Specific mismatch guidance: heading should generally be docs
+    if ht == "code" and "heading" in kv:
+        issues.append(Issue("warning", "heading= is typically used with docs evidence; consider switching to type=docs."))
+
+    # command should not be empty
+    if ht == "test" and "command" in kv and not kv["command"].strip():
+        issues.append(Issue("error", "command= is present but empty"))
+
+    return HookResult(line_no, raw_line.rstrip("\n"), issues)
 
 
-def generate_report(tasks_path: Path) -> Tuple[List[HookResult], str]:
-    content = tasks_path.read_text(encoding="utf-8", errors="ignore")
-    hooks = parse_evidence_hooks(content)
-
+def validate_file(tasks_path: Path) -> List[HookResult]:
+    content = tasks_path.read_text(encoding="utf-8", errors="ignore").splitlines(True)
     results: List[HookResult] = []
-    for h in hooks:
-        results.append(validate_one(h))
+    for i, line in enumerate(content, start=1):
+        r = validate_hook_line(i, line)
+        if r:
+            results.append(r)
+    return results
 
-    valid = [r for r in results if r.valid]
-    invalid = [r for r in results if not r.valid]
 
-    # Print report in a style similar to the previous script
-    lines: List[str] = []
-    lines.append("=" * 60)
-    lines.append("EVIDENCE HOOK VALIDATION REPORT")
-    lines.append("=" * 60)
-    lines.append(f"File: {tasks_path}")
-    lines.append("")
-    lines.append("Summary:")
-    lines.append(f"  Total evidence hooks: {len(results)}")
-    lines.append(f"  Valid hooks: {len(valid)}")
-    lines.append(f"  Invalid hooks: {len(invalid)}")
-    lines.append(f"  Validity: {(len(valid) / len(results) * 100) if results else 0:.1f}%")
+def print_report(tasks_path: Path, results: List[HookResult], *, show_warnings: bool = True) -> None:
+    total = len(results)
+    invalid = [r for r in results if not r.is_valid]
+    valid = [r for r in results if r.is_valid]
+    warn = [r for r in results if r.has_warnings]
 
-    # warnings summary
-    warn_count = sum(1 for r in results if r.warnings)
-    lines.append(f"  Hooks with warnings: {warn_count}")
+    validity = (len(valid) / total * 100.0) if total else 100.0
+
+    print("=" * 60)
+    print("EVIDENCE HOOK VALIDATION REPORT")
+    print("=" * 60)
+    print(f"File: {tasks_path.as_posix()}")
+    print()
+    print("Summary:")
+    print(f"  Total evidence hooks: {total}")
+    print(f"  Valid hooks: {len(valid)}")
+    print(f"  Invalid hooks: {len(invalid)}")
+    print(f"  Validity: {validity:.1f}%")
+    if total:
+        print(f"  Hooks with warnings: {len(warn)}")
+    print()
 
     if invalid:
-        lines.append("")
-        lines.append("=" * 60)
-        lines.append(f"INVALID EVIDENCE HOOKS ({len(invalid)}):")
-        lines.append("=" * 60)
-
+        print("=" * 60)
+        print(f"INVALID EVIDENCE HOOKS ({len(invalid)}):")
+        print("=" * 60)
+        print()
         for r in invalid:
-            lines.append("")
-            lines.append(f"Line {r.hook.line_num}:")
-            lines.append(f"  Content: {r.hook.content}")
-            lines.append("  Issues:")
-            for issue in r.issues:
-                lines.append(f"    - {issue}")
+            print(f"Line {r.line_no}:")
+            print(f"  Content: {r.content.strip()}")
+            print("  Issues:")
+            for iss in r.issues:
+                if iss.severity == "error":
+                    print(f"    - {iss.message}")
+            print()
 
-    # Show warnings (first 80) to help cleanup, but don't fail.
-    warnings_list = [r for r in results if r.warnings]
-    if warnings_list:
-        lines.append("")
-        lines.append("=" * 60)
-        lines.append(f"WARNINGS ({len(warnings_list)} hooks):")
-        lines.append("=" * 60)
-        shown = 0
-        for r in warnings_list:
-            if shown >= 80:
-                lines.append(f"... truncated ({len(warnings_list) - shown} more)")
-                break
-            lines.append("")
-            lines.append(f"Line {r.hook.line_num}:")
-            lines.append(f"  Content: {r.hook.content}")
-            for w in r.warnings:
-                lines.append(f"    - {w}")
-            shown += 1
-
-    lines.append("")
-    lines.append("=" * 60)
-
-    return results, "\n".join(lines)
+    if show_warnings and warn:
+        print("=" * 60)
+        print(f"WARNINGS ({len(warn)} hooks):")
+        print("=" * 60)
+        print()
+        for r in warn:
+            # show only warning messages
+            warn_msgs = [i.message for i in r.issues if i.severity == "warning"]
+            if not warn_msgs:
+                continue
+            print(f"Line {r.line_no}:")
+            print(f"  Content: {r.content.strip()}")
+            for msg in warn_msgs:
+                print(f"    - {msg}")
+            print()
 
 
 def main() -> int:
-    if len(sys.argv) < 2:
-        print("Usage: validate_evidence_hooks.py <path-to-tasks.md>")
-        return 1
+    ap = argparse.ArgumentParser(description="Validate canonical SmartSpec evidence hooks in tasks.md")
+    ap.add_argument("tasks_file", help="Path to tasks.md (typically specs/**/tasks.md)")
+    ap.add_argument("--json", action="store_true", help="Output JSON summary")
+    ap.add_argument("--quiet", action="store_true", help="Suppress non-essential output")
+    ap.add_argument("--no-warnings", action="store_true", help="Do not print warning details")
+    ap.add_argument("--fail-on-warnings", action="store_true", help="Return non-zero if any warnings")
+    args = ap.parse_args()
 
-    tasks_path = Path(sys.argv[1])
+    tasks_path = Path(args.tasks_file)
     if not tasks_path.exists():
-        print(f"Error: File not found: {tasks_path}")
-        return 1
+        print(f"ERROR: file not found: {tasks_path}")
+        return 2
 
-    results, report_text = generate_report(tasks_path)
-    print(report_text)
+    results = validate_file(tasks_path)
 
-    invalid = [r for r in results if not r.valid]
+    total = len(results)
+    invalid = [r for r in results if not r.is_valid]
+    warn = [r for r in results if r.has_warnings]
+
+    if args.json:
+        payload = {
+            "file": tasks_path.as_posix(),
+            "total": total,
+            "valid": total - len(invalid),
+            "invalid": len(invalid),
+            "warnings": len(warn),
+            "invalid_lines": [
+                {
+                    "line": r.line_no,
+                    "content": r.content.strip(),
+                    "issues": [{"severity": i.severity, "message": i.message} for i in r.issues],
+                }
+                for r in invalid
+            ],
+        }
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    else:
+        if not args.quiet:
+            print_report(tasks_path, results, show_warnings=not args.no_warnings)
+
     if invalid:
         return 1
-
-    print("✅ All evidence hooks are valid (warnings may remain).")
+    if args.fail_on_warnings and warn:
+        return 1
     return 0
 
 

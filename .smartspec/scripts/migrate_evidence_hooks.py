@@ -1,33 +1,35 @@
 #!/usr/bin/env python3
-"""migrate_evidence_hooks.py (v6.5.2)
+"""migrate_evidence_hooks.py (v6.5.3)
 
-Preview-first migrator for SmartSpec tasks evidence hooks.
+SmartSpec helper script used by `/smartspec_migrate_evidence_hooks`.
 
-Why you need this
-- Many tasks.md files contain evidence lines that look strict but are NOT
-  shlex-parseable or are semantically wrong (e.g. command in path=).
-- Strict verifiers/validators will produce false-negatives unless evidence
-  is canonical.
+Goals
+- Preview-first: default behavior MUST NOT modify governed artifacts.
+- Governed writes require `--apply`.
+- Output artifacts only under `.spec/reports/**` in preview mode.
+- Normalize legacy evidence formatting and convert non-strict evidence hooks
+  into strict-verifier compatible hooks: code|test|docs|ui.
 
-What it does
-- Reads a governed `specs/**/tasks.md`
-- Normalizes evidence lines into strict, shlex-parseable hooks
-- Writes preview artifacts under `.spec/reports/migrate-evidence-hooks/<run-id>/...`
-- Only modifies the governed tasks file when `--apply` is explicitly provided
+Why this exists
+- Strict verifier (`smartspec_verify_tasks_progress_strict`) only understands:
+  `evidence: code|test|docs|ui key=value ...`
+- Legacy tasks often include:
+  - bullets like `- evidence: ...`
+  - unsupported types like `file_exists`, `api_route`, `db_schema`, `command`
+  - broken strict-ish hooks where values with spaces are not quoted, e.g.
+    `command=npx prisma validate` (breaks shlex parsing and causes false negatives)
 
-Canonical evidence format (output)
-  evidence: <code|test|docs|ui> path=<repo-relative> [key=value ...]
+This script:
+- normalizes bullet evidence into canonical `evidence:` (no leading `-`)
+- converts unsupported types into strict types
+- repairs broken strict-ish hooks by re-hydrating unquoted values
+  (joins stray tokens onto the previous key for keys like command/contains/etc.)
+- converts command-ish evidence into `evidence: test path=<anchor> command="..."`
 
-Notable repairs
-- `evidence: test path=npm run build` -> `evidence: test path=package.json command="npm run build"`
-- `evidence: code path=SomeSymbol` -> `evidence: code path=<anchor-file> symbol=SomeSymbol` (best-effort)
-- `evidence: code path=packages/x/y/` -> `evidence: code path=packages/x/y symbol=Directory`
-- `evidence: code path=openapi.yaml heading="..."` -> `evidence: docs path=openapi.yaml heading="..."`
+IMPORTANT
+- This script does NOT call the network.
+- This script does NOT run commands in evidence; it only records them.
 
-Safety
-- No network.
-- Does not run commands.
-- In preview mode, does not write to governed files.
 """
 
 from __future__ import annotations
@@ -45,22 +47,25 @@ from typing import Dict, List, Optional, Tuple
 
 STRICT_TYPES = {"code", "test", "docs", "ui"}
 
-COMMAND_PREFIXES = {
+# Keys that may legitimately contain spaces (must be quoted in the final output)
+SPACE_TOLERANT_KEYS = {"command", "contains", "regex", "heading", "selector", "symbol"}
+
+# Common command prefixes that should NEVER appear as path= values.
+SUSPICIOUS_PATH_PREFIXES = {
     "npm",
     "pnpm",
     "yarn",
     "npx",
-    "bun",
     "node",
     "python",
     "python3",
     "pip",
     "pip3",
-    "pytest",
-    "make",
     "docker",
     "docker-compose",
     "compose",
+    "make",
+    "pytest",
     "go",
     "cargo",
     "mvn",
@@ -68,14 +73,11 @@ COMMAND_PREFIXES = {
     "java",
     "dotnet",
     "swagger-cli",
+    "bun",
 }
 
-GLOB_CHARS = set("*?[]")
-
-RE_EVIDENCE_ANY = re.compile(r"^(?P<indent>\s*)(?:-\s*)?evidence:\s+(?P<payload>.*)$", re.IGNORECASE)
-
-# Detect probable symbol-only "paths" like IDatabase, AuthService, IUserRepo
-RE_SYMBOL_LIKE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+RE_EVIDENCE_CANON = re.compile(r"^\s*evidence:\s+(?P<payload>.*)$", re.IGNORECASE)
+RE_EVIDENCE_BULLET = re.compile(r"^\s*-\s*evidence:\s+(?P<payload>.*)$", re.IGNORECASE)
 
 
 @dataclass
@@ -86,42 +88,33 @@ class EvidenceFix:
     reason: str
 
 
-def _run_id() -> str:
-    return time.strftime("%Y%m%d_%H%M%S", time.localtime())
-
-
-def _strip_quotes(v: str) -> str:
-    v = v.strip()
-    if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
-        return v[1:-1]
-    return v
-
-
-def _norm_path(p: str) -> str:
-    p = _strip_quotes(p).replace("\\", "/")
+def _safe_rel_path(p: str) -> str:
+    p = p.strip().strip('"').strip("'").replace("\\", "/")
     if p.startswith("./"):
         p = p[2:]
     return p
 
 
+def _is_glob_path(p: str) -> bool:
+    return any(ch in p for ch in ["*", "?", "[", "]"])
+
+
 def _is_abs_or_traversal(p: str) -> bool:
     if not p:
         return True
-    p2 = _norm_path(p)
-    if p2.startswith("/") or p2.startswith("\\") or re.match(r"^[A-Za-z]:/", p2):
+    p = _safe_rel_path(p)
+    if p.startswith("/") or re.match(r"^[A-Za-z]:/", p):
         return True
-    if ".." in p2.split("/"):
+    if ".." in p.split("/"):
         return True
     return False
 
 
-def _has_glob(p: str) -> bool:
-    return any(ch in p for ch in GLOB_CHARS)
-
-
 def _quote_if_needed(v: str) -> str:
-    v = _strip_quotes(v)
-    if any(ch.isspace() for ch in v) or any(ch in v for ch in ['"', "=", "\\"]):
+    v = v.strip()
+    if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+        return v
+    if any(ch.isspace() for ch in v) or '"' in v:
         v = v.replace('"', '\\"')
         return f'"{v}"'
     return v
@@ -129,140 +122,202 @@ def _quote_if_needed(v: str) -> str:
 
 def _shlex_split(payload: str) -> Tuple[List[str], Optional[str]]:
     try:
-        return shlex.split(payload), None
-    except ValueError as e:
-        return [], str(e)
+        return shlex.split(payload, posix=True), None
+    except Exception as e:
+        return [], f"shlex_error:{e}"
 
 
-def _anchor_path_for_command(cmd: str, project_root: Path) -> str:
-    c = cmd.lower().strip()
+def _parse_payload_lenient(payload: str) -> Tuple[str, Dict[str, str], Optional[str]]:
+    """Lenient parser that repairs unquoted values with spaces.
 
-    if c.startswith(("npm ", "pnpm ", "yarn ", "bun ", "npx ")):
-        return "package.json"
+    Example input (broken):
+      test path=... command=npx prisma validate
 
-    if "prisma" in c:
-        return "prisma/schema.prisma"
+    Tokens become:
+      ['test','path=...','command=npx','prisma','validate']
 
-    if "openapi" in c or "swagger" in c:
-        for cand in ["openapi.yaml", "openapi.yml", "openapi.json", "swagger.yaml", "swagger.yml", "swagger.json"]:
-            if (project_root / cand).exists():
-                return cand
-        return "openapi.yaml"
-
-    if c.startswith(("pytest", "python ", "python3 ")):
-        return "pyproject.toml"
-
-    if c.startswith("docker"):
-        return "Dockerfile" if (project_root / "Dockerfile").exists() else "docker-compose.yml"
-
-    return "README.md" if (project_root / "README.md").exists() else "package.json"
-
-
-def _render_payload(etype: str, kv: Dict[str, str]) -> str:
-    keys = ["path"] + sorted([k for k in kv.keys() if k != "path"])
-    parts = [etype]
-    for k in keys:
-        if k not in kv:
-            continue
-        parts.append(f"{k}={_quote_if_needed(kv[k])}")
-    return " ".join(parts)
-
-
-def _convert_commandish(raw: str, project_root: Path) -> Optional[Tuple[str, str]]:
-    first = raw.split()[0].lower() if raw.split() else ""
-    if first in COMMAND_PREFIXES:
-        anchor = _anchor_path_for_command(raw, project_root)
-        return _render_payload("test", {"path": anchor, "command": raw}), "converted_commandish_to_test"
-    return None
-
-
-def _parse_kv_strict(payload: str) -> Tuple[str, Dict[str, str], Optional[str]]:
+    We join stray tokens ('prisma','validate') onto the last key (command).
+    """
     tokens, err = _shlex_split(payload)
     if err:
-        return "", {}, f"shlex_error:{err}"
+        return "", {}, err
     if not tokens:
-        return "", {}, "empty"
+        return "", {}, "empty_payload"
 
-    etype = tokens[0].lower().strip()
+    hook_type = tokens[0]
     kv: Dict[str, str] = {}
+    last_key: Optional[str] = None
     stray: List[str] = []
+
     for t in tokens[1:]:
         if "=" in t:
             k, v = t.split("=", 1)
-            kv[k.strip()] = _strip_quotes(v)
+            k = k.strip()
+            kv[k] = v.strip()
+            last_key = k
+            continue
+
+        if last_key and last_key in SPACE_TOLERANT_KEYS:
+            kv[last_key] = (kv.get(last_key, "").rstrip() + " " + t).strip()
         else:
             stray.append(t)
 
     if stray:
-        return etype, kv, f"stray_tokens:{stray}"
+        return hook_type, kv, f"stray_tokens:{stray}"
 
-    return etype, kv, None
+    return hook_type, kv, None
 
 
-def _normalize_one(payload: str, project_root: Path) -> Tuple[str, str]:
-    raw = payload.strip()
+def _anchor_path_for_command(cmd: str, project_root: Path) -> str:
+    cmd_l = cmd.lower().strip()
 
-    # 1) Pure command evidence (no type) -> convert
-    conv = _convert_commandish(raw, project_root)
-    if conv:
-        return conv[0], conv[1]
+    if cmd_l.startswith(("npm ", "pnpm ", "yarn ", "bun ", "npx ")):
+        return "package.json" if (project_root / "package.json").exists() else "package.json"
 
-    # 2) Parse (even if it's strict-ish)
-    etype, kv, err = _parse_kv_strict(raw)
+    if "prisma" in cmd_l:
+        return "prisma/schema.prisma"
 
-    # If parsing failed or stray tokens: treat as command-like evidence
-    if not etype or err:
-        anchor = _anchor_path_for_command(raw, project_root)
-        return _render_payload("test", {"path": anchor, "command": raw}), f"replaced_unparseable:{err or 'unknown'}"
+    if "openapi" in cmd_l or "swagger" in cmd_l:
+        for cand in [
+            "openapi.yaml",
+            "openapi.yml",
+            "openapi.json",
+            "swagger.yaml",
+            "swagger.yml",
+            "swagger.json",
+        ]:
+            if (project_root / cand).exists():
+                return cand
+        return "openapi.yaml"
 
-    # 3) If the first token is not strict, best-effort: store as docs contains
-    if etype not in STRICT_TYPES:
-        # legacy types can be handled here if needed; safe fallback:
+    if cmd_l.startswith(("pytest", "python ", "python3 ")):
+        for cand in ["pyproject.toml", "requirements.txt", "setup.cfg"]:
+            if (project_root / cand).exists():
+                return cand
+        return "pyproject.toml"
+
+    if cmd_l.startswith("docker"):
+        if (project_root / "Dockerfile").exists():
+            return "Dockerfile"
+        return "docker-compose.yml" if (project_root / "docker-compose.yml").exists() else "docker-compose.yml"
+
+    return "README.md" if (project_root / "README.md").exists() else "package.json"
+
+
+def _render_payload(hook_type: str, kv: Dict[str, str]) -> str:
+    ht = hook_type.strip().lower()
+
+    if "path" in kv:
+        kv = dict(kv)
+        kv["path"] = _safe_rel_path(kv["path"]).rstrip("/")
+
+    ordered: List[str] = []
+    if "path" in kv:
+        ordered.append("path")
+    ordered.extend(sorted(k for k in kv.keys() if k != "path"))
+
+    parts = [ht]
+    for k in ordered:
+        parts.append(f"{k}={_quote_if_needed(kv[k])}")
+    return " ".join(parts)
+
+
+def _convert_commandish_payload(raw_payload: str, project_root: Path) -> Optional[Tuple[str, str]]:
+    raw = raw_payload.strip()
+    if re.match(r"^(code|test|docs|ui)\b", raw, re.IGNORECASE):
+        return None
+
+    first = raw.split()[0].lower() if raw.split() else ""
+    if first in SUSPICIOUS_PATH_PREFIXES:
+        cmd = raw
+        anchor = _anchor_path_for_command(cmd, project_root)
+        return (f"test path={anchor} command={_quote_if_needed(cmd)}", "converted_commandish_to_test")
+
+    return None
+
+
+def _convert_unsupported_to_strict(hook_type: str, kv: Dict[str, str], project_root: Path) -> Tuple[Optional[str], str]:
+    ht = hook_type.strip().lower()
+
+    if ht in STRICT_TYPES:
+        return None, "already_strict"
+
+    if ht in {"file_exists", "file"}:
+        p = kv.get("path") or kv.get("file") or ""
+        p = _safe_rel_path(p)
+        if not p:
+            return None, "missing_path"
+        if p.lower().endswith((".md", ".markdown", ".rst", ".txt", ".yaml", ".yml", ".json")):
+            return f"docs path={p}", "mapped_file_exists_to_docs"
+        return f"code path={p}", "mapped_file_exists_to_code"
+
+    if ht in {"api_route", "route", "endpoint"}:
+        p = _safe_rel_path(kv.get("path", ""))
+        route = kv.get("route") or kv.get("url") or kv.get("endpoint") or ""
+        if not route:
+            return None, "missing_route"
+        if not p:
+            anchor = _anchor_path_for_command("openapi", project_root)
+            return f"docs path={anchor} contains={_quote_if_needed(route)}", "mapped_api_route_to_docs_contains"
+        return f"code path={p} contains={_quote_if_needed(route)}", "mapped_api_route_to_code_contains"
+
+    if ht in {"db_schema", "schema", "prisma"}:
+        p = _safe_rel_path(kv.get("path", "")) or "prisma/schema.prisma"
+        model = kv.get("model") or kv.get("table") or ""
+        if model:
+            return f"code path={p} contains={_quote_if_needed(model)}", "mapped_db_schema_to_code_contains"
+        return f"code path={p}", "mapped_db_schema_to_code"
+
+    if ht in {"command", "cmd", "shell"}:
+        cmd = kv.get("command") or kv.get("cmd") or ""
+        if not cmd:
+            return None, "missing_command"
+        anchor = _anchor_path_for_command(cmd, project_root)
+        return f"test path={anchor} command={_quote_if_needed(cmd)}", "mapped_command_to_test_command"
+
+    return None, f"unknown_type:{ht}"
+
+
+def _repair_strict(hook_type: str, kv: Dict[str, str], project_root: Path) -> Tuple[str, str]:
+    ht = hook_type.strip().lower()
+
+    if ht not in STRICT_TYPES:
+        # unknown type: preserve as docs contains (best-effort)
         anchor = _anchor_path_for_command("openapi", project_root)
-        return _render_payload("docs", {"path": anchor, "contains": raw[:120]}), f"unknown_type:{etype}"
+        return _render_payload("docs", {"path": anchor, "contains": f"{hook_type} {kv}"}), "unknown_type_to_docs_contains"
 
-    # 4) Must have path; if missing, convert to test command with anchor
     if "path" not in kv:
-        anchor = _anchor_path_for_command(raw, project_root)
-        return _render_payload("test", {"path": anchor, "command": raw}), "missing_path_converted_to_test"
+        # missing path -> treat as command-ish reference
+        cmd = f"{hook_type} " + " ".join([f"{k}={v}" for k, v in kv.items()])
+        anchor = _anchor_path_for_command(cmd, project_root)
+        return _render_payload("test", {"path": anchor, "command": cmd}), "missing_path_to_test_command"
 
-    p = _norm_path(kv["path"])  # may contain trailing slash
+    p = _safe_rel_path(kv.get("path", ""))
 
-    # 5) If path looks like a command or is unsafe/glob: convert to test command
-    if _is_abs_or_traversal(p) or _has_glob(p):
-        anchor = _anchor_path_for_command(raw, project_root)
-        return _render_payload("test", {"path": anchor, "command": raw}), "unsafe_path_converted_to_test"
+    if _is_abs_or_traversal(p) or _is_glob_path(p):
+        cmd = f"{hook_type} " + " ".join([f"{k}={v}" for k, v in kv.items()])
+        anchor = _anchor_path_for_command(cmd, project_root)
+        return _render_payload("test", {"path": anchor, "command": cmd}), "unsafe_path_to_test_command"
 
     first = p.split("/", 1)[0].lower() if p else ""
-    if first in COMMAND_PREFIXES:
-        anchor = _anchor_path_for_command(raw, project_root)
-        return _render_payload("test", {"path": anchor, "command": raw}), "command_in_path_converted_to_test"
+    if first in SUSPICIOUS_PATH_PREFIXES:
+        cmd = p
+        anchor = _anchor_path_for_command(cmd, project_root)
+        return _render_payload("test", {"path": anchor, "command": cmd}), "command_in_path_to_test_command"
 
-    # 6) Symbol-only path (e.g. IDatabase) -> convert to symbol evidence anchored to best-effort file
-    if RE_SYMBOL_LIKE.match(p) and ("/" not in p) and (not p.endswith((".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".java", ".md", ".yaml", ".yml", ".json"))):
-        # keep symbol and anchor to README or package.json so validator doesn't choke
-        anchor = "README.md" if (project_root / "README.md").exists() else "package.json"
-        return _render_payload("code", {"path": anchor, "symbol": p}), "symbol_like_path_converted_to_symbol"
-
-    # 7) Directory shorthand
-    if etype == "code" and p.endswith("/"):
-        p2 = p.rstrip("/")
+    # directory shorthand
+    if ht == "code" and p.endswith("/"):
         kv2 = dict(kv)
-        kv2["path"] = p2
+        kv2["path"] = p.rstrip("/")
         kv2.setdefault("symbol", "Directory")
         return _render_payload("code", kv2), "directory_path_added_symbol_directory"
 
-    # 8) docs vs code mismatch: heading belongs to docs; also treat openapi/spec files as docs
-    if etype == "code" and ("heading" in kv):
-        p_low = p.lower()
-        if p_low.endswith((".md", ".markdown", ".rst", ".txt", ".yaml", ".yml", ".json")):
-            kv2 = dict(kv)
-            return _render_payload("docs", kv2), "converted_code_heading_to_docs"
+    # docs vs code mismatch when heading is present
+    if ht == "code" and "heading" in kv:
+        if p.lower().endswith((".md", ".markdown", ".rst", ".txt", ".yaml", ".yml", ".json")):
+            return _render_payload("docs", dict(kv, path=p)), "converted_code_heading_to_docs"
 
-    # normalize path
-    kv["path"] = p.rstrip("/") if p.endswith("/") else p
-
-    return _render_payload(etype, kv), "normalized"
+    return _render_payload(ht, dict(kv, path=p)), "normalized"
 
 
 def transform_tasks_md(content: str, project_root: Path) -> Tuple[str, List[EvidenceFix]]:
@@ -270,19 +325,57 @@ def transform_tasks_md(content: str, project_root: Path) -> Tuple[str, List[Evid
     fixes: List[EvidenceFix] = []
 
     for idx, line in enumerate(lines, start=1):
-        m = RE_EVIDENCE_ANY.match(line)
-        if not m:
+        m_b = RE_EVIDENCE_BULLET.match(line)
+        m_c = RE_EVIDENCE_CANON.match(line)
+        if not (m_b or m_c):
             continue
 
-        indent = m.group("indent")
-        payload = m.group("payload").strip()
+        payload = (m_b or m_c).group("payload").strip()
+        indent = re.match(r"^\s*", line).group(0)
 
-        new_payload, reason = _normalize_one(payload, project_root)
-        new_line = f"{indent}evidence: {new_payload}\n"
-
-        if new_line != line:
+        # 1) command-ish line
+        cmdish = _convert_commandish_payload(payload, project_root)
+        if cmdish:
+            new_payload, reason = cmdish
+            new_line = f"{indent}evidence: {new_payload}\n"
             fixes.append(EvidenceFix(idx, line.rstrip("\n"), new_line.rstrip("\n"), reason))
             lines[idx - 1] = new_line
+            continue
+
+        # 2) parse leniently
+        hook_type, kv, parse_error = _parse_payload_lenient(payload)
+
+        if parse_error and parse_error.startswith("shlex_error"):
+            cmd = payload
+            anchor = _anchor_path_for_command(cmd, project_root)
+            new_payload = _render_payload("test", {"path": anchor, "command": cmd})
+            new_line = f"{indent}evidence: {new_payload}\n"
+            fixes.append(EvidenceFix(idx, line.rstrip("\n"), new_line.rstrip("\n"), f"replaced_unparseable:{parse_error}"))
+            lines[idx - 1] = new_line
+            continue
+
+        # 3) unsupported types -> strict
+        converted, reason = _convert_unsupported_to_strict(hook_type, kv, project_root)
+        if converted:
+            new_line = f"{indent}evidence: {converted}\n"
+            fixes.append(EvidenceFix(idx, line.rstrip("\n"), new_line.rstrip("\n"), reason))
+            lines[idx - 1] = new_line
+            continue
+
+        # 4) strict normalize/repairs
+        repaired_payload, r_reason = _repair_strict(hook_type, kv, project_root)
+        new_line = f"{indent}evidence: {repaired_payload}\n"
+
+        if new_line.rstrip("\n") != line.rstrip("\n"):
+            fixes.append(EvidenceFix(idx, line.rstrip("\n"), new_line.rstrip("\n"), r_reason))
+            lines[idx - 1] = new_line
+            continue
+
+        # 5) normalize bullet prefix
+        if m_b:
+            new_line2 = f"{indent}evidence: {payload}\n"
+            fixes.append(EvidenceFix(idx, line.rstrip("\n"), new_line2.rstrip("\n"), "normalized_bullet_evidence"))
+            lines[idx - 1] = new_line2
 
     return "".join(lines), fixes
 
@@ -304,22 +397,16 @@ def atomic_write(path: Path, content: str) -> None:
     os.replace(tmp, path)
 
 
-def ensure_specs_scoped(tasks_file: Path) -> None:
-    parts = [p.replace("\\", "/") for p in tasks_file.parts]
-    if "specs" not in parts:
-        raise SystemExit(f"Refusing: tasks file must be under specs/**. Got: {tasks_file}")
-
-
-def write_report(out_dir: Path, tasks_rel: str, apply: bool, fixes: List[EvidenceFix], preview_path: Path) -> None:
+def write_report(out_dir: Path, tasks_rel: str, apply: bool, fixes: List[EvidenceFix]) -> None:
     lines: List[str] = []
     lines.append("# migrate-evidence-hooks report\n")
     lines.append(f"\n- tasks: {tasks_rel}\n")
     lines.append(f"- apply: {apply}\n")
     lines.append(f"- fixes: {len(fixes)}\n")
     lines.append("\n## outputs\n")
-    lines.append(f"- preview: `{preview_path}`\n")
-    lines.append(f"- diff: `{out_dir / 'diff.patch'}`\n")
-    lines.append(f"- report: `{out_dir / 'report.md'}`\n")
+    lines.append(f"- preview: `{out_dir}/preview/{tasks_rel}`\n")
+    lines.append(f"- diff: `{out_dir}/diff.patch`\n")
+    lines.append(f"- report: `{out_dir}/report.md`\n")
 
     if fixes:
         lines.append("\n## changes (first 200)\n")
@@ -331,6 +418,12 @@ def write_report(out_dir: Path, tasks_rel: str, apply: bool, fixes: List[Evidenc
             lines.append(f"- ... {len(fixes) - 200} more\n")
 
     (out_dir / "report.md").write_text("".join(lines), encoding="utf-8")
+
+
+def ensure_specs_scoped(tasks_file: Path) -> None:
+    parts = [p.replace("\\", "/") for p in tasks_file.parts]
+    if "specs" not in parts:
+        raise SystemExit(f"Refusing: tasks file must be under specs/**. Got: {tasks_file}")
 
 
 def main() -> int:
@@ -356,7 +449,7 @@ def main() -> int:
     original = tasks_file.read_text(encoding="utf-8", errors="ignore")
     modified, fixes = transform_tasks_md(original, project_root)
 
-    run_id = _run_id()
+    run_id = time.strftime("%Y%m%d_%H%M%S", time.localtime())
     out_dir = Path(args.out) / run_id
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -368,7 +461,7 @@ def main() -> int:
     diff_text = unified_diff(original, modified, fromfile=f"a/{tasks_rel}", tofile=f"b/{tasks_rel}")
     (out_dir / "diff.patch").write_text(diff_text, encoding="utf-8")
 
-    write_report(out_dir, tasks_rel=tasks_rel, apply=bool(args.apply), fixes=fixes, preview_path=preview_path)
+    write_report(out_dir, tasks_rel=tasks_rel, apply=bool(args.apply), fixes=fixes)
 
     if args.apply:
         backup = tasks_file.with_suffix(tasks_file.suffix + f".backup.{run_id}")

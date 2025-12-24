@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""validate_evidence_hooks.py (v2.2.1)
+"""validate_evidence_hooks.py (v2.2.2)
 
 Canonical Evidence Hook Validator for SmartSpec tasks.md
 
@@ -15,6 +15,7 @@ Key guarantees:
 - Only supported evidence types: code|test|docs|ui.
 - Required key: path= for all types.
 - Path must be repo-relative (no absolute, no traversal, no globs).
+- **Path must not contain whitespace** (commands belong in command=).
 
 This script:
 - DOES NOT execute any commands.
@@ -33,7 +34,6 @@ import argparse
 import json
 import re
 import shlex
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -51,7 +51,7 @@ ALLOWED_KEYS: Dict[str, set[str]] = {
 # Keys that make evidence more robust than "file exists".
 MATCHER_KEYS = {"contains", "symbol", "heading", "selector", "regex", "command"}
 
-# Common command prefixes; should not appear as path roots.
+# Common command prefixes; should not appear as path roots or as the first word.
 SUSPICIOUS_PATH_PREFIXES = {
     "npm",
     "pnpm",
@@ -149,6 +149,13 @@ def _parse_tokens(tokens: Sequence[str]) -> Tuple[str, Dict[str, str], List[str]
     return hook_type, kv, stray
 
 
+def _first_word(s: str) -> str:
+    s = s.strip()
+    if not s:
+        return ""
+    return s.split()[0]
+
+
 def validate_hook_line(line_no: int, raw_line: str) -> Optional[HookResult]:
     m = RE_EVIDENCE.match(raw_line)
     bullet = False
@@ -187,16 +194,31 @@ def validate_hook_line(line_no: int, raw_line: str) -> Optional[HookResult]:
         issues.append(Issue("error", "Missing required key: path"))
         return HookResult(line_no, raw_line.rstrip("\n"), issues)
 
-    path_val = _safe_rel_path(kv.get("path", ""))
+    raw_path = kv.get("path", "")
+
+    # Hard rule: path must not contain whitespace.
+    # Commands belong in command= (test) or as matchers (contains/regex), not in path.
+    if re.search(r"\s", raw_path):
+        issues.append(Issue("error", f"path contains whitespace; path must be a repo file path, not a command: {raw_path}"))
+
+    path_val = _safe_rel_path(raw_path)
+
     if _is_abs_or_traversal(path_val):
-        issues.append(Issue("error", f"Path must be repo-relative and not traversal/absolute: {kv.get('path')}"))
+        issues.append(Issue("error", f"Path must be repo-relative and not traversal/absolute: {raw_path}"))
 
     if _has_glob(path_val):
-        issues.append(Issue("error", f"Glob patterns not allowed in path=: {kv.get('path')}"))
+        issues.append(Issue("error", f"Glob patterns not allowed in path=: {raw_path}"))
 
-    first = path_val.split("/", 1)[0].lower() if path_val else ""
-    if first in SUSPICIOUS_PATH_PREFIXES:
-        issues.append(Issue("error", f"Path looks like a command token. Put the command under command= and use a real file under path=: {kv.get('path')}"))
+    # Reject commands stuffed into path.
+    root_segment = path_val.split("/", 1)[0].lower() if path_val else ""
+    first_word = _first_word(path_val).lower() if path_val else ""
+    if root_segment in SUSPICIOUS_PATH_PREFIXES or first_word in SUSPICIOUS_PATH_PREFIXES:
+        issues.append(
+            Issue(
+                "error",
+                f"path looks like a command. Put the command under command= and use a real file under path=: {raw_path}",
+            )
+        )
 
     allowed = ALLOWED_KEYS.get(ht, set())
     unknown_keys = sorted(k for k in kv.keys() if k not in allowed)
@@ -292,15 +314,14 @@ def main() -> int:
 
     results = validate_file(tasks_path)
 
-    total = len(results)
     invalid = [r for r in results if not r.is_valid]
     warn = [r for r in results if r.has_warnings]
 
     if args.json:
         payload = {
             "file": tasks_path.as_posix(),
-            "total": total,
-            "valid": total - len(invalid),
+            "total": len(results),
+            "valid": len(results) - len(invalid),
             "invalid": len(invalid),
             "warnings": len(warn),
             "invalid_lines": [

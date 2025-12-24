@@ -1,6 +1,6 @@
 ---
 workflow_id: smartspec_generate_tasks
-version: "7.2.0"
+version: "7.2.1"
 status: active
 category: core
 platform_support:
@@ -15,119 +15,198 @@ writes:
 # /smartspec_generate_tasks
 
 ## Purpose
-Generate หรือ refine `tasks.md` จาก `spec.md` (หรือ `plan.md` / `ui-spec.json`) โดยเน้น:
+Generate/merge `tasks.md` from SmartSpec `spec.md` (or `plan.md` / `ui-spec.json`) with **preview-first governance** and **strict evidence hooks** that are compatible with `smartspec_verify_tasks_progress_strict`.
 
-- **preview-first governance** (validate-only / default = ไม่แตะไฟล์ governed)
-- output `tasks.md` ที่ **strict evidence hook parse ได้จริง** เพื่อลด verify false-negative
-- **merge ได้** เมื่อมี `tasks.md` อยู่แล้ว (คง task IDs เดิม + normalize รูปแบบ)
+Primary outcomes:
+- Preview bundle under `.spec/reports/generate-tasks/**`
+- `tasks.md` preview that passes strict validators
+- Optional governed update of `specs/**/tasks.md` only when `--apply`
 
 ---
 
 ## Governance contract (MUST)
 
-### Path scope (MUST)
-- Input file MUST be under `specs/**`.
-- Without `--apply`: MUST NOT modify any file under `specs/**`.
-- With `--apply`: MAY write ONLY `specs/<category>/<spec-id>/tasks.md`.
+### Preview-first (MUST)
+- Default mode and `--validate-only` MUST NOT modify any file under `specs/**`.
+- Without `--apply`, this workflow MUST only write to `.spec/reports/**`.
 
-### `--apply` behavior (MUST)
+### Governed writes (MUST)
+- With `--apply`, may update/create ONLY:
+  - `specs/<category>/<spec-id>/tasks.md`
+- MUST write atomically (temp + rename).
+- MUST create a backup copy under the run report folder.
 
-**Without `--apply` (includes `--validate-only`):**
-- MUST NOT modify `specs/**/tasks.md`.
-- MUST write preview bundle ONLY under `.spec/reports/generate-tasks/<run-id>/...`.
-- MUST NOT create any helper scripts anywhere (เช่น `fix_evidence.py`) ไม่ว่าจะใน root หรือโฟลเดอร์ใด ๆ.
-- MUST NOT attempt “auto-fix” โดยไปแก้ไฟล์จริง แม้ validation fail.
-
-**With `--apply`:**
-- MAY update/create `specs/<category>/<spec-id>/tasks.md`.
-- MUST write atomically (temp+rename).
-- MUST NOT modify any other governed files.
+### Script hygiene (MUST)
+- MUST NOT create ad-hoc scripts anywhere (repo root or otherwise).
+- Maintained scripts MUST be referenced only from `.smartspec/scripts/`.
+- `.spec/` is outputs/reports only.
 
 ### No network / no shell (MUST)
-- Workflow นี้ต้องทำงานได้โดยไม่ต้อง network. ถ้าขั้นตอนไหนต้อง network ให้แยก workflow และต้อง require `--allow-network`.
-- ห้ามแนะนำ `sh -c` หรือการ run shell ที่ไม่ allowlisted.
-
-### Script location (MUST)
-- Maintained scripts MUST be referenced under `.smartspec/scripts/`.
-- `.spec/` is reserved for reports/outputs only.
+- MUST NOT use the network.
+- MUST NOT use `sh -c` or non-allowlisted shells.
 
 ---
 
 ## Inputs
-Primary input is positional (MUST exist) และต้องอยู่ใต้ `specs/**`:
 
+### Positional input (required)
 - `specs/<category>/<spec-id>/spec.md`
-- หรือ `specs/<category>/<spec-id>/plan.md`
-- หรือ `specs/<category>/<spec-id>/ui-spec.json`
+- OR `specs/<category>/<spec-id>/plan.md`
+- OR `specs/<category>/<spec-id>/ui-spec.json`
+
+The workflow MUST resolve the spec root folder as:
+- `specs/<category>/<spec-id>/`
 
 ---
 
 ## Flags
-- `--apply`: อนุญาตให้เขียน `specs/**/tasks.md`
-- `--validate-only`: ทำ preview + validation เท่านั้น (no governed writes)
-- `--json`: ให้ report มี summary เป็น JSON เพิ่ม
+- `--apply`: write governed `specs/**/tasks.md` (ONLY after preview validates)
+- `--validate-only`: preview + validation only (no governed writes)
+- `--json`: add machine-readable summary to report folder
 
 ---
 
 ## Outputs
-All outputs MUST be under `.spec/reports/generate-tasks/<run-id>/`:
+All outputs MUST be written under:
+- `.spec/reports/generate-tasks/<run-id>/`
 
-- Preview tasks:
-  - `.spec/reports/generate-tasks/<run-id>/preview/<spec-folder>/tasks.md`
-- Patch (diff):
-  - `.spec/reports/generate-tasks/<run-id>/diff/<spec-id>.patch`
-- Report:
-  - `.spec/reports/generate-tasks/<run-id>/report.md`
-  - `.spec/reports/generate-tasks/<run-id>/report.json` (when `--json`)
-- Optional backup bundle (only when `--apply`):
-  - `.spec/reports/generate-tasks/<run-id>/backup/<spec-folder>/tasks.md`
+Files:
+- `preview/<spec-folder>/tasks.md`
+- `diff/<spec-id>.patch`
+- `report.md`
+- `report.json` (when `--json`)
+- `backup/<spec-folder>/tasks.md` (ONLY when `--apply`)
 
 ---
 
-## Evidence hook policy (MUST)
-Generated tasks MUST use **canonical evidence hook** เท่านั้น:
+## Canonical `tasks.md` format (MUST)
 
-### Canonical format
+### Required structure
+1) Title (H1)
+2) Header table (2 columns) near the top (within ~80 lines)
+3) `## Tasks`
+4) Tasks are markdown checkboxes with stable IDs
+
+Example:
+```md
+# Authentication Tasks
+
+| Key | Value |
+| --- | --- |
+| Spec | specs/core/spec-core-001-authentication/spec.md |
+| Updated | 2025-12-24 |
+
+## Tasks
+
+### Phase 1: Foundations
+- [ ] TSK-AUTH-001 Initialize auth service skeleton
+  evidence: code path=packages/auth-service/package.json contains="\"name\": \"auth-service\""
+  evidence: test path=packages/auth-service/package.json command="npm test"
+```
+
+---
+
+## Evidence hooks (MUST)
+This workflow MUST produce evidence hooks that pass `.smartspec/scripts/validate_evidence_hooks.py`.
+
+### Canonical line format
 - `evidence: <code|test|docs|ui> key=value key="value with spaces" ...`
 
 ### Allowed types + keys
-- `code`: `path` (required), optional `symbol`, `contains`, `regex`
-- `test`: `path` (required), optional `command`, `contains`, `regex`
-- `docs`: `path` (required), optional `heading`, `contains`, `regex`
-- `ui`: `path` (required), optional `selector`, `contains`, `regex`
+- `code`: `path` (required), optional `symbol|contains|regex`
+- `docs`: `path` (required), optional `heading|contains|regex`
+- `ui`: `path` (required), optional `selector|contains|regex`
+- `test`: `path` (required), optional `command|contains|regex`
 
-### Hard rules
-- `path=` MUST be repo-relative path (ห้ามเป็นคำสั่ง)
-- ถ้า value มีช่องว่าง MUST ใส่ double quotes เช่น:
-  - ✅ `command="npx prisma validate"`
-  - ❌ `command=npx prisma validate`
-- ห้ามใช้ glob ใน `path=` เช่น `src/**/*.ts`
-- ถ้าเป็น directory ให้ใช้ `symbol=Directory` (แนะนำ) แทนการพึ่งพา path ลงท้าย `/`
-- ถ้าเป็นเอกสาร/สเปคและต้องการ `heading=` ให้ใช้ `docs` ไม่ใช่ `code` เช่น:
-  - ✅ `evidence: docs path=openapi.yaml heading="OpenAPI"`
+### Hard rules (MUST)
+- `path=` MUST be a repo-relative file path.
+- **`path=` MUST NOT contain whitespace.**
+  - ✅ `path=package.json`
+  - ❌ `path="npm run build"`
+- `path=` MUST NOT be a command token (e.g., `npm`, `npx`, `docker`, `docker-compose`, ...).
+- Glob patterns are forbidden in `path=` (e.g., `src/**/*.ts`).
+- Any value containing spaces MUST be quoted.
+
+### Test evidence rule (prevents verify false-negative)
+If the evidence is a command, it MUST be recorded in `command=` and anchored with a real file in `path=`.
+
+Examples:
+- ✅ `evidence: test path=package.json command="npm run build"`
+- ✅ `evidence: test path=prisma/schema.prisma command="npx prisma validate"`
+- ✅ `evidence: test path=docker-compose.yml command="docker-compose up"`
+- ❌ `evidence: test path="npm run build"`
+- ❌ `evidence: test path=npm run build`
+
+### Docs-vs-code rule (prevents mismatch)
+If you need `heading=...` and the file is docs/spec-like (`.md/.yaml/.yml/.json/.txt`), use `docs` evidence, not `code`.
 
 ---
 
-## Validation (MUST)
-Workflow MUST validate the **preview tasks** ด้วยสคริปต์ canonical ใน repo:
+## Procedure (what the agent MUST do)
+
+### Step 0 — Resolve spec folder
+- Derive spec root folder `specs/<category>/<spec-id>/`.
+
+### Step 1 — Read inputs
+- Read the positional input.
+- Also read `spec.md` in the folder when present (even if input is `plan.md`) to ensure coverage.
+- If `specs/<category>/<spec-id>/tasks.md` exists, read it for merge.
+
+### Step 2 — Generate tasks (in-memory)
+- Generate a normalized tasks list.
+- Preserve existing Task IDs where semantic match exists.
+- New tasks MUST use the same project ID scheme.
+
+### Step 3 — Normalize evidence (in-memory) (MUST)
+Before writing preview, normalize any evidence into canonical form:
+
+1) Quote values with spaces:
+- `command=npx prisma validate` → `command="npx prisma validate"`
+
+2) Convert command-ish evidence into canonical test evidence:
+- `evidence: npm run build` → `evidence: test path=package.json command="npm run build"`
+
+3) Fix **path-as-command** (critical):
+- `evidence: test path="npm run build"` → `evidence: test path=package.json command="npm run build"`
+- `evidence: test path=npm run build` → `evidence: test path=package.json command="npm run build"`
+
+4) Ensure `test` always has `path=`:
+- If a test evidence has `command=` but no `path=`, add a stable anchor file path.
+
+5) Switch `code`→`docs` when using `heading=` on docs-like files.
+
+> Hint: The canonical migrator/normalizer lives at `.smartspec/scripts/migrate_evidence_hooks.py`.
+> Generator implementations SHOULD reuse the same normalization logic.
+
+### Step 4 — Write preview bundle
+Write to `.spec/reports/generate-tasks/<run-id>/`:
+- `preview/<spec-folder>/tasks.md`
+- `diff/<spec-id>.patch`
+- `report.md`
+- `report.json` (optional)
+
+### Step 5 — Validate preview (MUST)
+Run validators on the **preview** tasks file:
 
 1) Evidence hooks:
 ```bash
 python3 .smartspec/scripts/validate_evidence_hooks.py .spec/reports/generate-tasks/<run-id>/preview/<spec-folder>/tasks.md
 ```
 
-2) Tasks structure (header table / sections / IDs):
+2) Tasks structure:
 ```bash
 python3 .smartspec/scripts/validate_tasks_enhanced.py .spec/reports/generate-tasks/<run-id>/preview/<spec-folder>/tasks.md --spec specs/<category>/<spec-id>/spec.md
 ```
 
-Validation rules:
-- Fail เมื่อ evidence ไม่ parse ได้ (เช่น stray tokens เพราะไม่ได้ quote)
-- Allow `path-only` evidence เป็น warning ได้ เพื่อไม่ตัด evidence แบบ existence ทิ้งแบบผิด ๆ
-
 If any validator fails:
 - MUST exit non-zero
 - MUST NOT apply changes
+
+### Step 6 — Apply (ONLY if `--apply`)
+- Create backup:
+  - `.spec/reports/generate-tasks/<run-id>/backup/<spec-folder>/tasks.md`
+- Atomic replace:
+  - `specs/<category>/<spec-id>/tasks.md`
 
 ---
 
@@ -145,7 +224,7 @@ If any validator fails:
 /smartspec_generate_tasks.md specs/<category>/<spec-id>/spec.md --validate-only --platform kilo
 ```
 
-### Apply (writes governed)
+### Apply (governed write)
 
 **CLI:**
 ```bash
@@ -159,35 +238,21 @@ If any validator fails:
 
 ---
 
-## Behavior when `tasks.md` already exists
-When `specs/<category>/<spec-id>/tasks.md` exists:
+## Troubleshooting
 
-- In validate-only:
-  - MUST read existing tasks for merge planning
-  - MUST write merged result ONLY to preview path under `.spec/reports/**`
-  - MUST NOT modify existing tasks file
+### "validate-only แต่ไปแก้ tasks.md จริง"
+- Hard violation. STOP and treat the run as failed.
 
-- In apply:
-  - MUST preserve existing task IDs where possible
-  - MUST normalize evidence hooks to canonical format
-  - MUST produce an atomic update to the tasks file
+### "Validator ผ่าน แต่ verifier ยังหาไม่เจอ"
+- Usually indicates weak evidence (path-only) or wrong evidence type.
+- Add matchers (`contains/regex/symbol/heading/selector`) and ensure docs use `docs`.
 
----
-
-## Common failure modes and required handling
-
-### 1) “validate-only แต่เหมือนแก้ tasks.md”
-Hard violation: `--validate-only` MUST NOT modify any file under `specs/**`.
-
-### 2) “สร้าง script เพิ่มใน root (fix_evidence.py)”
-Hard violation: MUST NOT create ad-hoc scripts. If fixes are needed, they must be done in-memory and written only to `.spec/reports/**`.
-
-### 3) “พยายามเรียกสคริปต์ใน .spec/scripts/”
-Hard violation: `.spec/` is outputs only. Scripts must be in `.smartspec/scripts/`.
+### "ยังมี test path ที่เป็นคำสั่ง"
+- This is invalid under v7.2.1.
+- Fix by moving the command into `command=` and using a real file for `path=`.
 
 ---
 
 ## Related workflows
-- `/smartspec_migrate_evidence_hooks` (normalize existing tasks evidence; quote command/contains etc.)
-- `/smartspec_verify_tasks_progress_strict` (read-only strict verify)
-
+- `/smartspec_migrate_evidence_hooks` (normalize legacy evidence)
+- `/smartspec_verify_tasks_progress_strict` (strict verific

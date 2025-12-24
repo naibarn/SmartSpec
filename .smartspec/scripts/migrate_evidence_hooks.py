@@ -1,582 +1,434 @@
 #!/usr/bin/env python3
-"""migrate_evidence_hooks.py (v6.4.4)
+"""migrate_evidence_hooks.py (v6.5.1)
 
-Deterministically migrate/normalize SmartSpec tasks.md into strict evidence-hook format.
+Preview-first migrator for SmartSpec tasks evidence hooks.
 
-What v6.4.4 adds
------------------
-1) Structural normalization (safe, deterministic):
-   - Convert YAML front-matter (--- ... ---) to the canonical header table.
-   - Ensure exactly one '## Tasks' heading exists.
-   - Remove known noise lines inside Tasks section (e.g. '$/a').
+What it does
+- Reads a governed `specs/**/tasks.md`
+- Normalizes evidence lines into strict, shlex-parseable hooks
+- Writes preview artifacts under `.spec/reports/migrate-evidence-hooks/<run-id>/...`
+- Only modifies the governed tasks file when `--apply` is explicitly provided
 
-2) Evidence line normalization:
-   - Convert bullet evidence lines like '- evidence: ...' to 'evidence: ...'.
+Canonical evidence format (output)
+  evidence: <code|test|docs|ui> key=value key="value with spaces" ...
 
-3) Existing v6.4.3 behavior retained:
-   - Convert legacy Evidence Hooks / Evidence / Code: bullets into canonical evidence lines.
-   - Fix known false-negative patterns:
-     - unparseable evidence due to unescaped quotes / multi-token values
-     - contains=exists placeholder
-     - glob paths in path=
-     - heading= on non-docs
+Key behaviors (to reduce verify false-negatives)
+- Normalizes `- evidence: ...` into `evidence: ...` (no bullet)
+- Converts command-like evidence (e.g. `evidence: npm run build`) into:
+    evidence: test path=<anchor-file> command="npm run build"
+- Converts unsupported legacy types into strict types (best-effort)
+- Prevents unsafe paths (absolute, traversal, glob patterns) from becoming path=
 
-Safety & governance
--------------------
-- Default is preview: write outputs under `.spec/reports/migrate-evidence-hooks/<run-id>/...` only.
-- Writes to `specs/**/tasks.md` require --apply.
-- Atomic write on apply (temp + replace).
-
-Usage
------
-  python3 migrate_evidence_hooks.py --tasks-file specs/<cat>/<spec-id>/tasks.md [--apply]
-
-No network.
+Safety
+- No network.
+- Does not run commands.
+- In preview mode, does not write to governed files.
 """
 
 from __future__ import annotations
 
 import argparse
-import datetime as _dt
 import difflib
+import os
 import re
 import shlex
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 
-# -----------------------------
-# Regexes
-# -----------------------------
+STRICT_TYPES = {"code", "test", "docs", "ui"}
 
-RE_TASK_LINE = re.compile(r"^(?P<indent>\s*)-\s*\[[ xX]\]\s+(?P<id>\S+)\s+.*$")
-RE_EVIDENCE_LINE = re.compile(r"^(?P<indent>\s*)evidence:\s+(?P<payload>.*)$", re.IGNORECASE)
-RE_BULLET_EVIDENCE_LINE = re.compile(r"^(?P<indent>\s*)[-*]\s+evidence:\s+(?P<payload>.*)$", re.IGNORECASE)
+# Common command prefixes that should NEVER appear as path= values.
+COMMAND_PREFIXES = {
+    "npm",
+    "pnpm",
+    "yarn",
+    "npx",
+    "bun",
+    "node",
+    "python",
+    "python3",
+    "pip",
+    "pip3",
+    "pytest",
+    "make",
+    "docker",
+    "docker-compose",
+    "compose",
+    "go",
+    "cargo",
+    "mvn",
+    "gradle",
+    "java",
+    "dotnet",
+    "swagger-cli",
+}
 
-RE_LEGACY_HOOKS_HEADER = re.compile(r"^\s*(\*\*\s*)?Evidence Hooks(\s*\*\*)?\s*:\s*$", re.IGNORECASE)
-RE_LEGACY_EVIDENCE_HEADER = re.compile(r"^\s*(\*\*\s*)?Evidence(\s*\*\*)?\s*:\s*(?P<body>.*)$", re.IGNORECASE)
-RE_LEGACY_BULLET = re.compile(r"^\s*[-*]\s*(?P<kind>Code|Test|Docs|UI)\s*:\s*(?P<body>.+)$", re.IGNORECASE)
+GLOB_CHARS = set("*?[]")
 
-RE_NOISE = re.compile(r"^\s*\$/.+\s*$")
+# Matches both canonical and bullet evidence lines.
+RE_EVIDENCE_ANY = re.compile(r"^(?P<indent>\s*)(?:-\s*)?evidence:\s+(?P<payload>.*)$", re.IGNORECASE)
 
-RE_PATH_LIKE = re.compile(
-    r"\b([A-Za-z0-9_./-]+\.(ts|tsx|js|jsx|py|go|java|kt|rs|md|yaml|yml|json|sql|prisma))\b"
-)
-RE_PATH = re.compile(r"\bpath\s*=\s*(?P<p>[^\s]+)")
-RE_QUOTED = re.compile(r"\"([^\"]*)\"|'([^']*)'")
-
-RE_HEADER_TABLE = re.compile(r"^\|\s*spec-id\s*\|\s*source\s*\|\s*generated_by\s*\|\s*updated_at\s*\|\s*$", re.IGNORECASE)
-RE_MD_HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+# Minimal legacy patterns (used only for best-effort conversions)
+RE_LEGACY_BULLET_TYPED = re.compile(r"^\s*-\s*(Code|Test|Docs|UI)\s*:\s*(?P<body>.+)$", re.IGNORECASE)
 
 
-# -----------------------------
-# Helpers
-# -----------------------------
+@dataclass
+class EvidenceFix:
+    line_no: int
+    before: str
+    after: str
+    reason: str
 
 
 def _run_id() -> str:
-    return _dt.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    return time.strftime("%Y%m%d_%H%M%S", time.localtime())
 
 
-def _is_tasks_md_path(p: Path) -> bool:
-    s = str(p).replace("\\", "/")
-    return s.endswith("tasks.md") and "/specs/" in f"/{s.strip('/')}/"
-
-
-def _normalize_path_token(p: str) -> str:
-    p = (p or "").strip().strip('"\'')
-    p = p.replace("\\", "/")
+def _norm_path(p: str) -> str:
+    p = p.strip().strip('"').strip("'").replace("\\", "/")
     if p.startswith("./"):
         p = p[2:]
-    p = re.sub(r"/{2,}", "/", p)
     return p
 
 
+def _is_abs_or_traversal(p: str) -> bool:
+    if not p:
+        return True
+    p2 = _norm_path(p)
+    if p2.startswith("/") or p2.startswith("\\") or re.match(r"^[A-Za-z]:/", p2):
+        return True
+    if ".." in Path(p2).parts:
+        return True
+    return False
+
+
 def _has_glob(p: str) -> bool:
-    return any(ch in p for ch in ["*", "?", "[", "]"])
+    return any(ch in p for ch in GLOB_CHARS)
 
 
-def _quote_single(s: str) -> str:
-    # Safe for shlex: wrap in single quotes; escape embedded single quotes.
-    if s is None:
-        s = ""
-    return "'" + s.replace("'", "'\\''") + "'"
+def _quote_if_needed(v: str) -> str:
+    v = v.strip().strip('"').strip("'")
+    if any(ch.isspace() for ch in v) or any(ch in v for ch in ['"', "=", "\\"]):
+        v = v.replace('"', '\\"')
+        return f'"{v}"'
+    return v
 
 
-def _parse_front_matter(lines: List[str]) -> Tuple[Dict[str, str], int]:
-    """Parse YAML-ish front matter if present.
-
-    Returns (kv, end_index_exclusive). If not present, returns ({}, 0).
-    """
-    if not lines or lines[0].strip() != "---":
-        return {}, 0
-
-    kv: Dict[str, str] = {}
-    for i in range(1, len(lines)):
-        if lines[i].strip() == "---":
-            return kv, i + 1
-        # simple key: value pairs only
-        m = re.match(r"^\s*([A-Za-z0-9_-]+)\s*:\s*(.*?)\s*$", lines[i])
-        if not m:
-            continue
-        k, v = m.group(1), m.group(2)
-        v = v.strip().strip('"').strip("'")
-        kv[k] = v
-
-    # No closing ---
-    return {}, 0
-
-
-def _ensure_header_table(lines: List[str]) -> Tuple[List[str], List[str]]:
-    """Ensure canonical header table exists near top.
-
-    - If already present, return unchanged.
-    - If YAML front matter exists, convert it to table and remove the front matter.
-    """
-    notes: List[str] = []
-
-    # If header table already exists in first 40 lines, keep.
-    for i in range(min(40, len(lines))):
-        if RE_HEADER_TABLE.match(lines[i].strip()):
-            return lines, notes
-
-    kv, end_idx = _parse_front_matter(lines)
-    if end_idx > 0:
-        # Convert front matter → header table
-        spec_id = kv.get("spec_id") or kv.get("spec-id") or kv.get("specId") or "<spec-id>"
-        source = kv.get("source") or "<spec.md>"
-        generated_by = kv.get("generated_by") or kv.get("generated-by") or kv.get("generatedBy") or "smartspec_generate_tasks"
-        updated_at = kv.get("updated_at") or kv.get("updated-at") or kv.get("updatedAt") or "<ISO_DATETIME>"
-
-        header = [
-            "| spec-id | source | generated_by | updated_at |",
-            "|---|---|---|---|",
-            f"| {spec_id} | {source} | {generated_by} | {updated_at} |",
-            "",
-        ]
-
-        new_lines = header + lines[end_idx:]
-        notes.append("converted YAML front-matter to canonical header table")
-        return new_lines, notes
-
-    # No front matter and no header table: insert a minimal table at top.
-    header = [
-        "| spec-id | source | generated_by | updated_at |",
-        "|---|---|---|---|",
-        "| <spec-id> | <spec.md> | smartspec_migrate_evidence_hooks | <ISO_DATETIME> |",
-        "",
-    ]
-    notes.append("inserted missing canonical header table (placeholders need manual fill)")
-    return header + lines, notes
-
-
-def _count_exact_heading(lines: List[str], heading: str) -> List[int]:
-    return [i for i, l in enumerate(lines) if l.strip() == heading]
-
-
-def _ensure_single_tasks_heading(lines: List[str]) -> Tuple[List[str], List[str]]:
-    """Ensure exactly one '## Tasks' heading exists.
-
-    - If missing: insert after header table.
-    - If duplicated: keep first, remove subsequent exact duplicates.
-    """
-    notes: List[str] = []
-    idxs = _count_exact_heading(lines, "## Tasks")
-
-    if not idxs:
-        # Insert after header table (assume header table is at top; insert after first blank after header)
-        insert_at = 0
-        # find end of table if present
-        for i in range(min(15, len(lines))):
-            if lines[i].startswith("| "):
-                insert_at = i + 1
-                continue
-        # move to first blank line after header table
-        for j in range(insert_at, min(insert_at + 10, len(lines))):
-            if lines[j].strip() == "":
-                insert_at = j + 1
-                break
-
-        lines = lines[:insert_at] + ["## Tasks", ""] + lines[insert_at:]
-        notes.append("inserted missing '## Tasks' heading")
-        return lines, notes
-
-    if len(idxs) > 1:
-        keep = idxs[0]
-        to_remove = set(idxs[1:])
-        new_lines: List[str] = []
-        for i, l in enumerate(lines):
-            if i in to_remove and l.strip() == "## Tasks":
-                continue
-            new_lines.append(l)
-        notes.append(f"removed duplicate '## Tasks' headings at lines {[x+1 for x in idxs[1:]]}")
-        return new_lines, notes
-
-    return lines, notes
-
-
-def _tasks_section_bounds(lines: List[str]) -> Tuple[Optional[int], Optional[int]]:
-    """Return (start, end) indices for the Tasks section content.
-
-    start: index of '## Tasks'
-    end: index of next heading with level <= 2 (i.e., '#', '##') or EOF
-    """
-    start_idxs = _count_exact_heading(lines, "## Tasks")
-    if not start_idxs:
-        return None, None
-    start = start_idxs[0]
-
-    end = len(lines)
-    for i in range(start + 1, len(lines)):
-        m = RE_MD_HEADING.match(lines[i])
-        if not m:
-            continue
-        level = len(m.group(1))
-        if level <= 2:
-            end = i
-            break
-
-    return start, end
-
-
-def _remove_noise_in_tasks(lines: List[str]) -> Tuple[List[str], List[str]]:
-    notes: List[str] = []
-    s, e = _tasks_section_bounds(lines)
-    if s is None:
-        return lines, notes
-
-    new_lines: List[str] = []
-    removed = 0
-    for i, l in enumerate(lines):
-        if s < i < e and RE_NOISE.match(l):
-            removed += 1
-            continue
-        new_lines.append(l)
-
-    if removed:
-        notes.append(f"removed {removed} noise lines inside Tasks section")
-
-    return new_lines, notes
-
-
-def _parse_evidence_payload(payload: str) -> Tuple[Optional[str], List[str], Optional[str]]:
+def _shlex_split(payload: str) -> Tuple[List[str], Optional[str]]:
     try:
-        tokens = shlex.split(payload)
-    except Exception as e:
-        return None, [], str(e)
-    if not tokens:
-        return None, [], "empty"
-    etype = tokens[0].lower()
-    return etype, tokens, None
+        return shlex.split(payload), None
+    except ValueError as e:
+        return [], str(e)
 
 
-def _fix_contains_or_heading_multitoken(payload: str) -> str:
-    """Fix evidence payload where contains=/heading= value spills into multiple tokens.
+def _anchor_path_for_command(cmd: str, project_root: Path) -> str:
+    """Choose a stable file to anchor a test evidence command."""
+    c = cmd.lower().strip()
 
-    Strategy:
-    - If shlex tokenization fails or yields stray tokens, try to salvage by wrapping
-      the remainder of the line after contains=/heading= in single quotes.
-    """
-    for key in ("contains=", "heading="):
-        idx = payload.find(key)
-        if idx < 0:
+    if c.startswith(("npm ", "pnpm ", "yarn ", "bun ", "npx ")):
+        if (project_root / "package.json").exists():
+            return "package.json"
+        return "package.json"
+
+    if "prisma" in c:
+        if (project_root / "prisma/schema.prisma").exists():
+            return "prisma/schema.prisma"
+        return "prisma/schema.prisma"
+
+    if "openapi" in c or "swagger" in c:
+        for cand in ["openapi.yaml", "openapi.yml", "openapi.json", "swagger.yaml", "swagger.yml", "swagger.json"]:
+            if (project_root / cand).exists():
+                return cand
+        return "openapi.yaml"
+
+    if c.startswith(("pytest", "python ", "python3 ")):
+        for cand in ["pyproject.toml", "requirements.txt", "setup.cfg"]:
+            if (project_root / cand).exists():
+                return cand
+        return "pyproject.toml"
+
+    if c.startswith("docker"):
+        if (project_root / "Dockerfile").exists():
+            return "Dockerfile"
+        for cand in ["docker-compose.yml", "docker-compose.yaml"]:
+            if (project_root / cand).exists():
+                return cand
+        return "Dockerfile"
+
+    return "README.md" if (project_root / "README.md").exists() else "package.json"
+
+
+def _render_payload(etype: str, kv: Dict[str, str]) -> str:
+    # Stable ordering: path first, then the rest sorted.
+    keys = ["path"] + sorted([k for k in kv.keys() if k != "path"])
+    parts = [etype]
+    for k in keys:
+        if k not in kv:
             continue
-        before = payload[:idx]
-        after = payload[idx + len(key) :].strip()
-        if not after:
-            return payload
-        if after.startswith("'") or after.startswith('"'):
-            return payload
-        return before + key + _quote_single(after)
-    return payload
-
-
-def _rewrite_evidence_payload(payload: str) -> Tuple[str, List[str]]:
-    """Normalize one evidence payload. Returns (new_payload, notes)."""
-    notes: List[str] = []
-
-    etype, tokens, err = _parse_evidence_payload(payload)
-    if err is not None:
-        fixed = _fix_contains_or_heading_multitoken(payload)
-        etype2, tokens2, err2 = _parse_evidence_payload(fixed)
-        if err2 is None:
-            payload = fixed
-            etype, tokens = etype2, tokens2
-            notes.append("fixed: quote/space tokenization")
-        else:
-            notes.append(f"invalid evidence (unparseable): {err}")
-            return payload, notes
-
-    stray = [t for t in tokens[1:] if "=" not in t]
-    if stray:
-        fixed = _fix_contains_or_heading_multitoken(payload)
-        etype2, tokens2, err3 = _parse_evidence_payload(fixed)
-        if err3 is None and not [t for t in tokens2[1:] if "=" not in t]:
-            payload = fixed
-            etype, tokens = etype2, tokens2
-            notes.append("fixed: stray tokens by quoting remainder")
-        else:
-            notes.append(f"invalid evidence (stray tokens): {stray}")
-            return payload, notes
-
-    # Build kv map
-    kv: Dict[str, str] = {}
-    for t in tokens[1:]:
-        k, v = t.split("=", 1)
-        kv[k] = v
-
-    # Fix contains=exists
-    if "contains" in kv:
-        cv = kv["contains"].strip().strip('"\'').lower()
-        if cv == "exists":
-            kv.pop("contains", None)
-            kv.setdefault("regex", '"."')
-            notes.append("fixed: replaced contains=exists with regex=\".\"")
-
-    # Fix glob path (do not guess file list)
-    if "path" in kv:
-        p = _normalize_path_token(kv["path"])
-        kv["path"] = p
-        if _has_glob(p):
-            notes.append(f"needs manual fix: glob path not supported: {p}")
-
-    # Fix heading= on non-docs
-    if "heading" in kv and (etype or "") != "docs":
-        path_val = _normalize_path_token(kv.get("path", ""))
-        if path_val.endswith(".md") or "docs/" in path_val or path_val.endswith("openapi.yaml"):
-            etype = "docs"
-            notes.append("fixed: converted evidence type to docs because heading= is docs-only")
-        else:
-            notes.append("needs manual fix: heading= only allowed for docs")
-
-    # Rebuild payload
-    rebuilt: List[str] = [etype or "code"]
-    if "path" in kv:
-        rebuilt.append(f"path={kv['path']}")
-    for k in sorted(k for k in kv.keys() if k != "path"):
-        rebuilt.append(f"{k}={kv[k]}")
-
-    return " ".join(rebuilt), notes
-
-
-def _convert_legacy_bullet_to_evidence(kind: str, body: str) -> Optional[str]:
-    kind_l = kind.lower()
-    etype = {"code": "code", "test": "test", "docs": "docs", "ui": "ui"}.get(kind_l)
-    if not etype:
-        return None
-
-    # Find a path
-    path = None
-    m = RE_PATH_LIKE.search(body)
-    if m:
-        path = m.group(1)
-    m2 = RE_PATH.search(body)
-    if m2:
-        path = m2.group("p")
-    if not path:
-        return None
-
-    # Find a quoted matcher (best-effort)
-    contains = None
-    qm = RE_QUOTED.search(body)
-    if qm:
-        contains = qm.group(1) or qm.group(2)
-
-    parts = [etype, f"path={_normalize_path_token(path)}"]
-    if contains:
-        parts.append(f"contains={_quote_single(contains)}")
-    else:
-        parts.append('regex="."')
-
+        parts.append(f"{k}={_quote_if_needed(kv[k])}")
     return " ".join(parts)
 
 
-# -----------------------------
-# Main migration
-# -----------------------------
+def _convert_commandish(payload: str, project_root: Path) -> Optional[Tuple[str, str]]:
+    """Convert raw command evidence into strict test evidence."""
+    raw = payload.strip()
+    first = raw.split()[0].lower() if raw.split() else ""
+    if first in COMMAND_PREFIXES:
+        anchor = _anchor_path_for_command(raw, project_root)
+        return _render_payload("test", {"path": anchor, "command": raw}), "converted_commandish_to_test"
+    return None
 
 
-def migrate(text: str) -> Tuple[str, List[str]]:
-    orig_lines = text.splitlines()
-    notes: List[str] = []
+def _parse_kv_strict(payload: str) -> Tuple[str, Dict[str, str], Optional[str]]:
+    tokens, err = _shlex_split(payload)
+    if err:
+        return "", {}, f"shlex_error:{err}"
+    if not tokens:
+        return "", {}, "empty"
+    etype = tokens[0].lower()
+    kv: Dict[str, str] = {}
+    stray: List[str] = []
+    for t in tokens[1:]:
+        if "=" not in t:
+            stray.append(t)
+            continue
+        k, v = t.split("=", 1)
+        kv[k.strip()] = v.strip()
+    if stray:
+        return etype, kv, f"stray_tokens:{' '.join(stray)}"
+    return etype, kv, None
 
-    # 1) Ensure header table (convert front matter if present)
-    lines, n1 = _ensure_header_table(orig_lines)
-    notes += n1
 
-    # 2) Ensure single ## Tasks heading
-    lines, n2 = _ensure_single_tasks_heading(lines)
-    notes += n2
+def _best_effort_convert_legacy_typed(line: str, project_root: Path) -> Optional[Tuple[str, str]]:
+    m = RE_LEGACY_BULLET_TYPED.match(line)
+    if not m:
+        return None
+    typ = m.group(1).lower()
+    body = m.group("body").strip()
 
-    # 3) Remove noise lines inside Tasks section
-    lines, n3 = _remove_noise_in_tasks(lines)
-    notes += n3
+    # Minimal heuristics
+    if typ in {"code", "docs"}:
+        # If it looks like a path, treat as path
+        if "/" in body or body.endswith((".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".java", ".md", ".yaml", ".yml", ".json")):
+            et = "docs" if body.endswith((".md", ".yaml", ".yml", ".json")) else "code"
+            return _render_payload(et, {"path": body}), "converted_legacy_typed_bullet"
 
-    # 4) Evidence normalization + legacy conversions
-    out: List[str] = []
-    current_task_indent = ""
-    in_legacy_block = False
+    if typ == "test":
+        # If looks like a command, turn into command evidence
+        conv = _convert_commandish(body, project_root)
+        if conv:
+            return conv[0], "converted_legacy_test_command"
 
-    for i, line in enumerate(lines, start=1):
-        tm = RE_TASK_LINE.match(line)
-        if tm:
-            in_legacy_block = False
-            current_task_indent = tm.group("indent") + "  "
-            out.append(line)
+    # Can't safely infer
+    return None
+
+
+def _normalize_one_evidence(payload: str, project_root: Path) -> Tuple[str, str]:
+    # 1) If the entire payload is command-like: convert
+    conv = _convert_commandish(payload, project_root)
+    if conv:
+        return conv[0], conv[1]
+
+    # 2) Parse strict payload
+    etype, kv, err = _parse_kv_strict(payload)
+
+    # Unparseable or stray tokens -> convert whole payload into command evidence (best-effort)
+    if not etype or err:
+        anchor = _anchor_path_for_command(payload, project_root)
+        return _render_payload("test", {"path": anchor, "command": payload}), f"replaced_unparseable:{err or 'unknown'}"
+
+    # Unsupported type -> map to strict types when possible
+    if etype not in STRICT_TYPES:
+        # Simple legacy mapping
+        if etype in {"file_exists", "file"}:
+            p = _norm_path(kv.get("path", "") or kv.get("file", ""))
+            if not p:
+                anchor = _anchor_path_for_command("openapi", project_root)
+                return _render_payload("docs", {"path": anchor, "contains": payload[:80]}), "legacy_file_exists_missing_path"
+            kind = "docs" if p.endswith((".md", ".yaml", ".yml", ".json")) else "code"
+            return _render_payload(kind, {"path": p}), "legacy_file_exists_mapped"
+
+        if etype in {"api_route", "route", "endpoint"}:
+            route = kv.get("route") or kv.get("endpoint") or kv.get("url") or ""
+            p = _norm_path(kv.get("path", ""))
+            if not route:
+                return _render_payload("docs", {"path": _anchor_path_for_command("openapi", project_root), "contains": payload[:80]}), "legacy_route_missing_value"
+            if not p:
+                return _render_payload("docs", {"path": _anchor_path_for_command("openapi", project_root), "contains": route}), "legacy_route_to_docs"
+            return _render_payload("code", {"path": p, "contains": route}), "legacy_route_to_code"
+
+        if etype in {"db_schema", "schema", "prisma"}:
+            p = _norm_path(kv.get("path", "") or "prisma/schema.prisma")
+            model = kv.get("model") or kv.get("table") or ""
+            out_kv = {"path": p}
+            if model:
+                out_kv["contains"] = model
+            return _render_payload("code", out_kv), "legacy_schema_to_code"
+
+        if etype in {"command", "cmd", "shell", "verification"}:
+            cmd = kv.get("command") or kv.get("cmd") or payload
+            anchor = _anchor_path_for_command(cmd, project_root)
+            return _render_payload("test", {"path": anchor, "command": cmd}), "legacy_command_to_test"
+
+        # Unknown type: convert to docs with contains (safe fallback)
+        return _render_payload("docs", {"path": _anchor_path_for_command("openapi", project_root), "contains": payload[:80]}), f"unknown_type:{etype}"
+
+    # Normalize path and safety
+    if "path" in kv:
+        kv["path"] = _norm_path(kv["path"])
+        p = kv["path"]
+
+        # If path is unsafe, do NOT keep it as path=
+        if _is_abs_or_traversal(p) or _has_glob(p):
+            anchor = _anchor_path_for_command(payload, project_root)
+            return _render_payload("test", {"path": anchor, "command": payload}), "unsafe_path_converted_to_test_command"
+
+        # If path starts with a command prefix, it's likely wrong
+        first = p.split("/", 1)[0].lower()
+        if first in COMMAND_PREFIXES:
+            anchor = _anchor_path_for_command(payload, project_root)
+            return _render_payload("test", {"path": anchor, "command": payload}), "command_in_path_converted_to_test_command"
+
+    # Fix: heading= is docs-only; if code uses heading and looks like docs file, convert
+    if etype == "code" and "heading" in kv:
+        p = kv.get("path", "")
+        if p.endswith((".md", ".yaml", ".yml", ".json")):
+            return _render_payload("docs", kv), "converted_code_heading_to_docs"
+
+    return _render_payload(etype, kv), "normalized"
+
+
+def transform_tasks_md(content: str, project_root: Path) -> Tuple[str, List[EvidenceFix]]:
+    lines = content.splitlines(keepends=True)
+    fixes: List[EvidenceFix] = []
+
+    for idx, line in enumerate(lines, start=1):
+        # Convert minimal typed legacy bullets (optional)
+        legacy = _best_effort_convert_legacy_typed(line, project_root)
+        if legacy:
+            payload, reason = legacy
+            indent = re.match(r"^\s*", line).group(0)
+            new_line = f"{indent}evidence: {payload}\n"
+            fixes.append(EvidenceFix(idx, line.rstrip("\n"), new_line.rstrip("\n"), reason))
+            lines[idx - 1] = new_line
             continue
 
-        # Convert bullet-evidence to evidence
-        bem = RE_BULLET_EVIDENCE_LINE.match(line)
-        if bem:
-            payload = bem.group("payload")
-            new_payload, ln_notes = _rewrite_evidence_payload(payload)
-            out.append(f"{bem.group('indent')}evidence: {new_payload}")
-            notes.append(f"L{i}: normalized '- evidence:' to 'evidence:'")
-            for n in ln_notes:
-                notes.append(f"L{i}: {n}")
+        m = RE_EVIDENCE_ANY.match(line)
+        if not m:
             continue
 
-        # Legacy headers
-        if RE_LEGACY_HOOKS_HEADER.match(line):
-            in_legacy_block = True
-            notes.append(f"L{i}: removed legacy Evidence Hooks header")
-            continue
+        indent = m.group("indent")
+        payload = m.group("payload").strip()
 
-        em = RE_LEGACY_EVIDENCE_HEADER.match(line)
-        if em:
-            body = (em.group("body") or "").strip()
-            mpath = RE_PATH_LIKE.search(body)
-            if mpath:
-                path = _normalize_path_token(mpath.group(1))
-                payload = f"docs path={path} regex=\".\""
-                new_payload, ln_notes = _rewrite_evidence_payload(payload)
-                out.append(f"{current_task_indent}evidence: {new_payload}")
-                notes.append(f"L{i}: converted legacy Evidence: → evidence: docs")
-                for n in ln_notes:
-                    notes.append(f"L{i}: {n}")
-            else:
-                out.append(f"{current_task_indent}note: legacy Evidence could not be converted; please add strict evidence hooks")
-                notes.append(f"L{i}: legacy Evidence not convertible")
-            continue
+        new_payload, reason = _normalize_one_evidence(payload, project_root)
+        new_line = f"{indent}evidence: {new_payload}\n"
 
-        bm = RE_LEGACY_BULLET.match(line)
-        if bm:
-            kind = bm.group("kind")
-            body = bm.group("body")
-            converted = _convert_legacy_bullet_to_evidence(kind, body)
-            if converted:
-                new_payload, ln_notes = _rewrite_evidence_payload(converted)
-                out.append(f"{current_task_indent}evidence: {new_payload}")
-                notes.append(f"L{i}: converted legacy bullet {kind} → evidence")
-                for n in ln_notes:
-                    notes.append(f"L{i}: {n}")
-            else:
-                out.append(f"{current_task_indent}note: legacy bullet not convertible; please add strict evidence")
-                notes.append(f"L{i}: legacy bullet not convertible")
-            continue
+        if new_line != line:
+            fixes.append(EvidenceFix(idx, line.rstrip("\n"), new_line.rstrip("\n"), reason))
+            lines[idx - 1] = new_line
 
-        # Canonical evidence line
-        evm = RE_EVIDENCE_LINE.match(line)
-        if evm:
-            indent = evm.group("indent")
-            payload = evm.group("payload")
-            new_payload, ln_notes = _rewrite_evidence_payload(payload)
-            out.append(f"{indent}evidence: {new_payload}")
-            for n in ln_notes:
-                notes.append(f"L{i}: {n}")
-            continue
-
-        out.append(line)
-
-    return "\n".join(out) + "\n", notes
+    return "".join(lines), fixes
 
 
-# -----------------------------
-# IO
-# -----------------------------
+def unified_diff(old: str, new: str, fromfile: str, tofile: str) -> str:
+    return "".join(
+        difflib.unified_diff(
+            old.splitlines(keepends=True),
+            new.splitlines(keepends=True),
+            fromfile=fromfile,
+            tofile=tofile,
+        )
+    )
 
 
-def _write_text(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-
-
-def _atomic_write(path: Path, content: str) -> None:
+def atomic_write(path: Path, content: str) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
-    _write_text(tmp, content)
-    tmp.replace(path)
+    tmp.write_text(content, encoding="utf-8")
+    os.replace(tmp, path)
+
+
+def ensure_specs_scoped(tasks_file: Path) -> None:
+    # Guard: tasks.md should be under specs/**
+    parts = [p.replace("\\", "/") for p in tasks_file.parts]
+    if "specs" not in parts:
+        raise SystemExit(f"Refusing: tasks file must be under specs/**. Got: {tasks_file}")
+
+
+def write_report(out_dir: Path, tasks_rel: str, apply: bool, fixes: List[EvidenceFix], preview_path: Path) -> None:
+    lines: List[str] = []
+    lines.append("# migrate-evidence-hooks report\n")
+    lines.append(f"\n- tasks: {tasks_rel}\n")
+    lines.append(f"- apply: {apply}\n")
+    lines.append(f"- fixes: {len(fixes)}\n")
+    lines.append("\n## outputs\n")
+    lines.append(f"- preview: `{preview_path}`\n")
+    lines.append(f"- diff: `{out_dir / 'diff.patch'}`\n")
+    lines.append(f"- report: `{out_dir / 'report.md'}`\n")
+
+    if fixes:
+        lines.append("\n## changes (first 200)\n")
+        for f in fixes[:200]:
+            lines.append(f"- L{f.line_no}: {f.reason}\n")
+            lines.append(f"  - before: `{f.before.strip()}`\n")
+            lines.append(f"  - after:  `{f.after.strip()}`\n")
+        if len(fixes) > 200:
+            lines.append(f"- ... {len(fixes) - 200} more\n")
+
+    (out_dir / "report.md").write_text("".join(lines), encoding="utf-8")
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--tasks-file", required=True)
-    ap.add_argument("--apply", action="store_true")
-    ap.add_argument("--out", default=".spec/reports/migrate-evidence-hooks")
+    ap = argparse.ArgumentParser(description="Preview-first evidence hook migrator")
+    ap.add_argument("--tasks-file", required=True, help="Path to specs/**/tasks.md")
+    ap.add_argument("--project-root", default=".", help="Repo root")
+    ap.add_argument("--out", default=".spec/reports/migrate-evidence-hooks", help="Report root")
+    ap.add_argument("--apply", action="store_true", help="Apply changes to governed tasks.md")
     args = ap.parse_args()
 
-    tasks_path = Path(args.tasks_file)
-    if not tasks_path.exists():
-        print(f"ERROR: tasks file not found: {tasks_path}")
+    project_root = Path(args.project_root).resolve()
+    tasks_file = Path(args.tasks_file)
+
+    if not project_root.exists():
+        print(f"ERROR: project root not found: {project_root}")
+        return 2
+    if not tasks_file.exists():
+        print(f"ERROR: tasks file not found: {tasks_file}")
         return 2
 
-    if not _is_tasks_md_path(tasks_path):
-        print("ERROR: for safety, --tasks-file must be under specs/** and end with tasks.md")
-        return 2
+    ensure_specs_scoped(tasks_file)
 
-    original = tasks_path.read_text(encoding="utf-8", errors="replace")
-    migrated, notes = migrate(original)
+    original = tasks_file.read_text(encoding="utf-8", errors="ignore")
+    modified, fixes = transform_tasks_md(original, project_root)
 
-    rid = _run_id()
-    out_base = Path(args.out) / rid
-    preview_path = out_base / "preview" / tasks_path.as_posix()
-    report_path = out_base / "report.md"
-    diff_path = out_base / "diff.patch"
+    run_id = _run_id()
+    out_dir = Path(args.out) / run_id
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    _write_text(preview_path, migrated)
+    # Preview mirrors original relative path
+    tasks_rel = tasks_file.as_posix()
+    preview_path = out_dir / "preview" / tasks_rel
+    preview_path.parent.mkdir(parents=True, exist_ok=True)
+    preview_path.write_text(modified, encoding="utf-8")
 
-    diff = "\n".join(
-        difflib.unified_diff(
-            original.splitlines(),
-            migrated.splitlines(),
-            fromfile=str(tasks_path),
-            tofile=str(tasks_path) + " (migrated)",
-            lineterm="",
-        )
-    )
-    _write_text(diff_path, diff + "\n")
+    diff_text = unified_diff(original, modified, fromfile=f"a/{tasks_rel}", tofile=f"b/{tasks_rel}")
+    (out_dir / "diff.patch").write_text(diff_text, encoding="utf-8")
 
-    report_lines = [
-        f"# Migrate Evidence Hooks Report ({rid})",
-        "",
-        f"Target: `{tasks_path}`",
-        f"Apply: `{bool(args.apply)}`",
-        "",
-        "## Notes",
-    ]
-    if notes:
-        report_lines += [f"- {n}" for n in notes]
-    else:
-        report_lines.append("- No changes needed")
-
-    report_lines += [
-        "",
-        "## Outputs",
-        f"- Preview: `{preview_path}`",
-        f"- Diff: `{diff_path}`",
-        "",
-        "## Next steps",
-        "- Run the strict tasks validator on the preview file.",
-        "- If satisfied, re-run with --apply.",
-    ]
-    _write_text(report_path, "\n".join(report_lines) + "\n")
+    write_report(out_dir, tasks_rel=tasks_rel, apply=bool(args.apply), fixes=fixes, preview_path=preview_path)
 
     if args.apply:
-        _atomic_write(tasks_path, migrated)
-        print(f"Applied: updated {tasks_path}")
+        backup = tasks_file.with_suffix(tasks_file.suffix + f".backup.{run_id}")
+        backup.write_text(original, encoding="utf-8")
+        atomic_write(tasks_file, modified)
+        print(f"OK: applied {len(fixes)} fixes to {tasks_file}")
+        print(f"OK: backup: {backup}")
     else:
-        print(f"Preview written: {preview_path}")
+        print(f"OK: preview only (no governed writes)")
+        print(f"OK: preview: {preview_path}")
 
+    print(f"OK: report: {out_dir / 'report.md'}")
     return 0
 
 

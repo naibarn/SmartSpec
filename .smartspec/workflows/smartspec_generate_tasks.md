@@ -1,140 +1,95 @@
 ---
-description: Convert spec.md (or plan.md) → tasks.md with duplication prevention and strict-verifier-compatible evidence hooks.
-version: 7.1.5
-workflow: /smartspec_generate_tasks
+workflow_id: smartspec_generate_tasks
+version: "7.1.3"
+status: active
 category: core
+platform_support:
+  - cli
+  - kilo
+requires_apply: false
+writes:
+  - ".spec/reports/**"
+  - "specs/**/tasks.md (only with --apply)"
 ---
 
-# smartspec_generate_tasks
-
-> **Canonical path:** `.smartspec/workflows/smartspec_generate_tasks.md`
-> **Version:** 7.1.5
-> **Status:** Active
-> **Category:** core
+# /smartspec_generate_tasks
 
 ## Purpose
+Generate หรือ refine `tasks.md` จาก `spec.md` (หรือ `plan.md` / `ui-spec.json`) โดยเน้น:
 
-Generate or **normalize** `tasks.md` from:
+- **preview-first governance**
+- **evidence hook เป็น machine-parseable** เพื่อลด verify false-negative
+- **merge ได้** เมื่อมี `tasks.md` อยู่แล้ว (คง task IDs เดิม + normalize รูปแบบ)
+
+## Governance contract (สำคัญ)
+- Without `--apply` (รวมถึง `--validate-only`):
+  - MUST NOT modify any file under `specs/**`
+  - MUST only write outputs under `.spec/reports/generate-tasks/**`
+  - MUST NOT auto-fix โดยไปแก้ `specs/**/tasks.md` (แม้ validation fail)
+- With `--apply`:
+  - MAY update/create `specs/<category>/<spec-id>/tasks.md`
+  - MUST write atomically (temp+rename)
+  - MUST NOT write outside `specs/<category>/<spec-id>/tasks.md`
+
+> หมายเหตุ: เอกสารนี้ตั้งใจหลีกเลี่ยงการใส่บรรทัดที่ทำให้ agent ตีความผิดว่าเป็น “คำสั่งให้สร้าง/รันสคริปต์ย่อย”
+
+## Inputs (positional)
+Primary input is positional (ต้องอยู่ใต้ `specs/**`):
 
 - `specs/<category>/<spec-id>/spec.md`
-- `specs/<category>/<spec-id>/plan.md`
-- `specs/<category>/<spec-id>/ui-spec.json` (A2UI)
+- หรือ `specs/<category>/<spec-id>/plan.md`
+- หรือ `specs/<category>/<spec-id>/ui-spec.json`
 
-This workflow is the canonical producer of `tasks.md` that downstream workflows can trust.
+## Flags
+- `--apply`: อนุญาตให้เขียน `specs/**/tasks.md`
+- `--validate-only`: ทำ preview + validation เท่านั้น (no governed writes)
 
----
+## Outputs
+- Preview: `.spec/reports/generate-tasks/<run-id>/preview/<spec-id>/tasks.md`
+- Diff/Patch: `.spec/reports/generate-tasks/<run-id>/diff/<spec-id>.patch`
+- Report: `.spec/reports/generate-tasks/<run-id>/report.md`
 
-## Governance: preview-first & hard gates
+## Evidence hook policy (MUST)
+Generated tasks MUST use canonical evidence lines only:
 
-### Write scopes (enforced)
+- `evidence: code path=... symbol=...`
+- `evidence: code path=... contains="..."`
+- `evidence: docs path=... heading="..."`
+- `evidence: test path=... command="..."` (command เป็น informational เท่านั้น)
+- `evidence: ui path=... selector="..."`
 
-Allowed writes:
-
-- Safe outputs: `.spec/reports/generate-tasks/**` (always allowed)
-
-Governed writes (ONLY with `--apply`):
-
-- `specs/**/tasks.md`
-
-Forbidden writes (hard-fail):
-
-- Any other governed files (`spec.md`, `plan.md`, registries)
-- Any file creation in repo root
-- Any file creation outside `.spec/reports/**` in preview mode
-
-### Validate-only hard gate (MUST)
-
-If `--validate-only` is present:
-
-- MUST behave as preview mode.
-- MUST NOT modify `specs/**` under any circumstance.
-- MUST NOT attempt “auto-fix” by writing helper scripts (e.g. `fix_evidence.py`) anywhere.
-- MUST output:
-  - preview tasks file to `.spec/reports/generate-tasks/<run-id>/preview/<spec-id>/tasks.md`
-  - report to `.spec/reports/generate-tasks/<run-id>/report.md`
-  - (optional) patch to `.spec/reports/generate-tasks/<run-id>/diff/<spec-id>.patch`
-
-If validation fails in validate-only mode:
-
-- MUST NOT apply.
-- MUST NOT edit `specs/**/tasks.md`.
-- MUST report remediation steps.
-
-> **Kilo-specific rule:**
-> - When running with `--platform kilo` and `--validate-only`, the agent must **never** propose or perform writes outside `.spec/reports/**`.
-
----
+Hard rules:
+- `path=` ต้องเป็น repo-relative path (ห้ามเป็นคำสั่ง)
+- ถ้า value มีช่องว่าง ต้องใส่ double quotes
+- ห้ามใช้ glob ใน `path=` เช่น `src/**/*.ts`
+- ถ้าเป็นเอกสาร/สเปค (เช่น `openapi.yaml`) และต้องการ `heading=` ให้ใช้ `docs` ไม่ใช่ `code`
 
 ## Invocation
 
-### CLI
-
-```text
-/smartspec_generate_tasks <specs/<category>/<spec-id>/spec.md|.../plan.md|.../ui-spec.json> [--apply] [--validate-only] [--json]
+**CLI:**
+```bash
+/smartspec_generate_tasks specs/<category>/<spec-id>/spec.md --validate-only
 ```
 
-### Kilo Code
-
-```text
-/smartspec_generate_tasks.md <specs/<category>/<spec-id>/spec.md|.../plan.md|.../ui-spec.json> [--apply] [--validate-only] [--json] --platform kilo
+**Kilo Code:**
+```bash
+/smartspec_generate_tasks.md specs/<category>/<spec-id>/spec.md --validate-only --platform kilo
 ```
 
----
+## Apply mode
 
-## Evidence hook grammar (MUST)
-
-```text
-evidence: <type> key=value key="value with spaces" ...
+**CLI:**
+```bash
+/smartspec_generate_tasks specs/<category>/<spec-id>/spec.md --apply
 ```
 
-### Allowed types
-
-- `code`
-- `test`
-- `docs`
-- `ui`
-
-### Key rules
-
-- `path=` is required.
-- `heading=` only allowed for `docs`.
-- `contains=exists` is forbidden (causes false negatives).
-- `path` must not contain glob characters (`* ? [ ]`).
-
----
-
-## Quote-safe encoding rules (CRITICAL)
-
-If the evidence value includes quotes/spaces (JSON/YAML fragments), it MUST be emitted as a single token.
-
-Preferred:
-
-```md
-evidence: code path=package.json contains='"node": "22.x"'
+**Kilo Code:**
+```bash
+/smartspec_generate_tasks.md specs/<category>/<spec-id>/spec.md --apply --platform kilo
 ```
 
-Alternative:
-
-```md
-evidence: code path=package.json contains="\"node\": \"22.x\""
-```
-
----
-
-## Validation (MANDATORY)
-
-After producing preview tasks, validate using:
-
-```text
-python3 .smartspec/scripts/validate_tasks_enhanced.py --tasks .spec/reports/generate-tasks/<run-id>/preview/<spec-id>/tasks.md --spec specs/<category>/<spec-id>/spec.md
-```
-
-Apply is allowed only when:
-
-- `--apply` is present
-- AND validation passes
-
----
-
-# End of workflow doc
+## Implementation notes
+- Validation script (repo): `.smartspec/scripts/validate_tasks_enhanced.py`
+- Evidence normalization helper (repo): `.smartspec/scripts/migrate_evidence_hooks.py`
+- ห้ามสร้าง script ที่ root หรือ `.spec/scripts` (path canonical คือ `.smartspec/scripts/**`)
 

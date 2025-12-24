@@ -1,160 +1,141 @@
 ---
 workflow_id: smartspec_migrate_evidence_hooks
-version: "7.1.1"
+version: "6.6.0"
 status: active
-category: maintenance
+category: a2ui
 platform_support:
   - cli
   - kilo
 requires_apply: false
 writes:
-  - ".spec/reports/**"
-  - "specs/**/tasks.md (ONLY with --apply)"
+  - preview: ".spec/reports/migrate-evidence-hooks/**"
+  - apply: "specs/**/tasks.md"  # governed; only with --apply
 ---
 
 # /smartspec_migrate_evidence_hooks
 
 ## Purpose
-Normalize legacy evidence hooks ใน `tasks.md` ให้กลายเป็น **canonical evidence hooks** ที่ strict verifier / strict validator อ่านได้จริง เพื่อลดปัญหา verify false-negative.
 
-เป้าหมายหลัก:
-- แก้เคส evidence เก่าที่มี **unquoted values with spaces** (เช่น `command=npx prisma validate`) ให้เป็น `command="..."`
-- แก้เคส `test` evidence ที่ไม่มี `path=` (เติม anchor ให้)
-- แปลง evidence ที่เป็น “command-ish line” ให้เป็น `evidence: test path=<anchor> command="..."`
-- เปลี่ยน `code + heading` ที่ชี้ไปไฟล์เอกสาร/สเปค ให้เป็น `docs` เพื่อหลีกเลี่ยง mismatch
+Normalize / migrate legacy evidence into **strict-verifier-compatible evidence hooks** so that `/smartspec_verify_tasks_progress_strict` can reliably detect implemented work.
 
----
+This workflow is designed to eliminate false-negatives caused by:
+- bullet evidence (`- evidence:`)
+- legacy types (`file_exists`, `api_route`, `db_schema`, `command`)
+- command-ish evidence accidentally put into `path=`
+
+**Output goal:** each task contains one or more canonical hooks:
+
+- `evidence: code ...`
+- `evidence: test ...`
+- `evidence: docs ...`
+- `evidence: ui ...`
 
 ## Governance contract (MUST)
 
-### Preview-first (MUST)
-- Default mode (ไม่มี `--apply`) ต้องเป็น **preview-only**.
-- Preview-only MUST NOT modify any governed files under `specs/**`.
-- Preview artifacts MUST be written only under `.spec/reports/migrate-evidence-hooks/<run-id>/`.
+- **Preview-first by default** (no governed writes).
+- Governed writes under `specs/**` require `--apply`.
+- All preview outputs MUST be written only under `.spec/reports/migrate-evidence-hooks/<run-id>/**`.
+- MUST NOT create helper scripts in `.spec/scripts` or repo root.
+- Network is deny-by-default.
 
-### Governed writes (MUST)
-- การแก้ไฟล์จริงภายใต้ `specs/**` ต้องทำเฉพาะเมื่อใส่ `--apply`.
-- With `--apply`: MAY write ONLY `specs/**/tasks.md`.
-- With `--apply`: MUST write atomically (temp + rename) และสร้าง backup.
+## Canonical evidence hook policy (MUST)
 
-### Refuse unsafe apply (MUST)
-- MUST refuse `--apply` หาก `--tasks-file` ชี้ไปไฟล์ภายใต้ `.spec/reports/**` (ไฟล์ preview).
+### Required syntax
 
-### No network / no shell (MUST)
-- Workflow นี้ต้องทำงานได้โดยไม่ต้องใช้ network.
-- ห้าม execute คำสั่งใด ๆ จาก evidence (command เป็นเพียง metadata).
+`evidence: <type> <key>=<value> <key>=<value> ...`
 
-### Script location (MUST)
-- Maintained script MUST be referenced only under `.smartspec/scripts/`.
-- `.spec/` เป็นพื้นที่ outputs/reports เท่านั้น
+- `<type>` MUST be one of: `code`, `test`, `docs`, `ui`
+- Values with spaces MUST be quoted with double quotes
+- Paths MUST be repo-relative and MUST NOT contain `..`
 
----
+### Type mapping rules (MUST)
+
+When encountering legacy concepts, map to strict types:
+
+- `file_exists path=docs/openapi.yaml` → `evidence: docs path=docs/openapi.yaml`
+- `api_route route=/auth/register path=src/routes/auth.ts` → `evidence: code path=src/routes/auth.ts contains="/auth/register"`
+- `db_schema path=prisma/schema.prisma model=User` → `evidence: code path=prisma/schema.prisma contains="model User"`
+- `command command="npm test"` → `evidence: test path=package.json command="npm test"`
+
+### Command-in-path fix (MUST)
+
+If a `test` hook contains a command inside `path=...` (e.g. `evidence: test path="npm test"`) the workflow MUST convert it to:
+
+`evidence: test path=<anchor-file> command="npm test"`
+
+(Anchor file selection heuristics are implemented in the script.)
 
 ## Inputs
 
-### Required
-- `--tasks-file`: path ไปยัง `specs/**/tasks.md`
+- `--tasks-file` (required): path to `specs/**/tasks.md`
 
-### Optional
-- `--project-root`: default `.`
+## Outputs
 
----
+### Preview mode (default)
 
-## Flags
-- `--apply`: apply การแก้ไขลง `specs/**/tasks.md` (governed write)
+Writes:
+- `.spec/reports/migrate-evidence-hooks/<run-id>/preview/<tasks-file>`
+- `.spec/reports/migrate-evidence-hooks/<run-id>/diff.patch`
+- `.spec/reports/migrate-evidence-hooks/<run-id>/report.md`
 
----
+### Apply mode (`--apply`)
 
-## Outputs (always)
-Outputs MUST be under `.spec/reports/migrate-evidence-hooks/<run-id>/`:
-- `preview/<original-path>`: tasks ที่ถูก normalize แล้ว (preview)
-- `diff.patch`: unified diff ระหว่าง original กับ preview
-- `report.md`: สรุปการแก้ไข
-
----
-
-## Canonical evidence hook rules (target output)
-ทุก evidence line ต้องเป็น:
-
-- `evidence: <code|test|docs|ui> key=value key="value with spaces" ...`
-
-Constraints:
-- `path=` ต้องเป็น repo-relative path (ห้ามเป็นคำสั่ง)
-- ถ้า value มีช่องว่าง → ต้อง quote ด้วย double quotes
-- `test` ต้องมี `path=` เสมอ (เป็น anchor file) แม้จะมี `command=`
-
----
+- Atomically updates the governed tasks file at `specs/**/tasks.md`
+- Writes a backup under `.spec/reports/migrate-evidence-hooks/<run-id>/backup/<tasks-file>`
 
 ## Implementation
-Workflow นี้ต้องเรียก script canonical ต่อไปนี้เท่านั้น:
 
-```bash
-python3 .smartspec/scripts/migrate_evidence_hooks.py --tasks-file <specs/**/tasks.md> --project-root . [--apply]
-```
+- Script: `.smartspec/scripts/migrate_evidence_hooks.py`
 
----
+## Usage
 
-## Invocation
-
-### Preview-only (recommended first)
+### Preview
 
 **CLI:**
 ```bash
-/smartspec_migrate_evidence_hooks --tasks-file specs/<category>/<spec-id>/tasks.md
+/smartspec_migrate_evidence_hooks \
+  --tasks-file specs/core/spec-core-001-authentication/tasks.md
 ```
 
 **Kilo Code:**
 ```bash
-/smartspec_migrate_evidence_hooks.md --tasks-file specs/<category>/<spec-id>/tasks.md --platform kilo
+/smartspec_migrate_evidence_hooks.md \
+  --tasks-file specs/core/spec-core-001-authentication/tasks.md \
+  --platform kilo
 ```
 
-### Apply (writes governed)
+### Apply
 
 **CLI:**
 ```bash
-/smartspec_migrate_evidence_hooks --tasks-file specs/<category>/<spec-id>/tasks.md --apply
+/smartspec_migrate_evidence_hooks \
+  --tasks-file specs/core/spec-core-001-authentication/tasks.md \
+  --apply
 ```
 
 **Kilo Code:**
 ```bash
-/smartspec_migrate_evidence_hooks.md --tasks-file specs/<category>/<spec-id>/tasks.md --apply --platform kilo
+/smartspec_migrate_evidence_hooks.md \
+  --tasks-file specs/core/spec-core-001-authentication/tasks.md \
+  --apply \
+  --platform kilo
+```
+
+## Recommended follow-ups
+
+1) Validate evidence hooks on the **preview** file:
+
+```bash
+python3 .smartspec/scripts/validate_evidence_hooks.py --tasks .spec/reports/migrate-evidence-hooks/<run-id>/preview/specs/core/spec-core-001-authentication/tasks.md
+```
+
+2) Run strict verification after applying:
+
+```bash
+/smartspec_verify_tasks_progress_strict specs/core/spec-core-001-authentication/tasks.md
 ```
 
 ---
 
-## Recommended follow-up
-หลัง preview หรือ apply ให้ run validators เพื่อยืนยันว่า evidence parse ได้:
-
-1) Evidence hook validation:
-```bash
-python3 .smartspec/scripts/validate_evidence_hooks.py specs/<category>/<spec-id>/tasks.md
-```
-
-2) Tasks structure validation:
-```bash
-python3 .smartspec/scripts/validate_tasks_enhanced.py specs/<category>/<spec-id>/tasks.md --spec specs/<category>/<spec-id>/spec.md
-```
-
-3) Strict progress verify:
-
-**CLI:**
-```bash
-/smartspec_verify_tasks_progress_strict specs/<category>/<spec-id>/tasks.md
-```
-
-**Kilo Code:**
-```bash
-/smartspec_verify_tasks_progress_strict.md specs/<category>/<spec-id>/tasks.md --platform kilo
-```
-
----
-
-## Troubleshooting
-
-### “ยัง invalid เยอะหลัง migrate”
-- ตรวจดูว่า evidence บางบรรทัดเป็นคนละ pattern (เช่น `evidence:` อยู่ใน code block) — ควรแก้ต้นทาง generator ให้ output canonical ตั้งแต่แรก
-- ถ้า `command=` ยังไม่ quote แปลว่า line ไม่ผ่าน shlex หรือถูก embed ในรูปแบบอื่น ให้แก้ tasks formatting ให้เป็น plain markdown line
-
-### “validate-only แต่ไปแก้ไฟล์จริง”
-- ถือว่า workflow/script ผิด governance ต้องแก้ให้ preview-only ไม่แตะ `specs/**` เมื่อไม่มี `--apply`
+# End of workflow doc
 

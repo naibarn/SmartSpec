@@ -1,6 +1,6 @@
 ---
 workflow_id: smartspec_generate_tasks
-version: "7.1.3"
+version: "7.1.4"
 status: active
 category: core
 platform_support:
@@ -26,12 +26,11 @@ Generate หรือ refine `tasks.md` จาก `spec.md` (หรือ `plan.
   - MUST NOT modify any file under `specs/**`
   - MUST only write outputs under `.spec/reports/generate-tasks/**`
   - MUST NOT auto-fix โดยไปแก้ `specs/**/tasks.md` (แม้ validation fail)
+  - MUST NOT create helper scripts anywhere (เช่น `fix_evidence.py`) ใน root หรือที่อื่น
 - With `--apply`:
   - MAY update/create `specs/<category>/<spec-id>/tasks.md`
   - MUST write atomically (temp+rename)
   - MUST NOT write outside `specs/<category>/<spec-id>/tasks.md`
-
-> หมายเหตุ: เอกสารนี้ตั้งใจหลีกเลี่ยงการใส่บรรทัดที่ทำให้ agent ตีความผิดว่าเป็น “คำสั่งให้สร้าง/รันสคริปต์ย่อย”
 
 ## Inputs (positional)
 Primary input is positional (ต้องอยู่ใต้ `specs/**`):
@@ -52,6 +51,7 @@ Primary input is positional (ต้องอยู่ใต้ `specs/**`):
 ## Evidence hook policy (MUST)
 Generated tasks MUST use canonical evidence lines only:
 
+- `evidence: code path=...`
 - `evidence: code path=... symbol=...`
 - `evidence: code path=... contains="..."`
 - `evidence: docs path=... heading="..."`
@@ -62,7 +62,16 @@ Hard rules:
 - `path=` ต้องเป็น repo-relative path (ห้ามเป็นคำสั่ง)
 - ถ้า value มีช่องว่าง ต้องใส่ double quotes
 - ห้ามใช้ glob ใน `path=` เช่น `src/**/*.ts`
+- ถ้าเป็น directory ให้ใช้ `symbol=Directory` หรือ `path=<dir>/`
 - ถ้าเป็นเอกสาร/สเปค (เช่น `openapi.yaml`) และต้องการ `heading=` ให้ใช้ `docs` ไม่ใช่ `code`
+
+## Validation
+Workflow ควร validate evidence ด้วยสคริปต์ที่เป็น canonical ใน repo:
+
+- `.smartspec/scripts/validate_evidence_hooks.py`
+
+หมายเหตุ:
+- validator ต้อง **ยอมรับ path-only evidence** (พร้อม warning) เพื่อไม่ตัด `evidence: code path=...` ทิ้งแบบผิด ๆ
 
 ## Invocation
 
@@ -88,8 +97,7 @@ Hard rules:
 /smartspec_generate_tasks.md specs/<category>/<spec-id>/spec.md --apply --platform kilo
 ```
 
-## Implementation notes
-- Validation script (repo): `.smartspec/scripts/validate_tasks_enhanced.py`
-- Evidence normalization helper (repo): `.smartspec/scripts/migrate_evidence_hooks.py`
-- ห้ามสร้าง script ที่ root หรือ `.spec/scripts` (path canonical คือ `.smartspec/scripts/**`)
+## Related workflows
+- `/smartspec_migrate_evidence_hooks` (normalize existing tasks evidence)
+- `/smartspec_verify_tasks_progress_strict` (read-only strict verify)
 

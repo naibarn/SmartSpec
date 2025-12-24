@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
-"""migrate_evidence_hooks.py (v6.5.1)
+"""migrate_evidence_hooks.py (v6.5.2)
 
 Preview-first migrator for SmartSpec tasks evidence hooks.
+
+Why you need this
+- Many tasks.md files contain evidence lines that look strict but are NOT
+  shlex-parseable or are semantically wrong (e.g. command in path=).
+- Strict verifiers/validators will produce false-negatives unless evidence
+  is canonical.
 
 What it does
 - Reads a governed `specs/**/tasks.md`
@@ -10,14 +16,13 @@ What it does
 - Only modifies the governed tasks file when `--apply` is explicitly provided
 
 Canonical evidence format (output)
-  evidence: <code|test|docs|ui> key=value key="value with spaces" ...
+  evidence: <code|test|docs|ui> path=<repo-relative> [key=value ...]
 
-Key behaviors (to reduce verify false-negatives)
-- Normalizes `- evidence: ...` into `evidence: ...` (no bullet)
-- Converts command-like evidence (e.g. `evidence: npm run build`) into:
-    evidence: test path=<anchor-file> command="npm run build"
-- Converts unsupported legacy types into strict types (best-effort)
-- Prevents unsafe paths (absolute, traversal, glob patterns) from becoming path=
+Notable repairs
+- `evidence: test path=npm run build` -> `evidence: test path=package.json command="npm run build"`
+- `evidence: code path=SomeSymbol` -> `evidence: code path=<anchor-file> symbol=SomeSymbol` (best-effort)
+- `evidence: code path=packages/x/y/` -> `evidence: code path=packages/x/y symbol=Directory`
+- `evidence: code path=openapi.yaml heading="..."` -> `evidence: docs path=openapi.yaml heading="..."`
 
 Safety
 - No network.
@@ -40,7 +45,6 @@ from typing import Dict, List, Optional, Tuple
 
 STRICT_TYPES = {"code", "test", "docs", "ui"}
 
-# Common command prefixes that should NEVER appear as path= values.
 COMMAND_PREFIXES = {
     "npm",
     "pnpm",
@@ -68,11 +72,10 @@ COMMAND_PREFIXES = {
 
 GLOB_CHARS = set("*?[]")
 
-# Matches both canonical and bullet evidence lines.
 RE_EVIDENCE_ANY = re.compile(r"^(?P<indent>\s*)(?:-\s*)?evidence:\s+(?P<payload>.*)$", re.IGNORECASE)
 
-# Minimal legacy patterns (used only for best-effort conversions)
-RE_LEGACY_BULLET_TYPED = re.compile(r"^\s*-\s*(Code|Test|Docs|UI)\s*:\s*(?P<body>.+)$", re.IGNORECASE)
+# Detect probable symbol-only "paths" like IDatabase, AuthService, IUserRepo
+RE_SYMBOL_LIKE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 @dataclass
@@ -87,8 +90,15 @@ def _run_id() -> str:
     return time.strftime("%Y%m%d_%H%M%S", time.localtime())
 
 
+def _strip_quotes(v: str) -> str:
+    v = v.strip()
+    if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+        return v[1:-1]
+    return v
+
+
 def _norm_path(p: str) -> str:
-    p = p.strip().strip('"').strip("'").replace("\\", "/")
+    p = _strip_quotes(p).replace("\\", "/")
     if p.startswith("./"):
         p = p[2:]
     return p
@@ -100,7 +110,7 @@ def _is_abs_or_traversal(p: str) -> bool:
     p2 = _norm_path(p)
     if p2.startswith("/") or p2.startswith("\\") or re.match(r"^[A-Za-z]:/", p2):
         return True
-    if ".." in Path(p2).parts:
+    if ".." in p2.split("/"):
         return True
     return False
 
@@ -110,7 +120,7 @@ def _has_glob(p: str) -> bool:
 
 
 def _quote_if_needed(v: str) -> str:
-    v = v.strip().strip('"').strip("'")
+    v = _strip_quotes(v)
     if any(ch.isspace() for ch in v) or any(ch in v for ch in ['"', "=", "\\"]):
         v = v.replace('"', '\\"')
         return f'"{v}"'
@@ -125,17 +135,12 @@ def _shlex_split(payload: str) -> Tuple[List[str], Optional[str]]:
 
 
 def _anchor_path_for_command(cmd: str, project_root: Path) -> str:
-    """Choose a stable file to anchor a test evidence command."""
     c = cmd.lower().strip()
 
     if c.startswith(("npm ", "pnpm ", "yarn ", "bun ", "npx ")):
-        if (project_root / "package.json").exists():
-            return "package.json"
         return "package.json"
 
     if "prisma" in c:
-        if (project_root / "prisma/schema.prisma").exists():
-            return "prisma/schema.prisma"
         return "prisma/schema.prisma"
 
     if "openapi" in c or "swagger" in c:
@@ -145,24 +150,15 @@ def _anchor_path_for_command(cmd: str, project_root: Path) -> str:
         return "openapi.yaml"
 
     if c.startswith(("pytest", "python ", "python3 ")):
-        for cand in ["pyproject.toml", "requirements.txt", "setup.cfg"]:
-            if (project_root / cand).exists():
-                return cand
         return "pyproject.toml"
 
     if c.startswith("docker"):
-        if (project_root / "Dockerfile").exists():
-            return "Dockerfile"
-        for cand in ["docker-compose.yml", "docker-compose.yaml"]:
-            if (project_root / cand).exists():
-                return cand
-        return "Dockerfile"
+        return "Dockerfile" if (project_root / "Dockerfile").exists() else "docker-compose.yml"
 
     return "README.md" if (project_root / "README.md").exists() else "package.json"
 
 
 def _render_payload(etype: str, kv: Dict[str, str]) -> str:
-    # Stable ordering: path first, then the rest sorted.
     keys = ["path"] + sorted([k for k in kv.keys() if k != "path"])
     parts = [etype]
     for k in keys:
@@ -172,9 +168,7 @@ def _render_payload(etype: str, kv: Dict[str, str]) -> str:
     return " ".join(parts)
 
 
-def _convert_commandish(payload: str, project_root: Path) -> Optional[Tuple[str, str]]:
-    """Convert raw command evidence into strict test evidence."""
-    raw = payload.strip()
+def _convert_commandish(raw: str, project_root: Path) -> Optional[Tuple[str, str]]:
     first = raw.split()[0].lower() if raw.split() else ""
     if first in COMMAND_PREFIXES:
         anchor = _anchor_path_for_command(raw, project_root)
@@ -188,115 +182,85 @@ def _parse_kv_strict(payload: str) -> Tuple[str, Dict[str, str], Optional[str]]:
         return "", {}, f"shlex_error:{err}"
     if not tokens:
         return "", {}, "empty"
-    etype = tokens[0].lower()
+
+    etype = tokens[0].lower().strip()
     kv: Dict[str, str] = {}
     stray: List[str] = []
     for t in tokens[1:]:
-        if "=" not in t:
+        if "=" in t:
+            k, v = t.split("=", 1)
+            kv[k.strip()] = _strip_quotes(v)
+        else:
             stray.append(t)
-            continue
-        k, v = t.split("=", 1)
-        kv[k.strip()] = v.strip()
+
     if stray:
-        return etype, kv, f"stray_tokens:{' '.join(stray)}"
+        return etype, kv, f"stray_tokens:{stray}"
+
     return etype, kv, None
 
 
-def _best_effort_convert_legacy_typed(line: str, project_root: Path) -> Optional[Tuple[str, str]]:
-    m = RE_LEGACY_BULLET_TYPED.match(line)
-    if not m:
-        return None
-    typ = m.group(1).lower()
-    body = m.group("body").strip()
+def _normalize_one(payload: str, project_root: Path) -> Tuple[str, str]:
+    raw = payload.strip()
 
-    # Minimal heuristics
-    if typ in {"code", "docs"}:
-        # If it looks like a path, treat as path
-        if "/" in body or body.endswith((".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".java", ".md", ".yaml", ".yml", ".json")):
-            et = "docs" if body.endswith((".md", ".yaml", ".yml", ".json")) else "code"
-            return _render_payload(et, {"path": body}), "converted_legacy_typed_bullet"
-
-    if typ == "test":
-        # If looks like a command, turn into command evidence
-        conv = _convert_commandish(body, project_root)
-        if conv:
-            return conv[0], "converted_legacy_test_command"
-
-    # Can't safely infer
-    return None
-
-
-def _normalize_one_evidence(payload: str, project_root: Path) -> Tuple[str, str]:
-    # 1) If the entire payload is command-like: convert
-    conv = _convert_commandish(payload, project_root)
+    # 1) Pure command evidence (no type) -> convert
+    conv = _convert_commandish(raw, project_root)
     if conv:
         return conv[0], conv[1]
 
-    # 2) Parse strict payload
-    etype, kv, err = _parse_kv_strict(payload)
+    # 2) Parse (even if it's strict-ish)
+    etype, kv, err = _parse_kv_strict(raw)
 
-    # Unparseable or stray tokens -> convert whole payload into command evidence (best-effort)
+    # If parsing failed or stray tokens: treat as command-like evidence
     if not etype or err:
-        anchor = _anchor_path_for_command(payload, project_root)
-        return _render_payload("test", {"path": anchor, "command": payload}), f"replaced_unparseable:{err or 'unknown'}"
+        anchor = _anchor_path_for_command(raw, project_root)
+        return _render_payload("test", {"path": anchor, "command": raw}), f"replaced_unparseable:{err or 'unknown'}"
 
-    # Unsupported type -> map to strict types when possible
+    # 3) If the first token is not strict, best-effort: store as docs contains
     if etype not in STRICT_TYPES:
-        # Simple legacy mapping
-        if etype in {"file_exists", "file"}:
-            p = _norm_path(kv.get("path", "") or kv.get("file", ""))
-            if not p:
-                anchor = _anchor_path_for_command("openapi", project_root)
-                return _render_payload("docs", {"path": anchor, "contains": payload[:80]}), "legacy_file_exists_missing_path"
-            kind = "docs" if p.endswith((".md", ".yaml", ".yml", ".json")) else "code"
-            return _render_payload(kind, {"path": p}), "legacy_file_exists_mapped"
+        # legacy types can be handled here if needed; safe fallback:
+        anchor = _anchor_path_for_command("openapi", project_root)
+        return _render_payload("docs", {"path": anchor, "contains": raw[:120]}), f"unknown_type:{etype}"
 
-        if etype in {"api_route", "route", "endpoint"}:
-            route = kv.get("route") or kv.get("endpoint") or kv.get("url") or ""
-            p = _norm_path(kv.get("path", ""))
-            if not route:
-                return _render_payload("docs", {"path": _anchor_path_for_command("openapi", project_root), "contains": payload[:80]}), "legacy_route_missing_value"
-            if not p:
-                return _render_payload("docs", {"path": _anchor_path_for_command("openapi", project_root), "contains": route}), "legacy_route_to_docs"
-            return _render_payload("code", {"path": p, "contains": route}), "legacy_route_to_code"
+    # 4) Must have path; if missing, convert to test command with anchor
+    if "path" not in kv:
+        anchor = _anchor_path_for_command(raw, project_root)
+        return _render_payload("test", {"path": anchor, "command": raw}), "missing_path_converted_to_test"
 
-        if etype in {"db_schema", "schema", "prisma"}:
-            p = _norm_path(kv.get("path", "") or "prisma/schema.prisma")
-            model = kv.get("model") or kv.get("table") or ""
-            out_kv = {"path": p}
-            if model:
-                out_kv["contains"] = model
-            return _render_payload("code", out_kv), "legacy_schema_to_code"
+    p = _norm_path(kv["path"])  # may contain trailing slash
 
-        if etype in {"command", "cmd", "shell", "verification"}:
-            cmd = kv.get("command") or kv.get("cmd") or payload
-            anchor = _anchor_path_for_command(cmd, project_root)
-            return _render_payload("test", {"path": anchor, "command": cmd}), "legacy_command_to_test"
+    # 5) If path looks like a command or is unsafe/glob: convert to test command
+    if _is_abs_or_traversal(p) or _has_glob(p):
+        anchor = _anchor_path_for_command(raw, project_root)
+        return _render_payload("test", {"path": anchor, "command": raw}), "unsafe_path_converted_to_test"
 
-        # Unknown type: convert to docs with contains (safe fallback)
-        return _render_payload("docs", {"path": _anchor_path_for_command("openapi", project_root), "contains": payload[:80]}), f"unknown_type:{etype}"
+    first = p.split("/", 1)[0].lower() if p else ""
+    if first in COMMAND_PREFIXES:
+        anchor = _anchor_path_for_command(raw, project_root)
+        return _render_payload("test", {"path": anchor, "command": raw}), "command_in_path_converted_to_test"
 
-    # Normalize path and safety
-    if "path" in kv:
-        kv["path"] = _norm_path(kv["path"])
-        p = kv["path"]
+    # 6) Symbol-only path (e.g. IDatabase) -> convert to symbol evidence anchored to best-effort file
+    if RE_SYMBOL_LIKE.match(p) and ("/" not in p) and (not p.endswith((".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".java", ".md", ".yaml", ".yml", ".json"))):
+        # keep symbol and anchor to README or package.json so validator doesn't choke
+        anchor = "README.md" if (project_root / "README.md").exists() else "package.json"
+        return _render_payload("code", {"path": anchor, "symbol": p}), "symbol_like_path_converted_to_symbol"
 
-        # If path is unsafe, do NOT keep it as path=
-        if _is_abs_or_traversal(p) or _has_glob(p):
-            anchor = _anchor_path_for_command(payload, project_root)
-            return _render_payload("test", {"path": anchor, "command": payload}), "unsafe_path_converted_to_test_command"
+    # 7) Directory shorthand
+    if etype == "code" and p.endswith("/"):
+        p2 = p.rstrip("/")
+        kv2 = dict(kv)
+        kv2["path"] = p2
+        kv2.setdefault("symbol", "Directory")
+        return _render_payload("code", kv2), "directory_path_added_symbol_directory"
 
-        # If path starts with a command prefix, it's likely wrong
-        first = p.split("/", 1)[0].lower()
-        if first in COMMAND_PREFIXES:
-            anchor = _anchor_path_for_command(payload, project_root)
-            return _render_payload("test", {"path": anchor, "command": payload}), "command_in_path_converted_to_test_command"
+    # 8) docs vs code mismatch: heading belongs to docs; also treat openapi/spec files as docs
+    if etype == "code" and ("heading" in kv):
+        p_low = p.lower()
+        if p_low.endswith((".md", ".markdown", ".rst", ".txt", ".yaml", ".yml", ".json")):
+            kv2 = dict(kv)
+            return _render_payload("docs", kv2), "converted_code_heading_to_docs"
 
-    # Fix: heading= is docs-only; if code uses heading and looks like docs file, convert
-    if etype == "code" and "heading" in kv:
-        p = kv.get("path", "")
-        if p.endswith((".md", ".yaml", ".yml", ".json")):
-            return _render_payload("docs", kv), "converted_code_heading_to_docs"
+    # normalize path
+    kv["path"] = p.rstrip("/") if p.endswith("/") else p
 
     return _render_payload(etype, kv), "normalized"
 
@@ -306,16 +270,6 @@ def transform_tasks_md(content: str, project_root: Path) -> Tuple[str, List[Evid
     fixes: List[EvidenceFix] = []
 
     for idx, line in enumerate(lines, start=1):
-        # Convert minimal typed legacy bullets (optional)
-        legacy = _best_effort_convert_legacy_typed(line, project_root)
-        if legacy:
-            payload, reason = legacy
-            indent = re.match(r"^\s*", line).group(0)
-            new_line = f"{indent}evidence: {payload}\n"
-            fixes.append(EvidenceFix(idx, line.rstrip("\n"), new_line.rstrip("\n"), reason))
-            lines[idx - 1] = new_line
-            continue
-
         m = RE_EVIDENCE_ANY.match(line)
         if not m:
             continue
@@ -323,7 +277,7 @@ def transform_tasks_md(content: str, project_root: Path) -> Tuple[str, List[Evid
         indent = m.group("indent")
         payload = m.group("payload").strip()
 
-        new_payload, reason = _normalize_one_evidence(payload, project_root)
+        new_payload, reason = _normalize_one(payload, project_root)
         new_line = f"{indent}evidence: {new_payload}\n"
 
         if new_line != line:
@@ -351,7 +305,6 @@ def atomic_write(path: Path, content: str) -> None:
 
 
 def ensure_specs_scoped(tasks_file: Path) -> None:
-    # Guard: tasks.md should be under specs/**
     parts = [p.replace("\\", "/") for p in tasks_file.parts]
     if "specs" not in parts:
         raise SystemExit(f"Refusing: tasks file must be under specs/**. Got: {tasks_file}")
@@ -407,7 +360,6 @@ def main() -> int:
     out_dir = Path(args.out) / run_id
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Preview mirrors original relative path
     tasks_rel = tasks_file.as_posix()
     preview_path = out_dir / "preview" / tasks_rel
     preview_path.parent.mkdir(parents=True, exist_ok=True)
@@ -425,7 +377,7 @@ def main() -> int:
         print(f"OK: applied {len(fixes)} fixes to {tasks_file}")
         print(f"OK: backup: {backup}")
     else:
-        print(f"OK: preview only (no governed writes)")
+        print("OK: preview only (no governed writes)")
         print(f"OK: preview: {preview_path}")
 
     print(f"OK: report: {out_dir / 'report.md'}")

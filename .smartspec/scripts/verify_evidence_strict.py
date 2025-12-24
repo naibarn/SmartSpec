@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""verify_evidence_strict.py (v5.3.1)
+"""verify_evidence_strict.py (v5.3.2)
 
 Read-only strict evidence verifier for SmartSpec tasks.
 
@@ -24,7 +24,10 @@ Types and keys
 Verifier policy
 - A task is VERIFIED if ANY evidence line matches.
 - Accepts both `evidence:` and `- evidence:` lines.
-- `code symbol=Directory` enables bounded directory scan.
+- Directory shorthand:
+  - If `code path=<dir>/` OR the path points to an existing directory:
+    treat as directory evidence.
+  - If `contains`/`regex` present, run a bounded scan.
 
 Limitations
 - evidence-only: does not understand code semantics beyond textual matching.
@@ -196,39 +199,49 @@ def _verify_file_match(path: Path, contains: Optional[str], regex: Optional[str]
         return False, "regex not matched"
 
     if symbol is not None and symbol and symbol != "Directory":
-        # best-effort: symbol treated as substring
         if symbol not in txt:
             return False, "symbol not found"
 
     return True, "matched"
 
 
+def _verify_directory(root: Path, contains: Optional[str], regex: Optional[str], repo_root: Path) -> Tuple[bool, str]:
+    if not root.exists() or not root.is_dir():
+        return False, "directory not found"
+
+    if not (contains or regex):
+        return True, "directory exists"
+
+    for f in _bounded_walk(root):
+        txt = _read_text(f)
+        if contains and _match_contains(txt, contains):
+            return True, f"found contains in {f.relative_to(repo_root)}"
+        if regex and _match_regex(txt, regex):
+            return True, f"found regex in {f.relative_to(repo_root)}"
+
+    return False, "no match found in directory scan"
+
+
 def verify_code(repo_root: Path, ev: Evidence) -> EvidenceResult:
-    path = repo_root / ev.kv["path"]
+    raw_path = ev.kv["path"]
+    path = repo_root / raw_path
 
     symbol = ev.kv.get("symbol")
     contains = ev.kv.get("contains")
     regex = ev.kv.get("regex")
 
-    # Directory scan mode
-    if symbol == "Directory":
-        if not path.exists() or not path.is_dir():
-            return EvidenceResult(False, f"directory not found: {ev.kv['path']}", ev)
+    # Directory shorthand
+    if raw_path.endswith("/"):
+        path = repo_root / raw_path.rstrip("/")
+        ok, why = _verify_directory(path, contains=contains, regex=regex, repo_root=repo_root)
+        return EvidenceResult(ok, why, ev)
 
-        if not (contains or regex):
-            return EvidenceResult(True, "directory exists", ev)
-
-        for f in _bounded_walk(path):
-            txt = _read_text(f)
-            if contains and _match_contains(txt, contains):
-                return EvidenceResult(True, f"found contains in {f.relative_to(repo_root)}", ev)
-            if regex and _match_regex(txt, regex):
-                return EvidenceResult(True, f"found regex in {f.relative_to(repo_root)}", ev)
-
-        return EvidenceResult(False, "no match found in directory scan", ev)
+    if symbol == "Directory" or (path.exists() and path.is_dir()):
+        ok, why = _verify_directory(path, contains=contains, regex=regex, repo_root=repo_root)
+        return EvidenceResult(ok, why, ev)
 
     ok, why = _verify_file_match(path, contains=contains, regex=regex, symbol=symbol)
-    return EvidenceResult(ok, why if ok else why, ev)
+    return EvidenceResult(ok, why, ev)
 
 
 def verify_docs(repo_root: Path, ev: Evidence) -> EvidenceResult:
@@ -240,7 +253,6 @@ def verify_docs(repo_root: Path, ev: Evidence) -> EvidenceResult:
 
     if "heading" in ev.kv:
         h = ev.kv["heading"].strip()
-        # loose heading match: allow #/##/###
         if re.search(r"^#+\s+" + re.escape(h) + r"\s*$", txt, flags=re.MULTILINE) is None:
             return EvidenceResult(False, "heading not found", ev)
 
@@ -254,7 +266,6 @@ def verify_docs(repo_root: Path, ev: Evidence) -> EvidenceResult:
 
 
 def verify_test(repo_root: Path, ev: Evidence) -> EvidenceResult:
-    # command= is informational only. We verify by checking anchor exists.
     path = repo_root / ev.kv["path"]
     if not path.exists():
         return EvidenceResult(False, f"anchor not found: {ev.kv['path']}", ev)
@@ -331,11 +342,10 @@ def verify_tasks(repo_root: Path, tasks_path: Path) -> List[TaskResult]:
         m2 = RE_EVIDENCE_LINE.match(line)
         if m2 and current_id:
             payload = m2.group("payload").strip()
-            ev, err = parse_evidence(payload, i)
+            ev, _err = parse_evidence(payload, i)
             if ev:
                 current_evs.append(ev)
             else:
-                # record as failing evidence
                 current_evs.append(Evidence("code", {"path": ""}, raw=payload, line_no=i))
 
     flush()

@@ -1,6 +1,6 @@
 ---
 workflow_id: smartspec_verify_tasks_progress_strict
-version: "5.3.1"
+version: "5.3.2"
 status: active
 category: verify
 platform_support:
@@ -24,20 +24,27 @@ Verifier รับเฉพาะบรรทัด evidence แบบ machine-p
 
 - `evidence: <code|test|docs|ui> key=value key="value with spaces" ...`
 
-รองรับ `- evidence:` ด้วย (แต่จะ normalize เป็น `evidence:` ตอนประมวลผล)
+รองรับ `- evidence:` ด้วย
 
 ## Matching policy (ลด false-negative)
 - Task ถือว่า “ผ่าน” ถ้า evidence อย่างน้อย **1 บรรทัด** match
-- `code`:
-  - file exists + optional matcher (symbol/contains/regex)
-  - ถ้า `symbol=Directory` จะ scan แบบ bounded ภายใน directory (จำกัดจำนวนไฟล์)
-- `docs`:
-  - file exists + optional `heading` (match แบบ loose: #/##/###)
-- `test`:
-  - `command=` เป็น informational เท่านั้น (ไม่ถูกรัน)
-  - ตรวจ file anchor ที่ `path=` + optional matcher
-- `ui`:
-  - file exists + selector/contains/regex แบบ best-effort
+
+### code
+- file exists + optional matcher (symbol/contains/regex)
+- directory shorthand (ลด false-negative):
+  - `evidence: code path=packages/auth-lib/src/gdpr/`
+  - หรือ `evidence: code path=packages/auth-lib/src/gdpr symbol=Directory`
+  - ถ้ามี `contains` หรือ `regex` จะทำ bounded scan ใน directory
+
+### docs
+- file exists + optional `heading` (match แบบ loose: #/##/###)
+
+### test
+- `command=` เป็น informational เท่านั้น (ไม่ถูกรัน)
+- ตรวจ file anchor ที่ `path=` + optional matcher
+
+### ui
+- file exists + selector/contains/regex แบบ best-effort
 
 ## Governance
 - Read-only (no writes)

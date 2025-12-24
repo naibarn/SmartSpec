@@ -1,229 +1,264 @@
 #!/usr/bin/env python3
-"""validate_tasks_enhanced.py (v7.2.5)
+"""validate_tasks_enhanced.py (v1.5.0)
 
-Strict-ish validator for SmartSpec tasks.md.
+SmartSpec Tasks Validator (structure + references)
 
-Design goals
-- Validate structure + strict evidence hooks without modifying governed artifacts.
-- Reduce verify false-negatives by enforcing parseable evidence lines.
-- Accept both `evidence:` and `- evidence:` (canonicalize internally).
-- Reject legacy evidence blocks (`**Evidence Hooks:**`, `- Code: ...` bullets).
-- Reject glob paths in path= and suspicious command-looking path=.
+Validates that a tasks.md file follows the expected SmartSpec structure.
 
-Exit code
-- 0: valid
-- 1: invalid (errors)
+What this validator checks (high signal):
+- Header table exists near the top (| Key | Value |).
+- Required section: '## Tasks'.
+- Task checkbox lines exist and have stable IDs.
+- No duplicate task IDs.
+- Evidence lines are properly indented beneath a task and start with 'evidence:'
+  (Canonical evidence formatting details are validated by validate_evidence_hooks.py).
+- Optional: verify referenced IDs (e.g., T001...) exist in spec.md, if --spec provided.
+
+Governance
+- READ-ONLY: MUST NOT modify any files.
+- No network.
+
+Exit codes
+- 0: valid (warnings may exist unless --fail-on-warnings)
+- 1: invalid
+- 2: usage / file errors
 """
 
 from __future__ import annotations
 
 import argparse
-import dataclasses
-import json
 import re
-import shlex
+import sys
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
-EVIDENCE_TYPES = {"code", "test", "docs", "ui"}
 
-ALLOWED_KEYS = {
-    "code": {"path", "symbol", "contains", "regex"},
-    "test": {"path", "contains", "regex", "command"},
-    "docs": {"path", "contains", "heading", "regex"},
-    "ui": {"path", "contains", "selector", "regex"},
-}
+# Basic structure
+RE_H1 = re.compile(r"^#\s+.+")
+RE_SECTION_TASKS = re.compile(r"^##\s+Tasks\s*$")
 
-MATCHER_KEYS = {
-    "code": {"symbol", "contains", "regex"},
-    "test": {"contains", "regex"},
-    "docs": {"contains", "heading", "regex"},
-    "ui": {"contains", "selector", "regex"},
-}
+# Markdown table rows like: | Key | Value |
+RE_TABLE_ROW = re.compile(r"^\|\s*[^|]+\s*\|\s*[^|]+\s*\|\s*$")
 
-SUSPICIOUS_PATH_PREFIXES = {
-    "npm",
-    "pnpm",
-    "yarn",
-    "npx",
-    "bun",
-    "node",
-    "python",
-    "python3",
-    "pip",
-    "pip3",
-    "docker",
-    "docker-compose",
-    "compose",
-    "make",
-    "pytest",
-    "go",
-    "cargo",
-    "mvn",
-    "gradle",
-    "java",
-    "dotnet",
-    "swagger-cli",
-}
-
+# Task checkbox line, capturing ID and title
+# Example: - [ ] TSK-AUTH-001 Implement ...
 RE_TASK_LINE = re.compile(
-    r"^\s*-\s*\[(?P<chk>[ xX])\]\s+(?P<id>[A-Za-z0-9][A-Za-z0-9._:-]*)(\s+|\s*$)(?P<title>.*)$"
+    r"^\s*-\s*\[(?P<chk>[ xX])\]\s+(?P<id>[A-Za-z0-9][A-Za-z0-9._:-]*)\b(\s+|\s*$)(?P<title>.*)$"
 )
 
-# Accept bullet evidence too
-RE_EVIDENCE = re.compile(r"^\s*(?:-\s*)?evidence:\s+(?P<payload>.*)$", re.IGNORECASE)
+# Evidence line (indent recommended but we validate relationship)
+RE_EVIDENCE_LINE = re.compile(r"^\s*evidence:\s+.+$", re.IGNORECASE)
 
-# Legacy patterns to hard-fail
-RE_LEGACY_EVIDENCE_HOOKS = re.compile(r"^\s*\*\*?Evidence Hooks\*\*?:\s*$", re.IGNORECASE)
-RE_LEGACY_EVIDENCE = re.compile(r"^\s*\*\*?Evidence\*\*?:\s*.+$", re.IGNORECASE)
-RE_LEGACY_EVIDENCE_BULLET = re.compile(r"^\s*-\s*(Code|Test|Docs|UI)\s*:\s*.+$", re.IGNORECASE)
-
-# Noise lines often produced by agents
-RE_NOISE = re.compile(r"^\s*\$/.+\s*$")
+# Spec reference tokens (customize as needed; supports T001, T010, etc.)
+RE_SPEC_REF = re.compile(r"\bT\d{3,4}\b")
 
 
-@dataclasses.dataclass
-class Finding:
-    errors: List[str]
-    warnings: List[str]
+@dataclass
+class Issue:
+    level: str  # ERROR/WARN
+    message: str
+    line_no: Optional[int] = None
 
 
-def _shlex(payload: str) -> Tuple[List[str], Optional[str]]:
-    try:
-        return shlex.split(payload), None
-    except ValueError as e:
-        return [], str(e)
+def read_text(path: Path) -> List[str]:
+    return path.read_text(encoding="utf-8", errors="ignore").splitlines()
 
 
-def _strip_quotes(v: str) -> str:
-    v = v.strip()
-    if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
-        return v[1:-1]
-    return v
+def find_header_table(lines: List[str], max_scan: int = 80) -> Tuple[int, int]:
+    """Return (row_count, first_row_line_no) within first max_scan lines."""
+    row_count = 0
+    first_row = 0
+    for i, line in enumerate(lines[:max_scan], start=1):
+        if RE_TABLE_ROW.match(line.strip()):
+            row_count += 1
+            if first_row == 0:
+                first_row = i
+    return row_count, first_row
 
 
-def _parse_evidence(payload: str, line_no: int) -> Tuple[Optional[Dict[str, str]], Optional[str], Optional[str]]:
-    tokens, err = _shlex(payload)
-    if err:
-        return None, None, f"L{line_no}: evidence tokenization error: {err}"
-    if not tokens:
-        return None, None, f"L{line_no}: empty evidence payload"
+def extract_tasks(lines: List[str]) -> Tuple[List[Tuple[int, str, str]], List[Issue]]:
+    """Return list of (line_no, task_id, title) and issues."""
+    issues: List[Issue] = []
+    tasks: List[Tuple[int, str, str]] = []
 
-    etype = tokens[0].strip().lower()
-    if etype not in EVIDENCE_TYPES:
-        return None, None, f"L{line_no}: invalid evidence type '{etype}'"
+    for i, line in enumerate(lines, start=1):
+        m = RE_TASK_LINE.match(line)
+        if not m:
+            continue
+        task_id = m.group("id")
+        title = (m.group("title") or "").strip()
+        if not title:
+            issues.append(Issue("WARN", f"Task '{task_id}' has empty title", i))
+        tasks.append((i, task_id, title))
 
-    kv: Dict[str, str] = {}
-    stray: List[str] = []
-    for t in tokens[1:]:
-        if "=" in t:
-            k, v = t.split("=", 1)
-            kv[k.strip()] = _strip_quotes(v.strip())
-        else:
-            stray.append(t)
+    if not tasks:
+        issues.append(Issue("ERROR", "No task checkbox lines found (expected '- [ ] TSK-...' lines)", None))
 
-    if stray:
-        return None, None, f"L{line_no}: invalid evidence (stray tokens): {stray}"
-
-    for k in kv.keys():
-        if k not in ALLOWED_KEYS[etype]:
-            return None, None, f"L{line_no}: invalid key '{k}' for type '{etype}'"
-
-    if "path" not in kv:
-        return None, None, f"L{line_no}: missing required key 'path'"
-
-    path = kv["path"].replace("\\", "/").lstrip("./")
-    kv["path"] = path
-
-    if path.startswith("/") or path.startswith("\\") or ".." in path.split("/"):
-        return None, None, f"L{line_no}: invalid path (absolute/traversal): {path}"
-
-    if any(ch in path for ch in ["*", "?", "[", "]"]):
-        return None, None, f"L{line_no}: glob path is not supported in path=: {path}"
-
-    first = path.split("/", 1)[0].lower() if path else ""
-    if first in SUSPICIOUS_PATH_PREFIXES:
-        return None, None, f"L{line_no}: path looks like a command (not a file path): {path}"
-
-    if not (set(kv.keys()) & MATCHER_KEYS[etype]):
-        # allow but warn
-        return kv, etype, f"L{line_no}: warning: no matcher key (contains/symbol/heading/selector/regex); may cause false-negative"
-
-    return kv, etype, None
+    return tasks, issues
 
 
-def validate_tasks(tasks_path: Path) -> Finding:
-    errors: List[str] = []
-    warnings: List[str] = []
+def validate_evidence_nesting(lines: List[str]) -> List[Issue]:
+    """Ensure evidence lines appear under a task (not at top-level wandering).
 
-    if not tasks_path.exists():
-        return Finding(errors=[f"Tasks file not found: {tasks_path}"], warnings=[])
+    Heuristic:
+    - Evidence must occur AFTER at least one task line.
+    - Evidence should be indented more than the task line.
 
-    text = tasks_path.read_text(encoding="utf-8", errors="ignore")
-    lines = text.splitlines()
+    This validator does NOT validate evidence canonical tokens (done elsewhere).
+    """
+    issues: List[Issue] = []
 
-    if not re.search(r"\|\s*spec-id\s*\|\s*source\s*\|\s*generated_by\s*\|\s*updated_at\s*\|", text, re.IGNORECASE):
-        errors.append("Missing required header table with fields: spec-id | source | generated_by | updated_at")
+    last_task_line_no: Optional[int] = None
+    last_task_indent: Optional[int] = None
 
-    if not re.search(r"^##\s+Tasks\s*$", text, re.MULTILINE):
-        errors.append("Missing required section heading: '## Tasks'")
-
-    current_task_line = 0
-    evidence_count = 0
-
-    for i, line in enumerate(lines, 1):
-        if RE_LEGACY_EVIDENCE_HOOKS.match(line) or RE_LEGACY_EVIDENCE.match(line) or RE_LEGACY_EVIDENCE_BULLET.match(line):
-            errors.append(f"L{i}: legacy evidence format detected; must use strict 'evidence:' lines")
-
-        if RE_NOISE.match(line):
-            errors.append(f"L{i}: noise line detected inside tasks.md: {line.strip()}")
-
-        m_task = RE_TASK_LINE.match(line)
-        if m_task:
-            if current_task_line and evidence_count == 0:
-                errors.append(f"L{current_task_line}: task has no strict evidence lines")
-            current_task_line = i
-            evidence_count = 0
+    for i, line in enumerate(lines, start=1):
+        task_m = RE_TASK_LINE.match(line)
+        if task_m:
+            last_task_line_no = i
+            last_task_indent = len(line) - len(line.lstrip(" "))
             continue
 
-        m_ev = RE_EVIDENCE.match(line)
-        if m_ev:
-            payload = m_ev.group("payload").strip()
-            kv, _etype, msg = _parse_evidence(payload, i)
-            if kv is None:
-                errors.append(msg or f"L{i}: invalid evidence")
-            else:
-                evidence_count += 1
-                if msg:
-                    warnings.append(msg)
+        if RE_EVIDENCE_LINE.match(line):
+            if last_task_line_no is None:
+                issues.append(Issue("ERROR", "Evidence line appears before any task", i))
+                continue
 
-    if current_task_line and evidence_count == 0:
-        errors.append(f"L{current_task_line}: task has no strict evidence lines")
+            indent = len(line) - len(line.lstrip(" "))
+            if last_task_indent is not None and indent <= last_task_indent:
+                issues.append(
+                    Issue(
+                        "WARN",
+                        "Evidence line is not indented under its task (recommended indent deeper than task bullet)",
+                        i,
+                    )
+                )
 
-    return Finding(errors=errors, warnings=warnings)
+    return issues
+
+
+def validate_unique_ids(tasks: List[Tuple[int, str, str]]) -> List[Issue]:
+    issues: List[Issue] = []
+    seen: Dict[str, int] = {}
+    for line_no, task_id, _ in tasks:
+        if task_id in seen:
+            issues.append(Issue("ERROR", f"Duplicate task ID: {task_id} (also at line {seen[task_id]})", line_no))
+        else:
+            seen[task_id] = line_no
+    return issues
+
+
+def validate_required_sections(lines: List[str]) -> List[Issue]:
+    issues: List[Issue] = []
+
+    if not any(RE_H1.match(l.strip()) for l in lines[:10]):
+        issues.append(Issue("WARN", "Missing H1 title near top (# ...)", None))
+
+    if not any(RE_SECTION_TASKS.match(l.strip()) for l in lines):
+        issues.append(Issue("ERROR", "Missing required section header: '## Tasks'", None))
+
+    row_count, first_row = find_header_table(lines)
+    if row_count < 2:
+        issues.append(Issue("ERROR", "Missing header table near top (expected at least 2 rows like '| Key | Value |')", first_row or None))
+
+    return issues
+
+
+def extract_spec_refs(lines: List[str]) -> Set[str]:
+    refs: Set[str] = set()
+    for line in lines:
+        refs.update(RE_SPEC_REF.findall(line))
+    return refs
+
+
+def validate_spec_refs(tasks_lines: List[str], spec_path: Path) -> List[Issue]:
+    issues: List[Issue] = []
+    if not spec_path.exists():
+        issues.append(Issue("ERROR", f"Spec file not found: {spec_path}", None))
+        return issues
+
+    spec_lines = read_text(spec_path)
+    spec_refs = extract_spec_refs(spec_lines)
+    task_refs = extract_spec_refs(tasks_lines)
+
+    missing = sorted(r for r in task_refs if r not in spec_refs)
+    if missing:
+        # Warning (not error) because refs may intentionally point to other docs.
+        issues.append(Issue("WARN", f"References in tasks not found in spec.md: {', '.join(missing[:120])}", None))
+        if len(missing) > 120:
+            issues.append(Issue("WARN", f"... plus {len(missing) - 120} more missing references", None))
+
+    return issues
+
+
+def print_issues(path: Path, issues: List[Issue]) -> None:
+    errors = [i for i in issues if i.level == "ERROR"]
+    warns = [i for i in issues if i.level == "WARN"]
+
+    print("=" * 60)
+    print("TASKS STRUCTURE VALIDATION")
+    print("=" * 60)
+    print(f"File: {path.as_posix()}")
+    print(f"Errors: {len(errors)} | Warnings: {len(warns)}")
+    print("=" * 60)
+
+    for it in issues:
+        loc = f" (line {it.line_no})" if it.line_no else ""
+        print(f"{it.level}: {it.message}{loc}")
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--tasks", required=True, help="Path to tasks.md")
-    ap.add_argument("--json", action="store_true", help="Emit JSON summary")
+    ap = argparse.ArgumentParser(description="Validate SmartSpec tasks.md structure (read-only)")
+    ap.add_argument("tasks_file", help="Path to tasks.md")
+    ap.add_argument("--spec", help="Optional spec.md path to check references", default=None)
+    ap.add_argument("--json", action="store_true", help="Output JSON")
+    ap.add_argument("--fail-on-warnings", action="store_true", help="Return non-zero if warnings exist")
+    ap.add_argument("--quiet", action="store_true", help="Only print summary (or JSON)")
     args = ap.parse_args()
 
-    finding = validate_tasks(Path(args.tasks))
+    tasks_path = Path(args.tasks_file)
+    if not tasks_path.exists():
+        print(f"ERROR: tasks file not found: {tasks_path}")
+        return 2
+
+    tasks_lines = read_text(tasks_path)
+
+    issues: List[Issue] = []
+    issues.extend(validate_required_sections(tasks_lines))
+
+    tasks, task_issues = extract_tasks(tasks_lines)
+    issues.extend(task_issues)
+
+    if tasks:
+        issues.extend(validate_unique_ids(tasks))
+
+    issues.extend(validate_evidence_nesting(tasks_lines))
+
+    if args.spec:
+        issues.extend(validate_spec_refs(tasks_lines, Path(args.spec)))
+
+    errors = [i for i in issues if i.level == "ERROR"]
+    warns = [i for i in issues if i.level == "WARN"]
 
     if args.json:
-        print(json.dumps(dataclasses.asdict(finding), ensure_ascii=False, indent=2))
+        payload = {
+            "file": tasks_path.as_posix(),
+            "errors": [{"line": i.line_no, "message": i.message} for i in errors],
+            "warnings": [{"line": i.line_no, "message": i.message} for i in warns],
+            "counts": {"errors": len(errors), "warnings": len(warns)},
+        }
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
-        if finding.errors:
-            print("ERRORS:")
-            for e in finding.errors:
-                print(f"- {e}")
-        if finding.warnings:
-            print("WARNINGS:")
-            for w in finding.warnings:
-                print(f"- {w}")
+        if not args.quiet:
+            print_issues(tasks_path, issues)
+        else:
+            print(f"{tasks_path.as_posix()} :: errors={len(errors)} warnings={len(warns)}")
 
-    return 0 if not finding.errors else 1
+    if errors:
+        return 1
+    if args.fail_on_warnings and warns:
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

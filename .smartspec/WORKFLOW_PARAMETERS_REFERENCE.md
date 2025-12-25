@@ -108,7 +108,7 @@ These flags are supported by this workflow:
 **Kilo Code:**
 ```bash
 /smartspec_data_migration_generator.md \
-  --report .smartspec/reports/data-model-validation/<run-id>/summary.json \
+  --report .spec/reports/data-model-validation/<run-id>/summary.json \
   --migration-tool flyway \
   --output-dir db/migrations \
   --platform kilo
@@ -188,9 +188,9 @@ These flags are supported by this workflow:
 ```bash
 /smartspec_deployment_planner \
   specs/<category>/<spec-id>/spec.md \
-  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
   --target-env prod \
-  --out .smartspec/reports/deployment-planner \
+  --out .spec/reports/deployment-planner \
   --json
 ```
 
@@ -198,9 +198,9 @@ These flags are supported by this workflow:
 ```bash
 /smartspec_deployment_planner \
   specs/<category>/<spec-id>/spec.md \
-  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
   --apply \
-  --out .smartspec/reports/deployment-planner \
+  --out .spec/reports/deployment-planner \
   --json
 ```
 
@@ -220,7 +220,7 @@ These flags are supported by this workflow:
   --source-root <path/to/ui> \
   --from mui \
   --to custom \
-  [--audit-summary .smartspec/reports/ui-component-audit/<run-id>/summary.json] \
+  [--audit-summary .spec/reports/ui-component-audit/<run-id>/summary.json] \
   [--token-map .smartspec/mappings/design-tokens.json] \
   [--framework auto] \
   [--style-system auto] \
@@ -236,7 +236,7 @@ These flags are supported by this workflow:
   --source-root <path/to/ui> \
   --from mui \
   --to custom \
-  [--audit-summary .smartspec/reports/ui-component-audit/<run-id>/summary.json] \
+  [--audit-summary .spec/reports/ui-component-audit/<run-id>/summary.json] \
   [--token-map .smartspec/mappings/design-tokens.json] \
   [--framework auto] \
   [--style-system auto] \
@@ -267,7 +267,7 @@ These flags are supported by this workflow:
 /smartspec_docs_generator \
   --mode api-docs \
   --spec specs/<category>/<spec-id>/spec.md \
-  --out .smartspec/reports/docs-generator \
+  --out .spec/reports/docs-generator \
   --json
 ```
 
@@ -279,7 +279,7 @@ These flags are supported by this workflow:
   --target-dir docs \
   --write-docs \
   --apply \
-  --out .smartspec/reports/docs-generator \
+  --out .spec/reports/docs-generator \
   --json
 ```
 
@@ -301,26 +301,26 @@ These flags are supported by this workflow:
 **CLI:**
 ```bash
 /smartspec_docs_publisher \
-  --docs-dir .smartspec/reports/docs-generator/<run-id>/bundle.preview \
+  --docs-dir .spec/reports/docs-generator/<run-id>/bundle.preview \
   --publish-platform github-pages \
   --version v1.2.3 \
   --remote origin \
   --github-branch gh-pages \
-  --out .smartspec/reports/docs-publisher \
+  --out .spec/reports/docs-publisher \
   --json
 ```
 
 **CLI:**
 ```bash
 /smartspec_docs_publisher \
-  --docs-dir .smartspec/reports/docs-generator/<run-id>/bundle.preview \
+  --docs-dir .spec/reports/docs-generator/<run-id>/bundle.preview \
   --publish-platform github-pages \
   --version v1.2.3 \
   --remote origin \
   --github-branch gh-pages \
   --allow-network \
   --apply \
-  --out .smartspec/reports/docs-publisher \
+  --out .spec/reports/docs-publisher \
   --json
 ```
 
@@ -493,7 +493,7 @@ These flags are supported by this workflow:
   [--mode strict] \
   [--plan-format both] \
   [--include-dependencies] \
-  [--out .smartspec/reports/generate-tests/<label>] \
+  [--out .spec/reports/generate-tests/<label>] \
   [--json]
 ```
 
@@ -503,7 +503,7 @@ These flags are supported by this workflow:
   specs/<category>/<spec-id>/spec.md \
   --apply \
   [--target-path specs/<category>/<spec-id>/testplan/tests.md] \
-  [--out .smartspec/reports/generate-tests/<label>] \
+  [--out .spec/reports/generate-tests/<label>] \
   [--json]
 ```
 
@@ -551,11 +551,11 @@ These flags are supported by this workflow:
   --commit-sha <sha> \
   --remote origin \
   --main-branch main \
-  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
-  --deployment-summary .smartspec/reports/deployment-planner/<run-id>/summary.json \
+  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --deployment-summary .spec/reports/deployment-planner/<run-id>/summary.json \
   --release-notes specs/<category>/<spec-id>/deployment/release_notes.md \
   --test-script test \
-  --out .smartspec/reports/hotfix-assistant \
+  --out .spec/reports/hotfix-assistant \
   --json
 ```
 
@@ -569,12 +569,12 @@ These flags are supported by this workflow:
   --main-branch main \
   --allow-network \
   --require-tests-pass \
-  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
-  --deployment-summary .smartspec/reports/deployment-planner/<run-id>/summary.json \
+  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --deployment-summary .spec/reports/deployment-planner/<run-id>/summary.json \
   --release-notes specs/<category>/<spec-id>/deployment/release_notes.md \
   --test-script test \
   --apply \
-  --out .smartspec/reports/hotfix-assistant \
+  --out .spec/reports/hotfix-assistant \
   --json
 ```
 
@@ -742,7 +742,7 @@ These flags are supported by this workflow:
 ```bash
 /smartspec_nfr_perf_verifier \
   specs/<category>/<spec-id>/spec.md \
-  [--evidence-manifest .smartspec/reports/nfr-evidence/<run-id>/evidence.json] \
+  [--evidence-manifest .spec/reports/nfr-evidence/<run-id>/evidence.json] \
   [--target-env prod] \
   [--time-window 30d] \
   [--mode strict] \
@@ -756,7 +756,7 @@ These flags are supported by this workflow:
 ```bash
 /smartspec_nfr_perf_verifier.md \
   specs/<category>/<spec-id>/spec.md \
-  [--evidence-manifest .smartspec/reports/nfr-evidence/<run-id>/evidence.json] \
+  [--evidence-manifest .spec/reports/nfr-evidence/<run-id>/evidence.json] \
   [--target-env prod] \
   [--time-window 30d] \
   [--mode strict] \
@@ -787,7 +787,7 @@ These flags are supported by this workflow:
 /smartspec_observability_configurator \
   --spec specs/<category>/<spec-id>/spec.md \
   --obs-platform opentelemetry \
-  --out .smartspec/reports/observability-configurator \
+  --out .spec/reports/observability-configurator \
   --json
 ```
 
@@ -799,7 +799,7 @@ These flags are supported by this workflow:
   --target-dir <path/approved/by/config> \
   --write-runtime-config \
   --apply \
-  --out .smartspec/reports/observability-configurator \
+  --out .spec/reports/observability-configurator \
   --json
 ```
 
@@ -1039,9 +1039,9 @@ These flags are supported by this workflow:
   --commit-sha <sha> \
   --spec-id <spec-id> \
   --release-notes specs/<category>/<spec-id>/deployment/release_notes.md \
-  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
-  --deployment-summary .smartspec/reports/deployment-planner/<run-id>/summary.json \
-  --out .smartspec/reports/release-tagger \
+  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --deployment-summary .spec/reports/deployment-planner/<run-id>/summary.json \
+  --out .spec/reports/release-tagger \
   --json
 ```
 
@@ -1052,13 +1052,13 @@ These flags are supported by this workflow:
   --commit-sha <sha> \
   --spec-id <spec-id> \
   --release-notes specs/<category>/<spec-id>/deployment/release_notes.md \
-  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
-  --deployment-summary .smartspec/reports/deployment-planner/<run-id>/summary.json \
+  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --deployment-summary .spec/reports/deployment-planner/<run-id>/summary.json \
   --remote origin \
   --provider github \
   --allow-network \
   --apply \
-  --out .smartspec/reports/release-tagger \
+  --out .spec/reports/release-tagger \
   --json
 ```
 
@@ -1145,7 +1145,7 @@ These flags are supported by this workflow:
 /smartspec_security_audit_reporter.md \
   specs/<category>/<spec-id>/spec.md \
   [--report-format detailed] \
-  [--verify-summary .smartspec/reports/verify-tasks-progress-strict/<run-id>/summary.json] \
+  [--verify-summary .spec/reports/verify-tasks-progress-strict/<run-id>/summary.json] \
   [--out <output-root>] \
   [--json] \
   --platform kilo
@@ -1247,7 +1247,7 @@ These flags are supported by this workflow:
 **CLI:**
 ```bash
 /smartspec_test_report_analyzer \
-  --test-report .smartspec/reports/test-suite-runner/<run-id> \
+  --test-report .spec/reports/test-suite-runner/<run-id> \
   [--mode <normal|strict>] \
   [--max-log-bytes <int>] \
   [--max-junit-bytes <int>] \
@@ -1259,9 +1259,9 @@ These flags are supported by this workflow:
 **Kilo Code:**
 ```bash
 /smartspec_test_report_analyzer.md \
-  --test-report .smartspec/reports/test-suite-runner/<run-id> \
+  --test-report .spec/reports/test-suite-runner/<run-id> \
   --mode normal \
-  --out .smartspec/reports/test-report-analyzer \
+  --out .spec/reports/test-report-analyzer \
   --json \
   --platform kilo
 ```
@@ -1296,9 +1296,9 @@ These flags are supported by this workflow:
 ```bash
 /smartspec_test_suite_runner.md \
   --test-script test:unit \
-  --junit-report-path .smartspec/reports/test-suite-runner/_tmp/junit.xml \
+  --junit-report-path .spec/reports/test-suite-runner/_tmp/junit.xml \
   --timeout 600 \
-  --out .smartspec/reports/test-suite-runner \
+  --out .spec/reports/test-suite-runner \
   --json \
   --platform kilo
 ```

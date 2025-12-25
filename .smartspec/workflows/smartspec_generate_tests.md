@@ -37,7 +37,7 @@ This workflow MUST follow:
 
 **Always allowed writes (safe outputs):**
 
-- Reports: `.smartspec/reports/generate-tests/**`
+- Reports: `.spec/reports/generate-tests/**`
 
 **Governed writes (ONLY with `--apply`):**
 
@@ -169,7 +169,7 @@ Optional overrides (read-only):
   [--mode strict] \
   [--plan-format both] \
   [--include-dependencies] \
-  [--out .smartspec/reports/generate-tests/<label>] \
+  [--out .spec/reports/generate-tests/<label>] \
   [--json]
 ```
 
@@ -180,7 +180,7 @@ Apply mode (writes governed test plan into spec folder):
   specs/<category>/<spec-id>/spec.md \
   --apply \
   [--target-path specs/<category>/<spec-id>/testplan/tests.md] \
-  [--out .smartspec/reports/generate-tests/<label>] \
+  [--out .spec/reports/generate-tests/<label>] \
   [--json]
 ```
 
@@ -192,7 +192,7 @@ Apply mode (writes governed test plan into spec folder):
   [--mode strict] \
   [--plan-format both] \
   [--include-dependencies] \
-  [--out .smartspec/reports/generate-tests/<label>] \
+  [--out .spec/reports/generate-tests/<label>] \
   [--json] \
   --platform kilo
 ```
@@ -204,7 +204,7 @@ Apply mode:
   specs/<category>/<spec-id>/spec.md \
   --apply \
   [--target-path specs/<category>/<spec-id>/testplan/tests.md] \
-  [--out .smartspec/reports/generate-tests/<label>] \
+  [--out .spec/reports/generate-tests/<label>] \
   [--json] \
   --platform kilo
 ```
@@ -218,7 +218,7 @@ All outputs are written under a unique run folder.
 Default report root:
 
 ```
-.smartspec/reports/generate-tests/<run-id>/
+.spec/reports/generate-tests/<run-id>/
 ```
 
 Artifacts (safe outputs):
@@ -245,23 +245,23 @@ This workflow generates **WHAT to test** and **WHAT evidence is required**, and 
 When relevant, the generated plan MUST reference evidence artifacts from the corresponding workflow run folders (if present in the project registry). Use these **paths as the canonical convention**:
 
 - **Test execution evidence**
-  - Runner output: `.smartspec/reports/test-suite-runner/<run-id>/summary.json`
-  - Analyzer output: `.smartspec/reports/test-report-analyzer/<run-id>/summary.json`
+  - Runner output: `.spec/reports/test-suite-runner/<run-id>/summary.json`
+  - Analyzer output: `.spec/reports/test-report-analyzer/<run-id>/summary.json`
 
 - **NFR / Performance evidence**
-  - Planner output: `.smartspec/reports/nfr-perf-planner/<run-id>/summary.json`
-  - Verifier output: `.smartspec/reports/nfr-perf-verifier/<run-id>/summary.json`
+  - Planner output: `.spec/reports/nfr-perf-planner/<run-id>/summary.json`
+  - Verifier output: `.spec/reports/nfr-perf-verifier/<run-id>/summary.json`
 
 - **UI / Design system evidence**
-  - UI audit output: `.smartspec/reports/ui-component-audit/<run-id>/summary.json`
-  - Design-system migration preview/apply: `.smartspec/reports/design-system-migration/<run-id>/summary.json`
+  - UI audit output: `.spec/reports/ui-component-audit/<run-id>/summary.json`
+  - Design-system migration preview/apply: `.spec/reports/design-system-migration/<run-id>/summary.json`
 
 - **Security evidence**
-  - Threat model input source: `.smartspec/reports/security-threat-model/<run-id>/threats.md`
-  - Security audit output: `.smartspec/reports/security-audit/<run-id>/summary.json`
+  - Threat model input source: `.spec/reports/security-threat-model/<run-id>/threats.md`
+  - Security audit output: `.spec/reports/security-audit/<run-id>/summary.json`
 
 - **Data model evidence**
-  - Data model validation output: `.smartspec/reports/data-model-validation/<run-id>/summary.json`
+  - Data model validation output: `.spec/reports/data-model-validation/<run-id>/summary.json`
 
 If an evidence hook path does not exist or the workflow is not registered, the plan MUST:
 

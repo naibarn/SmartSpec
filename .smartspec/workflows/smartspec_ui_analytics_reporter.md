@@ -39,7 +39,7 @@ This workflow MUST follow:
 
 Allowed writes:
 
-- Report outputs: `.smartspec/reports/ui-analytics/**` (no `--apply` required)
+- Report outputs: `.spec/reports/ui-analytics/**` (no `--apply` required)
 
 Forbidden writes (must hard-fail):
 
@@ -457,7 +457,7 @@ If implementation directory doesn't exist:
   --catalog .spec/ui-catalog.json \
   --implementation src/ui/ \
   --time-range 90d \
-  --compare-to .smartspec/reports/ui-analytics/2025-11-22/summary.json
+  --compare-to .spec/reports/ui-analytics/2025-11-22/summary.json
 ```
 
 ### Example 3: Kilo Code

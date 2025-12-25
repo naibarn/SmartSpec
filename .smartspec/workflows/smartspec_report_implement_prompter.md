@@ -38,7 +38,7 @@ Forbidden writes (must hard-fail):
 
 - Any path outside allowlist from config
 - Any governed artifact (e.g., `specs/**`, `.spec/SPEC_INDEX.json`, `.spec/WORKFLOWS_INDEX.yaml`)
-- Reports output (this workflow does not write to `.smartspec/reports/**`)
+- Reports output (this workflow does not write to `.spec/reports/**`)
 - Any runtime source tree modifications
 
 ### `--apply` behavior (universal flag)

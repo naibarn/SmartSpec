@@ -30,7 +30,7 @@ If conflict: **Handbook wins**.
 - **Positional-first:** prefer positional primary inputs when supported.
 - **Secure-by-default:** no secrets; redact tokens/keys; use placeholders.
 - **No source pollution:** outputs must stay in:
-  - reports: `.smartspec/reports/**`
+  - reports: `.spec/reports/**`
   - prompts: `.smartspec/prompts/**`
   - generated scripts: `.smartspec/generated-scripts/**`
 - **Governed artifacts require `--apply`:** anything under `specs/**` plus registry updates.
@@ -133,7 +133,7 @@ Always provide CLI + Kilo examples.
 
 **Before answering user questions, MUST check for context clues:**
 
-1. **Check for recent reports:** Look in `.smartspec/reports/` for recent workflow outputs
+1. **Check for recent reports:** Look in `.spec/reports/` for recent workflow outputs
 2. **Read summary.json:** Extract context from `summary.json` files to understand:
    - Which spec the user is working on
    - Current task status
@@ -143,8 +143,8 @@ Always provide CLI + Kilo examples.
 4. **Never guess paths:** If unclear, ask the user for the exact path or recommend `/smartspec_project_copilot`
 
 **Example context sources:**
-- `.smartspec/reports/verify-tasks-progress/<run-id>/summary.json` → task completion status
-- `.smartspec/reports/implement-tasks/<run-id>/summary.json` → implementation results
+- `.spec/reports/verify-tasks-progress/<run-id>/summary.json` → task completion status
+- `.spec/reports/implement-tasks/<run-id>/summary.json` → implementation results
 - `.spec/SPEC_INDEX.json` → list of all specs in the project
 
 ---

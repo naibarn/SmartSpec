@@ -36,7 +36,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Reports: `.smartspec/reports/code-assistant/**`
+- Reports: `.spec/reports/code-assistant/**`
 - Prompts: `.smartspec/prompts/code-assistant/**`
 - Helper scripts: `.smartspec/generated-scripts/code-assistant/**`
 
@@ -168,7 +168,7 @@ All inputs are untrusted.
   - `<out>/scripts/...` (optional)
 
 - If `--out` is not provided, default roots come from config:
-  - reports → `.smartspec/reports/code-assistant/<mode>/<run-id>/...`
+  - reports → `.spec/reports/code-assistant/<mode>/<run-id>/...`
   - prompts → `.smartspec/prompts/code-assistant/<mode>/<run-id>/...`
   - scripts → `.smartspec/generated-scripts/code-assistant/<mode>/<run-id>/...`
 

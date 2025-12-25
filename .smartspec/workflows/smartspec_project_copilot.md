@@ -50,7 +50,7 @@ This workflow MUST follow:
 
 - `write_guard: NO-WRITE` is absolute.
 - If the platform persists an optional report, it is orchestrator-controlled and MUST be under:
-  - `.smartspec/reports/project-copilot/**`
+  - `.spec/reports/project-copilot/**`
 
 The copilot itself must still act as read-only.
 
@@ -106,7 +106,7 @@ The copilot treats these as primary evidence, in this priority order:
    - `ui.json` (if used by the project)
 
 5) **Reports**
-   - `.smartspec/reports/**`
+   - `.spec/reports/**`
 
 6) **Workflow specs/manuals**
    - `.smartspec/workflows/smartspec_*.md`
@@ -246,7 +246,7 @@ Optional persisted report (orchestrator-controlled) MAY include:
 
 If persisted, it MUST be written under:
 
-- `.smartspec/reports/project-copilot/<run-id>/...`
+- `.spec/reports/project-copilot/<run-id>/...`
 
 ---
 

@@ -41,7 +41,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs):
 
-- `.smartspec/reports/sync-tasks-checkboxes/**`
+- `.spec/reports/sync-tasks-checkboxes/**`
 
 Governed writes (**requires** `--apply`):
 
@@ -137,7 +137,7 @@ No other flags in v6.
 
 This workflow reads the **strict verifier** `summary.json` produced under:
 
-- `.smartspec/reports/verify-tasks-progress/<run-id>/summary.json`
+- `.spec/reports/verify-tasks-progress/<run-id>/summary.json`
 
 Required fields (minimum):
 
@@ -238,9 +238,9 @@ If the file structure is ambiguous, skip roll-up and report `parent_rollup_skipp
 
 Write under a run folder:
 
-- `.smartspec/reports/sync-tasks-checkboxes/<run-id>/report.md`
-- `.smartspec/reports/sync-tasks-checkboxes/<run-id>/diff.patch`
-- `.smartspec/reports/sync-tasks-checkboxes/<run-id>/summary.json` (if `--json` or `--report-format=both/json`)
+- `.spec/reports/sync-tasks-checkboxes/<run-id>/report.md`
+- `.spec/reports/sync-tasks-checkboxes/<run-id>/diff.patch`
+- `.spec/reports/sync-tasks-checkboxes/<run-id>/summary.json` (if `--json` or `--report-format=both/json`)
 
 If `--out` is provided, write under:
 

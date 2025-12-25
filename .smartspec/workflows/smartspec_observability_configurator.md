@@ -48,7 +48,7 @@ This workflow MUST follow:
 
 **Always allowed writes (safe outputs):**
 
-- Reports: `.smartspec/reports/observability-configurator/**`
+- Reports: `.spec/reports/observability-configurator/**`
 - Optional prompts: `.smartspec/prompts/**`
 - Optional generated scripts: `.smartspec/generated-scripts/**`
 
@@ -171,7 +171,7 @@ If any rule fails: `exit 2`.
 
 All runs produce a unique run folder.
 
-- Default report root: `.smartspec/reports/observability-configurator/<run-id>/...`
+- Default report root: `.spec/reports/observability-configurator/<run-id>/...`
 
 Artifacts (safe outputs):
 
@@ -226,16 +226,16 @@ This workflow should act as a producer of **deployment evidence hooks** and shou
 ### 7.1 Evidence inputs (optional)
 
 - NFR/perf verifier summary:
-  - `.smartspec/reports/nfr-perf-verifier/<run-id>/summary.json`
+  - `.spec/reports/nfr-perf-verifier/<run-id>/summary.json`
 - Test runner/analyzer summaries (for alert/noise tuning signals):
-  - `.smartspec/reports/test-suite-runner/<run-id>/summary.json`
-  - `.smartspec/reports/test-report-analyzer/<run-id>/summary.json`
+  - `.spec/reports/test-suite-runner/<run-id>/summary.json`
+  - `.spec/reports/test-report-analyzer/<run-id>/summary.json`
 
 ### 7.2 Evidence outputs (consumed by deployment_planner)
 
 The generated report MUST include evidence pointers suitable for release/deploy planning:
 
-- `.smartspec/reports/observability-configurator/<run-id>/summary.json`
+- `.spec/reports/observability-configurator/<run-id>/summary.json`
 - (optional) `bundle.hashes.json`
 
 Deployment planner may reference these as part of the deployment checklist.
@@ -274,7 +274,7 @@ Deployment planner may reference these as part of the deployment checklist.
 /smartspec_observability_configurator \
   --spec specs/<category>/<spec-id>/spec.md \
   --obs-platform opentelemetry \
-  --out .smartspec/reports/observability-configurator \
+  --out .spec/reports/observability-configurator \
   --json
 ```
 
@@ -287,7 +287,7 @@ Deployment planner may reference these as part of the deployment checklist.
   --target-dir <path/approved/by/config> \
   --write-runtime-config \
   --apply \
-  --out .smartspec/reports/observability-configurator \
+  --out .spec/reports/observability-configurator \
   --json
 ```
 
@@ -297,7 +297,7 @@ Deployment planner may reference these as part of the deployment checklist.
 /smartspec_observability_configurator.md \
   --spec specs/<category>/<spec-id>/spec.md \
   --obs-platform opentelemetry \
-  --out .smartspec/reports/observability-configurator \
+  --out .spec/reports/observability-configurator \
   --json \
   --platform kilo
 ```

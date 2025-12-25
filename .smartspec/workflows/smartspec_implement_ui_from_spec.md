@@ -197,7 +197,7 @@ This workflow MUST follow:
 ### Preview Mode
 
 ```
-.smartspec/reports/implement-ui-from-spec/<run-id>/
+.spec/reports/implement-ui-from-spec/<run-id>/
 ├── components/                    # Generated component files
 │   ├── ContactForm.ts
 │   ├── NameField.ts

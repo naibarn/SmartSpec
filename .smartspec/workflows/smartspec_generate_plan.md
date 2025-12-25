@@ -45,7 +45,7 @@ Key goals:
 - **Config:** `.spec/smartspec.config.yaml` (NOT `smartspec.config.yaml` at root)
 - **Spec Index:** `.spec/SPEC_INDEX.json` (NOT `SPEC_INDEX.json` at root)
 - **Registry:** `.spec/registry/` (component registry, reuse index)
-- **Reports:** `.smartspec/reports/` (workflow outputs, previews, diffs)
+- **Reports:** `.spec/reports/` (workflow outputs, previews, diffs)
 - **Scripts:** `.spec/scripts/` (automation scripts)
 
 **When searching for these files, ALWAYS use the `.spec/` prefix from project root.**
@@ -63,7 +63,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs):
 
-- `.smartspec/reports/generate-plan/**`
+- `.spec/reports/generate-plan/**`
 
 Governed writes (**requires** `--apply`):
 
@@ -81,7 +81,7 @@ Forbidden writes (must hard-fail):
 
 - Without `--apply`:
   - MUST NOT modify `specs/**/plan.md`.
-  - MUST write a deterministic preview bundle to `.smartspec/reports/`.
+  - MUST write a deterministic preview bundle to `.spec/reports/`.
 
 - With `--apply`:
   - MAY update `specs/**/plan.md`.
@@ -169,7 +169,7 @@ If any newly-generated content matches configured redaction patterns:
 - `--lang <th|en>`
 - `--platform <cli|kilo|ci|other>`
 - `--apply`
-- `--out <path>` (`.smartspec/reports/` root; safe outputs only)
+- `--out <path>` (`.spec/reports/` root; safe outputs only)
 - `--json`
 - `--quiet`
 
@@ -203,10 +203,10 @@ No other flags in v6.
 
 Write:
 
-- `.smartspec/reports/generate-plan/<run-id>/preview/<spec-id>/plan.md`
-- `.smartspec/reports/generate-plan/<run-id>/diff/<spec-id>.patch` (best-effort)
-- `.smartspec/reports/generate-plan/<run-id>/report.md`
-- `.smartspec/reports/generate-plan/<run-id>/summary.json` (if `--json`)
+- `.spec/reports/generate-plan/<run-id>/preview/<spec-id>/plan.md`
+- `.spec/reports/generate-plan/<run-id>/diff/<spec-id>.patch` (best-effort)
+- `.spec/reports/generate-plan/<run-id>/report.md`
+- `.spec/reports/generate-plan/<run-id>/summary.json` (if `--json`)
 
 If `--out` is provided, write under `<out>/<run-id>/...`.
 
@@ -216,7 +216,7 @@ After generating the preview and before applying, the AI agent **MUST** validate
 
 **Validation Command:**
 ```bash
-python3 .spec/scripts/validate_plan.py .smartspec/reports/generate-plan/<run-id>/preview/<spec-id>/plan.md
+python3 .spec/scripts/validate_plan.py .spec/reports/generate-plan/<run-id>/preview/<spec-id>/plan.md
 ```
 
 **Validation Rules:**
@@ -326,7 +326,7 @@ To ensure consistent and complete output, the AI agent executing this workflow M
 - **Prerequisites:** ...
 - **Deliverables:** ...
 - **Evidence & Verification Artifacts:**
-  - **Report Path:** `.smartspec/reports/.../run-id/...`
+  - **Report Path:** `.spec/reports/.../run-id/...`
   - **Verification Results:** `run_id`, `status`, `timestamp`
   - **File Inventory:** paths of created/modified files with sizes/hashes
   - **Test Results:** coverage %, pass/fail counts

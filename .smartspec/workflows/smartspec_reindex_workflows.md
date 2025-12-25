@@ -43,7 +43,7 @@ This workflow MUST follow:
 Allowed writes:
 
 - Governed registry: `.spec/WORKFLOWS_INDEX.yaml` (**requires** `--apply`)
-- Safe outputs (reports/snippets): `.smartspec/reports/reindex-workflows/**` (no `--apply` required)
+- Safe outputs (reports/snippets): `.spec/reports/reindex-workflows/**` (no `--apply` required)
 
 Forbidden writes (must hard-fail):
 
@@ -203,8 +203,8 @@ Refresh under `workflows:`:
 
 The workflow MUST write a report under a run folder:
 
-- `.smartspec/reports/reindex-workflows/<run-id>/report.md`
-- `.smartspec/reports/reindex-workflows/<run-id>/summary.json` (if `--json`)
+- `.spec/reports/reindex-workflows/<run-id>/report.md`
+- `.spec/reports/reindex-workflows/<run-id>/summary.json` (if `--json`)
 
 If `--out` is provided:
 

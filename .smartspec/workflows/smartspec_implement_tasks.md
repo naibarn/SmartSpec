@@ -201,9 +201,9 @@ python3 .smartspec/scripts/detect_duplicates.py \
 
 Write:
 
-- `.smartspec/reports/implement-tasks/<run-id>/report.md`
-- `.smartspec/reports/implement-tasks/<run-id>/summary.json`
-- `.smartspec/reports/implement-tasks/<run-id>/change_plan.md` (always generated when `--apply` is present; generated before any write)
+- `.spec/reports/implement-tasks/<run-id>/report.md`
+- `.spec/reports/implement-tasks/<run-id>/summary.json`
+- `.spec/reports/implement-tasks/<run-id>/change_plan.md` (always generated when `--apply` is present; generated before any write)
 
 ### 4) Post-Implementation Validation (MANDATORY)
 
@@ -263,14 +263,14 @@ After completing this workflow, **MUST** provide clear next steps based on the m
 ```bash
 /smartspec_verify_tasks_progress_strict \
   specs/<category>/<spec-id>/tasks.md \
-  --out .smartspec/reports/verify-tasks-progress/<spec-id>
+  --out .spec/reports/verify-tasks-progress/<spec-id>
 ```
 
 **Kilo Code:**
 ```bash
 /smartspec_verify_tasks_progress_strict.md \
   specs/<category>/<spec-id>/tasks.md \
-  --out .smartspec/reports/verify-tasks-progress/<spec-id> \
+  --out .spec/reports/verify-tasks-progress/<spec-id> \
   --platform kilo
 ```
 

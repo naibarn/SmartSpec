@@ -31,7 +31,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Reports: `.smartspec/reports/api-contract-validation/**`
+- Reports: `.spec/reports/api-contract-validation/**`
 
 Forbidden writes (must hard-fail):
 
@@ -180,7 +180,7 @@ Unless config overrides, the workflow SHOULD:
 
 Outputs are always written under a run folder to prevent overwrites.
 
-- Default root: `.smartspec/reports/api-contract-validation/<run-id>/...`
+- Default root: `.spec/reports/api-contract-validation/<run-id>/...`
 - If `--out` is provided, it is treated as a *requested* base output root and MUST pass Output root safety validation; otherwise `exit 2`.
 
 ### Exit codes

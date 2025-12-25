@@ -39,7 +39,7 @@ This workflow MUST follow:
 
 Allowed writes:
 
-- Report outputs: `.smartspec/reports/ui-accessibility-audit/**` (no `--apply` required)
+- Report outputs: `.spec/reports/ui-accessibility-audit/**` (no `--apply` required)
 
 Forbidden writes (must hard-fail):
 

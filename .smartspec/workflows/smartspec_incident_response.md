@@ -36,7 +36,7 @@ This workflow MUST:
 - **Config:** `.spec/smartspec.config.yaml`
 - **Spec Index:** `.spec/SPEC_INDEX.json`
 - **Registry:** `.spec/registry/`
-- **Reports:** `.smartspec/reports/`
+- **Reports:** `.spec/reports/`
 
 ---
 
@@ -51,8 +51,8 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs):
 
-- `.smartspec/reports/incidents/**`
-- `.smartspec/reports/post-mortems/**`
+- `.spec/reports/incidents/**`
+- `.spec/reports/post-mortems/**`
 
 Forbidden writes (must hard-fail):
 
@@ -136,8 +136,8 @@ This workflow must defend against:
 
 ## Output Structure
 
-- **Incident Reports:** Saved in `.smartspec/reports/incidents/`.
-- **Post-Mortems:** Saved in `.smartspec/reports/post-mortems/`.
+- **Incident Reports:** Saved in `.spec/reports/incidents/`.
+- **Post-Mortems:** Saved in `.spec/reports/post-mortems/`.
 - **Action Items:** Sent to `smartspec_feedback_aggregator`.
 
 ---

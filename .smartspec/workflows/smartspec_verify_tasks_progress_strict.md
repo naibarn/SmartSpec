@@ -10,7 +10,7 @@ category: verify
 > **Canonical path:** `.smartspec/workflows/smartspec_verify_tasks_progress_strict.md`
 > **Version:** 6.2.0
 > **Category:** verify
-> **Writes:** reports only (`.smartspec/reports/**`)
+> **Writes:** reports only (`.spec/reports/**`)
 
 ## Purpose
 
@@ -20,7 +20,7 @@ This workflow MUST:
 
 - treat checkboxes as **non-authoritative** (they are not evidence)
 - verify each task via **explicit evidence hooks** (`code|test|ui|docs`)
-- produce an auditable report under `.smartspec/reports/verify-tasks-progress/**`
+- produce an auditable report under `.spec/reports/verify-tasks-progress/**`
 - never modify `tasks.md` (checkbox updates are handled by `/smartspec_sync_tasks_checkboxes`)
 
 It is **safe-by-default** and performs **reports-only** writes.
@@ -38,7 +38,7 @@ This workflow MUST follow:
 
 Allowed writes:
 
-- Safe outputs (reports): `.smartspec/reports/verify-tasks-progress/**`
+- Safe outputs (reports): `.spec/reports/verify-tasks-progress/**`
 
 Forbidden writes (must hard-fail):
 
@@ -93,7 +93,7 @@ This workflow must defend against:
 Notes:
 
 - This workflow never uses `--apply`.
-- If `--out` is not provided, it writes to `.smartspec/reports/verify-tasks-progress/`.
+- If `--out` is not provided, it writes to `.spec/reports/verify-tasks-progress/`.
 
 ---
 
@@ -210,8 +210,8 @@ If your tasks file has lots of legacy evidence, migrate it first:
 
 Write under a run folder:
 
-- `.smartspec/reports/verify-tasks-progress/<run-id>/report.md`
-- `.smartspec/reports/verify-tasks-progress/<run-id>/summary.json` (when `--json` or `--report-format=both/json`)
+- `.spec/reports/verify-tasks-progress/<run-id>/report.md`
+- `.spec/reports/verify-tasks-progress/<run-id>/summary.json` (when `--json` or `--report-format=both/json`)
 
 If `--out` is provided:
 

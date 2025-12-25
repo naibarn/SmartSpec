@@ -8,7 +8,7 @@ platform_support:
   - kilo
 requires_apply: false
 writes:
-  - ".smartspec/reports/**"
+  - ".spec/reports/**"
   - "specs/**/tasks.md (ONLY with --apply)"
 ---
 
@@ -18,7 +18,7 @@ writes:
 Generate/merge `tasks.md` from SmartSpec `spec.md` (or `plan.md` / `ui-spec.json`) with **preview-first governance** and **strict evidence hooks** that are compatible with `smartspec_verify_tasks_progress_strict`.
 
 Primary outcomes:
-- Preview bundle under `.smartspec/reports/generate-tasks/**`
+- Preview bundle under `.spec/reports/generate-tasks/**`
 - `tasks.md` preview that passes strict validators
 - Optional governed update of `specs/**/tasks.md` only when `--apply`
 
@@ -28,7 +28,7 @@ Primary outcomes:
 
 ### Preview-first (MUST)
 - Default mode and `--validate-only` MUST NOT modify any file under `specs/**`.
-- Without `--apply`, this workflow MUST only write to `.smartspec/reports/**`.
+- Without `--apply`, this workflow MUST only write to `.spec/reports/**`.
 
 ### Governed writes (MUST)
 - With `--apply`, may update/create ONLY:
@@ -68,7 +68,7 @@ The workflow MUST resolve the spec root folder as:
 
 ## Outputs
 All outputs MUST be written under:
-- `.smartspec/reports/generate-tasks/<run-id>/`
+- `.spec/reports/generate-tasks/<run-id>/`
 
 Files:
 - `preview/<spec-folder>/tasks.md`
@@ -179,7 +179,7 @@ Before writing preview, normalize any evidence into canonical form:
 > Generator implementations SHOULD reuse the same normalization logic.
 
 ### Step 4 — Write preview bundle
-Write to `.smartspec/reports/generate-tasks/<run-id>/`:
+Write to `.spec/reports/generate-tasks/<run-id>/`:
 - `preview/<spec-folder>/tasks.md`
 - `diff/<spec-id>.patch`
 - `report.md`
@@ -190,12 +190,12 @@ Run validators on the **preview** tasks file:
 
 1) Evidence hooks:
 ```bash
-python3 .smartspec/scripts/validate_evidence_hooks.py .smartspec/reports/generate-tasks/<run-id>/preview/<spec-folder>/tasks.md
+python3 .smartspec/scripts/validate_evidence_hooks.py .spec/reports/generate-tasks/<run-id>/preview/<spec-folder>/tasks.md
 ```
 
 2) Tasks structure:
 ```bash
-python3 .smartspec/scripts/validate_tasks_enhanced.py .smartspec/reports/generate-tasks/<run-id>/preview/<spec-folder>/tasks.md --spec specs/<category>/<spec-id>/spec.md
+python3 .smartspec/scripts/validate_tasks_enhanced.py .spec/reports/generate-tasks/<run-id>/preview/<spec-folder>/tasks.md --spec specs/<category>/<spec-id>/spec.md
 ```
 
 If any validator fails:
@@ -204,7 +204,7 @@ If any validator fails:
 
 ### Step 6 — Apply (ONLY if `--apply`)
 - Create backup:
-  - `.smartspec/reports/generate-tasks/<run-id>/backup/<spec-folder>/tasks.md`
+  - `.spec/reports/generate-tasks/<run-id>/backup/<spec-folder>/tasks.md`
 - Atomic replace:
   - `specs/<category>/<spec-id>/tasks.md`
 

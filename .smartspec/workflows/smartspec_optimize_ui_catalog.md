@@ -39,7 +39,7 @@ This workflow MUST follow:
 Allowed writes:
 
 - Cache outputs: `.spec/cache/ui-catalog/**` (**requires** `--apply`)
-- Safe outputs (reports): `.smartspec/reports/optimize-ui-catalog/**` (no `--apply` required)
+- Safe outputs (reports): `.spec/reports/optimize-ui-catalog/**` (no `--apply` required)
 
 Forbidden writes (must hard-fail):
 
@@ -155,8 +155,8 @@ Write cache files:
 
 Write report:
 
-- `.smartspec/reports/optimize-ui-catalog/<run-id>/report.md`
-- `.smartspec/reports/optimize-ui-catalog/<run-id>/summary.json` (when `--json`)
+- `.spec/reports/optimize-ui-catalog/<run-id>/report.md`
+- `.spec/reports/optimize-ui-catalog/<run-id>/summary.json` (when `--json`)
 
 ---
 

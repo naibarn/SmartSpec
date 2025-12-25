@@ -409,7 +409,7 @@ Total: 17 components
 ### Preview Mode
 
 ```
-.smartspec/reports/manage-ui-catalog/<run-id>/
+.spec/reports/manage-ui-catalog/<run-id>/
 ├── report.md                      # Full report
 ├── catalog-preview.json           # Preview of changes
 ├── diff.txt                       # Diff of changes

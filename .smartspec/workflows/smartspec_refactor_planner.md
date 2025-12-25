@@ -14,8 +14,8 @@ license: MIT
 # Governance & Safety
 safety:
   allow_writes_only_under:
-    - ".smartspec/reports/refactoring/"
-    - ".smartspec/reports/previews/"
+    - ".spec/reports/refactoring/"
+    - ".spec/reports/previews/"
   deny_writes_under:
     - ".git/"
     - ".smartspec/"
@@ -80,7 +80,7 @@ flags:
 
 ## ⚙️ Governance Contract
 
-- **Allowed writes:** `.smartspec/reports/refactoring/`, `.smartspec/reports/previews/`
+- **Allowed writes:** `.spec/reports/refactoring/`, `.spec/reports/previews/`
 - **Forbidden writes:** `.git/`, `.smartspec/`, `src/`
 - **--apply required:** To create tasks.md
 

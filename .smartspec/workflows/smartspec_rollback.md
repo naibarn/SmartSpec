@@ -37,7 +37,7 @@ This workflow MUST:
 - **Config:** `.spec/smartspec.config.yaml`
 - **Spec Index:** `.spec/SPEC_INDEX.json`
 - **Registry:** `.spec/registry/`
-- **Reports:** `.smartspec/reports/`
+- **Reports:** `.spec/reports/`
 
 ---
 
@@ -52,7 +52,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs):
 
-- `.smartspec/reports/rollbacks/**`
+- `.spec/reports/rollbacks/**`
 
 Governed writes (**requires** `--apply`):
 
@@ -64,7 +64,7 @@ Forbidden writes (must hard-fail):
 
 ### `--apply` behavior
 
-- Without `--apply`: Generate a rollback plan and save it to `.smartspec/reports/rollbacks/`.
+- Without `--apply`: Generate a rollback plan and save it to `.spec/reports/rollbacks/`.
 - With `--apply`: Execute the rollback plan.
 
 ---
@@ -137,14 +137,14 @@ This workflow must defend against:
 ### Phase 5: Reporting
 
 1.  **Generate Rollback Report:** Create a report detailing the rollback process, including the reason for the rollback, the steps taken, and the verification results.
-2.  **Save Report:** Save the report in `.smartspec/reports/rollbacks/`.
+2.  **Save Report:** Save the report in `.spec/reports/rollbacks/`.
 3.  **Notify Stakeholders:** Notify stakeholders that the rollback is complete.
 
 ---
 
 ## Output Structure
 
-- **Rollback Reports:** Saved in `.smartspec/reports/rollbacks/`.
+- **Rollback Reports:** Saved in `.spec/reports/rollbacks/`.
 
 ---
 

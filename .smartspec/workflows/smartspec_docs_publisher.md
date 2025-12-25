@@ -37,7 +37,7 @@ It is **preview-first**:
 
 It is **reports-only**:
 
-- Writes only under `.smartspec/reports/docs-publisher/**`.
+- Writes only under `.spec/reports/docs-publisher/**`.
 - Any required workspace for clone/copy operations must live under the run folder.
 
 ---
@@ -53,11 +53,11 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Reports: `.smartspec/reports/docs-publisher/**`
+- Reports: `.spec/reports/docs-publisher/**`
 
 Allowed temporary workspace (safe output):
 
-- `.smartspec/reports/docs-publisher/<run-id>/workspace/**`
+- `.spec/reports/docs-publisher/<run-id>/workspace/**`
 
 Forbidden writes (must hard-fail):
 
@@ -182,7 +182,7 @@ Mode:
 
 Recommended: point `--docs-dir` to output of `smartspec_docs_generator`:
 
-- preview bundle: `.smartspec/reports/docs-generator/<run-id>/bundle.preview/`
+- preview bundle: `.spec/reports/docs-generator/<run-id>/bundle.preview/`
 - or governed docs directory after `docs_generator --apply --write-docs`
 
 In `--mode=strict`, the workflow SHOULD require a `bundle.hashes.json` nearby or a `docs_generator` summary reference to ensure provenance.
@@ -208,7 +208,7 @@ In apply mode, before any destructive operations, MUST:
 
 All runs produce a unique run folder.
 
-- Default root: `.smartspec/reports/docs-publisher/<run-id>/...`
+- Default root: `.spec/reports/docs-publisher/<run-id>/...`
 
 Artifacts:
 
@@ -288,12 +288,12 @@ Each check MUST emit a stable ID (`DPU-xxx`).
 
 ```bash
 /smartspec_docs_publisher \
-  --docs-dir .smartspec/reports/docs-generator/<run-id>/bundle.preview \
+  --docs-dir .spec/reports/docs-generator/<run-id>/bundle.preview \
   --publish-platform github-pages \
   --version v1.2.3 \
   --remote origin \
   --github-branch gh-pages \
-  --out .smartspec/reports/docs-publisher \
+  --out .spec/reports/docs-publisher \
   --json
 ```
 
@@ -301,14 +301,14 @@ Each check MUST emit a stable ID (`DPU-xxx`).
 
 ```bash
 /smartspec_docs_publisher \
-  --docs-dir .smartspec/reports/docs-generator/<run-id>/bundle.preview \
+  --docs-dir .spec/reports/docs-generator/<run-id>/bundle.preview \
   --publish-platform github-pages \
   --version v1.2.3 \
   --remote origin \
   --github-branch gh-pages \
   --allow-network \
   --apply \
-  --out .smartspec/reports/docs-publisher \
+  --out .spec/reports/docs-publisher \
   --json
 ```
 
@@ -316,14 +316,14 @@ Each check MUST emit a stable ID (`DPU-xxx`).
 
 ```bash
 /smartspec_docs_publisher \
-  --docs-dir .smartspec/reports/docs-generator/<run-id>/bundle.preview \
+  --docs-dir .spec/reports/docs-generator/<run-id>/bundle.preview \
   --publish-platform readthedocs \
   --version v1.2.3 \
   --rtd-project-slug my-project \
   --rtd-webhook-secret-ref env:RTD_WEBHOOK_SECRET \
   --allow-network \
   --apply \
-  --out .smartspec/reports/docs-publisher \
+  --out .spec/reports/docs-publisher \
   --json
 ```
 
@@ -331,14 +331,14 @@ Each check MUST emit a stable ID (`DPU-xxx`).
 
 ```bash
 /smartspec_docs_publisher.md \
-  --docs-dir .smartspec/reports/docs-generator/<run-id>/bundle.preview \
+  --docs-dir .spec/reports/docs-generator/<run-id>/bundle.preview \
   --publish-platform github-pages \
   --version v1.2.3 \
   --remote origin \
   --github-branch gh-pages \
   --allow-network \
   --apply \
-  --out .smartspec/reports/docs-publisher \
+  --out .spec/reports/docs-publisher \
   --json \
   --platform kilo
 ```

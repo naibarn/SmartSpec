@@ -30,7 +30,7 @@ Orchestrate a hotfix from a released baseline by:
 This workflow is **highly privileged** because it executes VCS operations.
 
 - **Preview-first:** Without `--apply`, it generates a step-by-step plan and the exact commands it would run.
-- **Reports-only:** It writes only under `.smartspec/reports/**`.
+- **Reports-only:** It writes only under `.spec/reports/**`.
 
 ---
 
@@ -45,7 +45,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Reports: `.smartspec/reports/hotfix-assistant/**`
+- Reports: `.spec/reports/hotfix-assistant/**`
 
 Optional safe outputs:
 
@@ -137,12 +137,12 @@ Branch naming is deterministic and avoids tag/branch collisions:
 ### 4.2 Recommended (evidence-first alignment)
 
 - `--verify-summary <path>`: strict verification summary for tasks (evidence-first gate)
-  - Expected convention: `.smartspec/reports/verify-tasks-progress/<run-id>/summary.json`
+  - Expected convention: `.spec/reports/verify-tasks-progress/<run-id>/summary.json`
 - `--deployment-summary <path>`: deployment planner summary
-  - Expected convention: `.smartspec/reports/deployment-planner/<run-id>/summary.json`
+  - Expected convention: `.spec/reports/deployment-planner/<run-id>/summary.json`
 - `--release-notes <path>`: release notes markdown
   - Preferred governed: `specs/<category>/<spec-id>/deployment/release_notes.md`
-  - Or planner preview: `.smartspec/reports/deployment-planner/<run-id>/release_notes.preview.md`
+  - Or planner preview: `.spec/reports/deployment-planner/<run-id>/release_notes.preview.md`
 
 ### 4.3 Optional
 
@@ -201,11 +201,11 @@ Quality gates (optional but recommended):
   --commit-sha <sha> \
   --remote origin \
   --main-branch main \
-  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
-  --deployment-summary .smartspec/reports/deployment-planner/<run-id>/summary.json \
+  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --deployment-summary .spec/reports/deployment-planner/<run-id>/summary.json \
   --release-notes specs/<category>/<spec-id>/deployment/release_notes.md \
   --test-script test \
-  --out .smartspec/reports/hotfix-assistant \
+  --out .spec/reports/hotfix-assistant \
   --json
 ```
 
@@ -220,12 +220,12 @@ Quality gates (optional but recommended):
   --main-branch main \
   --allow-network \
   --require-tests-pass \
-  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
-  --deployment-summary .smartspec/reports/deployment-planner/<run-id>/summary.json \
+  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --deployment-summary .spec/reports/deployment-planner/<run-id>/summary.json \
   --release-notes specs/<category>/<spec-id>/deployment/release_notes.md \
   --test-script test \
   --apply \
-  --out .smartspec/reports/hotfix-assistant \
+  --out .spec/reports/hotfix-assistant \
   --json
 ```
 
@@ -240,12 +240,12 @@ Quality gates (optional but recommended):
   --main-branch main \
   --allow-network \
   --require-tests-pass \
-  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
-  --deployment-summary .smartspec/reports/deployment-planner/<run-id>/summary.json \
+  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --deployment-summary .spec/reports/deployment-planner/<run-id>/summary.json \
   --release-notes specs/<category>/<spec-id>/deployment/release_notes.md \
   --test-script test \
   --apply \
-  --out .smartspec/reports/hotfix-assistant \
+  --out .spec/reports/hotfix-assistant \
   --json \
   --platform kilo
 ```
@@ -256,7 +256,7 @@ Quality gates (optional but recommended):
 
 Outputs are written under a unique run folder.
 
-- Default root: `.smartspec/reports/hotfix-assistant/<run-id>/...`
+- Default root: `.spec/reports/hotfix-assistant/<run-id>/...`
 - If `--out` is provided, it is treated as a requested base output root and MUST pass Output root safety validation; otherwise `exit 2`.
 
 Artifacts:
@@ -273,11 +273,11 @@ Artifacts:
 
 This workflow MUST align with the updated workflows by treating their outputs as evidence:
 
-- **Strict verification:** `.smartspec/reports/verify-tasks-progress/<run-id>/summary.json`
-- **Deployment planner:** `.smartspec/reports/deployment-planner/<run-id>/summary.json`
-- **Test runner (executed by this workflow):** `.smartspec/reports/test-suite-runner/<run-id>/summary.json`
-- **Test analyzer (optional follow-up):** `.smartspec/reports/test-report-analyzer/<run-id>/summary.json`
-- **Release tagger (called in apply mode):** `.smartspec/reports/release-tagger/<run-id>/summary.json`
+- **Strict verification:** `.spec/reports/verify-tasks-progress/<run-id>/summary.json`
+- **Deployment planner:** `.spec/reports/deployment-planner/<run-id>/summary.json`
+- **Test runner (executed by this workflow):** `.spec/reports/test-suite-runner/<run-id>/summary.json`
+- **Test analyzer (optional follow-up):** `.spec/reports/test-report-analyzer/<run-id>/summary.json`
+- **Release tagger (called in apply mode):** `.spec/reports/release-tagger/<run-id>/summary.json`
 
 The hotfix report MUST include these paths (when available) and MUST NOT claim completion based on checkboxes.
 

@@ -163,7 +163,7 @@ Use this when you **do not have `spec.md` yet**.
 ```bash
 /smartspec_generate_spec_from_prompt \
   "<your feature/product prompt>" \
-  --out .smartspec/reports/generate-spec-from-prompt \
+  --out .spec/reports/generate-spec-from-prompt \
   --json
 ```
 
@@ -171,7 +171,7 @@ Use this when you **do not have `spec.md` yet**.
 ```bash
 /smartspec_generate_spec_from_prompt.md \
   "<your feature/product prompt>" \
-  --out .smartspec/reports/generate-spec-from-prompt \
+  --out .spec/reports/generate-spec-from-prompt \
   --json \
   --platform kilo
 ```
@@ -245,7 +245,7 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
 /smartspec_implement_tasks \
   specs/feature/spec-002-user-management/tasks.md \
   --validate-only \
-  --out .smartspec/reports/implement-tasks/spec-002 \
+  --out .spec/reports/implement-tasks/spec-002 \
   --json
 
 # Apply and write code
@@ -253,7 +253,7 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
   specs/feature/spec-002-user-management/tasks.md \
   --apply \
   --write-code \
-  --out .smartspec/reports/implement-tasks/spec-002 \
+  --out .spec/reports/implement-tasks/spec-002 \
   --json
 ```
 
@@ -263,7 +263,7 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
 /smartspec_implement_tasks.md \
   specs/feature/spec-002-user-management/tasks.md \
   --validate-only \
-  --out .smartspec/reports/implement-tasks/spec-002 \
+  --out .spec/reports/implement-tasks/spec-002 \
   --json \
   --platform kilo
 
@@ -272,7 +272,7 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
   specs/feature/spec-002-user-management/tasks.md \
   --apply \
   --write-code \
-  --out .smartspec/reports/implement-tasks/spec-002 \
+  --out .spec/reports/implement-tasks/spec-002 \
   --json \
   --platform kilo
 ```
@@ -283,7 +283,7 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
 ```bash
 /smartspec_verify_tasks_progress_strict \
   specs/feature/spec-002-user-management/tasks.md \
-  --out .smartspec/reports/verify-tasks-progress/spec-002 \
+  --out .spec/reports/verify-tasks-progress/spec-002 \
   --json
 ```
 
@@ -291,7 +291,7 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
 ```bash
 /smartspec_verify_tasks_progress_strict.md \
   specs/feature/spec-002-user-management/tasks.md \
-  --out .smartspec/reports/verify-tasks-progress/spec-002 \
+  --out .spec/reports/verify-tasks-progress/spec-002 \
   --json \
   --platform kilo
 ```
@@ -715,7 +715,7 @@ This section provides comprehensive parameter documentation for all 40 workflows
 ```bash
 /smartspec_generate_spec_from_prompt \
   "<your feature/product prompt>" \
-  --out .smartspec/reports/generate-spec-from-prompt \
+  --out .spec/reports/generate-spec-from-prompt \
   --json
 ```
 
@@ -834,7 +834,7 @@ This section provides comprehensive parameter documentation for all 40 workflows
   specs/feature/spec-002-user-management/tasks.md \
   --apply \
   --write-code \
-  --out .smartspec/reports/implement-tasks/spec-002 \
+  --out .spec/reports/implement-tasks/spec-002 \
   --json
 ```
 

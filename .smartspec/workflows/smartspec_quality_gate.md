@@ -32,7 +32,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Reports: `.smartspec/reports/quality-gate/**`
+- Reports: `.spec/reports/quality-gate/**`
 
 Forbidden writes (must hard-fail):
 
@@ -166,7 +166,7 @@ To prevent accidental overwrites, outputs are always written under a run folder.
   - `<out>/<profile>/<run-id>/artifacts/*` (optional)
 
 - If `--out` is not provided, default to:
-  - `.smartspec/reports/quality-gate/<profile>/<run-id>/...`
+  - `.spec/reports/quality-gate/<profile>/<run-id>/...`
 
 Where `<run-id>` is timestamp + short hash of **redacted** normalized inputs (no secrets).
 

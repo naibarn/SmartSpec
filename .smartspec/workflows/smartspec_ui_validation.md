@@ -36,7 +36,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Reports: `.smartspec/reports/ui-validation/**`
+- Reports: `.spec/reports/ui-validation/**`
 
 Forbidden writes (must hard-fail):
 
@@ -161,7 +161,7 @@ Hardening requirements:
   - `<out>/artifacts/*` (optional)
 
 - If `--out` is not provided, default to:
-  - `.smartspec/reports/ui-validation/<mode>/<run-id>/...`
+  - `.spec/reports/ui-validation/<mode>/<run-id>/...`
 
 Where `<run-id>` is timestamp + short hash of normalized inputs (no secrets).
 

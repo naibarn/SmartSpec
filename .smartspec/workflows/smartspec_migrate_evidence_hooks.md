@@ -13,7 +13,7 @@ requires_apply: false
 # Allowed writes (preview-only)
 writes:
   preview_only:
-    - ".smartspec/reports/migrate-evidence-hooks/**"
+    - ".spec/reports/migrate-evidence-hooks/**"
   governed_on_apply:
     - "specs/**/tasks.md"
 
@@ -95,9 +95,9 @@ When **NOT** using `--apply`:
 
 - MUST NOT modify `specs/**/tasks.md`
 - MUST write ONLY to:
-  - `.smartspec/reports/migrate-evidence-hooks/<run-id>/preview/**`
-  - `.smartspec/reports/migrate-evidence-hooks/<run-id>/diff.patch`
-  - `.smartspec/reports/migrate-evidence-hooks/<run-id>/report.md`
+  - `.spec/reports/migrate-evidence-hooks/<run-id>/preview/**`
+  - `.spec/reports/migrate-evidence-hooks/<run-id>/diff.patch`
+  - `.spec/reports/migrate-evidence-hooks/<run-id>/report.md`
 
 ### Apply mode
 
@@ -105,7 +105,7 @@ When using `--apply`:
 
 - MAY update exactly one governed file: the provided `specs/**/tasks.md`
 - MUST create a backup under:
-  - `.smartspec/reports/migrate-evidence-hooks/<run-id>/backup/**`
+  - `.spec/reports/migrate-evidence-hooks/<run-id>/backup/**`
 - MUST apply changes atomically (temp file + rename)
 - MUST NOT create helper scripts (no root scripts, no `.spec/scripts/*`)
 

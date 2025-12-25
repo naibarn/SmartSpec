@@ -14,8 +14,8 @@ license: MIT
 # Governance & Safety
 safety:
   allow_writes_only_under:
-    - ".smartspec/reports/performance/"
-    - ".smartspec/reports/previews/"
+    - ".spec/reports/performance/"
+    - ".spec/reports/previews/"
   deny_writes_under:
     - ".git/"
     - ".smartspec/"
@@ -58,7 +58,7 @@ flags:
 ### 1. Run Performance Profile
 - The agent runs the application with a profiler attached
 - It collects performance data under a specific load or scenario
-- It saves the profiling data to `.smartspec/reports/performance/`
+- It saves the profiling data to `.spec/reports/performance/`
 
 ### 2. Analyze Profiling Data
 - The agent analyzes the profiling data to identify hotspots and bottlenecks
@@ -80,7 +80,7 @@ flags:
 
 ## ⚙️ Governance Contract
 
-- **Allowed writes:** `.smartspec/reports/performance/`, `.smartspec/reports/previews/`
+- **Allowed writes:** `.spec/reports/performance/`, `.spec/reports/previews/`
 - **Forbidden writes:** `.git/`, `.smartspec/`, `src/`
 - **--apply required:** To create tasks.md
 

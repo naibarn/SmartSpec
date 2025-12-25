@@ -232,7 +232,7 @@ This workflow MUST follow:
 ### Verification Report
 
 ```
-.smartspec/reports/verify-ui-implementation/<run-id>/
+.spec/reports/verify-ui-implementation/<run-id>/
 ├── report.md                      # Full verification report
 ├── summary.json                   # Machine-readable summary
 ├── issues.json                    # Detailed issues list
@@ -365,7 +365,7 @@ This workflow MUST follow:
 
 Status: PASS (with warnings)
 
-Report: .smartspec/reports/verify-ui-implementation/20251222-143022/report.md
+Report: .spec/reports/verify-ui-implementation/20251222-143022/report.md
 ```
 
 ### Example 2: Strict Mode (CI/CD)
@@ -436,7 +436,7 @@ Status: PASS
 ✅ Fixed: Added keyboard handler to ContactForm
 
 ⚠️ Manual fix required: Add loading state to SubmitButton
-   See: .smartspec/reports/verify-ui-implementation/.../fixes/README.md
+   See: .spec/reports/verify-ui-implementation/.../fixes/README.md
 
 Re-running verification...
 

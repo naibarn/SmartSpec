@@ -35,7 +35,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Reports: `.smartspec/reports/ui-component-audit/**`
+- Reports: `.spec/reports/ui-component-audit/**`
 
 Forbidden writes (must hard-fail):
 
@@ -165,7 +165,7 @@ If limits are reached, the workflow MUST emit `UCA-290 Reduced Coverage` and low
 
 Outputs are always written under a run folder to prevent overwrites.
 
-- Default root: `.smartspec/reports/ui-component-audit/<run-id>/...`
+- Default root: `.spec/reports/ui-component-audit/<run-id>/...`
 - If `--out` is provided, it is treated as a *requested* base output root and MUST pass Output root safety validation; otherwise `exit 2`.
 
 Artifacts:

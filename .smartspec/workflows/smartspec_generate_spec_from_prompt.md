@@ -97,7 +97,7 @@ Allowed writes:
 - Governed specs: `specs/<category>/<spec-id>/**` (**requires** `--apply`)
 - **Governed registries:** `.spec/registry/*.json` (**requires** `--apply`)
 - Governed index: `.spec/SPEC_INDEX.json` (**requires** `--apply`)
-- Safe outputs (previews/reports): `.smartspec/reports/spec-from-prompt/**` (no `--apply` required)
+- Safe outputs (previews/reports): `.spec/reports/spec-from-prompt/**` (no `--apply` required)
 
 Forbidden writes (must hard-fail):
 

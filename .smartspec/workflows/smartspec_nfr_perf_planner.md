@@ -19,7 +19,7 @@ workflow: /smartspec_nfr_perf_planner
 
 Planner-only workflow that converts **NFRs** (latency, throughput, error rate, availability, UX timings, etc.) into structured **performance/load/reliability task proposals**.
 
-This workflow is **reports-only**: it writes planning outputs under `.smartspec/reports/**` and never modifies governed artifacts (`specs/**`, registries, CI, code).
+This workflow is **reports-only**: it writes planning outputs under `.spec/reports/**` and never modifies governed artifacts (`specs/**`, registries, CI, code).
 
 ---
 
@@ -34,7 +34,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Reports: `.smartspec/reports/nfr-perf-planner/**`
+- Reports: `.spec/reports/nfr-perf-planner/**`
 
 Forbidden writes (must hard-fail):
 
@@ -98,7 +98,7 @@ This workflow must defend against:
 Default report directory:
 
 ```
-.smartspec/reports/nfr-perf-planner/<run-id>/
+.spec/reports/nfr-perf-planner/<run-id>/
 ```
 
 Artifacts:

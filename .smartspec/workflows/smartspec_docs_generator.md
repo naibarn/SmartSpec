@@ -30,7 +30,7 @@ Supported modes:
 
 This workflow is **preview-first**:
 
-- Default: writes **reports only** under `.smartspec/reports/docs-generator/**`.
+- Default: writes **reports only** under `.spec/reports/docs-generator/**`.
 - With `--apply` + `--write-docs`: may write docs into a governed target directory (e.g., `docs/`).
 
 It does **not** install dependencies.
@@ -48,7 +48,7 @@ This workflow MUST follow:
 
 **Always allowed writes (safe outputs):**
 
-- Reports: `.smartspec/reports/docs-generator/**`
+- Reports: `.spec/reports/docs-generator/**`
 - Optional prompts: `.smartspec/prompts/**`
 - Optional generated scripts: `.smartspec/generated-scripts/**`
 
@@ -204,7 +204,7 @@ If any validation fails: `exit 2`.
 /smartspec_docs_generator \
   --mode api-docs \
   --spec specs/<category>/<spec-id>/spec.md \
-  --out .smartspec/reports/docs-generator \
+  --out .spec/reports/docs-generator \
   --json
 ```
 
@@ -217,7 +217,7 @@ If any validation fails: `exit 2`.
   --target-dir docs \
   --write-docs \
   --apply \
-  --out .smartspec/reports/docs-generator \
+  --out .spec/reports/docs-generator \
   --json
 ```
 
@@ -227,7 +227,7 @@ If any validation fails: `exit 2`.
 /smartspec_docs_generator.md \
   --mode architecture-diagram \
   --spec specs/<category>/<spec-id>/spec.md \
-  --out .smartspec/reports/docs-generator \
+  --out .spec/reports/docs-generator \
   --json \
   --platform kilo
 ```
@@ -238,7 +238,7 @@ If any validation fails: `exit 2`.
 
 All runs produce a unique run folder.
 
-- Default report root: `.smartspec/reports/docs-generator/<run-id>/...`
+- Default report root: `.spec/reports/docs-generator/<run-id>/...`
 
 Artifacts (safe outputs):
 
@@ -295,16 +295,16 @@ This workflow should integrate with the release/deploy chain as **evidence** and
 Recommended evidence hooks (if your policy requires them):
 
 - Strict verification summary:
-  - `.smartspec/reports/verify-tasks-progress/<run-id>/summary.json`
+  - `.spec/reports/verify-tasks-progress/<run-id>/summary.json`
 - Deployment planner summary:
-  - `.smartspec/reports/deployment-planner/<run-id>/summary.json`
+  - `.spec/reports/deployment-planner/<run-id>/summary.json`
 - Test runner/analyzer summaries (optional):
-  - `.smartspec/reports/test-suite-runner/<run-id>/summary.json`
-  - `.smartspec/reports/test-report-analyzer/<run-id>/summary.json`
+  - `.spec/reports/test-suite-runner/<run-id>/summary.json`
+  - `.spec/reports/test-report-analyzer/<run-id>/summary.json`
 
 Docs generator output evidence:
 
-- `.smartspec/reports/docs-generator/<run-id>/summary.json`
+- `.spec/reports/docs-generator/<run-id>/summary.json`
 
 Deployment planner may reference this evidence in a deployment checklist.
 

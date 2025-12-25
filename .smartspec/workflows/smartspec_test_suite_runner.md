@@ -18,7 +18,7 @@ This is a **reports-only** workflow, but it executes an external test process, w
 
 - It **does not** modify specs, registries, or application source code.
 - It **does not** install dependencies.
-- It writes only report artifacts under `.smartspec/reports/**`.
+- It writes only report artifacts under `.spec/reports/**`.
 
 ---
 
@@ -33,7 +33,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Reports: `.smartspec/reports/test-suite-runner/**`
+- Reports: `.spec/reports/test-suite-runner/**`
 
 Forbidden writes (must hard-fail):
 
@@ -106,9 +106,9 @@ This workflow must defend against:
 ```bash
 /smartspec_test_suite_runner.md \
   --test-script test:unit \
-  --junit-report-path .smartspec/reports/test-suite-runner/_tmp/junit.xml \
+  --junit-report-path .spec/reports/test-suite-runner/_tmp/junit.xml \
   --timeout 600 \
-  --out .smartspec/reports/test-suite-runner \
+  --out .spec/reports/test-suite-runner \
   --json \
   --platform kilo
 ```
@@ -161,7 +161,7 @@ This workflow must defend against:
 
 Outputs are always written under a run folder to prevent overwrites.
 
-- Default root: `.smartspec/reports/test-suite-runner/<run-id>/...`
+- Default root: `.spec/reports/test-suite-runner/<run-id>/...`
 - If `--out` is provided, it is treated as a *requested* base output root and MUST pass Output root safety validation; otherwise `exit 2`.
 
 Artifacts:

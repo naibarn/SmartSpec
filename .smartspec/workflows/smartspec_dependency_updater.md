@@ -14,8 +14,8 @@ license: MIT
 # Governance & Safety
 safety:
   allow_writes_only_under:
-    - ".smartspec/reports/dependency-updates/"
-    - ".smartspec/reports/previews/"
+    - ".spec/reports/dependency-updates/"
+    - ".spec/reports/previews/"
   deny_writes_under:
     - ".git/"
     - ".smartspec/"
@@ -67,7 +67,7 @@ flags:
   - Determines the potential impact on the codebase
 
 ### 3. Generate Report
-- The agent generates a detailed report in `.smartspec/reports/dependency-updates/`
+- The agent generates a detailed report in `.spec/reports/dependency-updates/`
 - The report includes:
   - List of outdated dependencies
   - Security vulnerabilities found
@@ -86,7 +86,7 @@ flags:
 
 ## ⚙️ Governance Contract
 
-- **Allowed writes:** `.smartspec/reports/dependency-updates/`, `.smartspec/reports/previews/`
+- **Allowed writes:** `.spec/reports/dependency-updates/`, `.spec/reports/previews/`
 - **Forbidden writes:** `.git/`, `.smartspec/`, `src/`
 - **--apply required:** To create tasks.md
 

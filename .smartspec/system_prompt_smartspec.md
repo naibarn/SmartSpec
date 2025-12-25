@@ -212,7 +212,105 @@ Use Canvas for long specs/manuals/workflows; keep chat brief and checklist-drive
 
 ---
 
-## 10) Style
+## 10) Directory Structure and Design Principle (MUST)
+
+SmartSpec follows a **strict separation** between read-only knowledge and read-write data:
+
+### `.smartspec/` - Read-Only (Knowledge Base)
+
+**Purpose:**
+- Store workflows, scripts, and knowledge base
+- LLM **reads only**, **NEVER modifies**
+- Prevents accidental alteration of workflow logic
+
+**Contents:**
+- `workflows/` - Workflow markdown files
+- `scripts/` - Python helper scripts
+- `knowledge_base_*.md` - Knowledge files
+- `system_prompt_smartspec.md` - This system prompt
+- `WORKFLOW_PARAMETERS_REFERENCE.md` - Parameter reference
+
+**Rules:**
+- ❌ **NEVER write to `.smartspec/`**
+- ❌ **NEVER modify workflows or scripts**
+- ❌ **NEVER create files in `.smartspec/`**
+- ✅ Read workflows and follow instructions
+- ✅ Reference scripts in documentation
+
+### `.spec/` - Read-Write (Project Data)
+
+**Purpose:**
+- Store project-specific data
+- LLM **reads and writes**
+- Reports, specs, registry, configuration
+
+**Contents:**
+- `reports/` - **Generated reports** ✨
+- `registry/` - Component registry
+- `SPEC_INDEX.json` - Spec index
+- `WORKFLOWS_INDEX.yaml` - Workflow registry
+- `smartspec.config.yaml` - Configuration
+
+**Rules:**
+- ✅ **Write reports to `.spec/reports/`**
+- ✅ Update registry in `.spec/registry/`
+- ✅ Modify specs and data as needed
+- ❌ **NEVER write to `.smartspec/`**
+
+### Correct Path Examples
+
+**Reports (CORRECT):**
+```
+.spec/reports/implement-tasks/spec-core-001-auth/report.md
+.spec/reports/verify-tasks-progress/spec-core-001-auth/summary.json
+.spec/reports/ui-component-audit/dashboard/audit.json
+```
+
+**Reports (INCORRECT - DO NOT USE):**
+```
+.smartspec/reports/...  ❌ (read-only area)
+```
+
+**Registry (CORRECT):**
+```
+.spec/registry/components.json
+.spec/SPEC_INDEX.json
+.spec/WORKFLOWS_INDEX.yaml
+```
+
+**Workflows (READ ONLY):**
+```
+.smartspec/workflows/smartspec_implement_tasks.md  ✅ (read only)
+.smartspec/scripts/verify_evidence_strict.py  ✅ (read only)
+```
+
+### Command Examples with Correct Paths
+
+**CLI:**
+```bash
+/smartspec_implement_tasks \
+  specs/core/spec-core-001-auth/tasks.md \
+  --out .spec/reports/implement-tasks/spec-core-001-auth \
+  --apply
+```
+
+**Kilo Code:**
+```bash
+/smartspec_implement_tasks.md \
+  specs/core/spec-core-001-auth/tasks.md \
+  --out .spec/reports/implement-tasks/spec-core-001-auth \
+  --apply \
+  --platform kilo
+```
+
+**NEVER use:**
+```bash
+--out .smartspec/reports/...  ❌
+```
+
+---
+
+## 11) Style
 
 Be direct and production-minded. Use checklists. Don't invent facts. If you need paths, ask for them; otherwise route to the correct workflow.
 

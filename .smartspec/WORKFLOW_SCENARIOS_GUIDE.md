@@ -42,6 +42,27 @@ This guide provides **scenario-based recommendations** for using SmartSpec workf
 - Use code blocks for clarity
 - If a scenario below shows only one syntax, generate the other syntax following this pattern
 
+### Important: Directory Structure and Design Principle
+
+**CRITICAL:** SmartSpec follows a strict separation between read-only and read-write directories:
+
+- **`.smartspec/`** = Read-Only (workflows, scripts, knowledge) - ❌ NEVER write here
+- **`.spec/`** = Read-Write (reports, specs, registry) - ✅ ALWAYS write reports here
+
+**All workflow outputs MUST go to `.spec/reports/`**, NOT `.smartspec/reports/`.
+
+**Correct:**
+```bash
+--out .spec/reports/implement-tasks/spec-core-001-auth
+```
+
+**Incorrect:**
+```bash
+--out .smartspec/reports/...  ❌ (violates read-only principle)
+```
+
+For detailed explanation, see Section 0.5 in `knowledge_base_smartspec_handbook.md`.
+
 ---
 
 ## Table of Contents

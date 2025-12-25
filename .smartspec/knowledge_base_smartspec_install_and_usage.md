@@ -49,7 +49,83 @@ After installation, verify these directories exist:
 
 ---
 
-## 2) What’s included
+## 1.5) Directory Structure and Design Principle (MUST READ)
+
+SmartSpec follows a **strict separation** between read-only knowledge and read-write data:
+
+### `.smartspec/` - Read-Only (Knowledge Base)
+
+**LLM reads only, NEVER modifies**
+
+**Contents:**
+- `workflows/` - 58 workflow markdown files
+- `scripts/` - 42 Python helper scripts
+- `knowledge_base_*.md` - Knowledge files
+- `system_prompt_smartspec.md` - System prompt
+
+**Rules:**
+- ❌ **NEVER write to `.smartspec/`**
+- ❌ **NEVER modify workflows or scripts**
+- ✅ Read workflows and follow instructions
+
+### `.spec/` - Read-Write (Project Data)
+
+**LLM reads and writes**
+
+**Contents:**
+- `reports/` - **Generated reports** ✨ (ALL workflow outputs)
+- `registry/` - Component registry
+- `SPEC_INDEX.json` - Spec index
+- `WORKFLOWS_INDEX.yaml` - Workflow registry
+- `smartspec.config.yaml` - Configuration
+
+**Rules:**
+- ✅ **Write reports to `.spec/reports/`**
+- ✅ Update registry and specs as needed
+- ❌ **NEVER write to `.smartspec/`**
+
+### Correct Path Examples
+
+**Reports (CORRECT):**
+```
+.spec/reports/implement-tasks/spec-core-001-auth/report.md
+.spec/reports/verify-tasks-progress/spec-core-001-auth/summary.json
+```
+
+**Reports (INCORRECT):**
+```
+.smartspec/reports/...  ❌ (read-only area)
+```
+
+### Command Examples
+
+**CLI:**
+```bash
+/smartspec_implement_tasks \
+  specs/core/spec-core-001-auth/tasks.md \
+  --out .spec/reports/implement-tasks/spec-core-001-auth \
+  --apply
+```
+
+**Kilo Code:**
+```bash
+/smartspec_implement_tasks.md \
+  specs/core/spec-core-001-auth/tasks.md \
+  --out .spec/reports/implement-tasks/spec-core-001-auth \
+  --apply \
+  --platform kilo
+```
+
+**NEVER use:**
+```bash
+--out .smartspec/reports/...  ❌
+```
+
+For detailed explanation, see Section 0.5 in `knowledge_base_smartspec_handbook.md`.
+
+---
+
+## 2) What's included
 
 ### 2.1 Canonical chain (most-used)
 

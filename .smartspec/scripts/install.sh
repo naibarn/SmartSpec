@@ -1,6 +1,6 @@
 #!/bin/bash
 # SmartSpec Installation Script
-# Usage: curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/install.sh | bash
 
 set -e
 
@@ -41,6 +41,18 @@ else
     cd "$INSTALL_DIR"
 fi
 
+# Verify workflows directory exists
+if [ ! -d "$INSTALL_DIR/.smartspec/workflows" ]; then
+    echo "❌ Error: Workflows directory not found after clone."
+    exit 1
+fi
+
+# Verify scripts directory exists
+if [ ! -d "$INSTALL_DIR/.smartspec/scripts" ]; then
+    echo "❌ Error: Scripts directory not found after clone."
+    exit 1
+fi
+
 # Install Python dependencies if requirements.txt exists
 if [ -f "requirements.txt" ]; then
     echo "📦 Installing Python dependencies..."
@@ -69,10 +81,11 @@ echo ""
 echo "✅ SmartSpec installed successfully!"
 echo ""
 echo "📍 Installation directory: $INSTALL_DIR"
+echo "📁 Workflows: $INSTALL_DIR/.smartspec/workflows/"
+echo "📁 Scripts: $INSTALL_DIR/.smartspec/scripts/"
 echo ""
 echo "🎯 Next steps:"
 echo "   1. Reload your shell: source $SHELL_RC"
 echo "   2. Verify installation: python3 \$SMARTSPEC_HOME/.smartspec/scripts/verify_evidence_strict.py --help"
-echo "   3. Read the docs: https://smartspec.docs/"
-echo "   4. Thai manual: https://smartspec.docs/th/"
+echo "   3. Check workflows: ls \$SMARTSPEC_HOME/.smartspec/workflows/"
 echo ""

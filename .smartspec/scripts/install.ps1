@@ -1,5 +1,5 @@
 # SmartSpec Installation Script for Windows
-# Usage: iwr -useb https://raw.githubusercontent.com/naibarn/SmartSpec/main/install.ps1 | iex
+# Usage: iwr -useb https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/install.ps1 | iex
 
 Write-Host "🚀 Installing SmartSpec..." -ForegroundColor Green
 
@@ -30,6 +30,18 @@ if (Test-Path $InstallDir) {
     Set-Location $InstallDir
 }
 
+# Verify workflows directory exists
+if (-not (Test-Path "$InstallDir\.smartspec\workflows")) {
+    Write-Host "❌ Error: Workflows directory not found after clone." -ForegroundColor Red
+    exit 1
+}
+
+# Verify scripts directory exists
+if (-not (Test-Path "$InstallDir\.smartspec\scripts")) {
+    Write-Host "❌ Error: Scripts directory not found after clone." -ForegroundColor Red
+    exit 1
+}
+
 # Install Python dependencies if requirements.txt exists
 if (Test-Path "requirements.txt") {
     Write-Host "📦 Installing Python dependencies..." -ForegroundColor Cyan
@@ -56,10 +68,11 @@ Write-Host ""
 Write-Host "✅ SmartSpec installed successfully!" -ForegroundColor Green
 Write-Host ""
 Write-Host "📍 Installation directory: $InstallDir" -ForegroundColor Cyan
+Write-Host "📁 Workflows: $InstallDir\.smartspec\workflows\" -ForegroundColor Cyan
+Write-Host "📁 Scripts: $InstallDir\.smartspec\scripts\" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "🎯 Next steps:" -ForegroundColor Yellow
 Write-Host "   1. Restart your terminal to reload PATH"
 Write-Host "   2. Verify installation: python `$env:SMARTSPEC_HOME\.smartspec\scripts\verify_evidence_strict.py --help"
-Write-Host "   3. Read the docs: https://smartspec.docs/"
-Write-Host "   4. Thai manual: https://smartspec.docs/th/"
+Write-Host "   3. Check workflows: dir `$env:SMARTSPEC_HOME\.smartspec\workflows\"
 Write-Host ""

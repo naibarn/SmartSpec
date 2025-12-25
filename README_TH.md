@@ -41,13 +41,13 @@ SmartSpec V6 รองรับแพลตฟอร์ม AI coding ที่�
 #### Linux / macOS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/install.sh | bash
 ```
 
 #### Windows (PowerShell)
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/naibarn/SmartSpec/main/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/install.ps1 | iex
 ```
 
 ### ติดตั้งแบบ Manual

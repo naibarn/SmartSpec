@@ -41,13 +41,13 @@ SmartSpec V6 supports your favorite AI coding platforms with a single-command in
 #### Linux / macOS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/install.sh | bash
 ```
 
 #### Windows (PowerShell)
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/naibarn/SmartSpec/main/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/install.ps1 | iex
 ```
 
 ### Manual Installation

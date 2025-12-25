@@ -220,7 +220,7 @@ Notes:
 - **Governed artifacts** (anything under `specs/**` and registry files) require `--apply`.
 - **Safe outputs** (reports/prompts/scripts) may be written without `--apply`.
 - Workflow-generated helper scripts must be placed under **`.smartspec/generated-scripts/**`**.
-- Some runtime-tree writes require an additional explicit opt-in gate (examples: `--write-code`, `--write-docs`, `--write-runtime-config`, `--write-ci-workflow`).
+- Some workflows may require additional workflow-specific opt-in flags for runtime-tree writes (check individual workflow documentation).
 - SPEC can be either:
   - **draft + refine**: `generate_spec_from_prompt` → human edit → `generate_spec`
   - **refine only**: if `spec.md` already exists
@@ -312,7 +312,7 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
 `/smartspec_implement_tasks` is **tasks-first** and refuses to expand scope beyond selected tasks.
 
 - Validate-only (no writes): use `--validate-only`.
-- Writing code/tests/config requires **two gates**: `--apply` + `--write-code`.
+- Writing code/tests/config requires `--apply`.
 - Any action that needs network (dependency install/download/remote fetch) requires `--allow-network`.
 
 **CLI:**
@@ -328,7 +328,6 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
 /smartspec_implement_tasks \
   specs/feature/spec-002-user-management/tasks.md \
   --apply \
-  --write-code \
   --out .spec/reports/implement-tasks/spec-002 \
   --json
 ```
@@ -347,7 +346,6 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
 /smartspec_implement_tasks.md \
   specs/feature/spec-002-user-management/tasks.md \
   --apply \
-  --write-code \
   --out .spec/reports/implement-tasks/spec-002 \
   --json \
   --platform kilo
@@ -902,14 +900,13 @@ This section provides comprehensive parameter documentation for all 40 workflows
 | `--quiet` | Optional | Suppress non-essential output |
 | `--tasks` | Required | Path to tasks file (positional or --tasks) |
 | `--validate-only` | Optional | Validate without writing any files |
-| `--write-code` | Optional | Enable writing code files (requires --apply) |
+| `--apply` | Optional | Apply changes (required for actual implementation) |
 
 **Usage Example:**
 ```bash
 /smartspec_implement_tasks \
   specs/feature/spec-002-user-management/tasks.md \
   --apply \
-  --write-code \
   --out .spec/reports/implement-tasks/spec-002 \
   --json
 ```

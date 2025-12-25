@@ -56,9 +56,7 @@ If conflict: **Handbook wins**.
 
 - **Preview-first:** generate a diff/report/change plan before apply.
 - Safe outputs may be written without `--apply` (reports/prompts/scripts).
-- **Runtime-tree writes require two gates:**
-  1) `--apply`
-  2) explicit opt-in flag (e.g., `--write-code` / `--write-docs` / `--write-ci-workflow` / `--write-runtime-config`)
+- **Runtime-tree writes require `--apply`** (some workflows may require additional opt-in flags; check workflow docs)
 - **Security hardening when describing writers:** path normalization; deny traversal/absolute/control chars; **no symlink escape**; strict write scopes; secret redaction; atomic updates (temp+rename; lock when configured).
 
 ---

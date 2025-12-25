@@ -206,15 +206,12 @@ You have a finalized spec and want to implement it.
 /smartspec_implement_tasks \
   specs/feature/spec-003-auth-system/tasks.md \
   --apply \
-  --write-code \
   --out .spec/reports/implement-tasks/spec-003 \
   --json
 ```
 
 **Parameter Explanation:**
-- `--apply`: First gate (governed artifacts)
-- `--write-code`: Second gate (runtime tree writes)
-- Both required for actual code changes
+- `--apply`: Required for actual code changes (governed artifacts)
 
 ### Best Practices
 ✅ Always run `--validate-only` first  
@@ -224,8 +221,8 @@ You have a finalized spec and want to implement it.
 
 ### Common Pitfalls
 ❌ Skipping validation step  
-❌ Using `--write-code` without `--apply`  
 ❌ Not reviewing change plan  
+❌ Not using `--apply` for actual changes  
 
 ---
 
@@ -713,15 +710,15 @@ workflow_name \
 - `--apply` required
 - Preview before applying
 
-### Runtime Tree Writers (Code/Docs/Config)
+##### Runtime Tree Writes (Code/Config)
 ```bash
 workflow_name \
   [inputs] \
-  --apply \
-  --write-code  # or --write-docs, --write-ci-workflow, etc.
+  --apply
 ```
-- Two gates: `--apply` + specific write flag
-- Always validate first
+- `--apply` required for governed artifacts
+- Some workflows may require additional flags (check workflow docs)
+- Always validate firstirst
 
 ### Network Operations (Fetch/Push/Publish)
 ```bash
@@ -752,8 +749,8 @@ workflow_name \
 **Solution:** Add `--apply` flag
 
 ### Issue: "Permission denied writing to runtime tree"
-**Cause:** Missing specific write flag  
-**Solution:** Add `--write-code`, `--write-docs`, etc.
+**Cause:** Missing required flag or permission  
+**Solution:** Check workflow documentation for required flags
 
 ### Issue: "Network access denied"
 **Cause:** Workflow needs network but `--allow-network` not provided  

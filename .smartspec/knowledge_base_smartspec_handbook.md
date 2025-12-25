@@ -276,10 +276,7 @@ Workflows that read or write filesystem paths MUST enforce:
 
 Default rule: SmartSpec workflows MUST NOT modify application runtime source trees.
 
-If a workflow *must* write to a runtime tree, it MUST require **two gates**:
-
-1) `--apply` (governed)
-2) a workflow-specific explicit opt-in flag (e.g., `--write-code`, `--write-docs`)
+If a workflow *must* write to a runtime tree, it MUST require `--apply` and may require additional workflow-specific opt-in flags (check individual workflow documentation).
 
 ---
 
@@ -313,7 +310,7 @@ Workflows should accept the primary input as a positional argument.
 Examples:
 
 - `smartspec_generate_plan <spec.md> --apply`
-- `smartspec_implement_tasks <tasks.md> --apply --write-code`
+- `smartspec_implement_tasks <tasks.md> --apply`
 - `smartspec_verify_tasks_progress_strict <tasks.md> --out <dir> --json`
 
 ---

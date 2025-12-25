@@ -211,7 +211,7 @@ This workflow MUST follow:
 ### Preview Mode
 
 ```
-.spec/reports/generate-multiplatform-ui/<run-id>/
+.smartspec/reports/generate-multiplatform-ui/<run-id>/
 ├── report.md                      # Full generation report
 ├── file-list.txt                  # List of files to be generated
 ├── directory-structure.txt        # Directory structure preview
@@ -789,7 +789,7 @@ src/ui/contact/
 
 **Solution:** Review consistency report:
 ```
-.spec/reports/generate-multiplatform-ui/.../consistency-report.md
+.smartspec/reports/generate-multiplatform-ui/.../consistency-report.md
 ```
 
 Fix issues or skip check:

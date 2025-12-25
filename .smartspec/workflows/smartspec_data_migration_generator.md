@@ -29,7 +29,7 @@ This workflow MUST follow:
 
 **Always allowed writes (safe outputs):**
 
-- Reports: `.spec/reports/data-migration-generator/**`
+- Reports: `.smartspec/reports/data-migration-generator/**`
 
 **Governed writes (ONLY with `--apply`):**
 
@@ -81,7 +81,7 @@ This workflow must defend against:
 
 ```bash
 /smartspec_data_migration_generator.md \
-  --report .spec/reports/data-model-validation/<run-id>/summary.json \
+  --report .smartspec/reports/data-model-validation/<run-id>/summary.json \
   --migration-tool flyway \
   --output-dir db/migrations
 ```
@@ -131,7 +131,7 @@ This workflow must defend against:
 
 ## Output structure
 
-- **Report Path**: `.spec/reports/data-migration-generator/<run-id>/`
+- **Report Path**: `.smartspec/reports/data-migration-generator/<run-id>/`
 
 ### Artifacts (safe outputs)
 
@@ -178,11 +178,11 @@ This workflow acts as the "fix" for issues found by the validator.
   --schema-files "db/schema.prisma"
 
 # Step 2: Review the validation report for discrepancies
-# cat .spec/reports/data-model-validation/<run-id>/summary.json
+# cat .smartspec/reports/data-model-validation/<run-id>/summary.json
 
 # Step 3: Generate a draft migration script to fix the discrepancies
 /smartspec_data_migration_generator \
-  --report .spec/reports/data-model-validation/<run-id>/summary.json \
+  --report .smartspec/reports/data-model-validation/<run-id>/summary.json \
   --migration-tool flyway \
   --output-dir db/migrations \
   --apply

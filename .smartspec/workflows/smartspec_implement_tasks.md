@@ -201,9 +201,9 @@ python3 .smartspec/scripts/detect_duplicates.py \
 
 Write:
 
-- `.spec/reports/implement-tasks/<run-id>/report.md`
-- `.spec/reports/implement-tasks/<run-id>/summary.json`
-- `.spec/reports/implement-tasks/<run-id>/change_plan.md` (always generated when `--apply` is present; generated before any write)
+- `.smartspec/reports/implement-tasks/<run-id>/report.md`
+- `.smartspec/reports/implement-tasks/<run-id>/summary.json`
+- `.smartspec/reports/implement-tasks/<run-id>/change_plan.md` (always generated when `--apply` is present; generated before any write)
 
 ### 4) Post-Implementation Validation (MANDATORY)
 

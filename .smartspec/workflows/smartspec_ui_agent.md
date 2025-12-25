@@ -380,7 +380,7 @@ specs/feature/<feature-name>/
 ### Session Report
 
 ```
-.spec/reports/ui-agent/<session-id>/
+.smartspec/reports/ui-agent/<session-id>/
 ├── report.md                      # Session summary
 ├── design-evolution.md            # How design evolved
 ├── suggestions-made.md            # Suggestions agent made

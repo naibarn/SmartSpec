@@ -44,7 +44,7 @@ This workflow MUST follow:
 Allowed writes:
 
 - Governed registry: `.spec/SPEC_INDEX.json` (**requires** `--apply`)
-- Safe outputs (reports/snippets): `.spec/reports/reindex-specs/**` (no `--apply` required)
+- Safe outputs (reports/snippets): `.smartspec/reports/reindex-specs/**` (no `--apply` required)
 
 Forbidden writes (must hard-fail):
 
@@ -226,8 +226,8 @@ Never:
 
 The workflow MUST write a report under a run folder:
 
-- `.spec/reports/reindex-specs/<run-id>/report.md`
-- `.spec/reports/reindex-specs/<run-id>/summary.json` (if `--json`)
+- `.smartspec/reports/reindex-specs/<run-id>/report.md`
+- `.smartspec/reports/reindex-specs/<run-id>/summary.json` (if `--json`)
 
 If `--out` is provided:
 

@@ -36,7 +36,7 @@ This workflow MUST:
 - **Config:** `.spec/smartspec.config.yaml`
 - **Spec Index:** `.spec/SPEC_INDEX.json`
 - **Registry:** `.spec/registry/`
-- **Reports:** `.spec/reports/`
+- **Reports:** `.smartspec/reports/`
 
 ---
 
@@ -51,7 +51,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs):
 
-- `.spec/reports/production-monitoring/**`
+- `.smartspec/reports/production-monitoring/**`
 
 Forbidden writes (must hard-fail):
 
@@ -124,7 +124,7 @@ This workflow must defend against:
 ### Phase 4: Reporting
 
 1.  **Generate Performance Report:** On a schedule (e.g., daily, weekly), generate a summary report of performance against SLOs.
-2.  **Save Report:** Save the report in a structured format (e.g., JSON) in `.spec/reports/production-monitoring/`.
+2.  **Save Report:** Save the report in a structured format (e.g., JSON) in `.smartspec/reports/production-monitoring/`.
 3.  **Notify Feedback Aggregator:** Trigger the `smartspec_feedback_aggregator` to process the new performance report.
 
 ---
@@ -132,7 +132,7 @@ This workflow must defend against:
 ## Output Structure
 
 - **Alerts:** Sent to `smartspec_incident_response`.
-- **Reports:** Saved in `.spec/reports/production-monitoring/`.
+- **Reports:** Saved in `.smartspec/reports/production-monitoring/`.
 - **Logs:** Standard monitoring logs.
 
 ---

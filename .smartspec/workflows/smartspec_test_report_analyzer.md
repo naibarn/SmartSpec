@@ -19,7 +19,7 @@ Analyze test results produced by `smartspec_test_suite_runner` and produce a hig
 - extract actionable follow-ups (without executing code changes)
 - compute trend-like signals from structured evidence (best-effort)
 
-This workflow is **reports-only**: it writes analysis artifacts under `.spec/reports/**` and never modifies governed artifacts.
+This workflow is **reports-only**: it writes analysis artifacts under `.smartspec/reports/**` and never modifies governed artifacts.
 
 ---
 
@@ -34,7 +34,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Reports: `.spec/reports/test-report-analyzer/**`
+- Reports: `.smartspec/reports/test-report-analyzer/**`
 
 Forbidden writes (must hard-fail):
 
@@ -67,7 +67,7 @@ This workflow must defend against:
 - **Path normalization (reads + writes):** Reject traversal (`..`), absolute paths, and control characters on any user-supplied path.
 - **No symlink escape (reads + writes):** Do not read/write through symlinks that resolve outside allowed scopes.
 - **Allowed read root (MANDATORY):** `--test-report` MUST resolve under:
-  - `.spec/reports/test-suite-runner/` (exact root lock)
+  - `.smartspec/reports/test-suite-runner/` (exact root lock)
 - **Output root safety (`--out`):** If provided, it is a *requested* base output root and MUST:
   - resolve under config `safety.allow_writes_only_under`
   - not fall under config `safety.deny_writes_under`
@@ -86,7 +86,7 @@ This workflow must defend against:
 
 ```bash
 /smartspec_test_report_analyzer \
-  --test-report .spec/reports/test-suite-runner/<run-id> \
+  --test-report .smartspec/reports/test-suite-runner/<run-id> \
   [--mode <normal|strict>] \
   [--max-log-bytes <int>] \
   [--max-junit-bytes <int>] \
@@ -99,9 +99,9 @@ This workflow must defend against:
 
 ```bash
 /smartspec_test_report_analyzer.md \
-  --test-report .spec/reports/test-suite-runner/<run-id> \
+  --test-report .smartspec/reports/test-suite-runner/<run-id> \
   --mode normal \
-  --out .spec/reports/test-report-analyzer \
+  --out .smartspec/reports/test-report-analyzer \
   --json \
   --platform kilo
 ```
@@ -127,7 +127,7 @@ This workflow must defend against:
 
 1) **Path safety:** rejects traversal (`..`), absolute paths, and control characters.
 2) **Symlink safety:** resolves realpath and MUST NOT escape project root.
-3) **Root lock:** resolves under `.spec/reports/test-suite-runner/`.
+3) **Root lock:** resolves under `.smartspec/reports/test-suite-runner/`.
 4) **Run folder shape:** directory MUST contain:
    - `summary.json`
    - `report.md`
@@ -174,7 +174,7 @@ If trust validation fails: hard-fail (`exit 2`).
 
 Outputs are always written under a run folder to prevent overwrites.
 
-- Default root: `.spec/reports/test-report-analyzer/<run-id>/...`
+- Default root: `.smartspec/reports/test-report-analyzer/<run-id>/...`
 - If `--out` is provided, it is treated as a *requested* base output root and MUST pass Output root safety validation; otherwise `exit 2`.
 
 Artifacts:

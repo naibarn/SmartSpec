@@ -36,7 +36,7 @@ It is **safe-by-default** and writes governed artifacts only when explicitly app
 - **Config:** `.spec/smartspec.config.yaml`
 - **Spec Index:** `.spec/SPEC_INDEX.json`
 - **Registry:** `.spec/registry/` (component registry, reuse index)
-- **Reports:** `.spec/reports/` (workflow outputs, previews, diffs)
+- **Reports:** `.smartspec/reports/` (workflow outputs, previews, diffs)
 - **Scripts:** `.spec/scripts/` (automation scripts)
 
 **When searching for these files, ALWAYS use the `.spec/` prefix from project root.**
@@ -57,7 +57,7 @@ Allowed writes:
 - Governed specs: `specs/**` (**requires** `--apply`)
 - Governed registry: `.spec/SPEC_INDEX.json` (**requires** `--apply` and allowlisted)
 - **Component registry:** `.spec/registry/**` (**requires** `--apply`)
-- Safe outputs (previews/reports): `.spec/reports/generate-spec/**` (no `--apply` required)
+- Safe outputs (previews/reports): `.smartspec/reports/generate-spec/**` (no `--apply` required)
 
 Forbidden writes (must hard-fail):
 
@@ -69,7 +69,7 @@ Forbidden writes (must hard-fail):
 
 - Without `--apply`:
   - MUST NOT create/modify `specs/**`, `.spec/SPEC_INDEX.json`, or `.spec/registry/**`.
-  - MUST write a deterministic preview bundle to `.spec/reports/`.
+  - MUST write a deterministic preview bundle to `.smartspec/reports/`.
 
 - With `--apply`:
   - MAY update target `spec.md` and required companion reference files.
@@ -157,18 +157,18 @@ python3 .spec/scripts/detect_duplicates.py \
 
 Write:
 
-- `.spec/reports/generate-spec/<run-id>/preview/spec.md`
-- `.spec/reports/generate-spec/<run-id>/preview/registry/api-registry.json`
-- `.spec/reports/generate-spec/<run-id>/preview/registry/data-model-registry.json`
-- `.spec/reports/generate-spec/<run-id>/preview/registry/ui-components-registry.json`
-- `.spec/reports/generate-spec/<run-id>/preview/registry/services-registry.json`
-- `.spec/reports/generate-spec/<run-id>/preview/registry/workflows-registry.json`
-- `.spec/reports/generate-spec/<run-id>/preview/registry/integrations-registry.json`
-- `.spec/reports/generate-spec/<run-id>/preview/registry/glossary.json`
-- `.spec/reports/generate-spec/<run-id>/preview/registry/critical-sections-registry.json`
-- `.spec/reports/generate-spec/<run-id>/diff/spec.patch` (best-effort)
-- `.spec/reports/generate-spec/<run-id>/report.md`
-- `.spec/reports/generate-spec/<run-id>/summary.json` (if `--json`)
+- `.smartspec/reports/generate-spec/<run-id>/preview/spec.md`
+- `.smartspec/reports/generate-spec/<run-id>/preview/registry/api-registry.json`
+- `.smartspec/reports/generate-spec/<run-id>/preview/registry/data-model-registry.json`
+- `.smartspec/reports/generate-spec/<run-id>/preview/registry/ui-components-registry.json`
+- `.smartspec/reports/generate-spec/<run-id>/preview/registry/services-registry.json`
+- `.smartspec/reports/generate-spec/<run-id>/preview/registry/workflows-registry.json`
+- `.smartspec/reports/generate-spec/<run-id>/preview/registry/integrations-registry.json`
+- `.smartspec/reports/generate-spec/<run-id>/preview/registry/glossary.json`
+- `.smartspec/reports/generate-spec/<run-id>/preview/registry/critical-sections-registry.json`
+- `.smartspec/reports/generate-spec/<run-id>/diff/spec.patch` (best-effort)
+- `.smartspec/reports/generate-spec/<run-id>/report.md`
+- `.smartspec/reports/generate-spec/<run-id>/summary.json` (if `--json`)
 
 ### 4) Post-Generation Validation (MANDATORY)
 
@@ -177,8 +177,8 @@ After generating the preview and before applying, the AI agent **MUST** validate
 **Validation Command:**
 ```bash
 python3 .spec/scripts/validate_spec_enhanced.py \
-  --spec .spec/reports/generate-spec/<run-id>/preview/spec.md \
-  --registry .spec/reports/generate-spec/<run-id>/preview/registry/ \
+  --spec .smartspec/reports/generate-spec/<run-id>/preview/spec.md \
+  --registry .smartspec/reports/generate-spec/<run-id>/preview/registry/ \
   --check-duplicates --threshold 0.8
 ```
 

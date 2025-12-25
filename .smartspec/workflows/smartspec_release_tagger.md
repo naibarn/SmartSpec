@@ -30,7 +30,7 @@ It is **preview-first**:
 - Default: produces a report describing exactly what would happen.
 - With `--apply`: performs tagging and optional publishing.
 
-Writes are **reports-only** under `.spec/reports/**`.
+Writes are **reports-only** under `.smartspec/reports/**`.
 
 ---
 
@@ -45,7 +45,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Reports: `.spec/reports/release-tagger/**`
+- Reports: `.smartspec/reports/release-tagger/**`
 
 Forbidden writes (must hard-fail):
 
@@ -106,13 +106,13 @@ This workflow is designed to consume artifacts produced by the workflows you upd
 Provide these inputs to ensure the tag reflects verified work:
 
 - `--verify-summary` (preferred): strict task verification summary
-  - Expected path convention: `.spec/reports/verify-tasks-progress/<run-id>/summary.json`
+  - Expected path convention: `.smartspec/reports/verify-tasks-progress/<run-id>/summary.json`
 - `--deployment-summary` (recommended): deployment planner summary
-  - Expected path convention: `.spec/reports/deployment-planner/<run-id>/summary.json`
+  - Expected path convention: `.smartspec/reports/deployment-planner/<run-id>/summary.json`
 - Optional quality gates (if your release policy requires them):
-  - test runner: `.spec/reports/test-suite-runner/<run-id>/summary.json`
-  - test analyzer: `.spec/reports/test-report-analyzer/<run-id>/summary.json`
-  - perf verifier: `.spec/reports/nfr-perf-verifier/<run-id>/summary.json`
+  - test runner: `.smartspec/reports/test-suite-runner/<run-id>/summary.json`
+  - test analyzer: `.smartspec/reports/test-report-analyzer/<run-id>/summary.json`
+  - perf verifier: `.smartspec/reports/nfr-perf-verifier/<run-id>/summary.json`
 
 In `--mode=strict`, the workflow MUST block if required evidence is missing.
 
@@ -121,7 +121,7 @@ In `--mode=strict`, the workflow MUST block if required evidence is missing.
 Preferred `--release-notes` inputs:
 
 - Governed: `specs/<category>/<spec-id>/deployment/release_notes.md`
-- Or preview output: `.spec/reports/deployment-planner/<run-id>/release_notes.preview.md`
+- Or preview output: `.smartspec/reports/deployment-planner/<run-id>/release_notes.preview.md`
 
 The workflow MUST:
 
@@ -198,9 +198,9 @@ Evidence inputs (recommended):
   --commit-sha <sha> \
   --spec-id <spec-id> \
   --release-notes specs/<category>/<spec-id>/deployment/release_notes.md \
-  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
-  --deployment-summary .spec/reports/deployment-planner/<run-id>/summary.json \
-  --out .spec/reports/release-tagger \
+  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --deployment-summary .smartspec/reports/deployment-planner/<run-id>/summary.json \
+  --out .smartspec/reports/release-tagger \
   --json
 ```
 
@@ -212,13 +212,13 @@ Evidence inputs (recommended):
   --commit-sha <sha> \
   --spec-id <spec-id> \
   --release-notes specs/<category>/<spec-id>/deployment/release_notes.md \
-  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
-  --deployment-summary .spec/reports/deployment-planner/<run-id>/summary.json \
+  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --deployment-summary .smartspec/reports/deployment-planner/<run-id>/summary.json \
   --remote origin \
   --provider github \
   --allow-network \
   --apply \
-  --out .spec/reports/release-tagger \
+  --out .smartspec/reports/release-tagger \
   --json
 ```
 
@@ -230,13 +230,13 @@ Evidence inputs (recommended):
   --commit-sha <sha> \
   --spec-id <spec-id> \
   --release-notes specs/<category>/<spec-id>/deployment/release_notes.md \
-  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
-  --deployment-summary .spec/reports/deployment-planner/<run-id>/summary.json \
+  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --deployment-summary .smartspec/reports/deployment-planner/<run-id>/summary.json \
   --remote origin \
   --provider github \
   --allow-network \
   --apply \
-  --out .spec/reports/release-tagger \
+  --out .smartspec/reports/release-tagger \
   --json \
   --platform kilo
 ```
@@ -247,7 +247,7 @@ Evidence inputs (recommended):
 
 Outputs are written under a unique run folder.
 
-- Default root: `.spec/reports/release-tagger/<run-id>/...`
+- Default root: `.smartspec/reports/release-tagger/<run-id>/...`
 - If `--out` is provided, it is treated as a requested base output root and MUST pass Output root safety validation; otherwise `exit 2`.
 
 Artifacts:

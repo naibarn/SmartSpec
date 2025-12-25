@@ -29,7 +29,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs):
 
-- Reports: `.spec/reports/security-threat-model/**` (for previews and logs)
+- Reports: `.smartspec/reports/security-threat-model/**` (for previews and logs)
 
 Governed writes (**requires** `--apply`):
 
@@ -134,7 +134,7 @@ This workflow must defend against:
 ## Output structure
 
 - **Governed Artifact**: `specs/<category>/<spec-id>/threats.md`
-- **Report/Preview**: `.spec/reports/security-threat-model/<run-id>/`
+- **Report/Preview**: `.smartspec/reports/security-threat-model/<run-id>/`
 
 ### Exit codes
 

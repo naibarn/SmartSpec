@@ -34,7 +34,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Reports: `.spec/reports/index-validation/**`
+- Reports: `.smartspec/reports/index-validation/**`
 
 Forbidden writes (must hard-fail):
 
@@ -140,7 +140,7 @@ To prevent accidental overwrites, outputs are always written under a run folder.
   - `<out>/<run-id>/summary.json` (if `--json`)
 
 - If `--out` is not provided, default to:
-  - `.spec/reports/index-validation/<run-id>/...`
+  - `.smartspec/reports/index-validation/<run-id>/...`
 
 Where `<run-id>` is timestamp + short hash of **redacted** normalized inputs (no secrets).
 

@@ -7,7 +7,7 @@ purpose: Generate performance/load/reliability test task proposals from existing
   SLOs, policies, and SmartSpec artifacts. Planner-only; never modifies specs, tasks,
   CI, or application code.
 version_notes:
-- v6.1.1: v6 governance alignment; safe output path moved under .spec/reports; universal
+- v6.1.1: v6 governance alignment; safe output path moved under .smartspec/reports; universal
     flags clarified; mandatory hardening + path safety; deterministic output; strict-mode
     policy compliance rules.
 description: Produce NFR/performance plan from spec (reports).
@@ -19,7 +19,7 @@ workflow: /smartspec_nfr_perf_planner
 
 Planner-only workflow that converts **NFRs** (latency, throughput, error rate, availability, UX timings, etc.) into structured **performance/load/reliability task proposals**.
 
-This workflow is **reports-only**: it writes planning outputs under `.spec/reports/**` and never modifies governed artifacts (`specs/**`, registries, CI, code).
+This workflow is **reports-only**: it writes planning outputs under `.smartspec/reports/**` and never modifies governed artifacts (`specs/**`, registries, CI, code).
 
 ---
 
@@ -34,7 +34,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Reports: `.spec/reports/nfr-perf-planner/**`
+- Reports: `.smartspec/reports/nfr-perf-planner/**`
 
 Forbidden writes (must hard-fail):
 
@@ -98,7 +98,7 @@ This workflow must defend against:
 Default report directory:
 
 ```
-.spec/reports/nfr-perf-planner/<run-id>/
+.smartspec/reports/nfr-perf-planner/<run-id>/
 ```
 
 Artifacts:

@@ -36,7 +36,7 @@ This workflow MUST:
 - **Config:** `.spec/smartspec.config.yaml`
 - **Spec Index:** `.spec/SPEC_INDEX.json`
 - **Registry:** `.spec/registry/`
-- **Reports:** `.spec/reports/`
+- **Reports:** `.smartspec/reports/`
 
 ---
 
@@ -51,7 +51,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs):
 
-- `.spec/reports/feedback/**`
+- `.smartspec/reports/feedback/**`
 
 Forbidden writes (must hard-fail):
 
@@ -102,8 +102,8 @@ This workflow must defend against:
 ### Phase 1: Data Collection
 
 1.  **Poll Sources:** On a schedule, poll all configured feedback sources:
-    -   `.spec/reports/production-monitoring/` for performance reports.
-    -   `.spec/reports/post-mortems/` for action items from incidents.
+    -   `.smartspec/reports/production-monitoring/` for performance reports.
+    -   `.smartspec/reports/post-mortems/` for action items from incidents.
     -   User feedback channels (e.g., via API integration with Zendesk, Intercom, etc.).
 2.  **Normalize Data:** Convert all incoming data into a standardized feedback format.
 
@@ -131,7 +131,7 @@ This workflow must defend against:
 ## Output Structure
 
 -   **Feedback Dashboard:** A web-based dashboard for visualizing feedback.
--   **Suggestions:** Saved in `.spec/reports/feedback/suggestions/`.
+-   **Suggestions:** Saved in `.smartspec/reports/feedback/suggestions/`.
 -   **Summary Reports:** Sent to stakeholders.
 
 ---

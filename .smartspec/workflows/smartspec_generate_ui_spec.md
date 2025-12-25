@@ -219,7 +219,7 @@ This workflow MUST follow:
 ### Preview Mode
 
 ```
-.spec/reports/generate-ui-spec/<run-id>/
+.smartspec/reports/generate-ui-spec/<run-id>/
 ├── ui-spec-preview.json          # Generated A2UI specification
 ├── mockup.png                     # Visual mockup
 ├── mockup.html                    # Interactive preview (optional)
@@ -244,7 +244,7 @@ specs/<category>/<spec-id>/
 ### Interactive Mode (additional)
 
 ```
-.spec/reports/generate-ui-spec/<run-id>/
+.smartspec/reports/generate-ui-spec/<run-id>/
 └── iterations/                    # UI spec iterations
     ├── iteration-1.json
     ├── iteration-2.json

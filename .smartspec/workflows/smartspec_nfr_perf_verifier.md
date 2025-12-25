@@ -22,7 +22,7 @@ Verifier workflow that evaluates whether declared **performance / reliability NF
 - **Does not** run performance tests.
 - **Does not** connect to production systems.
 - **Does not** modify specs/tasks/registries/CI/code.
-- **Writes reports only** under `.spec/reports/**`.
+- **Writes reports only** under `.smartspec/reports/**`.
 
 ---
 
@@ -37,7 +37,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Reports: `.spec/reports/nfr-perf-verifier/**`
+- Reports: `.smartspec/reports/nfr-perf-verifier/**`
 
 Forbidden writes (must hard-fail):
 
@@ -107,8 +107,8 @@ Evidence can be supplied explicitly or discovered from known report locations.
 
 **Known report roots (optional discovery):**
 
-- `.spec/reports/nfr-perf-planner/**/plan.json` (planner output)
-- `.spec/reports/**` (other tool outputs)
+- `.smartspec/reports/nfr-perf-planner/**/plan.json` (planner output)
+- `.smartspec/reports/**` (other tool outputs)
 
 ### 2.3 Multi-repo wiring (optional)
 
@@ -220,7 +220,7 @@ The report MUST record:
 ```bash
 /smartspec_nfr_perf_verifier \
   specs/<category>/<spec-id>/spec.md \
-  [--evidence-manifest .spec/reports/nfr-evidence/<run-id>/evidence.json] \
+  [--evidence-manifest .smartspec/reports/nfr-evidence/<run-id>/evidence.json] \
   [--target-env prod] \
   [--time-window 30d] \
   [--mode strict] \
@@ -235,7 +235,7 @@ The report MUST record:
 ```bash
 /smartspec_nfr_perf_verifier.md \
   specs/<category>/<spec-id>/spec.md \
-  [--evidence-manifest .spec/reports/nfr-evidence/<run-id>/evidence.json] \
+  [--evidence-manifest .smartspec/reports/nfr-evidence/<run-id>/evidence.json] \
   [--target-env prod] \
   [--time-window 30d] \
   [--mode strict] \
@@ -253,7 +253,7 @@ The report MUST record:
 Default report directory:
 
 ```
-.spec/reports/nfr-perf-verifier/<run-id>/
+.smartspec/reports/nfr-perf-verifier/<run-id>/
 ```
 
 Artifacts:

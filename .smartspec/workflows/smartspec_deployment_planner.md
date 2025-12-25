@@ -43,7 +43,7 @@ This workflow MUST follow:
 
 **Always allowed writes (safe outputs):**
 
-- Reports: `.spec/reports/deployment-planner/**`
+- Reports: `.smartspec/reports/deployment-planner/**`
 - Optional prompts: `.smartspec/prompts/**`
 - Optional generated scripts: `.smartspec/generated-scripts/**`
 
@@ -179,9 +179,9 @@ Release notes MUST be derived from **verification evidence**:
 ```bash
 /smartspec_deployment_planner \
   specs/<category>/<spec-id>/spec.md \
-  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
   --target-env prod \
-  --out .spec/reports/deployment-planner \
+  --out .smartspec/reports/deployment-planner \
   --json
 ```
 
@@ -190,9 +190,9 @@ Release notes MUST be derived from **verification evidence**:
 ```bash
 /smartspec_deployment_planner \
   specs/<category>/<spec-id>/spec.md \
-  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
   --apply \
-  --out .spec/reports/deployment-planner \
+  --out .smartspec/reports/deployment-planner \
   --json
 ```
 
@@ -201,12 +201,12 @@ Release notes MUST be derived from **verification evidence**:
 ```bash
 /smartspec_deployment_planner \
   specs/<category>/<spec-id>/spec.md \
-  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
   --apply \
   --write-ci-workflow \
   --ci-provider github-actions \
   --ci-template deploy-basic \
-  --out .spec/reports/deployment-planner \
+  --out .smartspec/reports/deployment-planner \
   --json
 ```
 
@@ -215,9 +215,9 @@ Release notes MUST be derived from **verification evidence**:
 ```bash
 /smartspec_deployment_planner.md \
   specs/<category>/<spec-id>/spec.md \
-  --verify-summary .spec/reports/verify-tasks-progress/<run-id>/summary.json \
+  --verify-summary .smartspec/reports/verify-tasks-progress/<run-id>/summary.json \
   --target-env prod \
-  --out .spec/reports/deployment-planner \
+  --out .smartspec/reports/deployment-planner \
   --json \
   --platform kilo
 ```
@@ -228,7 +228,7 @@ Release notes MUST be derived from **verification evidence**:
 
 Outputs are written under a unique run folder.
 
-- Default root: `.spec/reports/deployment-planner/<run-id>/...`
+- Default root: `.smartspec/reports/deployment-planner/<run-id>/...`
 - If `--out` is provided, it is treated as a requested base output root and MUST pass Output root safety validation; otherwise `exit 2`.
 
 Artifacts (safe outputs):

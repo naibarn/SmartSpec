@@ -34,6 +34,72 @@ SmartSpec V6 supports your favorite AI coding platforms with a single-command in
 
 ---
 
+## 📦 Installation
+
+### Prerequisites
+
+- **Git** - For cloning the repository
+- **Python 3.8+** - For running SmartSpec scripts
+- **Node.js 16+** (optional) - For web-based workflows
+
+### Linux / macOS
+
+```bash
+# Clone the repository
+git clone https://github.com/naibarn/SmartSpec.git
+cd SmartSpec
+
+# Install Python dependencies (if needed)
+pip3 install -r requirements.txt
+
+# Verify installation
+python3 .smartspec/scripts/verify_evidence_strict.py --help
+```
+
+### Windows
+
+```powershell
+# Clone the repository
+git clone https://github.com/naibarn/SmartSpec.git
+cd SmartSpec
+
+# Install Python dependencies (if needed)
+python -m pip install -r requirements.txt
+
+# Verify installation
+python .smartspec/scripts/verify_evidence_strict.py --help
+```
+
+### Platform-Specific Setup
+
+#### Kilo Code / Antigravity
+
+No additional setup required. SmartSpec workflows are automatically available via `/smartspec_*` commands.
+
+#### Cursor / VSCode
+
+Add SmartSpec to your workspace:
+
+```json
+{
+  "folders": [
+    {"path": "."},
+    {"path": "../SmartSpec"}
+  ]
+}
+```
+
+---
+
+## 📚 Documentation
+
+- **[คู่มือภาษาไทย (Thai Manual)](https://smartspec.docs/th/)** - Complete guide in Thai
+- **[English Documentation](https://smartspec.docs/)** - Full documentation
+- **[Workflow Reference](https://smartspec.docs/workflows/)** - All 58 workflows
+- **[API Reference](https://smartspec.docs/api/)** - Script APIs
+
+---
+
 ## ⚠️ Critical: Preview-First Workflow Pattern
 
 **SmartSpec follows a strict preview-first approach to prevent accidental file modifications.** This is a core safety principle that ensures you always review changes before they are applied.

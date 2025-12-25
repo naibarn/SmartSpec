@@ -34,7 +34,7 @@ This workflow MUST follow:
 
 **Always allowed writes (safe outputs):**
 
-- Reports: `.spec/reports/design-system-migration/**`
+- Reports: `.smartspec/reports/design-system-migration/**`
 - Prompts (optional): `.smartspec/prompts/**`
 - Generated scripts (optional): `.smartspec/generated-scripts/**`
 
@@ -173,7 +173,7 @@ In apply mode, the workflow MUST still generate the patch set and report, and in
 When `--apply` is used:
 
 - **Backup MUST** be created before modifying each file:
-  - store pre-image copies under `.spec/reports/design-system-migration/<run-id>/backups/...`
+  - store pre-image copies under `.smartspec/reports/design-system-migration/<run-id>/backups/...`
   - store file hash manifest (sha256) before/after in `file_manifest.json`
 - **Atomic write MUST** be used:
   - write to a temp file in the same directory, fsync (if available), then rename
@@ -190,7 +190,7 @@ When `--apply` is used:
   --source-root <path/to/ui> \
   --from mui \
   --to custom \
-  [--audit-summary .spec/reports/ui-component-audit/<run-id>/summary.json] \
+  [--audit-summary .smartspec/reports/ui-component-audit/<run-id>/summary.json] \
   [--token-map .smartspec/mappings/design-tokens.json] \
   [--framework auto] \
   [--style-system auto] \
@@ -207,7 +207,7 @@ When `--apply` is used:
   --source-root <path/to/ui> \
   --from mui \
   --to custom \
-  [--audit-summary .spec/reports/ui-component-audit/<run-id>/summary.json] \
+  [--audit-summary .smartspec/reports/ui-component-audit/<run-id>/summary.json] \
   [--token-map .smartspec/mappings/design-tokens.json] \
   [--framework auto] \
   [--style-system auto] \
@@ -225,10 +225,10 @@ Apply mode example:
   --source-root <path/to/ui> \
   --from mui \
   --to custom \
-  --audit-summary .spec/reports/ui-component-audit/<run-id>/summary.json \
+  --audit-summary .smartspec/reports/ui-component-audit/<run-id>/summary.json \
   --token-map .smartspec/mappings/design-tokens.json \
   --apply \
-  --out .spec/reports/design-system-migration
+  --out .smartspec/reports/design-system-migration
 ```
 
 ---
@@ -237,7 +237,7 @@ Apply mode example:
 
 Outputs are written under a unique run folder.
 
-- Default root: `.spec/reports/design-system-migration/<run-id>/...`
+- Default root: `.smartspec/reports/design-system-migration/<run-id>/...`
 - If `--out` is provided, it is treated as a *requested* base output root and MUST pass Output root safety validation; otherwise `exit 2`.
 
 Artifacts:

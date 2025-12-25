@@ -43,8 +43,14 @@ import re
 import shlex
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 EVIDENCE_TYPES = {"code", "test", "docs", "ui"}
+NON_COMPLIANT_TYPES = {"file_exists", "test_exists", "command"}
 
 ALLOWED_KEYS = {
     "code": {"path", "symbol", "contains", "regex"},
@@ -310,6 +316,7 @@ def verify_one(repo_root: Path, ev: Evidence) -> EvidenceResult:
 
 
 def verify_tasks(repo_root: Path, tasks_path: Path) -> List[TaskResult]:
+    logger.info(f"Starting verification: {tasks_path}")
     text = tasks_path.read_text(encoding="utf-8", errors="ignore")
     lines = text.splitlines()
 
@@ -357,6 +364,7 @@ def main() -> int:
     ap.add_argument("tasks", help="Path to tasks.md")
     ap.add_argument("--repo-root", default=".", help="Repo root")
     ap.add_argument("--json", action="store_true", help="Emit JSON report")
+    ap.add_argument("--out", default=".smartspec/reports/verify-tasks-progress", help="Output directory")
     args = ap.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
@@ -369,6 +377,50 @@ def main() -> int:
         "tasks_ok": sum(1 for r in results if r.ok),
         "tasks_fail": sum(1 for r in results if not r.ok),
     }
+
+    # Generate reports
+    from datetime import datetime
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out_dir = Path(args.out) / run_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Write summary.json
+    summary_data = {
+        "run_id": run_id,
+        "timestamp": datetime.now().isoformat(),
+        "tasks_file": str(tasks_path),
+        "verified": summary["tasks_ok"],
+        "total": summary["tasks_total"],
+        "not_verified": summary["tasks_fail"],
+        "tasks": [{"id": r.task_id, "ok": r.ok, "why": r.evidence_results[0].reason if r.evidence_results else ""} for r in results]
+    }
+    with open(out_dir / "summary.json", "w") as f:
+        json.dump(summary_data, f, indent=2)
+    
+    # Write report.md
+    with open(out_dir / "report.md", "w") as f:
+        f.write(f"# Task Verification Report\n\n")
+        f.write(f"**Generated:** {datetime.now().isoformat()}\n")
+        f.write(f"**Run ID:** {run_id}\n")
+        f.write(f"**Tasks File:** {tasks_path}\n\n")
+        f.write(f"## Summary\n\n")
+        f.write(f"- **Total Tasks:** {summary['tasks_total']}\n")
+        f.write(f"- **Verified:** {summary['tasks_ok']}\n")
+        f.write(f"- **Not Verified:** {summary['tasks_fail']}\n\n")
+        f.write(f"## Task Details\n\n")
+        for r in results:
+            status = "✅" if r.ok else "❌"
+            f.write(f"### {status} {r.task_id}\n")
+            if not r.ok:
+                f.write(f"**Evidence Issues:**\n")
+                for er in r.evidence_results:
+                    if not er.ok:
+                        f.write(f"- Line {er.evidence.line_no}: {er.reason}\n")
+            f.write(f"\n")
+    
+    logger.info(f"Reports written to: {out_dir}")
+    logger.info(f"  - {out_dir / 'report.md'}")
+    logger.info(f"  - {out_dir / 'summary.json'}")
 
     if args.json:
         print(

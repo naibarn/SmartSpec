@@ -28,7 +28,19 @@ This wrapper focuses on installation, standard execution sequence, and a complet
 
 ## 1) Installation overview
 
-Install the SmartSpec workflow suite into your environment (CLI/Kilo/CI) using your platform’s standard method.
+### Quick Install (One-liner)
+
+**Linux / macOS:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+iwr -useb https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/install.ps1 | iex
+```
+
+### Verification
 
 After installation, verify these directories exist:
 
@@ -151,7 +163,7 @@ Use this when you **do not have `spec.md` yet**.
 ```bash
 /smartspec_generate_spec_from_prompt \
   "<your feature/product prompt>" \
-  --out .spec/reports/generate-spec-from-prompt \
+  --out .smartspec/reports/generate-spec-from-prompt \
   --json
 ```
 
@@ -159,7 +171,7 @@ Use this when you **do not have `spec.md` yet**.
 ```bash
 /smartspec_generate_spec_from_prompt.md \
   "<your feature/product prompt>" \
-  --out .spec/reports/generate-spec-from-prompt \
+  --out .smartspec/reports/generate-spec-from-prompt \
   --json \
   --platform kilo
 ```
@@ -233,7 +245,7 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
 /smartspec_implement_tasks \
   specs/feature/spec-002-user-management/tasks.md \
   --validate-only \
-  --out .spec/reports/implement-tasks/spec-002 \
+  --out .smartspec/reports/implement-tasks/spec-002 \
   --json
 
 # Apply and write code
@@ -241,7 +253,7 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
   specs/feature/spec-002-user-management/tasks.md \
   --apply \
   --write-code \
-  --out .spec/reports/implement-tasks/spec-002 \
+  --out .smartspec/reports/implement-tasks/spec-002 \
   --json
 ```
 
@@ -251,7 +263,7 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
 /smartspec_implement_tasks.md \
   specs/feature/spec-002-user-management/tasks.md \
   --validate-only \
-  --out .spec/reports/implement-tasks/spec-002 \
+  --out .smartspec/reports/implement-tasks/spec-002 \
   --json \
   --platform kilo
 
@@ -260,7 +272,7 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
   specs/feature/spec-002-user-management/tasks.md \
   --apply \
   --write-code \
-  --out .spec/reports/implement-tasks/spec-002 \
+  --out .smartspec/reports/implement-tasks/spec-002 \
   --json \
   --platform kilo
 ```
@@ -271,7 +283,7 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
 ```bash
 /smartspec_verify_tasks_progress_strict \
   specs/feature/spec-002-user-management/tasks.md \
-  --out .spec/reports/verify-tasks-progress/spec-002 \
+  --out .smartspec/reports/verify-tasks-progress/spec-002 \
   --json
 ```
 
@@ -279,7 +291,7 @@ Use this after the human-edited draft, or when you already have a `spec.md`.
 ```bash
 /smartspec_verify_tasks_progress_strict.md \
   specs/feature/spec-002-user-management/tasks.md \
-  --out .spec/reports/verify-tasks-progress/spec-002 \
+  --out .smartspec/reports/verify-tasks-progress/spec-002 \
   --json \
   --platform kilo
 ```
@@ -703,7 +715,7 @@ This section provides comprehensive parameter documentation for all 40 workflows
 ```bash
 /smartspec_generate_spec_from_prompt \
   "<your feature/product prompt>" \
-  --out .spec/reports/generate-spec-from-prompt \
+  --out .smartspec/reports/generate-spec-from-prompt \
   --json
 ```
 
@@ -822,7 +834,7 @@ This section provides comprehensive parameter documentation for all 40 workflows
   specs/feature/spec-002-user-management/tasks.md \
   --apply \
   --write-code \
-  --out .spec/reports/implement-tasks/spec-002 \
+  --out .smartspec/reports/implement-tasks/spec-002 \
   --json
 ```
 

@@ -98,10 +98,8 @@ source ~/.bashrc
 ## 📚 เอกสารประกอบ
 
 - **[📖 README English](README.md)** - คู่มือฉบับภาษาอังกฤษ
-- **[🇹🇭 คู่มือภาษาไทย (Thai Manual)](https://smartspec.docs/th/)** - คู่มือฉบับสมบูรณ์
-- **[🇬🇧 English Documentation](https://smartspec.docs/)** - เอกสารฉบับเต็ม
-- **[⚙️ Workflow Reference](https://smartspec.docs/workflows/)** - Workflows ทั้งหมด 58 ตัว
-- **[🔧 API Reference](https://smartspec.docs/api/)** - Script APIs
+- **[⚙️ Workflows](.smartspec/workflows/)** - Workflow definitions ทั้งหมด 58 ตัว
+- **[🔧 Scripts](.smartspec/scripts/)** - Python scripts และเครื่องมือ
 
 ---
 

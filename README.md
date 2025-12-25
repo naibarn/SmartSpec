@@ -98,10 +98,8 @@ Add SmartSpec to your workspace:
 ## 📚 Documentation
 
 - **[📖 README ภาษาไทย (Thai README)](README_TH.md)** - คู่มือฉบับภาษาไทย
-- **[🇹🇭 คู่มือภาษาไทย (Thai Manual)](https://smartspec.docs/th/)** - Complete guide in Thai
-- **[🇬🇧 English Documentation](https://smartspec.docs/)** - Full documentation
-- **[⚙️ Workflow Reference](https://smartspec.docs/workflows/)** - All 58 workflows
-- **[🔧 API Reference](https://smartspec.docs/api/)** - Script APIs
+- **[⚙️ Workflows](.smartspec/workflows/)** - All 58 workflow definitions
+- **[🔧 Scripts](.smartspec/scripts/)** - Python scripts and tools
 
 ---
 

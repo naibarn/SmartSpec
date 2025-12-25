@@ -36,39 +36,43 @@ SmartSpec V6 supports your favorite AI coding platforms with a single-command in
 
 ## 📦 Installation
 
+### Quick Install (Recommended)
+
+#### Linux / macOS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/install.sh | bash
+```
+
+#### Windows (PowerShell)
+
+```powershell
+iwr -useb https://raw.githubusercontent.com/naibarn/SmartSpec/main/install.ps1 | iex
+```
+
+### Manual Installation
+
+If you prefer to install manually:
+
+```bash
+# Clone the repository
+git clone https://github.com/naibarn/SmartSpec.git ~/.smartspec
+cd ~/.smartspec
+
+# Install Python dependencies (if needed)
+pip3 install -r requirements.txt
+
+# Add to PATH (optional)
+echo 'export SMARTSPEC_HOME="$HOME/.smartspec"' >> ~/.bashrc
+echo 'export PATH="$SMARTSPEC_HOME/.smartspec/scripts:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
 ### Prerequisites
 
 - **Git** - For cloning the repository
 - **Python 3.8+** - For running SmartSpec scripts
 - **Node.js 16+** (optional) - For web-based workflows
-
-### Linux / macOS
-
-```bash
-# Clone the repository
-git clone https://github.com/naibarn/SmartSpec.git
-cd SmartSpec
-
-# Install Python dependencies (if needed)
-pip3 install -r requirements.txt
-
-# Verify installation
-python3 .smartspec/scripts/verify_evidence_strict.py --help
-```
-
-### Windows
-
-```powershell
-# Clone the repository
-git clone https://github.com/naibarn/SmartSpec.git
-cd SmartSpec
-
-# Install Python dependencies (if needed)
-python -m pip install -r requirements.txt
-
-# Verify installation
-python .smartspec/scripts/verify_evidence_strict.py --help
-```
 
 ### Platform-Specific Setup
 
@@ -93,10 +97,11 @@ Add SmartSpec to your workspace:
 
 ## 📚 Documentation
 
-- **[คู่มือภาษาไทย (Thai Manual)](https://smartspec.docs/th/)** - Complete guide in Thai
-- **[English Documentation](https://smartspec.docs/)** - Full documentation
-- **[Workflow Reference](https://smartspec.docs/workflows/)** - All 58 workflows
-- **[API Reference](https://smartspec.docs/api/)** - Script APIs
+- **[📖 README ภาษาไทย (Thai README)](README_TH.md)** - คู่มือฉบับภาษาไทย
+- **[🇹🇭 คู่มือภาษาไทย (Thai Manual)](https://smartspec.docs/th/)** - Complete guide in Thai
+- **[🇬🇧 English Documentation](https://smartspec.docs/)** - Full documentation
+- **[⚙️ Workflow Reference](https://smartspec.docs/workflows/)** - All 58 workflows
+- **[🔧 API Reference](https://smartspec.docs/api/)** - Script APIs
 
 ---
 

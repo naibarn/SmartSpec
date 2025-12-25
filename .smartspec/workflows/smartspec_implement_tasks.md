@@ -230,4 +230,85 @@ python3 .smartspec/scripts/validate_implementation.py \
 
 ---
 
+## 6) Next Steps
+
+After completing this workflow, **MUST** provide clear next steps based on the mode and validation results.
+
+### If `--validate-only` was used:
+
+**Recommend running with `--apply` to implement changes:**
+
+**CLI:**
+```bash
+/smartspec_implement_tasks \
+  specs/<category>/<spec-id>/tasks.md \
+  --apply
+```
+
+**Kilo Code:**
+```bash
+/smartspec_implement_tasks.md \
+  specs/<category>/<spec-id>/tasks.md \
+  --apply \
+  --platform kilo
+```
+
+### If `--apply` was used:
+
+**Recommend verification and synchronization:**
+
+**1. Verify implementation:**
+
+**CLI:**
+```bash
+/smartspec_verify_tasks_progress_strict \
+  specs/<category>/<spec-id>/tasks.md \
+  --out .smartspec/reports/verify-tasks-progress/<spec-id>
+```
+
+**Kilo Code:**
+```bash
+/smartspec_verify_tasks_progress_strict.md \
+  specs/<category>/<spec-id>/tasks.md \
+  --out .smartspec/reports/verify-tasks-progress/<spec-id> \
+  --platform kilo
+```
+
+**2. Sync task checkboxes (after verification):**
+
+**CLI:**
+```bash
+/smartspec_sync_tasks_checkboxes \
+  specs/<category>/<spec-id>/tasks.md \
+  --apply
+```
+
+**Kilo Code:**
+```bash
+/smartspec_sync_tasks_checkboxes.md \
+  specs/<category>/<spec-id>/tasks.md \
+  --apply \
+  --platform kilo
+```
+
+### Critical Tasks Identified:
+
+If the report identifies **critical tasks** (P0 priority, security, GDPR, etc.):
+- **MUST** highlight them prominently
+- **MUST** recommend immediate attention
+- **MUST** provide specific commands to implement those tasks
+
+### Command Format Rules:
+
+**MUST follow these rules when generating commands:**
+1. ✅ Use `/smartspec_<workflow_name>` for CLI
+2. ✅ Use `/smartspec_<workflow_name>.md` for Kilo Code
+3. ✅ Include `--platform kilo` for Kilo Code
+4. ✅ Use actual spec paths (replace `<category>` and `<spec-id>` with real values)
+5. ❌ NEVER use `smartspec <verb> <noun>` format (e.g., `smartspec implement tasks`)
+6. ❌ NEVER omit `.md` extension in Kilo Code
+7. ❌ NEVER omit `--platform kilo` flag in Kilo Code
+
+---
+
 # End of workflow doc

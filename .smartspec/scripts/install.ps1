@@ -1,109 +1,206 @@
-# SmartSpec Installation Script for Windows
-# Usage: iwr -useb https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/install.ps1 | iex
+<#
+  SmartSpec Installer (Project-Local)
+  Platform : Windows (PowerShell)
+  Version  : 5.6.1
 
-Write-Host "🚀 Installing SmartSpec..." -ForegroundColor Green
+  This script:
+    - Downloads the SmartSpec distribution repo
+    - Copies `.smartspec/` and `.smartspec-docs/` into the current project
+    - Ensures stable filenames:
+        .smartspec/system_prompt_smartspec.md
+        .smartspec/knowledge_base_smart_spec.md
+    - Copies .smartspec/workflows into platform-specific folders if present:
+        .kilocode/workflows
+        .roo/commands
+        .claude/commands
+        .agent/workflows
+        .gemini/commands
 
-# Check prerequisites
-if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-    Write-Host "❌ Error: git is not installed. Please install git first." -ForegroundColor Red
-    Write-Host "   Download from: https://git-scm.com/download/win" -ForegroundColor Yellow
+  NOTE:
+    - The distribution repo is fixed to https://github.com/naibarn/SmartSpec
+    - You may override the branch with the SMARTSPEC_REPO_BRANCH environment
+      variable if really needed (default: main).
+#>
+
+[CmdletBinding()]
+param()
+
+$ErrorActionPreference = 'Stop'
+
+###############################
+# Configuration
+###############################
+
+# Fixed distribution repository (do NOT override)
+$SmartSpecRepoUrl    = 'https://github.com/naibarn/SmartSpec.git'
+# Branch can be overridden via environment variable SMARTSPEC_REPO_BRANCH
+$SmartSpecRepoBranch = if ($env:SMARTSPEC_REPO_BRANCH) { $env:SMARTSPEC_REPO_BRANCH } else { 'main' }
+
+$SmartSpecDir       = '.smartspec'
+$SmartSpecDocsDir   = '.smartspec-docs'
+$WorkflowsDir       = Join-Path $SmartSpecDir 'workflows'
+$WorkflowDocsDir    = Join-Path $SmartSpecDocsDir 'workflows'
+
+# Project-local platform directories
+$KiloCodeDir        = '.kilocode/workflows'
+$RooDir             = '.roo/commands'
+$ClaudeDir          = '.claude/commands'
+$AntigravityDir     = '.agent/workflows'
+$GeminiDir          = '.gemini/commands'
+
+###############################
+# Helpers
+###############################
+
+function Write-Log {
+  param([string]$Message)
+  Write-Host $Message
+}
+
+function New-TempDir {
+  $base = Join-Path ([System.IO.Path]::GetTempPath()) "smartspec-$(Get-Random)"
+  New-Item -ItemType Directory -Path $base -Force | Out-Null
+  return $base
+}
+
+function Backup-DirIfExists {
+  param([string]$Path)
+  if (Test-Path $Path -PathType Container) {
+    $ts = Get-Date -Format 'yyyyMMdd_HHmmss'
+    $backup = "$Path.backup.$ts"
+    Write-Log "  • Backing up '$Path' -> '$backup'"
+    Copy-Item -Recurse -Force $Path $backup
+  }
+}
+
+function Copy-Dir {
+  param(
+    [string]$Source,
+    [string]$Destination
+  )
+  if (-not (Test-Path $Source -PathType Container)) {
+    return
+  }
+  if (-not (Test-Path $Destination -PathType Container)) {
+    New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+  }
+  Copy-Item -Recurse -Force (Join-Path $Source '*') $Destination
+}
+
+###############################
+# Banner
+###############################
+
+Write-Log '============================================='
+Write-Log '🚀 SmartSpec Installer (Windows PowerShell) v5.6.1'
+Write-Log '============================================='
+Write-Log ("Project root: {0}" -f (Get-Location))
+Write-Log ("Repo:         {0} (branch: {1})" -f $SmartSpecRepoUrl, $SmartSpecRepoBranch)
+Write-Log ''
+
+###############################
+# Step 1: Download SmartSpec repo
+###############################
+
+$TmpDir = New-TempDir
+Write-Log ("📥 Downloading SmartSpec into temp dir: {0}" -f $TmpDir)
+
+if (Get-Command git -ErrorAction SilentlyContinue) {
+  git clone --depth 1 --branch $SmartSpecRepoBranch $SmartSpecRepoUrl $TmpDir | Out-Null
+}
+else {
+  Write-Log '⚠️ git not found, trying Invoke-WebRequest + Expand-Archive...'
+  if (-not (Get-Command Invoke-WebRequest -ErrorAction SilentlyContinue)) {
+    Write-Log '❌ Neither git nor Invoke-WebRequest is available. Please install git (recommended).'
     exit 1
-}
-
-if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
-    Write-Host "❌ Error: python is not installed. Please install Python 3.8+ first." -ForegroundColor Red
-    Write-Host "   Download from: https://www.python.org/downloads/" -ForegroundColor Yellow
+  }
+  $zipUrl  = ($SmartSpecRepoUrl -replace '\.git$','') + "/archive/refs/heads/$SmartSpecRepoBranch.zip"
+  $zipFile = Join-Path $TmpDir 'smartspec.zip'
+  Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile
+  if (-not (Get-Command Expand-Archive -ErrorAction SilentlyContinue)) {
+    Write-Log '❌ Expand-Archive is required when git is not installed.'
     exit 1
+  }
+  Expand-Archive -Path $zipFile -DestinationPath $TmpDir -Force
+  $root = Get-ChildItem -Path $TmpDir -Directory | Where-Object { $_.FullName -ne $TmpDir } | Select-Object -First 1
+  if ($null -ne $root) {
+    $TmpDir = $root.FullName
+  }
 }
 
-# Determine installation directories
-$RepoDir = "$env:USERPROFILE\.smartspec-repo"
-$SmartSpecHome = "$env:USERPROFILE\.smartspec"
+###############################
+# Step 2: Copy .smartspec and .smartspec-docs
+###############################
 
-# Clone or update repository
-if (Test-Path $RepoDir) {
-    Write-Host "📥 Updating existing SmartSpec installation..." -ForegroundColor Cyan
-    Set-Location $RepoDir
-    git pull origin main
-} else {
-    Write-Host "📥 Cloning SmartSpec repository..." -ForegroundColor Cyan
-    git clone https://github.com/naibarn/SmartSpec.git $RepoDir
-    Set-Location $RepoDir
+$SrcSmartSpec      = Join-Path $TmpDir '.smartspec'
+$SrcSmartSpecDocs  = Join-Path $TmpDir '.smartspec-docs'
+
+if (-not (Test-Path $SrcSmartSpec -PathType Container)) {
+  Write-Log '❌ Source repo does not contain .smartspec/. Please ensure the distribution repo layout is correct.'
+  exit 1
 }
 
-# Verify .smartspec directory exists in repo
-if (-not (Test-Path "$RepoDir\.smartspec")) {
-    Write-Host "❌ Error: .smartspec directory not found in repository." -ForegroundColor Red
-    exit 1
+Write-Log '📂 Installing/Updating .smartspec/'
+Backup-DirIfExists -Path $SmartSpecDir
+New-Item -ItemType Directory -Path $SmartSpecDir -Force | Out-Null
+Copy-Dir -Source $SrcSmartSpec -Destination $SmartSpecDir
+
+if (Test-Path $SrcSmartSpecDocs -PathType Container) {
+  Write-Log '📂 Installing/Updating .smartspec-docs/'
+  Backup-DirIfExists -Path $SmartSpecDocsDir
+  New-Item -ItemType Directory -Path $SmartSpecDocsDir -Force | Out-Null
+  Copy-Dir -Source $SrcSmartSpecDocs -Destination $SmartSpecDocsDir
+}
+else {
+  Write-Log 'ℹ️ No .smartspec-docs/ directory found in repo; skipping docs copy.'
 }
 
-# Verify workflows directory exists
-if (-not (Test-Path "$RepoDir\.smartspec\workflows")) {
-    Write-Host "❌ Error: Workflows directory not found after clone." -ForegroundColor Red
-    exit 1
+###############################
+# Step 3: Sanity check core files
+###############################
+
+if (-not (Test-Path (Join-Path $SmartSpecDir 'system_prompt_smartspec.md'))) {
+  Write-Log '⚠️ Warning: .smartspec/system_prompt_smartspec.md not found.'
 }
 
-# Verify scripts directory exists
-if (-not (Test-Path "$RepoDir\.smartspec\scripts")) {
-    Write-Host "❌ Error: Scripts directory not found after clone." -ForegroundColor Red
-    exit 1
+if (-not (Test-Path (Join-Path $SmartSpecDir 'knowledge_base_smart_spec.md'))) {
+  Write-Log '⚠️ Warning: .smartspec/knowledge_base_smart_spec.md not found.'
 }
 
-# Create symbolic link to .smartspec directory
-if (Test-Path $SmartSpecHome) {
-    # Check if it's a symbolic link
-    $item = Get-Item $SmartSpecHome -Force
-    if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
-        # It's a symlink, remove and recreate
-        Remove-Item $SmartSpecHome -Force
-    } else {
-        # It's a directory, backup
-        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-        Move-Item $SmartSpecHome "$SmartSpecHome.backup.$timestamp"
+###############################
+# Step 4: Sync workflows to local tool directories
+###############################
+
+if (-not (Test-Path $WorkflowsDir -PathType Container)) {
+  Write-Log ("⚠️ No workflows directory found at {0}. Nothing to sync to tools." -f $WorkflowsDir)
+}
+else {
+  Write-Log '🔁 Syncing workflows to tool-specific directories (if they exist)...'
+
+  function Sync-To {
+    param([string]$Destination)
+    if (-not (Test-Path $Destination -PathType Container)) {
+      New-Item -ItemType Directory -Path $Destination -Force | Out-Null
     }
+    Copy-Dir -Source $WorkflowsDir -Destination $Destination
+    Write-Log ("  • Synced workflows -> {0}" -f $Destination)
+  }
+
+  Sync-To -Destination $KiloCodeDir
+  Sync-To -Destination $RooDir
+  Sync-To -Destination $ClaudeDir
+  Sync-To -Destination $AntigravityDir
+  Sync-To -Destination $GeminiDir
 }
 
-# Create new symbolic link (requires admin or Developer Mode on Windows 10+)
-try {
-    New-Item -ItemType SymbolicLink -Path $SmartSpecHome -Target "$RepoDir\.smartspec" -Force | Out-Null
-    Write-Host "✅ Created symbolic link: $SmartSpecHome -> $RepoDir\.smartspec" -ForegroundColor Green
-} catch {
-    Write-Host "⚠️  Warning: Could not create symbolic link. Copying directory instead..." -ForegroundColor Yellow
-    Copy-Item -Path "$RepoDir\.smartspec" -Destination $SmartSpecHome -Recurse -Force
-}
+###############################
+# Step 5: Done
+###############################
 
-# Install Python dependencies if requirements.txt exists
-if (Test-Path "$RepoDir\requirements.txt") {
-    Write-Host "📦 Installing Python dependencies..." -ForegroundColor Cyan
-    python -m pip install --user -r "$RepoDir\requirements.txt"
-}
-
-# Add to PATH
-$CurrentPath = [Environment]::GetEnvironmentVariable("Path", "User")
-$SmartSpecScripts = "$SmartSpecHome\scripts"
-
-if ($CurrentPath -notlike "*$SmartSpecScripts*") {
-    [Environment]::SetEnvironmentVariable(
-        "Path",
-        "$CurrentPath;$SmartSpecScripts",
-        "User"
-    )
-    Write-Host "✅ Added SmartSpec to PATH" -ForegroundColor Green
-}
-
-# Set SMARTSPEC_HOME
-[Environment]::SetEnvironmentVariable("SMARTSPEC_HOME", $SmartSpecHome, "User")
-
-Write-Host ""
-Write-Host "✅ SmartSpec installed successfully!" -ForegroundColor Green
-Write-Host ""
-Write-Host "📍 Repository: $RepoDir" -ForegroundColor Cyan
-Write-Host "📍 SmartSpec Home: $SmartSpecHome (symlink)" -ForegroundColor Cyan
-Write-Host "📁 Workflows: $SmartSpecHome\workflows\" -ForegroundColor Cyan
-Write-Host "📁 Scripts: $SmartSpecHome\scripts\" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "🎯 Next steps:" -ForegroundColor Yellow
-Write-Host "   1. Restart your terminal to reload PATH"
-Write-Host "   2. Verify installation: python `$env:SMARTSPEC_HOME\scripts\verify_evidence_strict.py --help"
-Write-Host "   3. Check workflows: dir `$env:SMARTSPEC_HOME\workflows\"
-Write-Host ""
+Write-Log ''
+Write-Log '✅ SmartSpec installation/update complete.'
+Write-Log ("   - Core:   {0}" -f $SmartSpecDir)
+Write-Log ("   - Docs:   {0} (if present in repo)" -f $SmartSpecDocsDir)
+Write-Log ("   - Tools:  {0}, {1}, {2}, {3}, {4}" -f $KiloCodeDir, $RooDir, $ClaudeDir, $AntigravityDir, $GeminiDir)
+Write-Log ''
+Write-Log 'You can now run SmartSpec workflows (e.g. /smartspec_project_copilot) via your preferred tool (Kilo/Roo/Claude/Antigravity/Gemini) using the synced commands from .smartspec/workflows.'

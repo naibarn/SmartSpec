@@ -177,7 +177,7 @@ Before implementing any task, the AI agent **MUST** check for existing similar c
 
 **Validation Command:**
 ```bash
-python3 .spec/scripts/detect_duplicates.py \
+python3 .smartspec/scripts/detect_duplicates.py \
   --registry-dir .spec/registry/ \
   --threshold 0.8
 ```
@@ -211,7 +211,7 @@ After implementing tasks and before applying changes, the AI agent **MUST** vali
 
 **Validation Command:**
 ```bash
-python3 .spec/scripts/validate_implementation.py \
+python3 .smartspec/scripts/validate_implementation.py \
   --tasks specs/<category>/<spec-id>/tasks.md \
   --spec specs/<category>/<spec-id>/spec.md \
   --registry .spec/registry/ \

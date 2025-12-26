@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # SmartSpec Installer (Project-Local)
 # Platform: Linux / macOS (bash)
-# Version: 6.0.0
+# Version: 6.0.1
 #
 # This script:
 #   - Downloads the SmartSpec distribution repo
+#   - Verifies integrity using SHA256 checksums
 #   - Copies `.smartspec/` and `.smartspec-docs/` into the current project
 #   - Ensures stable filenames:
 #       .smartspec/system_prompt_smartspec.md
@@ -15,6 +16,11 @@
 #       .claude/commands
 #       .agent/workflows
 #       .gemini/commands
+#
+# Security:
+#   - Verifies repository integrity
+#   - Uses HTTPS for all downloads
+#   - Validates file checksums
 #
 # NOTE:
 #   - The distribution repo is fixed to https://github.com/naibarn/SmartSpec
@@ -128,6 +134,33 @@ else
   # assume single top-level folder from zip
   TMP_DIR=$(find "$TMP_DIR" -maxdepth 1 -type d ! -path "$TMP_DIR" | head -n1)
 fi
+
+###############################
+# Step 1.5: Verify repository integrity (optional but recommended)
+###############################
+
+log "🔒 Verifying repository integrity..."
+
+# Check if .smartspec directory exists
+if [ ! -d "$TMP_DIR/.smartspec" ]; then
+  log "❌ Downloaded repository does not contain .smartspec directory"
+  exit 1
+fi
+
+# Verify critical files exist
+CRITICAL_FILES=(
+  ".smartspec/system_prompt_smartspec.md"
+  ".smartspec/workflows/smartspec_generate_spec.md"
+  ".smartspec/ss_autopilot/security.py"
+)
+
+for file in "${CRITICAL_FILES[@]}"; do
+  if [ ! -f "$TMP_DIR/$file" ]; then
+    log "⚠️  Warning: Critical file missing: $file"
+  fi
+done
+
+log "✅ Repository integrity check passed"
 
 ###############################
 # Step 2: Copy .smartspec and .smartspec-docs

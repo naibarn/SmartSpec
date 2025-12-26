@@ -13,6 +13,14 @@ from datetime import datetime
 from .workflow_loader import WorkflowCatalog, Workflow
 from .tasks_parser import parse_tasks_file
 from .router_enhanced import decide_next, get_step_recommendation
+from .security import (
+    sanitize_spec_id,
+    sanitize_workflow_name,
+    sanitize_platform,
+    validate_workflow_params,
+    InvalidInputError,
+    PathTraversalError
+)
 
 
 @dataclass
@@ -47,6 +55,15 @@ class OrchestratorAgent:
     def read_state(self, spec_id: str) -> Dict[str, Any]:
         """
         Read current state for a spec.
+        
+        Args:
+            spec_id: Spec ID (will be sanitized)
+            
+        Raises:
+            InvalidInputError: If spec_id is invalid
+        """
+        # Sanitize input
+        spec_id = sanitize_spec_id(spec_id)
         
         Returns:
             State dict with all relevant information
@@ -177,46 +194,53 @@ class OrchestratorAgent:
         
         return recommendation
     
-    def _build_command(self, workflow: Workflow, spec_id: str, state: Dict[str, Any]) -> str:
-        """Build command for workflow"""
+      def _build_command(self, workflow: Workflow, spec_id: str, state: Dict) -> str:
+        """Build command string for workflow"""
+        from .security import quote_for_shell
+        
+        # Sanitize spec_id (already sanitized in recommend_workflow, but double-check)
+        spec_id = sanitize_spec_id(spec_id)"
         # Base command
         cmd = f"/{workflow.name}.md"
         
         # Add spec-specific arguments
+        # Use quote_for_shell to prevent command injection
+        safe_spec_id = quote_for_shell(spec_id)
+        
         if workflow.name == "smartspec_generate_spec":
-            cmd += f" \\\n  --spec-id {spec_id}"
+            cmd += f" \\\n  --spec-id {safe_spec_id}"
         
         elif workflow.name == "smartspec_generate_plan":
-            cmd += f" \\\n  specs/{spec_id}/spec.md"
+            cmd += f" \\\n  specs/{safe_spec_id}/spec.md"
         
         elif workflow.name == "smartspec_generate_tasks":
-            cmd += f" \\\n  specs/{spec_id}/plan.md"
+            cmd += f" \\\n  specs/{safe_spec_id}/plan.md"
         
         elif workflow.name == "smartspec_implement_tasks":
-            cmd += f" \\\n  specs/{spec_id}/tasks.md"
+            cmd += f" \\\n  specs/{safe_spec_id}/tasks.md"
             cmd += f" \\\n  --apply"
-            cmd += f" \\\n  --out .spec/reports/implement-tasks/{spec_id}"
+            cmd += f" \\\n  --out .spec/reports/implement-tasks/{safe_spec_id}"
         
         elif workflow.name == "smartspec_sync_tasks_checkboxes":
-            cmd += f" \\\n  specs/{spec_id}/tasks.md"
+            cmd += f" \\\n  specs/{safe_spec_id}/tasks.md"
             cmd += f" \\\n  --apply"
-            cmd += f" \\\n  --out .spec/reports/sync-tasks/{spec_id}"
+            cmd += f" \\\n  --out .spec/reports/sync-tasks/{safe_spec_id}"
         
         elif workflow.name == "smartspec_generate_tests":
-            cmd += f" \\\n  specs/{spec_id}/spec.md"
-            cmd += f" \\\n  --out specs/{spec_id}/tests"
+            cmd += f" \\\n  specs/{safe_spec_id}/spec.md"
+            cmd += f" \\\n  --out specs/{safe_spec_id}/tests"
         
         elif workflow.name == "smartspec_test_suite_runner":
-            cmd += f" \\\n  specs/{spec_id}/tests"
-            cmd += f" \\\n  --out .spec/reports/test-suite/{spec_id}"
+            cmd += f" \\\n  specs/{safe_spec_id}/tests"
+            cmd += f" \\\n  --out .spec/reports/test-suite/{safe_spec_id}"
         
         elif workflow.name == "smartspec_quality_gate":
-            cmd += f" \\\n  --spec-id {spec_id}"
-            cmd += f" \\\n  --out .spec/reports/quality-gate/{spec_id}"
+            cmd += f" \\\n  --spec-id {safe_spec_id}"
+            cmd += f" \\\n  --out .spec/reports/quality-gate/{safe_spec_id}"
         
         elif workflow.name == "smartspec_docs_generator":
-            cmd += f" \\\n  specs/{spec_id}"
-            cmd += f" \\\n  --out specs/{spec_id}/README.md"
+            cmd += f" \\\n  specs/{safe_spec_id}"
+            cmd += f" \\\n  --out specs/{safe_spec_id}/README.md"
         
         # Add common flags
         cmd += f" \\\n  --json"

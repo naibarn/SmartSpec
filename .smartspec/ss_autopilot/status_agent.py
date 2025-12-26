@@ -12,8 +12,13 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
 
-# Note: In production, these would be proper imports
-# For now, we'll use standalone implementation
+from .security import (
+    sanitize_spec_id,
+    sanitize_query,
+    validate_tasks_path,
+    InvalidInputError,
+    PathTraversalError
+)
 
 
 @dataclass
@@ -56,9 +61,20 @@ class StatusAgent:
         
         Returns:
             StatusResponse with all relevant information
+            
+        Raises:
+            InvalidInputError: If spec_id or question is invalid
+            PathTraversalError: If path is outside project
         """
+        # Sanitize inputs
+        spec_id = sanitize_spec_id(spec_id)
+        if question:
+            question = sanitize_query(question)
+        
         # Parse tasks.md
         tasks_file = self.specs_dir / spec_id / "tasks.md"
+        # Validate path to prevent traversal
+        tasks_file = validate_tasks_path(str(tasks_file), ".")
         tasks_info = self._parse_tasks(tasks_file)
         
         # Get pending tasks

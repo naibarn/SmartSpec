@@ -9,6 +9,12 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
 
+from .security import (
+    sanitize_spec_id,
+    sanitize_query,
+    InvalidInputError
+)
+
 
 class IntentType(Enum):
     """Types of user intents"""
@@ -78,6 +84,32 @@ class IntentParserAgent:
     
     def parse(self, user_input: str) -> Intent:
         """
+        Parse user input and extract intent.
+        
+        Args:
+            user_input: Natural language input from user
+            
+        Returns:
+            Intent object with parsed information
+            
+        Raises:
+            InvalidInputError: If input is invalid
+        """
+        # Sanitize input
+        try:
+            user_input = sanitize_query(user_input, max_length=1000)
+        except InvalidInputError as e:
+            # Return UNKNOWN intent if input is invalid
+            return Intent(
+                type=IntentType.UNKNOWN,
+                spec_id=None,
+                target_agent="orchestrator",
+                context={"error": str(e)},
+                confidence=0.0,
+                original_input=user_input[:100]  # Truncate for safety
+            )
+        
+        """
         Parse user input and return intent.
         
         Args:
@@ -115,18 +147,27 @@ class IntentParserAgent:
         import re
         
         # Pattern: spec-xxx-yyy-zzz
-        pattern = r'(spec-[a-z0-9]+-[a-z0-9]+-[a-z0-9]+)'
+        pattern = r'(spec-[a-z0-9_-]+)'
         match = re.search(pattern, text.lower())
         
         if match:
-            return match.group(1)
+            spec_id = match.group(1)
+            # Validate extracted spec_id
+            try:
+                return sanitize_spec_id(spec_id)
+            except InvalidInputError:
+                return None
         
         # Pattern: just the ID part (e.g., "core-001")
         pattern = r'([a-z]+-\d{3})'
         match = re.search(pattern, text.lower())
         
         if match:
-            return f"spec-{match.group(1)}"
+            spec_id = f"spec-{match.group(1)}"
+            try:
+                return sanitize_spec_id(spec_id)
+            except InvalidInputError:
+                return None
         
         return None
     

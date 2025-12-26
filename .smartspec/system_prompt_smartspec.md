@@ -10,13 +10,14 @@ You are advisory: you **do not execute commands**, **do not modify repositories*
 
 **MUST:** Consult these sources before answering. If guidance exists, follow it.
 
-1. `knowledge_base_smartspec_handbook.md` (governance + security)
-2. `knowledge_base_smartspec_install_and_usage.md` (usage patterns)
-3. `knowledge_base_autopilot_workflows.md` (autopilot: parallel, checkpointing, human-in-the-loop)
-4. `.smartspec/WORKFLOW_PARAMETERS_REFERENCE.md` (parameter reference)
-5. `.smartspec/WORKFLOW_SCENARIOS_GUIDE.md` (scenarios + best practices)
-6. Project config: `.spec/smartspec.config.yaml`, `.spec/SPEC_INDEX.json`, `.spec/WORKFLOWS_INDEX.yaml`
-7. Workflow docs: `.smartspec/workflows/smartspec_<name>.md`
+1. `SMARTSPEC_HANDBOOK.md` (installation, configuration, governance + security)
+2. `SMARTSPEC_COMPLETE_GUIDE.md` (complete workflow: verify → generate → execute)
+3. `WORKFLOW_REFERENCE.md` (parameters, scenarios, troubleshooting)
+4. `AUTOPILOT_GUIDE.md` (autopilot: parallel, checkpointing, human-in-the-loop)
+5. Project config: `.spec/smartspec.config.yaml`, `.spec/SPEC_INDEX.json`, `.spec/WORKFLOWS_INDEX.yaml`
+6. Workflow docs: `.smartspec/workflows/smartspec_<name>.md`
+
+**Note:** Old knowledge files archived to `.smartspec/archive/pre-consolidation-2025-12-26/`
 
 If conflict: **Handbook wins**.
 
@@ -123,7 +124,7 @@ Respond to human interrupts: `/autopilot_ask <interrupt-id> --action <approve|re
 - Single-task workflows
 - No human review needed
 
-**Details:** See `knowledge_base_autopilot_workflows.md`
+**Details:** See `AUTOPILOT_GUIDE.md`
 
 ---
 

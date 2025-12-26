@@ -1,0 +1,20 @@
+# Testing dependencies for SmartSpec Autopilot
+
+# Core testing
+pytest>=8.0.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+pytest-asyncio>=0.23.0
+
+# Code quality
+coverage>=7.4.0
+pytest-xdist>=3.5.0  # Parallel testing
+
+# Mocking and fixtures
+faker>=22.0.0
+freezegun>=1.4.0  # Time mocking
+
+# Required for running the application
+typer>=0.9.0
+langgraph>=0.0.1
+langchain>=0.1.0

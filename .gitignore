@@ -31,3 +31,21 @@ yarn-debug.log*
 yarn-error.log*
 *:Zone.Identifier
 *.backup
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/

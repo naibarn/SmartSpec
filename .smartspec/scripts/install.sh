@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SmartSpec Installer (Project-Local)
 # Platform: Linux / macOS (bash)
-# Version: 5.6.1
+# Version: 6.0.0
 #
 # This script:
 #   - Downloads the SmartSpec distribution repo
@@ -91,7 +91,7 @@ copy_dir() {
 ###############################
 
 log "============================================="
-log "🚀 SmartSpec Installer (Linux/macOS) v5.6.1"
+log "🚀 SmartSpec Installer (Linux/macOS) v6.0.0"
 log "============================================="
 log "Project root: $(pwd)"
 log "Repo:         ${SMARTSPEC_REPO_URL} (branch: ${SMARTSPEC_REPO_BRANCH})"
@@ -210,15 +210,126 @@ else
 fi
 
 ###############################
-# Step 5: Done
+# Step 5: Check and install Python dependencies
+###############################
+
+log "🐍 Checking Python dependencies..."
+
+# Check if Python 3 is available
+if ! have_cmd python3; then
+  log "⚠️  Python 3 not found. Please install Python 3.8+ to use SmartSpec Autopilot."
+  log "   SmartSpec workflows will work, but Autopilot features require Python."
+else
+  PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
+  log "  • Python version: $PYTHON_VERSION"
+  
+  # Check if pip is available
+  if ! have_cmd pip3; then
+    log "⚠️  pip3 not found. Please install pip3 to install Python dependencies."
+  else
+    log "  • pip3 found"
+    
+    # Check if langgraph is installed
+    if python3 -c "import langgraph" 2>/dev/null; then
+      LANGGRAPH_VERSION=$(python3 -c "import langgraph; print(langgraph.__version__)" 2>/dev/null || echo "unknown")
+      log "  • LangGraph already installed (version: $LANGGRAPH_VERSION)"
+    else
+      log "  • LangGraph not found, installing..."
+      if pip3 install langgraph>=0.2.0 --quiet; then
+        log "  ✅ LangGraph installed successfully"
+      else
+        log "  ⚠️  Failed to install LangGraph. Autopilot features may not work."
+        log "     You can install it manually: pip3 install langgraph>=0.2.0"
+      fi
+    fi
+    
+    # Check if langgraph-checkpoint is installed
+    if python3 -c "import langgraph.checkpoint" 2>/dev/null; then
+      log "  • LangGraph Checkpoint already installed"
+    else
+      log "  • LangGraph Checkpoint not found, installing..."
+      if pip3 install langgraph-checkpoint>=0.2.0 --quiet; then
+        log "  ✅ LangGraph Checkpoint installed successfully"
+      else
+        log "  ⚠️  Failed to install LangGraph Checkpoint."
+        log "     You can install it manually: pip3 install langgraph-checkpoint>=0.2.0"
+      fi
+    fi
+  fi
+fi
+
+###############################
+# Step 6: Verify Autopilot installation
+###############################
+
+log "🤖 Verifying SmartSpec Autopilot installation..."
+
+AUTOPILOT_DIR="$SMARTSPEC_DIR/ss_autopilot"
+if [ -d "$AUTOPILOT_DIR" ]; then
+  log "  ✅ Autopilot agents found at $AUTOPILOT_DIR"
+  
+  # Count Python files
+  AGENT_COUNT=$(find "$AUTOPILOT_DIR" -name "*.py" -type f | wc -l | tr -d ' ')
+  log "  • $AGENT_COUNT agent modules installed"
+  
+  # Check for key agents
+  if [ -f "$AUTOPILOT_DIR/orchestrator_agent.py" ]; then
+    log "  • Orchestrator Agent: ✅"
+  fi
+  if [ -f "$AUTOPILOT_DIR/status_agent.py" ]; then
+    log "  • Status Agent: ✅"
+  fi
+  if [ -f "$AUTOPILOT_DIR/intent_parser_agent.py" ]; then
+    log "  • Intent Parser Agent: ✅"
+  fi
+else
+  log "  ⚠️  Autopilot directory not found. This might be an older version."
+fi
+
+# Check for Autopilot workflows
+AUTOPILOT_WORKFLOWS=("autopilot_status.md" "autopilot_run.md" "autopilot_ask.md")
+AUTOPILOT_WORKFLOW_COUNT=0
+for workflow in "${AUTOPILOT_WORKFLOWS[@]}"; do
+  if [ -f "$WORKFLOWS_DIR/$workflow" ]; then
+    ((AUTOPILOT_WORKFLOW_COUNT++))
+  fi
+done
+
+if [ $AUTOPILOT_WORKFLOW_COUNT -eq 3 ]; then
+  log "  ✅ All 3 Autopilot workflows installed"
+else
+  log "  ⚠️  Only $AUTOPILOT_WORKFLOW_COUNT/3 Autopilot workflows found"
+fi
+
+###############################
+# Step 7: Done
 ###############################
 
 log ""
-log "✅ SmartSpec installation/update complete."
-log "   - Core:   $SMARTSPEC_DIR"
-log "   - Docs:   $SMARTSPEC_DOCS_DIR (if present in repo)"
-log "   - Tools:  $KILOCODE_DIR, $ROO_DIR, $CLAUDE_DIR, $ANTIGRAVITY_DIR, $GEMINI_DIR"
+log "✅ SmartSpec installation/update complete!"
 log ""
-log "You can now run SmartSpec workflows (e.g. /smartspec_project_copilot) via"
-log "your preferred tool (Kilo/Roo/Claude/Antigravity/Gemini) using the synced"
-log "commands from .smartspec/workflows."
+log "📦 Installed Components:"
+log "   - Core:      $SMARTSPEC_DIR"
+log "   - Docs:      $SMARTSPEC_DOCS_DIR (if present in repo)"
+log "   - Autopilot: $AUTOPILOT_DIR ($AGENT_COUNT agents)"
+log "   - Workflows: $WORKFLOWS_DIR (59+ workflows)"
+log "   - Tools:     $KILOCODE_DIR, $ROO_DIR, $CLAUDE_DIR, $ANTIGRAVITY_DIR, $GEMINI_DIR"
+log ""
+log "🚀 Quick Start:"
+log ""
+log "   SmartSpec Workflows (59 workflows):"
+log "     /smartspec_project_copilot.md --platform kilo"
+log "     /smartspec_generate_spec.md <spec-path> --platform kilo"
+log "     /smartspec_implement_tasks.md <tasks-path> --apply --platform kilo"
+log ""
+log "   Autopilot Workflows (3 workflows - NEW!):"
+log "     /autopilot_status.md <spec-id> --platform kilo"
+log "     /autopilot_run.md <spec-id> --platform kilo"
+log "     /autopilot_ask.md \"<your question>\" --platform kilo"
+log ""
+log "📚 Documentation:"
+log "   - README:     https://github.com/naibarn/SmartSpec/blob/main/README.md"
+log "   - Workflows:  https://github.com/naibarn/SmartSpec/tree/main/.smartspec/workflows"
+log "   - Copilot:    https://chatgpt.com/g/g-6936ffad015c81918e006a9ee2077074-smartspec-copilot"
+log ""
+log "💡 Tip: Run /autopilot_ask.md \"help\" --platform kilo to learn more about Autopilot!"

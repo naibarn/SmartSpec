@@ -28,6 +28,7 @@
 | **Content missing** | Content Issue | 3 | Prompter → Add | `generate_prompts_from_verify_report.py --category content_issue` | Add missing content |
 | **Critical issues** | Any | 1 | Prompter Priority | `generate_prompts_from_verify_report.py --priority 1` | Fix marked [x] but failed tasks |
 | **Multiple categories** | Mixed | 2 | Prompter All | `generate_prompts_from_verify_report.py --verify-report report.json` | Fix by priority order |
+| **Multiple prompts** | Batch | 2 | Batch Execute | `execute_prompts_batch.py --prompts-dir .spec/prompts/latest/` | Execute all at once |
 
 ---
 

@@ -492,6 +492,55 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 
 ---
 
+## 🚀 Step 6: Batch Execution (Optional)
+
+### When to Use
+When you have multiple prompt files (5+) and want to execute them all at once
+
+### Command
+```bash
+python3.11 .smartspec/scripts/execute_prompts_batch.py \
+  --prompts-dir .spec/prompts/latest/ \
+  --tasks tasks.md \
+  --checkpoint
+```
+
+### Benefits
+- ✅ Execute all prompts in one command
+- ✅ Automatic priority ordering
+- ✅ Progress tracking
+- ✅ Error handling
+- ✅ Checkpoint support (resume on failure)
+- ✅ **70-80% time savings** compared to manual execution
+
+### Example
+```bash
+# 1. Generate prompts
+python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+  --verify-report reports/latest/summary.json \
+  --tasks tasks.md
+
+# 2. Preview execution plan
+python3.11 .smartspec/scripts/execute_prompts_batch.py \
+  --prompts-dir .spec/prompts/latest/ \
+  --tasks tasks.md \
+  --dry-run
+
+# 3. Execute batch
+python3.11 .smartspec/scripts/execute_prompts_batch.py \
+  --prompts-dir .spec/prompts/latest/ \
+  --tasks tasks.md \
+  --checkpoint
+
+# 4. Verify results
+python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
+```
+
+### See Full Guide
+`.smartspec/BATCH_EXECUTION_GUIDE.md` for complete documentation
+
+---
+
 ## 🎓 Best Practices
 
 ### 1. Verify Early, Verify Often

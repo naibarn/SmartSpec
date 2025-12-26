@@ -149,7 +149,7 @@ class HumanInterruptManager:
         self.logger.info(
             f"Interrupt created: {interrupt_id}",
             type=interrupt_type.value,
-            message=message
+            user_message=message
         )
         
         return interrupt_id

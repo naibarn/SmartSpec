@@ -86,6 +86,7 @@ class CheckpointManager:
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         
+        # Create table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS checkpoints (
                 checkpoint_id TEXT PRIMARY KEY,
@@ -96,11 +97,24 @@ class CheckpointManager:
                 timestamp REAL NOT NULL,
                 status TEXT NOT NULL,
                 error TEXT,
-                metadata TEXT,
-                INDEX idx_workflow_id (workflow_id),
-                INDEX idx_thread_id (thread_id),
-                INDEX idx_status (status)
+                metadata TEXT
             )
+        """)
+        
+        # Create indexes separately
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_workflow_id 
+            ON checkpoints(workflow_id)
+        """)
+        
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_thread_id 
+            ON checkpoints(thread_id)
+        """)
+        
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_status 
+            ON checkpoints(status)
         """)
         
         conn.commit()

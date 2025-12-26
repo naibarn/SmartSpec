@@ -203,7 +203,8 @@ class WorkflowProgressTracker:
         self.workflow_id = workflow_id
         self.thread_id = thread_id
         self.total_steps = total_steps
-        self.current_step = 0
+        self.current_step = 0  # int - for counting
+        self.current_step_name = ""  # str - for display
         self.streamer = streamer or get_streamer()
         self.start_time = time.time()
         
@@ -243,6 +244,7 @@ class WorkflowProgressTracker:
             step_name: Step name
         """
         self.current_step += 1
+        self.current_step_name = step_name
         progress = self.current_step / self.total_steps
         
         self._publish_event(

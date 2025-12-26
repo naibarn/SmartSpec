@@ -137,31 +137,31 @@
 
 ```bash
 # 1. Generate prompts
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report .spec/reports/latest/summary.json \
   --tasks tasks.md
 
 # 2. Execute batch
-python3.11 .smartspec/scripts/execute_prompts_batch.py \
+python3 .smartspec/scripts/execute_prompts_batch.py \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --checkpoint
 
 # 3. Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
+python3 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 ```
 
 ### Safe Execution (Recommended)
 
 ```bash
 # 1. Preview first (dry-run)
-python3.11 .smartspec/scripts/execute_prompts_batch.py \
+python3 .smartspec/scripts/execute_prompts_batch.py \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --dry-run
 
 # 2. Execute with safety features
-python3.11 .smartspec/scripts/execute_prompts_batch.py \
+python3 .smartspec/scripts/execute_prompts_batch.py \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --checkpoint \
@@ -173,13 +173,13 @@ python3.11 .smartspec/scripts/execute_prompts_batch.py \
 
 ```bash
 # Execute only high priority
-python3.11 .smartspec/scripts/execute_prompts_batch.py \
+python3 .smartspec/scripts/execute_prompts_batch.py \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --only-category not_implemented,missing_tests
 
 # Skip low priority
-python3.11 .smartspec/scripts/execute_prompts_batch.py \
+python3 .smartspec/scripts/execute_prompts_batch.py \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --skip-category naming_issue
@@ -229,7 +229,7 @@ Tasks executed in order:
 
 ```bash
 # First run (fails at task 5)
-python3.11 .smartspec/scripts/execute_prompts_batch.py \
+python3 .smartspec/scripts/execute_prompts_batch.py \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --checkpoint
@@ -238,7 +238,7 @@ python3.11 .smartspec/scripts/execute_prompts_batch.py \
 vim src/problematic_file.py
 
 # Resume from checkpoint
-python3.11 .smartspec/scripts/execute_prompts_batch.py \
+python3 .smartspec/scripts/execute_prompts_batch.py \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --checkpoint \
@@ -250,7 +250,7 @@ python3.11 .smartspec/scripts/execute_prompts_batch.py \
 Preview execution plan without making changes:
 
 ```bash
-python3.11 .smartspec/scripts/execute_prompts_batch.py \
+python3 .smartspec/scripts/execute_prompts_batch.py \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --dry-run

@@ -27,7 +27,7 @@
 
 **Usage:**
 ```bash
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md \
   --repo-root . \
   --json \
@@ -85,18 +85,18 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
 **Usage:**
 ```bash
 # Basic usage
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md
 
 # Filter by category
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --category missing_tests
 
 # Filter by priority
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --priority 1
@@ -146,7 +146,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 
 **Usage:**
 ```bash
-python3.11 .smartspec/scripts/migrate_evidence_hooks.py \
+python3 .smartspec/scripts/migrate_evidence_hooks.py \
   tasks.md \
   --backup
 ```
@@ -189,11 +189,11 @@ irm https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/scripts/
 
 ```bash
 # Step 1: Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root . --json --out reports/
 
 # Step 2: Generate prompts
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md
 
@@ -204,7 +204,7 @@ cat .spec/prompts/latest/README.md
 # (Follow prompts in category files)
 
 # Step 5: Verify again
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root .
 ```
 
@@ -236,22 +236,22 @@ curl -fsSL https://raw.githubusercontent.com/naibarn/SmartSpec/main/.smartspec/s
 # (Use SmartSpec workflows)
 
 # 3. Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md --json
+python3 .smartspec/scripts/verify_evidence_enhanced.py tasks.md --json
 
 # 4. Generate prompts
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json --tasks tasks.md
 ```
 
 **Checking progress:**
 ```bash
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
+python3 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 ```
 
 **Fixing issues:**
 ```bash
 # Generate prompts for specific category
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --category not_implemented
@@ -259,7 +259,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 
 **Migrating old format:**
 ```bash
-python3.11 .smartspec/scripts/migrate_evidence_hooks.py tasks.md --backup
+python3 .smartspec/scripts/migrate_evidence_hooks.py tasks.md --backup
 ```
 
 ---
@@ -286,7 +286,7 @@ python3.11 .smartspec/scripts/migrate_evidence_hooks.py tasks.md --backup
 ### Adding a New Script
 
 1. Create script in `.smartspec/scripts/`
-2. Add shebang: `#!/usr/bin/env python3.11`
+2. Add shebang: `#!/usr/bin/env python3`
 3. Make executable: `chmod +x script.py`
 4. Add to this index
 5. Create README if complex
@@ -319,7 +319,7 @@ chmod +x .smartspec/scripts/*.py
 
 ### Python version
 ```bash
-python3.11 --version
+python3 --version
 # If not found, use python3
 ```
 

@@ -43,7 +43,7 @@
 
 **Diagnosis:**
 ```bash
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md \
   --repo-root . \
   --json \
@@ -62,11 +62,11 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
 **Commands:**
 ```bash
 # Step 1: Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root . --json --out reports/
 
 # Step 2: Generate prompts
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md
 
@@ -76,7 +76,7 @@ cat .spec/prompts/latest/README.md
 # Step 4: Implement (follow prompts in category files)
 
 # Step 5: Verify again
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root .
 ```
 
@@ -104,7 +104,7 @@ Check verify report for "not_implemented" category
 **Commands:**
 ```bash
 # Generate prompts for not implemented tasks
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --category not_implemented
@@ -116,7 +116,7 @@ cat .spec/prompts/latest/not_implemented.md
 # (Create files, add code, add tests)
 
 # Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root .
 ```
 
@@ -144,7 +144,7 @@ Check verify report for "missing_tests" category
 **Commands:**
 ```bash
 # Generate prompts for missing tests
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --category missing_tests
@@ -158,7 +158,7 @@ cat .spec/prompts/latest/missing_tests.md
 pytest tests/ -v
 
 # Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root .
 ```
 
@@ -186,7 +186,7 @@ Check verify report for "missing_code" category
 **Commands:**
 ```bash
 # Generate prompts for missing code
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --category missing_code
@@ -200,7 +200,7 @@ cat .spec/prompts/latest/missing_code.md
 pytest tests/ -v
 
 # Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root .
 ```
 
@@ -231,7 +231,7 @@ mv old_name.py new_name.py
 vim tasks.md  # Update evidence path
 
 # Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root .
 ```
 
@@ -268,7 +268,7 @@ Check verify report for missing symbols
 **Commands:**
 ```bash
 # Generate prompts for symbol issues
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --category symbol_issue
@@ -279,7 +279,7 @@ cat .spec/prompts/latest/symbol_issues.md
 # Add missing symbols to files
 
 # Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root .
 ```
 
@@ -305,7 +305,7 @@ Check verify report for missing content
 **Commands:**
 ```bash
 # Generate prompts for content issues
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --category content_issue
@@ -316,7 +316,7 @@ cat .spec/prompts/latest/content_issues.md
 # Add missing content to files
 
 # Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root .
 ```
 
@@ -342,7 +342,7 @@ Check verify report for Priority 1 tasks
 **Commands:**
 ```bash
 # Generate prompts for critical issues only
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --priority 1
@@ -353,7 +353,7 @@ cat .spec/prompts/latest/README.md
 # Fix critical issues first
 
 # Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root .
 ```
 
@@ -380,7 +380,7 @@ Check verify report for all categories
 **Commands:**
 ```bash
 # Generate prompts for all issues
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md
 
@@ -394,7 +394,7 @@ cat .spec/prompts/latest/README.md
 # 4. Priority 4 (naming)
 
 # Verify after each category
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root .
 ```
 
@@ -438,11 +438,11 @@ Q: All verified?
 **Steps:**
 ```bash
 # 1. Verify to see what's missing
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root . --json --out reports/
 
 # 2. Generate all prompts
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md
 
@@ -450,7 +450,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 cat .spec/prompts/latest/README.md
 
 # 4. Verify progress
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root .
 ```
 
@@ -462,11 +462,11 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
 **Steps:**
 ```bash
 # 1. Verify current state
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root . --json --out reports/
 
 # 2. Generate prompts for remaining issues
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md
 
@@ -477,7 +477,7 @@ cat .spec/prompts/latest/not_implemented.md
 cat .spec/prompts/latest/missing_tests.md
 
 # 5. Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root .
 ```
 
@@ -489,11 +489,11 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
 **Steps:**
 ```bash
 # 1. Verify with JSON output
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root . --json --out reports/
 
 # 2. Generate prompts for Priority 1 only
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --priority 1
@@ -502,7 +502,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 cat .spec/prompts/latest/README.md
 
 # 4. Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root .
 ```
 

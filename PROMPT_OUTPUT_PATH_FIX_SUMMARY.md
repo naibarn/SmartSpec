@@ -163,7 +163,7 @@ Script `generate_prompts_from_verify_report.py` was outputting to `.smartspec/pr
 
 ```bash
 # 1. Check script help
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py --help
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py --help
 # Should show: "Output directory (default: .spec/prompts)"
 
 # 2. Check documentation
@@ -174,7 +174,7 @@ grep -r "\.spec/prompts" .smartspec/ --include="*.md"
 # Should return: 80+ results
 
 # 3. Test actual generation
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md
 # Should create: .spec/prompts/YYYYMMDD_HHMMSS/
@@ -183,7 +183,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 ### Verification Results ✅
 
 ```bash
-$ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py --help | grep "default:"
+$ python3 .smartspec/scripts/generate_prompts_from_verify_report.py --help | grep "default:"
   --out OUT             Output directory (default: .spec/prompts)
 
 $ grep -r "\.smartspec/prompts" .smartspec/ --include="*.md" | wc -l
@@ -278,7 +278,7 @@ No action needed - everything works out of the box!
 ## ✅ Testing
 
 ### Automated Tests
-- ✅ Script syntax check (python3.11 -m py_compile)
+- ✅ Script syntax check (python3 -m py_compile)
 - ✅ Help text verification
 - ✅ Documentation consistency check
 - ✅ No references to old path

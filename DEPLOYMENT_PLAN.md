@@ -176,7 +176,7 @@ pip install -r requirements.txt
 # Install system dependencies
 sudo apt-get update
 sudo apt-get install -y \
-    python3.11 \
+    python3 \
     python3-pip \
     postgresql-14 \
     redis-server \
@@ -216,7 +216,7 @@ sudo -u smartspec git clone https://github.com/naibarn/SmartSpec.git /opt/smarts
 cd /opt/smartspec
 
 # 4. Create virtual environment
-sudo -u smartspec python3.11 -m venv venv
+sudo -u smartspec python3 -m venv venv
 sudo -u smartspec ./venv/bin/pip install -r requirements.txt
 ```
 

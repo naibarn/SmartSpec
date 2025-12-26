@@ -18,7 +18,7 @@ The **smartspec_report_implement_prompter** workflow is now fully implemented wi
 
 ```bash
 # Run verification with JSON output
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md \
   --repo-root . \
   --json \
@@ -35,7 +35,7 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
 
 ```bash
 # Generate prompts from verify report
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --out .spec/prompts/
@@ -76,7 +76,7 @@ Follow the instructions in each category file to fix issues.
 
 ```bash
 # Verify all tasks pass
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md \
   --repo-root .
 ```
@@ -90,7 +90,7 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
 Generate prompts for specific category only:
 
 ```bash
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report report.json \
   --tasks tasks.md \
   --category missing_tests
@@ -111,7 +111,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 Generate prompts for specific priority only:
 
 ```bash
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report report.json \
   --tasks tasks.md \
   --priority 1
@@ -130,7 +130,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 Get summary in JSON format:
 
 ```bash
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report report.json \
   --tasks tasks.md \
   --json
@@ -143,7 +143,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 Use custom templates:
 
 ```bash
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report report.json \
   --tasks tasks.md \
   --template-dir /path/to/templates
@@ -227,7 +227,7 @@ Create a wrapper script for easier usage:
 # .smartspec/scripts/prompter.sh
 
 # Run verification
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   "$1" \
   --repo-root . \
   --json \
@@ -237,7 +237,7 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
 LATEST_REPORT=$(ls -t reports/*/summary.json | head -1)
 
 # Generate prompts
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report "$LATEST_REPORT" \
   --tasks "$1" \
   --out .spec/prompts/
@@ -308,11 +308,11 @@ bash .smartspec/scripts/prompter.sh tasks.md
 
 ```bash
 # 1. Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root . --json --out reports/
 
 # 2. Generate prompts
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/20251226_090000/summary.json \
   --tasks tasks.md
 
@@ -326,7 +326,7 @@ cat .spec/prompts/20251226_090100/README.md
 
 ```bash
 # Generate prompts for critical issues only (Priority 1)
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --priority 1
@@ -338,7 +338,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 
 ```bash
 # Generate prompts for missing tests only
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --category missing_tests
@@ -350,7 +350,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 
 ```bash
 # Get summary in JSON format
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --json > prompts_summary.json

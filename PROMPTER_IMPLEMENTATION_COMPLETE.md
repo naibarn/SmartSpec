@@ -92,11 +92,11 @@
 
 ```bash
 # Step 1: Verify tasks
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root . --json --out reports/
 
 # Step 2: Generate prompts
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --out .smartspec/prompts/
@@ -108,7 +108,7 @@ cat .smartspec/prompts/latest/README.md
 # (Follow instructions in category files)
 
 # Step 5: Verify again
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root .
 ```
 
@@ -294,7 +294,7 @@ Output: Category Prompts (Markdown)
 ### Example 1: Basic Usage
 
 ```bash
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/20251226_090000/summary.json \
   --tasks tasks.md
 ```
@@ -317,7 +317,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 ### Example 2: Filter by Priority
 
 ```bash
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report report.json \
   --tasks tasks.md \
   --priority 1
@@ -330,7 +330,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 ### Example 3: Filter by Category
 
 ```bash
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report report.json \
   --tasks tasks.md \
   --category missing_tests
@@ -343,7 +343,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 ### Example 4: JSON Output
 
 ```bash
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report report.json \
   --tasks tasks.md \
   --json

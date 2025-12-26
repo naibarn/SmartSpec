@@ -41,7 +41,7 @@ Check if all tasks in `tasks.md` have corresponding evidence (files, symbols, co
 
 ### Command
 ```bash
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md \
   --repo-root . \
   --json \
@@ -184,7 +184,7 @@ Automatically generate implementation prompts based on report categories
 
 ### Command
 ```bash
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md
 ```
@@ -315,7 +315,7 @@ def test_user_auth():
 ### Verification
 After implementation, verify:
 ```bash
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
+python3 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 ```
 
 ---
@@ -329,7 +329,7 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 
 ### After Each Category
 ```bash
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
+python3 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 ```
 
 ### Check Progress
@@ -340,7 +340,7 @@ cat reports/latest/report.md
 ### If Issues Remain
 ```bash
 # Generate prompts for remaining issues
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md
 ```
@@ -356,7 +356,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 vim tasks.md
 
 # 2. Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --repo-root . --json --out reports/
 
 # 3. Review report
@@ -368,7 +368,7 @@ cat reports/latest/report.md
 # Naming Issues: 1 task
 
 # 4. Generate all prompts
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md
 
@@ -385,7 +385,7 @@ cat .spec/prompts/latest/not_implemented.md
 # (Implement all 5 tasks)
 
 # 7. Verify progress
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
+python3 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 
 # Output:
 # Verified: 5 tasks (62.5%)
@@ -396,7 +396,7 @@ cat .spec/prompts/latest/missing_tests.md
 # (Add 2 test files)
 
 # 9. Verify again
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
+python3 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 
 # Output:
 # Verified: 7 tasks (87.5%)
@@ -407,7 +407,7 @@ cat .spec/prompts/latest/naming_issues.md
 # (Rename file or update evidence)
 
 # 11. Final verification
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
+python3 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 
 # Output:
 # All tasks verified! ✅
@@ -421,11 +421,11 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 
 ```bash
 # Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --json
 
 # Generate Priority 1 only
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --priority 1
@@ -434,7 +434,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 cat .spec/prompts/latest/README.md
 
 # Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
+python3 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 ```
 
 ---
@@ -443,11 +443,11 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 
 ```bash
 # Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --json
 
 # Generate missing_tests only
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
   --category missing_tests
@@ -456,7 +456,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 cat .spec/prompts/latest/missing_tests.md
 
 # Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
+python3 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 ```
 
 ---
@@ -465,11 +465,11 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 
 ```bash
 # Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md --json
 
 # Generate all prompts
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md
 
@@ -478,14 +478,14 @@ cat .spec/prompts/latest/not_implemented.md
 # (Implement)
 
 # Verify after each category
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
+python3 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 
 # Next category
 cat .spec/prompts/latest/missing_tests.md
 # (Implement)
 
 # Verify
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
+python3 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 
 # Continue until all verified
 ```
@@ -499,7 +499,7 @@ When you have multiple prompt files (5+) and want to execute them all at once
 
 ### Command
 ```bash
-python3.11 .smartspec/scripts/execute_prompts_batch.py \
+python3 .smartspec/scripts/execute_prompts_batch.py \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --checkpoint
@@ -516,24 +516,24 @@ python3.11 .smartspec/scripts/execute_prompts_batch.py \
 ### Example
 ```bash
 # 1. Generate prompts
-python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
+python3 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md
 
 # 2. Preview execution plan
-python3.11 .smartspec/scripts/execute_prompts_batch.py \
+python3 .smartspec/scripts/execute_prompts_batch.py \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --dry-run
 
 # 3. Execute batch
-python3.11 .smartspec/scripts/execute_prompts_batch.py \
+python3 .smartspec/scripts/execute_prompts_batch.py \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --checkpoint
 
 # 4. Verify results
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
+python3 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 ```
 
 ### See Full Guide

@@ -221,7 +221,7 @@ For each task in category:
 
 If `--verify-after-each`:
 ```bash
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
+python3 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 ```
 
 #### 3.4. Save Checkpoint
@@ -246,7 +246,7 @@ If `--checkpoint`:
 If `--verify-at-end` (default):
 
 ```bash
-python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   tasks.md \
   --repo-root . \
   --json \

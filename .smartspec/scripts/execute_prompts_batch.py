@@ -376,12 +376,26 @@ class ReportGenerator:
         
         md += "## Next Steps\n\n"
         if self.summary.failed > 0:
-            md += "1. Fix failed tasks manually\n"
-            md += "2. Run verification again\n"
-            md += "3. Commit changes\n"
+            md += "1. **Fix failed tasks manually**\n"
+            md += "2. **Run verification** to confirm all fixes:\n"
+            md += "   ```bash\n"
+            md += "   /smartspec_verify_tasks_progress_strict <tasks.md> --json\n"
+            md += "   ```\n"
+            md += "3. **Commit changes** after verification passes:\n"
+            md += "   ```bash\n"
+            md += "   git add -A\n"
+            md += "   git commit -m \"fix: Resolve issues from batch execution\"\n"
+            md += "   ```\n"
         else:
-            md += "1. Run verification to confirm\n"
-            md += "2. Commit changes\n"
+            md += "1. **Run verification** to confirm all fixes:\n"
+            md += "   ```bash\n"
+            md += "   /smartspec_verify_tasks_progress_strict <tasks.md> --json\n"
+            md += "   ```\n"
+            md += "2. **Commit changes** after verification passes:\n"
+            md += "   ```bash\n"
+            md += "   git add -A\n"
+            md += "   git commit -m \"fix: Complete batch execution fixes\"\n"
+            md += "   ```\n"
         
         return md
 
@@ -534,7 +548,7 @@ def main():
     )
     
     # Generate report
-    report_dir = args.repo_root / ".spec" / "reports"
+    report_dir = args.repo_root / ".spec" / "reports" / "batch-execution"
     report_gen = ReportGenerator(summary, report_dir)
     report_file = report_gen.generate()
     

@@ -23,7 +23,6 @@ from datetime import datetime
 import threading
 
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.checkpoint.sqlite import SqliteSaver
 
 from .error_handler import with_error_handling
 from .advanced_logger import get_logger
@@ -400,22 +399,20 @@ class CheckpointManager:
 # LangGraph Integration
 # ============================================================================
 
-def create_checkpointer(use_sqlite: bool = True, db_path: str = ".smartspec/langgraph_checkpoints.db") -> Any:
+def create_checkpointer(use_sqlite: bool = False, db_path: str = ".smartspec/langgraph_checkpoints.db") -> Any:
     """
     Create LangGraph checkpointer.
     
     Args:
-        use_sqlite: Use SQLite (True) or Memory (False)
-        db_path: Path to SQLite database
+        use_sqlite: Use SQLite (True) or Memory (False) - SQLite not available, always uses Memory
+        db_path: Path to SQLite database (ignored)
         
     Returns:
-        Checkpointer instance
+        Checkpointer instance (MemorySaver)
     """
-    if use_sqlite:
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-        return SqliteSaver.from_conn_string(db_path)
-    else:
-        return MemorySaver()
+    # SQLite checkpointer not available in current LangGraph version
+    # Always use MemorySaver
+    return MemorySaver()
 
 
 # Export all

@@ -1,7 +1,7 @@
-# SmartSpec Workflow Registry (v6.2.0)
+# SmartSpec Workflow Registry (v6.5.0)
 # Canonical list of workflows, their write scopes, and platform support.
 
-release_line: 6.2.0
+release_line: 6.5.0
 
 registry:
   canonical_config: .spec/smartspec.config.yaml
@@ -385,3 +385,76 @@ workflows:
     write_scopes: [reports]
     status: active
     version: "6.2.0"
+
+  # ---------------------------------------------------------------------------
+  # Autopilot (Advanced Workflow Execution) (3)
+  # ---------------------------------------------------------------------------
+  - name: /autopilot_run
+    purpose: Execute workflows with advanced features (checkpointing, parallel execution, human-in-the-loop).
+    category: autopilot
+    requires_a2ui: false
+    platform_support: [cli, kilo]
+    write_scopes: [reports, specs, checkpoints]
+    status: active
+    version: "6.5.0"
+    flags:
+      - name: --checkpoint
+        description: Enable checkpointing for workflow state persistence and resume capability
+        required: false
+      - name: --parallel
+        description: Enable parallel execution for multi-task workflows
+        required: false
+      - name: --max-workers
+        description: Set maximum number of parallel workers (default: 4)
+        required: false
+        default: 4
+      - name: --resume
+        description: Resume workflow from a specific checkpoint ID
+        required: false
+      - name: --human-approval
+        description: Require human approval at critical workflow steps
+        required: false
+    features:
+      - parallel_execution
+      - checkpointing
+      - progress_streaming
+      - human_in_the_loop
+      - dynamic_routing
+      - error_recovery
+
+  - name: /autopilot_status
+    purpose: Check workflow status, progress, and available checkpoints.
+    category: autopilot
+    requires_a2ui: false
+    platform_support: [cli, kilo]
+    write_scopes: [none]
+    status: active
+    version: "6.5.0"
+    outputs:
+      - workflow_state
+      - progress_percentage
+      - current_step
+      - pending_interrupts
+      - available_checkpoints
+
+  - name: /autopilot_ask
+    purpose: Respond to human interrupt requests (approval, review, input, decision).
+    category: autopilot
+    requires_a2ui: false
+    platform_support: [cli, kilo]
+    write_scopes: [checkpoints]
+    status: active
+    version: "6.5.0"
+    flags:
+      - name: --action
+        description: Action to take (approve, reject, modify)
+        required: true
+        values: [approve, reject, modify]
+      - name: --modifications
+        description: JSON object containing modifications to apply (required if action is modify)
+        required: false
+    interrupt_types:
+      - APPROVAL
+      - INPUT
+      - REVIEW
+      - DECISION

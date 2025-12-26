@@ -459,6 +459,39 @@ workflows:
       - REVIEW
       - DECISION
 
+  - name: /smartspec_fix_naming_issues
+    purpose: Fix naming issues by automatically updating evidence paths in tasks.md based on verification report.
+    category: autopilot
+    requires_a2ui: false
+    platform_support: [cli, kilo]
+    write_scopes: [specs]
+    status: active
+    version: "1.0.0"
+    flags:
+      - name: <tasks.md>
+        description: Path to tasks.md file
+        required: true
+      - name: --from-report
+        description: Path to verification report (JSON or Markdown)
+        required: true
+      - name: --apply
+        description: Apply changes immediately (default: preview only)
+        required: false
+    features:
+      - naming_issue_detection
+      - evidence_path_update
+      - preview_mode
+      - batch_update
+    outputs:
+      - updated_tasks_md
+      - change_summary
+    script: .smartspec/scripts/fix_naming_issues.py
+    examples:
+      - description: Preview naming issue fixes
+        command: /smartspec_fix_naming_issues tasks.md --from-report .spec/reports/batch-execution/batch_execution.md
+      - description: Apply naming issue fixes
+        command: /smartspec_fix_naming_issues tasks.md --from-report .spec/reports/batch-execution/batch_execution.md --apply
+
   - name: /smartspec_execute_prompts_batch
     purpose: Execute multiple generated prompts in batch with progress tracking and checkpoint support.
     category: autopilot

@@ -37,7 +37,7 @@ It is **safe-by-default** and writes governed artifacts only when explicitly app
 - **Spec Index:** `.spec/SPEC_INDEX.json`
 - **Registry:** `.spec/registry/` (component registry, reuse index)
 - **Reports:** `.spec/reports/` (workflow outputs, previews, diffs)
-- **Scripts:** `.spec/scripts/` (automation scripts)
+- **Scripts:** `.smartspec/scripts/` (automation scripts)
 
 **When searching for these files, ALWAYS use the `.spec/` prefix from project root.**
 
@@ -125,7 +125,7 @@ Before generating or refining a spec, the AI agent **MUST** check for potential 
 
 **Validation Command:**
 ```bash
-python3 .spec/scripts/detect_duplicates.py \
+python3 .smartspec/scripts/detect_duplicates.py \
   --registry-dir .spec/registry/ \
   --threshold 0.8
 ```
@@ -176,7 +176,7 @@ After generating the preview and before applying, the AI agent **MUST** validate
 
 **Validation Command:**
 ```bash
-python3 .spec/scripts/validate_spec_enhanced.py \
+python3 .smartspec/scripts/validate_spec_enhanced.py \
   --spec .spec/reports/generate-spec/<run-id>/preview/spec.md \
   --registry .spec/reports/generate-spec/<run-id>/preview/registry/ \
   --check-duplicates --threshold 0.8

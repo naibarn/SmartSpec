@@ -46,7 +46,7 @@ Key goals:
 - **Spec Index:** `.spec/SPEC_INDEX.json` (NOT `SPEC_INDEX.json` at root)
 - **Registry:** `.spec/registry/` (component registry, reuse index)
 - **Reports:** `.spec/reports/` (workflow outputs, previews, diffs)
-- **Scripts:** `.spec/scripts/` (automation scripts)
+- **Scripts:** `.smartspec/scripts/` (automation scripts - READ ONLY)
 
 **When searching for these files, ALWAYS use the `.spec/` prefix from project root.**
 
@@ -216,7 +216,7 @@ After generating the preview and before applying, the AI agent **MUST** validate
 
 **Validation Command:**
 ```bash
-python3 .spec/scripts/validate_plan.py .spec/reports/generate-plan/<run-id>/preview/<spec-id>/plan.md
+python3 .smartspec/scripts/validate_plan.py .spec/reports/generate-plan/<run-id>/preview/<spec-id>/plan.md
 ```
 
 **Validation Rules:**

@@ -103,7 +103,7 @@ Before generating prompts, the AI agent **MUST** check for existing similar comp
 
 **Validation Command:**
 ```bash
-python3 .spec/scripts/detect_duplicates.py \
+python3 .smartspec/scripts/detect_duplicates.py \
   --registry-dir .spec/registry/ \
   --threshold 0.8
 ```
@@ -183,7 +183,7 @@ After generating the prompt pack, the AI agent **MUST** validate the generated p
 
 **Validation Command:**
 ```bash
-python3 .spec/scripts/validate_prompts.py \
+python3 .smartspec/scripts/validate_prompts.py \
   --prompts .spec/prompts/<spec-id>/<target>/<run-id>/ \
   --registry .spec/registry/ \
   --check-duplicates --threshold 0.8

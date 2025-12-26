@@ -11,6 +11,7 @@ from .status import append_status
 from .error_handler import with_error_handling
 from .advanced_logger import get_logger
 from .agent_wrapper import wrap_agent
+from .checkpoint_manager import create_checkpointer, CheckpointManager
 
 
 @with_error_handling
@@ -196,7 +197,13 @@ def build_graph(cfg: Dict[str, Any]):
         for n in ["SPEC","PLAN","TASKS","IMPLEMENT","SYNC_TASKS","TEST_SUITE","QUALITY_GATE","STOP"]:
             graph.add_edge(n, END)
 
-        return graph.compile()
+        # Add checkpointing
+        checkpointer = create_checkpointer(use_sqlite=True)
+        compiled = graph.compile(checkpointer=checkpointer)
+        
+        logger.info("LangGraph workflow built with checkpointing enabled")
+        
+        return compiled
     
     except Exception as e:
         raise RuntimeError(f"Failed to build graph: {str(e)}")

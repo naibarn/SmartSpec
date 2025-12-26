@@ -146,7 +146,17 @@ class AgentWrapper:
             # 3. Rate Limiting
             if self.enable_rate_limiting:
                 identifier = f"{self.agent_name}_{method_name}"
-                if not self.rate_limiter.allow(identifier):
+                rate_result = self.rate_limiter.check_rate_limit(identifier)
+                
+                # Unwrap if needed
+                if isinstance(rate_result, dict) and "result" in rate_result:
+                    rate_info = rate_result["result"]
+                else:
+                    rate_info = rate_result
+                
+                # Check if allowed
+                allowed = rate_info.get("allowed", True) if isinstance(rate_info, dict) else True
+                if not allowed:
                     error_msg = f"Rate limit exceeded for {operation_name}"
                     if self.enable_logging:
                         self.logger.warning(error_msg)
@@ -155,12 +165,15 @@ class AgentWrapper:
             # 4. Caching - Check cache
             if self.enable_caching:
                 cache_key = self._make_cache_key(method_name, args, kwargs)
-                cached = self.cache.get(cache_key)
+                cached_result = self.cache.get(cache_key)
+                
+                # Unwrap if needed (cache methods have @with_error_handling)
+                if isinstance(cached_result, dict) and "result" in cached_result:
+                    cached = cached_result["result"]
+                else:
+                    cached = cached_result
+                
                 if cached is not None:
-                    # Unwrap if needed
-                    if isinstance(cached, dict) and "result" in cached:
-                        cached = cached["result"]
-                    
                     if self.enable_logging:
                         self.logger.info(f"Cache hit for {operation_name}")
                     return cached
@@ -214,19 +227,24 @@ class AgentWrapper:
         Args:
             args: Positional arguments
             kwargs: Keyword arguments
+            
+        Raises:
+            ValueError: If input validation fails
         """
         # Validate string inputs
         for arg in args:
             if isinstance(arg, str):
                 # Check for path traversal
                 if '/' in arg or '\\' in arg:
-                    self.path_validator.is_safe_path(arg)
+                    if not self.path_validator.is_safe_path(arg):
+                        raise ValueError(f"Unsafe path detected: {arg}")
         
         for key, value in kwargs.items():
             if isinstance(value, str):
                 # Check for path traversal
                 if '/' in value or '\\' in value:
-                    self.path_validator.is_safe_path(value)
+                    if not self.path_validator.is_safe_path(value):
+                        raise ValueError(f"Unsafe path detected in {key}: {value}")
     
     def _make_cache_key(self, method_name: str, args: tuple, kwargs: dict) -> str:
         """

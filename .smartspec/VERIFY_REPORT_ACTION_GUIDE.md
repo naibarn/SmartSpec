@@ -10,7 +10,51 @@
 
 หลังจากรัน `/smartspec_verify_tasks_progress_strict` แล้วได้ report ที่แจ้งปัญหา ควรใช้ workflow ไหนต่อไป?
 
+---
+
+## 🚀 NEW: Automated Solution (Recommended)
+
+**Best Approach:** ใช้ `/smartspec_report_implement_prompter` เพื่อสร้าง prompts สำหรับแก้ไขปัญหาอัตโนมัติ!
+
+```bash
+# Step 1: Verify and get report
+/smartspec_verify_tasks_progress_strict tasks.md --json --out reports/
+
+# Step 2: Generate fix prompts automatically
+/smartspec_report_implement_prompter \
+  --verify-report reports/latest/summary.json \
+  --tasks tasks.md
+
+# Output: .smartspec/prompts/latest/
+#   ├── README.md (summary + priority order)
+#   ├── not_implemented.md (if any)
+#   ├── missing_tests.md (if any)
+#   ├── naming_issues.md (if any)
+#   └── ... (other categories)
+
+# Step 3: Follow generated prompts
+cat .smartspec/prompts/latest/README.md
+
+# Step 4: Implement fixes and verify
+/smartspec_verify_tasks_progress_strict tasks.md
+```
+
+**Benefits:**
+- ✅ **Automatic category detection** - ไม่ต้องเลือก workflow เอง
+- ✅ **Priority-based ordering** - จัดลำดับความสำคัญให้อัตโนมัติ
+- ✅ **Actionable prompts** - คำแนะนำที่ชัดเจนสำหรับแต่ละปัญหา
+- ✅ **Single workflow** - ใช้ workflow เดียวสำหรับทุกปัญหา
+- ✅ **No manual decision** - ไม่ต้องตัดสินใจเอง
+
+**Documentation:** `.smartspec/workflows/smartspec_report_implement_prompter.md` (v7.1.0)
+
+---
+
+## Manual Approach (Alternative)
+
 **คำตอบขึ้นอยู่กับ Problem Category ที่ report แจ้ง**
+
+ถ้าต้องการแก้ไขด้วยตนเอง ให้ดู workflow ที่แนะนำด้านล่าง:
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 description: "Strict evidence-only verification using parseable evidence hooks (evidence: type key=value...)."
-version: 6.2.0
+version: 6.3.0
 workflow: /smartspec_verify_tasks_progress_strict
 category: verify
 ---
@@ -8,7 +8,7 @@ category: verify
 # smartspec_verify_tasks_progress_strict
 
 > **Canonical path:** `.smartspec/workflows/smartspec_verify_tasks_progress_strict.md`
-> **Version:** 6.2.0
+> **Version:** 6.3.0
 > **Category:** verify
 > **Writes:** reports only (`.spec/reports/**`)
 
@@ -314,12 +314,22 @@ When a task is `missing_hooks` or `needs_manual`, the report MUST suggest at lea
 
 ## Implementation
 
-Implemented in: `.smartspec/scripts/verify_evidence_strict.py`
+Implemented in: `.smartspec/scripts/verify_evidence_enhanced.py`
+
+**Enhanced Features (v6.3.0):**
+- Separate tracking of code vs test evidence
+- Checkbox status tracking
+- Fuzzy file matching for similar filenames
+- Problem categorization (not_implemented, missing_tests, naming_issue, etc.)
+- Root cause analysis
+- Actionable suggestions per task
+- Enhanced summary statistics
+- Grouped report format by problem category
 
 ### Usage (internal)
 
 ```bash
-python3 .smartspec/scripts/verify_evidence_strict.py \
+python3 .smartspec/scripts/verify_evidence_enhanced.py \
   <path/to/tasks.md> \
   --project-root <workspace-root> \
   --out <output-directory>

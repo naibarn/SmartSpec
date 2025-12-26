@@ -117,9 +117,7 @@ def test_{{task_id_lower}}():
 
 ### Suggestions from Report
 
-{{#each suggestions}}
-- {{this}}
-{{/each}}
+{{suggestions}}
 
 ### Verification
 

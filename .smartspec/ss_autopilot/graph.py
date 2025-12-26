@@ -9,6 +9,8 @@ from .commands import build_slash_command, default_out_dir
 from .runner import WorkflowRunner
 from .status import append_status
 from .error_handler import with_error_handling
+from .advanced_logger import get_logger
+from .agent_wrapper import wrap_agent
 
 
 @with_error_handling
@@ -23,6 +25,9 @@ def build_graph(cfg: Dict[str, Any]):
         Compiled graph or error dict
     """
     try:
+        logger = get_logger("graph")
+        logger.info("Building LangGraph workflow")
+        
         ai_specs_dir = cfg["paths"]["ai_specs_dir"]
 
         graph = StateGraph(dict)

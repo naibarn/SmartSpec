@@ -32,6 +32,7 @@ from .error_handler import (
     WorkflowNotFoundError,
     get_user_friendly_error
 )
+from .advanced_logger import get_logger
 
 
 @dataclass
@@ -66,9 +67,11 @@ class OrchestratorAgent:
             workflows_dir: Path to workflows directory
         """
         try:
+            self.logger = get_logger("orchestrator_agent")
             self.catalog = WorkflowCatalog(workflows_dir)
             self.state_dir = Path(".spec/state")
             self.state_dir.mkdir(parents=True, exist_ok=True)
+            self.logger.info("OrchestratorAgent initialized", workflows_dir=workflows_dir)
         except Exception as e:
             raise RuntimeError(f"Failed to initialize OrchestratorAgent: {str(e)}")
     
@@ -86,6 +89,9 @@ class OrchestratorAgent:
         Raises:
             InvalidInputError: If spec_id is invalid
         """
+        # Log operation start
+        self.logger.info("Reading state", spec_id=spec_id)
+        
         # Sanitize input
         try:
             spec_id = sanitize_spec_id(spec_id)

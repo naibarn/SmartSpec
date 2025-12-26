@@ -1,8 +1,1 @@
-# SHA256 checksum for install.sh
-# Generated: 2025-12-26
-# 
-# To verify:
-#   sha256sum -c install.sh.sha256
-#
-# This file will be updated automatically when install.sh changes
-5fec99cd885d95624c990a5b2edc8adf1af723f06939863c60126e88675edcc0  install.sh
+469af5acebc779a2aac775bf1696c23404ed40838500cb941fdd5b9e11fb1a42  install.sh

@@ -256,11 +256,20 @@ else
   PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
   log "  • Python version: $PYTHON_VERSION"
   
-  # Check if pip is available
-  if ! have_cmd pip3; then
-    log "⚠️  pip3 not found. Please install pip3 to install Python dependencies."
-  else
+  # Check if pip is available (try pip3 first, then python3 -m pip)
+  PIP_CMD=""
+  if have_cmd pip3; then
+    PIP_CMD="pip3"
     log "  • pip3 found"
+  elif python3 -m pip --version >/dev/null 2>&1; then
+    PIP_CMD="python3 -m pip"
+    log "  • pip found (via python3 -m pip)"
+  else
+    log "⚠️  pip not found. Please install pip to install Python dependencies."
+    log "   You can install it with: python3 -m ensurepip --upgrade"
+  fi
+  
+  if [ -n "$PIP_CMD" ]; then
     
     # Check if langgraph is installed
     if python3 -c "import langgraph" 2>/dev/null; then
@@ -268,11 +277,11 @@ else
       log "  • LangGraph already installed (version: $LANGGRAPH_VERSION)"
     else
       log "  • LangGraph not found, installing..."
-      if pip3 install langgraph>=0.2.0 --quiet; then
+      if $PIP_CMD install langgraph>=0.2.0 --quiet; then
         log "  ✅ LangGraph installed successfully"
       else
         log "  ⚠️  Failed to install LangGraph. Autopilot features may not work."
-        log "     You can install it manually: pip3 install langgraph>=0.2.0"
+        log "     You can install it manually: pip install langgraph>=0.2.0"
       fi
     fi
     
@@ -281,11 +290,11 @@ else
       log "  • LangGraph Checkpoint already installed"
     else
       log "  • LangGraph Checkpoint not found, installing..."
-      if pip3 install langgraph-checkpoint>=0.2.0 --quiet; then
+      if $PIP_CMD install langgraph-checkpoint>=0.2.0 --quiet; then
         log "  ✅ LangGraph Checkpoint installed successfully"
       else
         log "  ⚠️  Failed to install LangGraph Checkpoint."
-        log "     You can install it manually: pip3 install langgraph-checkpoint>=0.2.0"
+        log "     You can install it manually: pip install langgraph-checkpoint>=0.2.0"
       fi
     fi
   fi

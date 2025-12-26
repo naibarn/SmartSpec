@@ -387,7 +387,7 @@ workflows:
     version: "6.2.0"
 
   # ---------------------------------------------------------------------------
-  # Autopilot (Advanced Workflow Execution) (3)
+  # Autopilot (Advanced Workflow Execution) (4)
   # ---------------------------------------------------------------------------
   - name: /autopilot_run
     purpose: Execute workflows with advanced features (checkpointing, parallel execution, human-in-the-loop).
@@ -458,3 +458,50 @@ workflows:
       - INPUT
       - REVIEW
       - DECISION
+
+  - name: /smartspec_execute_prompts_batch
+    purpose: Execute multiple generated prompts in batch with progress tracking and checkpoint support.
+    category: autopilot
+    requires_a2ui: false
+    platform_support: [cli, kilo]
+    write_scopes: [specs, reports]
+    status: active
+    version: "6.5.0"
+    flags:
+      - name: --prompts-dir
+        description: Directory containing generated prompt files
+        required: true
+      - name: --tasks
+        description: Path to tasks.md file
+        required: true
+      - name: --dry-run
+        description: Preview execution plan without making changes
+        required: false
+      - name: --checkpoint
+        description: Enable checkpointing for resume capability
+        required: false
+      - name: --max-failures
+        description: Maximum number of failures before stopping (default 3)
+        required: false
+        default: 3
+      - name: --skip-category
+        description: Categories to skip (comma-separated)
+        required: false
+      - name: --only-category
+        description: Only execute specific categories (comma-separated)
+        required: false
+      - name: --verify-after-each
+        description: Run verification after each category
+        required: false
+    features:
+      - batch_execution
+      - priority_ordering
+      - progress_tracking
+      - checkpoint_support
+      - category_filtering
+      - error_handling
+    outputs:
+      - execution_report
+      - success_count
+      - failure_count
+      - duration

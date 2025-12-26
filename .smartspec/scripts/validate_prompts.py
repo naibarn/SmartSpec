@@ -21,8 +21,20 @@ def detect_prompt_type(prompts_path: Path) -> str:
     Returns:
         'spec-based' - Traditional spec-based prompts (00_system_and_rules.md, etc.)
         'task-based' - Task-based prompts from verify report (prompt_001_*.md, etc.)
+        'custom-priority' - Custom priority-filtered prompts (critical_issues.md, etc.)
         'unknown' - Cannot determine type
     """
+    # Check for custom/priority-filtered structure
+    custom_indicators = [
+        "critical_issues.md",
+        "high_priority_issues.md",
+        "medium_priority_issues.md",
+        "low_priority_issues.md"
+    ]
+    
+    if any((prompts_path / f).exists() for f in custom_indicators) or (prompts_path / "meta").is_dir():
+        return 'custom-priority'
+    
     # Check for spec-based structure
     spec_based_files = [
         "prompts/00_system_and_rules.md",
@@ -84,6 +96,50 @@ def validate_spec_based_prompts(prompts_path: Path) -> Tuple[List[str], List[str
         # Check for security notes
         if "no runtime source files were modified" not in readme_content.lower():
             warnings.append("README.md missing security notes")
+    
+    return errors, warnings
+
+
+def validate_custom_priority_prompts(prompts_path: Path) -> Tuple[List[str], List[str]]:
+    """Validate custom priority-filtered prompt pack."""
+    errors = []
+    warnings = []
+    
+    # Check required files
+    readme_path = prompts_path / "README.md"
+    
+    if not readme_path.exists():
+        errors.append("Required file missing: README.md")
+    
+    # Check for at least one priority file
+    priority_files = [
+        "critical_issues.md",
+        "high_priority_issues.md",
+        "medium_priority_issues.md",
+        "low_priority_issues.md"
+    ]
+    
+    has_priority_file = any((prompts_path / f).exists() for f in priority_files)
+    
+    if not has_priority_file:
+        errors.append("No priority issue files found (critical_issues.md, etc.)")
+    
+    # Check README.md content
+    if readme_path.exists():
+        readme_content = readme_path.read_text()
+        
+        # Check for key information
+        if "priority" not in readme_content.lower():
+            warnings.append("README.md missing priority information")
+        
+        if "issue" not in readme_content.lower() and "task" not in readme_content.lower():
+            warnings.append("README.md missing issue/task information")
+    
+    # Check meta directory (optional)
+    meta_dir = prompts_path / "meta"
+    if meta_dir.exists() and meta_dir.is_dir():
+        # Meta directory is optional, just note it
+        pass
     
     return errors, warnings
 
@@ -166,6 +222,8 @@ def validate_prompt_pack(prompts_dir, registry_dir, check_duplicates=False, thre
         errors, warnings = validate_spec_based_prompts(prompts_path)
     elif prompt_type == 'task-based':
         errors, warnings = validate_task_based_prompts(prompts_path)
+    elif prompt_type == 'custom-priority':
+        errors, warnings = validate_custom_priority_prompts(prompts_path)
     else:
         errors.append("Cannot determine prompt pack type (no recognizable structure found)")
         return errors, warnings

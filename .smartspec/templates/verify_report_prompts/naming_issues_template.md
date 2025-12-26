@@ -200,10 +200,45 @@ vim {{tasks_path}}
 # touch new_path
 
 # Verify all tasks
-/smartspec_verify_tasks_progress_strict {{tasks_path}}
+/smartspec_verify_tasks_progress_strict {{tasks_path}} --json
 
 # Expected: {{task_count}} tasks verified
 ```
+
+### What's Next?
+
+After fixing naming issues:
+
+1. **Re-run verification** to check if there are other issues
+2. **Generate new prompts** for remaining issues
+3. **Execute prompts** (batch or manual)
+
+```bash
+# Step 1: Verify again
+/smartspec_verify_tasks_progress_strict {{tasks_path}} \
+  --out .spec/reports/verify-tasks-progress/latest \
+  --json
+
+# Step 2: Generate prompts for remaining issues
+/smartspec_report_implement_prompter \
+  --verify-report .spec/reports/verify-tasks-progress/latest/summary.json \
+  --tasks {{tasks_path}} \
+  --out .spec/prompts/latest
+
+# Step 3: Check how many prompts generated
+cat .spec/prompts/latest/README.md
+
+# Step 4: Execute (choose based on count)
+# - If 1-4 tasks: Manual execution (read prompts one by one)
+# - If 5+ tasks: Batch execution (recommended)
+
+python3 .smartspec/scripts/execute_prompts_batch.py \
+  --prompts-dir .spec/prompts/latest/ \
+  --tasks {{tasks_path}} \
+  --checkpoint
+```
+
+📖 **See:** `.smartspec/AFTER_PROMPT_GENERATION_GUIDE.md` for complete workflow
 
 ---
 

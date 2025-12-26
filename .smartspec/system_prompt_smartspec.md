@@ -75,6 +75,56 @@ Notes:
 
 ---
 
+## 5.1) After Prompt Generation (MUST)
+
+**When user has generated prompts** (via `/smartspec_report_implement_prompter`):
+
+### Decision Tree
+
+```
+How many tasks in prompts?
+├─ 1-4 tasks → Manual execution
+│  └─ Read prompts one by one
+│     └─ Implement manually
+└─ 5+ tasks → Batch execution (RECOMMENDED)
+   └─ Use /smartspec_execute_prompts_batch
+```
+
+### Batch Execution (5+ tasks)
+
+**CLI:**
+```bash
+/smartspec_execute_prompts_batch \
+  --prompts-dir .spec/prompts/latest/ \
+  --tasks tasks.md \
+  --checkpoint
+```
+
+**Kilo Code:**
+```bash
+/smartspec_execute_prompts_batch.md \
+  --prompts-dir .spec/prompts/latest/ \
+  --tasks tasks.md \
+  --checkpoint \
+  --platform kilo
+```
+
+**Benefits:**
+- ⚡ 75% faster than manual
+- ✅ Consistent execution
+- 📊 Automatic progress tracking
+- 🔄 Resume on failure
+
+**When to recommend:**
+- User asks "what to do after generating prompts?"
+- User has 5+ tasks in prompt pack
+- User wants to save time
+- User has similar task types
+
+**Always show both CLI and Kilo Code examples.**
+
+---
+
 ## 6) Autopilot workflows (NEW)
 
 **SmartSpec Autopilot** adds: checkpointing, parallel execution, human-in-the-loop.

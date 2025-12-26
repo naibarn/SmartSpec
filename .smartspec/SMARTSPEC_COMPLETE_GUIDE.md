@@ -62,7 +62,7 @@ SmartSpec provides an automated workflow for verifying task completion, generati
   --tasks tasks.md
 
 # 3. Execute (if 5+ tasks)
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md
 
@@ -304,7 +304,7 @@ cat .spec/prompts/latest/missing_tests.md
 
 ```bash
 # Execute all prompts at once
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --checkpoint
@@ -326,7 +326,7 @@ python3 .smartspec/scripts/execute_prompts_batch.py \
 ### Basic Usage
 
 ```bash
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md
 ```
@@ -334,7 +334,7 @@ python3 .smartspec/scripts/execute_prompts_batch.py \
 ### With Checkpoint (Recommended)
 
 ```bash
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --checkpoint
@@ -348,7 +348,7 @@ python3 .smartspec/scripts/execute_prompts_batch.py \
 ### Dry Run (Test First)
 
 ```bash
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --dry-run
@@ -366,7 +366,7 @@ Would execute 8 tasks:
 ### Priority Ordering
 
 ```bash
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --priority-order
@@ -381,7 +381,7 @@ python3 .smartspec/scripts/execute_prompts_batch.py \
 
 ```bash
 # Only execute missing_tests
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --category missing_tests
@@ -413,7 +413,7 @@ python3 .smartspec/scripts/execute_prompts_batch.py \
 
 ```bash
 # If execution stopped
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --checkpoint \
@@ -465,7 +465,7 @@ cat .spec/prompts/spec-001/README.md
 # 40 tasks → Recommended: Batch execution
 
 # 5. Execute batch
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --prompts-dir .spec/prompts/spec-001/ \
   --tasks tasks.md \
   --checkpoint
@@ -507,7 +507,7 @@ cat .spec/prompts/spec-001/failed_tasks.md
   --out .spec/prompts/p1
 
 # 3. Execute P1
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --prompts-dir .spec/prompts/p1/ \
   --tasks tasks.md
 
@@ -522,7 +522,7 @@ python3 .smartspec/scripts/execute_prompts_batch.py \
   --out .spec/prompts/p2
 
 # 6. Execute P2
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --prompts-dir .spec/prompts/p2/ \
   --tasks tasks.md
 
@@ -558,7 +558,7 @@ cat .spec/prompts/latest/naming_issues.md
   --category missing_tests
 
 # 6. Execute batch
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md
 
@@ -588,11 +588,11 @@ python3 .smartspec/scripts/execute_prompts_batch.py \
 
 ```bash
 # ✅ Good
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --checkpoint
 
 # ❌ Bad
-python3 .smartspec/scripts/execute_prompts_batch.py
+/smartspec_execute_prompts_batch
 ```
 
 **Why:** Can resume if interrupted
@@ -603,11 +603,11 @@ python3 .smartspec/scripts/execute_prompts_batch.py
 
 ```bash
 # ✅ Good
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --dry-run
 
 # Then execute
-python3 .smartspec/scripts/execute_prompts_batch.py
+/smartspec_execute_prompts_batch
 ```
 
 **Why:** Preview what will happen
@@ -695,7 +695,7 @@ implement → implement → implement → verify
 **A:** Yes, if you used `--checkpoint`:
 
 ```bash
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --checkpoint \
   --resume
 ```
@@ -789,7 +789,7 @@ python3 .smartspec/scripts/execute_prompts_batch.py \
   --tasks tasks.md
 
 # 3. Batch execute
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --checkpoint
@@ -952,7 +952,7 @@ Symbol 'validateToken' not found
   --tasks tasks.md
 
 # Execute
-python3 .smartspec/scripts/execute_prompts_batch.py \
+/smartspec_execute_prompts_batch \
   --prompts-dir .spec/prompts/latest/ \
   --tasks tasks.md \
   --checkpoint

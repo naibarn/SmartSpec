@@ -426,3 +426,284 @@ __all__ = [
     'PathValidator',
     'InputValidator',
 ]
+
+
+
+class SchemaValidator:
+    """Validator for JSON schemas and data structures"""
+    
+    # Schema definitions
+    SPEC_METADATA_SCHEMA = {
+        "type": "object",
+        "required": ["spec_id", "title", "category", "priority"],
+        "properties": {
+            "spec_id": {
+                "type": "string",
+                "pattern": r"^spec-[a-z]+-\d{3}-[a-z0-9_-]+$"
+            },
+            "title": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 200
+            },
+            "category": {
+                "type": "string",
+                "enum": ["core", "feature", "integration", "security", "performance"]
+            },
+            "priority": {
+                "type": "string",
+                "enum": ["high", "medium", "low"]
+            },
+            "status": {
+                "type": "string",
+                "enum": ["draft", "review", "approved", "implemented"]
+            },
+            "tags": {
+                "type": "array",
+                "items": {"type": "string"}
+            }
+        }
+    }
+    
+    WORKFLOW_CONFIG_SCHEMA = {
+        "type": "object",
+        "required": ["name", "version", "steps"],
+        "properties": {
+            "name": {
+                "type": "string",
+                "pattern": r"^[a-z][a-z0-9_]*$"
+            },
+            "version": {
+                "type": "string",
+                "pattern": r"^\d+\.\d+\.\d+$"
+            },
+            "description": {
+                "type": "string",
+                "maxLength": 500
+            },
+            "steps": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                    "type": "object",
+                    "required": ["id", "type"],
+                    "properties": {
+                        "id": {"type": "string"},
+                        "type": {"type": "string"},
+                        "config": {"type": "object"}
+                    }
+                }
+            },
+            "timeout": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3600
+            }
+        }
+    }
+    
+    @staticmethod
+    @with_error_handling
+    def validate_schema(data: Dict[str, Any], schema: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate data against a schema.
+        
+        Args:
+            data: Data to validate
+            schema: Schema definition
+            
+        Returns:
+            Validation result dict
+        """
+        errors = []
+        
+        # Validate type
+        if "type" in schema:
+            expected_type = schema["type"]
+            actual_type = SchemaValidator._get_type(data)
+            
+            if actual_type != expected_type:
+                errors.append(f"Expected type {expected_type}, got {actual_type}")
+                return {
+                    "success": False,
+                    "errors": errors
+                }
+        
+        # For primitive types (string, number, integer), validate directly
+        if schema.get("type") in ["string", "integer", "number", "boolean"]:
+            result = SchemaValidator._validate_value(data, schema, "value")
+            if not result["valid"]:
+                return {
+                    "success": False,
+                    "errors": result["errors"]
+                }
+        
+        # Validate object properties
+        elif schema.get("type") == "object":
+            # Check required fields
+            required = schema.get("required", [])
+            for field in required:
+                if field not in data:
+                    errors.append(f"Missing required field: {field}")
+            
+            # Validate properties
+            properties = schema.get("properties", {})
+            for key, value in data.items():
+                if key in properties:
+                    prop_schema = properties[key]
+                    result = SchemaValidator._validate_value(value, prop_schema, key)
+                    if not result["valid"]:
+                        errors.extend(result["errors"])
+        
+        # Validate array items
+        elif schema.get("type") == "array":
+            if not isinstance(data, list):
+                errors.append("Expected array")
+            else:
+                # Check minItems
+                min_items = schema.get("minItems")
+                if min_items and len(data) < min_items:
+                    errors.append(f"Array must have at least {min_items} items")
+                
+                # Check maxItems
+                max_items = schema.get("maxItems")
+                if max_items and len(data) > max_items:
+                    errors.append(f"Array must have at most {max_items} items")
+                
+                # Validate items
+                items_schema = schema.get("items")
+                if items_schema:
+                    for i, item in enumerate(data):
+                        result = SchemaValidator._validate_value(item, items_schema, f"[{i}]")
+                        if not result["valid"]:
+                            errors.extend(result["errors"])
+        
+        if errors:
+            return {
+                "success": False,
+                "errors": errors
+            }
+        
+        return {
+            "success": True,
+            "validated_data": data
+        }
+    
+    @staticmethod
+    def _validate_value(value: Any, schema: Dict[str, Any], field_name: str) -> Dict[str, Any]:
+        """Validate a single value against schema"""
+        errors = []
+        
+        # Type check
+        if "type" in schema:
+            expected_type = schema["type"]
+            actual_type = SchemaValidator._get_type(value)
+            
+            if actual_type != expected_type:
+                errors.append(f"{field_name}: Expected {expected_type}, got {actual_type}")
+                return {"valid": False, "errors": errors}
+        
+        # String validations
+        if isinstance(value, str):
+            # minLength
+            if "minLength" in schema and len(value) < schema["minLength"]:
+                errors.append(f"{field_name}: Must be at least {schema['minLength']} characters")
+            
+            # maxLength
+            if "maxLength" in schema and len(value) > schema["maxLength"]:
+                errors.append(f"{field_name}: Must be at most {schema['maxLength']} characters")
+            
+            # pattern
+            if "pattern" in schema and not re.match(schema["pattern"], value):
+                errors.append(f"{field_name}: Does not match required pattern")
+            
+            # enum
+            if "enum" in schema and value not in schema["enum"]:
+                errors.append(f"{field_name}: Must be one of {schema['enum']}")
+        
+        # Number validations
+        if isinstance(value, (int, float)):
+            # minimum
+            if "minimum" in schema and value < schema["minimum"]:
+                errors.append(f"{field_name}: Must be at least {schema['minimum']}")
+            
+            # maximum
+            if "maximum" in schema and value > schema["maximum"]:
+                errors.append(f"{field_name}: Must be at most {schema['maximum']}")
+        
+        # Array validations
+        if isinstance(value, list):
+            # minItems
+            if "minItems" in schema and len(value) < schema["minItems"]:
+                errors.append(f"{field_name}: Must have at least {schema['minItems']} items")
+            
+            # maxItems
+            if "maxItems" in schema and len(value) > schema["maxItems"]:
+                errors.append(f"{field_name}: Must have at most {schema['maxItems']} items")
+        
+        return {
+            "valid": len(errors) == 0,
+            "errors": errors
+        }
+    
+    @staticmethod
+    def _get_type(value: Any) -> str:
+        """Get JSON schema type of a value"""
+        if isinstance(value, bool):
+            return "boolean"
+        elif isinstance(value, int):
+            return "integer"
+        elif isinstance(value, float):
+            return "number"
+        elif isinstance(value, str):
+            return "string"
+        elif isinstance(value, list):
+            return "array"
+        elif isinstance(value, dict):
+            return "object"
+        elif value is None:
+            return "null"
+        else:
+            return "unknown"
+    
+    @staticmethod
+    @with_error_handling
+    def validate_spec_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate spec metadata against schema.
+        
+        Args:
+            metadata: Spec metadata dict
+            
+        Returns:
+            Validation result
+        """
+        return SchemaValidator.validate_schema(
+            metadata,
+            SchemaValidator.SPEC_METADATA_SCHEMA
+        )
+    
+    @staticmethod
+    @with_error_handling
+    def validate_workflow_config(config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate workflow config against schema.
+        
+        Args:
+            config: Workflow config dict
+            
+        Returns:
+            Validation result
+        """
+        return SchemaValidator.validate_schema(
+            config,
+            SchemaValidator.WORKFLOW_CONFIG_SCHEMA
+        )
+
+
+# Update exports
+__all__ = [
+    'PathValidator',
+    'InputValidator',
+    'SchemaValidator',
+]

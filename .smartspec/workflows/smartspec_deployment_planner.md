@@ -44,7 +44,7 @@ This workflow MUST follow:
 **Always allowed writes (safe outputs):**
 
 - Reports: `.spec/reports/deployment-planner/**`
-- Optional prompts: `.smartspec/prompts/**`
+- Optional prompts: `.spec/prompts/**`
 - Optional generated scripts: `.smartspec/generated-scripts/**`
 
 **Governed writes (ONLY with `--apply`):**

@@ -217,7 +217,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 
 ### Output Structure
 ```
-.smartspec/prompts/YYYYMMDD_HHMMSS/
+.spec/prompts/YYYYMMDD_HHMMSS/
 ├── README.md                    # Overview and priority order
 ├── not_implemented.md           # Implementation prompts
 ├── missing_tests.md             # Test generation prompts
@@ -235,7 +235,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 
 ### Read README First
 ```bash
-cat .smartspec/prompts/latest/README.md
+cat .spec/prompts/latest/README.md
 ```
 
 **README contains:**
@@ -248,7 +248,7 @@ cat .smartspec/prompts/latest/README.md
 
 #### Priority 1: Critical Issues
 ```bash
-cat .smartspec/prompts/latest/README.md
+cat .spec/prompts/latest/README.md
 # Look for Priority 1 tasks
 # Fix immediately
 ```
@@ -256,24 +256,24 @@ cat .smartspec/prompts/latest/README.md
 #### Priority 2: Missing Features
 ```bash
 # Not Implemented
-cat .smartspec/prompts/latest/not_implemented.md
+cat .spec/prompts/latest/not_implemented.md
 
 # Missing Tests
-cat .smartspec/prompts/latest/missing_tests.md
+cat .spec/prompts/latest/missing_tests.md
 
 # Missing Code
-cat .smartspec/prompts/latest/missing_code.md
+cat .spec/prompts/latest/missing_code.md
 ```
 
 #### Priority 3: Symbol/Content
 ```bash
-cat .smartspec/prompts/latest/symbol_issues.md
-cat .smartspec/prompts/latest/content_issues.md
+cat .spec/prompts/latest/symbol_issues.md
+cat .spec/prompts/latest/content_issues.md
 ```
 
 #### Priority 4: Naming
 ```bash
-cat .smartspec/prompts/latest/naming_issues.md
+cat .spec/prompts/latest/naming_issues.md
 ```
 
 ### Prompt Structure
@@ -373,7 +373,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --tasks tasks.md
 
 # 5. Review priority order
-cat .smartspec/prompts/latest/README.md
+cat .spec/prompts/latest/README.md
 
 # Output:
 # Priority 2: Not Implemented (5 tasks)
@@ -381,7 +381,7 @@ cat .smartspec/prompts/latest/README.md
 # Priority 4: Naming Issues (1 task)
 
 # 6. Implement not_implemented first
-cat .smartspec/prompts/latest/not_implemented.md
+cat .spec/prompts/latest/not_implemented.md
 # (Implement all 5 tasks)
 
 # 7. Verify progress
@@ -392,7 +392,7 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 # Not Verified: 3 tasks (37.5%)
 
 # 8. Implement missing_tests
-cat .smartspec/prompts/latest/missing_tests.md
+cat .spec/prompts/latest/missing_tests.md
 # (Add 2 test files)
 
 # 9. Verify again
@@ -403,7 +403,7 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 # Not Verified: 1 task (12.5%)
 
 # 10. Fix naming issue
-cat .smartspec/prompts/latest/naming_issues.md
+cat .spec/prompts/latest/naming_issues.md
 # (Rename file or update evidence)
 
 # 11. Final verification
@@ -431,7 +431,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --priority 1
 
 # Fix critical issues
-cat .smartspec/prompts/latest/README.md
+cat .spec/prompts/latest/README.md
 
 # Verify
 python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
@@ -453,7 +453,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --category missing_tests
 
 # Add tests
-cat .smartspec/prompts/latest/missing_tests.md
+cat .spec/prompts/latest/missing_tests.md
 
 # Verify
 python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
@@ -474,14 +474,14 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --tasks tasks.md
 
 # Implement one category at a time
-cat .smartspec/prompts/latest/not_implemented.md
+cat .spec/prompts/latest/not_implemented.md
 # (Implement)
 
 # Verify after each category
 python3.11 .smartspec/scripts/verify_evidence_enhanced.py tasks.md
 
 # Next category
-cat .smartspec/prompts/latest/missing_tests.md
+cat .spec/prompts/latest/missing_tests.md
 # (Implement)
 
 # Verify

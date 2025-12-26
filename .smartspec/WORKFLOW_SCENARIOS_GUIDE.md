@@ -762,7 +762,7 @@ workflow_name \
 
 ### Issue: "Invalid output path"
 **Cause:** Output path outside allowed write scopes  
-**Solution:** Use path under `.spec/reports/` or `.smartspec/prompts/`
+**Solution:** Use path under `.spec/reports/` or `.spec/prompts/`
 
 ---
 

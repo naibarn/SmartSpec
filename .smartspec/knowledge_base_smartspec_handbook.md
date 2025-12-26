@@ -236,7 +236,7 @@ specs/
 
 - **Safe outputs (allowed by default)**
   - reports: `.spec/reports/**`
-  - prompts: `.smartspec/prompts/**`
+  - prompts: `.spec/prompts/**`
   - generated helper scripts: `.smartspec/generated-scripts/**`
 
 - **Governed artifacts (require explicit apply)**
@@ -258,7 +258,7 @@ specs/
 - Spec index updates: `.spec/SPEC_INDEX.json` (governed)
 - Workflow index updates: `.spec/WORKFLOWS_INDEX.yaml` (governed)
 - Reports: `.spec/reports/**` (safe)
-- Prompter outputs: `.smartspec/prompts/**` (safe)
+- Prompter outputs: `.spec/prompts/**` (safe)
 - Generated scripts: `.smartspec/generated-scripts/**` (safe)
 
 ### 4.4 Security hardening (mandatory)

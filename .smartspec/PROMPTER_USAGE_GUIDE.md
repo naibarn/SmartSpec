@@ -38,18 +38,18 @@ python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
 python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report reports/latest/summary.json \
   --tasks tasks.md \
-  --out .smartspec/prompts/
+  --out .spec/prompts/
 ```
 
 **Output:**
-- `.smartspec/prompts/YYYYMMDD_HHMMSS/README.md` - Summary and instructions
-- `.smartspec/prompts/YYYYMMDD_HHMMSS/not_implemented.md` - Tasks with no implementation
-- `.smartspec/prompts/YYYYMMDD_HHMMSS/missing_tests.md` - Tasks missing tests
-- `.smartspec/prompts/YYYYMMDD_HHMMSS/naming_issues.md` - File naming mismatches
-- `.smartspec/prompts/YYYYMMDD_HHMMSS/symbol_issues.md` - Missing symbols
-- `.smartspec/prompts/YYYYMMDD_HHMMSS/content_issues.md` - Missing content
-- `.smartspec/prompts/YYYYMMDD_HHMMSS/missing_code.md` - Missing implementation (TDD)
-- `.smartspec/prompts/YYYYMMDD_HHMMSS/meta/summary.json` - Generation metadata
+- `.spec/prompts/YYYYMMDD_HHMMSS/README.md` - Summary and instructions
+- `.spec/prompts/YYYYMMDD_HHMMSS/not_implemented.md` - Tasks with no implementation
+- `.spec/prompts/YYYYMMDD_HHMMSS/missing_tests.md` - Tasks missing tests
+- `.spec/prompts/YYYYMMDD_HHMMSS/naming_issues.md` - File naming mismatches
+- `.spec/prompts/YYYYMMDD_HHMMSS/symbol_issues.md` - Missing symbols
+- `.spec/prompts/YYYYMMDD_HHMMSS/content_issues.md` - Missing content
+- `.spec/prompts/YYYYMMDD_HHMMSS/missing_code.md` - Missing implementation (TDD)
+- `.spec/prompts/YYYYMMDD_HHMMSS/meta/summary.json` - Generation metadata
 
 ---
 
@@ -57,11 +57,11 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 
 ```bash
 # Read summary
-cat .smartspec/prompts/latest/README.md
+cat .spec/prompts/latest/README.md
 
 # Review category files
-cat .smartspec/prompts/latest/not_implemented.md
-cat .smartspec/prompts/latest/missing_tests.md
+cat .spec/prompts/latest/not_implemented.md
+cat .spec/prompts/latest/missing_tests.md
 ```
 
 ---
@@ -240,10 +240,10 @@ LATEST_REPORT=$(ls -t reports/*/summary.json | head -1)
 python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --verify-report "$LATEST_REPORT" \
   --tasks "$1" \
-  --out .smartspec/prompts/
+  --out .spec/prompts/
 
 # Get latest prompts
-LATEST_PROMPTS=$(ls -td .smartspec/prompts/*/ | head -1)
+LATEST_PROMPTS=$(ls -td .spec/prompts/*/ | head -1)
 
 # Show README
 cat "$LATEST_PROMPTS/README.md"
@@ -317,7 +317,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --tasks tasks.md
 
 # 3. Review
-cat .smartspec/prompts/20251226_090100/README.md
+cat .spec/prompts/20251226_090100/README.md
 ```
 
 ---

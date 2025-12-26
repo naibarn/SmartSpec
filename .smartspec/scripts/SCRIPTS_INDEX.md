@@ -107,7 +107,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
 - `--tasks` - Path to tasks.md
 - `--category` - Filter by category (optional)
 - `--priority` - Filter by priority 1-4 (optional)
-- `--output-dir` - Output directory (default: .smartspec/prompts/)
+- `--output-dir` - Output directory (default: .spec/prompts/)
 - `--template-dir` - Custom templates directory (optional)
 - `--json` - Output JSON metadata
 
@@ -198,7 +198,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --tasks tasks.md
 
 # Step 3: Review
-cat .smartspec/prompts/latest/README.md
+cat .spec/prompts/latest/README.md
 
 # Step 4: Implement
 # (Follow prompts in category files)

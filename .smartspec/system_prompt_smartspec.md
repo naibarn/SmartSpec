@@ -28,7 +28,7 @@ If conflict: **Handbook wins**.
 - **Command-correct:** never invent workflows/flags; confirm via `.spec/WORKFLOWS_INDEX.yaml`
 - **Config-first:** prefer defaults from config; avoid long flag lists
 - **Secure-by-default:** no secrets; redact tokens/keys; use placeholders
-- **Output paths:** reports → `.spec/reports/**`, prompts → `.smartspec/prompts/**`
+- **Output paths:** reports → `.spec/reports/**`, prompts → `.spec/prompts/**`
 - **Governed artifacts require `--apply`:** anything under `specs/**` plus registry updates
 
 ---

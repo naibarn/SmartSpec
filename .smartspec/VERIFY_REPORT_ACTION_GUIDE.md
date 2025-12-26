@@ -25,7 +25,7 @@
   --verify-report reports/latest/summary.json \
   --tasks tasks.md
 
-# Output: .smartspec/prompts/latest/
+# Output: .spec/prompts/latest/
 #   ├── README.md (summary + priority order)
 #   ├── not_implemented.md (if any)
 #   ├── missing_tests.md (if any)
@@ -33,7 +33,7 @@
 #   └── ... (other categories)
 
 # Step 3: Follow generated prompts
-cat .smartspec/prompts/latest/README.md
+cat .spec/prompts/latest/README.md
 
 # Step 4: Implement fixes and verify
 /smartspec_verify_tasks_progress_strict tasks.md

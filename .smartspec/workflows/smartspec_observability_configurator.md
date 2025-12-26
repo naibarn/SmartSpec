@@ -49,7 +49,7 @@ This workflow MUST follow:
 **Always allowed writes (safe outputs):**
 
 - Reports: `.spec/reports/observability-configurator/**`
-- Optional prompts: `.smartspec/prompts/**`
+- Optional prompts: `.spec/prompts/**`
 - Optional generated scripts: `.smartspec/generated-scripts/**`
 
 **Governed writes (ONLY with `--apply` AND `--write-runtime-config`):**

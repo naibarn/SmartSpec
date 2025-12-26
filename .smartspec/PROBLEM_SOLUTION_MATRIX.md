@@ -70,7 +70,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --tasks tasks.md
 
 # Step 3: Review
-cat .smartspec/prompts/latest/README.md
+cat .spec/prompts/latest/README.md
 
 # Step 4: Implement (follow prompts in category files)
 
@@ -109,7 +109,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --category not_implemented
 
 # Review prompts
-cat .smartspec/prompts/latest/not_implemented.md
+cat .spec/prompts/latest/not_implemented.md
 
 # Implement following the prompts
 # (Create files, add code, add tests)
@@ -149,7 +149,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --category missing_tests
 
 # Review prompts
-cat .smartspec/prompts/latest/missing_tests.md
+cat .spec/prompts/latest/missing_tests.md
 
 # Create test files following prompts
 
@@ -191,7 +191,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --category missing_code
 
 # Review prompts
-cat .smartspec/prompts/latest/missing_code.md
+cat .spec/prompts/latest/missing_code.md
 
 # Implement code following prompts
 
@@ -273,7 +273,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --category symbol_issue
 
 # Review prompts
-cat .smartspec/prompts/latest/symbol_issues.md
+cat .spec/prompts/latest/symbol_issues.md
 
 # Add missing symbols to files
 
@@ -310,7 +310,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --category content_issue
 
 # Review prompts
-cat .smartspec/prompts/latest/content_issues.md
+cat .spec/prompts/latest/content_issues.md
 
 # Add missing content to files
 
@@ -347,7 +347,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --priority 1
 
 # Review prompts
-cat .smartspec/prompts/latest/README.md
+cat .spec/prompts/latest/README.md
 
 # Fix critical issues first
 
@@ -384,7 +384,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --tasks tasks.md
 
 # Review priority order
-cat .smartspec/prompts/latest/README.md
+cat .spec/prompts/latest/README.md
 
 # Fix in order:
 # 1. Priority 1 (critical)
@@ -446,7 +446,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --tasks tasks.md
 
 # 3. Implement in priority order
-cat .smartspec/prompts/latest/README.md
+cat .spec/prompts/latest/README.md
 
 # 4. Verify progress
 python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
@@ -470,10 +470,10 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --tasks tasks.md
 
 # 3. Focus on not_implemented first
-cat .smartspec/prompts/latest/not_implemented.md
+cat .spec/prompts/latest/not_implemented.md
 
 # 4. Then missing_tests
-cat .smartspec/prompts/latest/missing_tests.md
+cat .spec/prompts/latest/missing_tests.md
 
 # 5. Verify
 python3.11 .smartspec/scripts/verify_evidence_enhanced.py \
@@ -498,7 +498,7 @@ python3.11 .smartspec/scripts/generate_prompts_from_verify_report.py \
   --priority 1
 
 # 3. Fix critical issues
-cat .smartspec/prompts/latest/README.md
+cat .spec/prompts/latest/README.md
 
 # 4. Verify
 python3.11 .smartspec/scripts/verify_evidence_enhanced.py \

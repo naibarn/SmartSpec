@@ -35,7 +35,7 @@ This workflow MUST follow:
 **Always allowed writes (safe outputs):**
 
 - Reports: `.spec/reports/design-system-migration/**`
-- Prompts (optional): `.smartspec/prompts/**`
+- Prompts (optional): `.spec/prompts/**`
 - Generated scripts (optional): `.smartspec/generated-scripts/**`
 
 **Governed writes (ONLY with `--apply`):**

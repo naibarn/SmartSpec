@@ -1080,7 +1080,7 @@ These flags are supported by this workflow:
 **CLI:**
 ```bash
 python3 .spec/scripts/validate_prompts.py \
-  --prompts .smartspec/prompts/<spec-id>/<target>/<run-id>/ \
+  --prompts .spec/prompts/<spec-id>/<target>/<run-id>/ \
   --registry .spec/registry/ \
   --check-duplicates --threshold 0.8
 ```

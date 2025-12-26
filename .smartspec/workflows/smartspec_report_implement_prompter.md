@@ -34,7 +34,7 @@ This workflow MUST follow:
 
 Allowed writes (safe outputs only):
 
-- Prompts: `.smartspec/prompts/**`
+- Prompts: `.spec/prompts/**`
 
 Forbidden writes (must hard-fail):
 
@@ -91,7 +91,7 @@ Flags specific to `/smartspec_report_implement_prompter`:
 - **Path safety:** All path arguments must pass safety validation (no directory traversal, symlink escape, or absolute paths outside project)
 - **Secret handling:** Never pass secrets as flag values; use `env:VAR_NAME` references or config file
 - **Duplication prevention:** Never use `--skip-duplication-check` unless explicitly instructed
-- **Safe outputs:** This workflow only writes to `.smartspec/prompts/**`, no `--apply` gate needed
+- **Safe outputs:** This workflow only writes to `.spec/prompts/**`, no `--apply` gate needed
 
 ---
 
@@ -184,7 +184,7 @@ After generating the prompt pack, the AI agent **MUST** validate the generated p
 **Validation Command:**
 ```bash
 python3 .spec/scripts/validate_prompts.py \
-  --prompts .smartspec/prompts/<spec-id>/<target>/<run-id>/ \
+  --prompts .spec/prompts/<spec-id>/<target>/<run-id>/ \
   --registry .spec/registry/ \
   --check-duplicates --threshold 0.8
 ```
@@ -208,7 +208,7 @@ To prevent accidental overwrites, outputs are always written under a run folder.
   - `<out>/<target>/<run-id>/meta/summary.json` (if `--json`)
 
 - If `--out` is not provided, default to:
-  - `.smartspec/prompts/<spec-id>/<target>/<run-id>/...`
+  - `.spec/prompts/<spec-id>/<target>/<run-id>/...`
 
 ---
 
@@ -234,16 +234,16 @@ To prevent accidental overwrites, outputs are always written under a run folder.
 /smartspec_report_implement_prompter \
   --verify-report .spec/reports/verify/20251226_082102/summary.json \
   --tasks tasks.md \
-  --out .smartspec/prompts/
+  --out .spec/prompts/
 
-# Output: .smartspec/prompts/20251226_083000/
+# Output: .spec/prompts/20251226_083000/
 #   ├── README.md (summary + priority order)
 #   ├── not_implemented.md (2 tasks, Priority 2)
 #   ├── missing_tests.md (1 task, Priority 2)
 #   └── meta/summary.json
 
 # Step 3: Review prompts
-cat .smartspec/prompts/20251226_083000/README.md
+cat .spec/prompts/20251226_083000/README.md
 
 # Step 4: Implement fixes (follow prompts)
 # Follow instructions in each category file
@@ -301,7 +301,7 @@ cat .smartspec/prompts/20251226_083000/README.md
 When using `--verify-report`, the output structure is:
 
 ```
-.smartspec/prompts/<run-id>/
+.spec/prompts/<run-id>/
 ├── README.md                    # Summary and priority order
 ├── not_implemented.md           # Tasks with no implementation (if any)
 ├── missing_tests.md             # Tasks with no tests (if any)
@@ -359,7 +359,7 @@ When using `--verify-report`, the output structure is:
 
 ```bash
 # Read README first
-cat .smartspec/prompts/latest/README.md
+cat .spec/prompts/latest/README.md
 
 # Then review each category
 ```

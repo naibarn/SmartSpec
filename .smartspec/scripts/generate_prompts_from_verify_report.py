@@ -10,7 +10,7 @@ Usage:
     python3 generate_prompts_from_verify_report.py \
         --verify-report report.json \
         --tasks tasks.md \
-        --out .smartspec/prompts/
+        --out .spec/prompts/
 
 Features:
     - Automatic category detection
@@ -557,8 +557,8 @@ def main():
     parser.add_argument(
         "--out",
         type=Path,
-        default=Path(".smartspec/prompts"),
-        help="Output directory (default: .smartspec/prompts)"
+        default=Path(".spec/prompts"),
+        help="Output directory (default: .spec/prompts)"
     )
     
     parser.add_argument(

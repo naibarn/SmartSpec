@@ -49,7 +49,7 @@ Allowed writes (safe outputs only):
 
 Optional safe outputs:
 
-- Prompts: `.smartspec/prompts/**`
+- Prompts: `.spec/prompts/**`
 - Generated scripts: `.smartspec/generated-scripts/**`
 
 Forbidden writes (must hard-fail):

@@ -1,7 +1,7 @@
 """
 Workflow Loader - Load and parse all SmartSpec workflows.
 
-This module loads all 59 workflows from .smartspec/workflows/
+This module loads all 63 workflows from .smartspec/workflows/
 and provides a searchable catalog.
 """
 

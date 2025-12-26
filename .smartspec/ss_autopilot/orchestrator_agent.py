@@ -1,7 +1,7 @@
 """
 Orchestrator Agent - Main development loop coordinator.
 
-This agent knows all 59 workflows and coordinates the entire
+This agent knows all 63 workflows and coordinates the entire
 development lifecycle.
 """
 
@@ -52,7 +52,7 @@ class OrchestratorAgent:
     Orchestrator Agent - Coordinates development lifecycle.
     
     Capabilities:
-    - Know all 59 workflows
+    - Know all 63 workflows
     - Understand development loop
     - Determine current state
     - Select appropriate workflow
@@ -423,7 +423,7 @@ Workflows loaded: {workflow_count}
 Categories: {category_count}
 
 Capabilities:
-- Know all 59 workflows
+- Know all 63 workflows
 - Understand development loop
 - Recommend next workflow
 - Build workflow commands

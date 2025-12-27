@@ -296,6 +296,157 @@ def test_format_issues():
     print("✅ Issue formatting tests passed\n")
 
 
+def test_camel_to_kebab():
+    """Test camelCase to kebab-case conversion"""
+    print("Testing camel_to_kebab...")
+    
+    from naming_convention_helper import camel_to_kebab
+    
+    test_cases = [
+        ('userService', 'user-service'),
+        ('SMSProvider', 'sms-provider'),
+        ('jwtUtil', 'jwt-util'),
+        ('APIClient', 'api-client'),
+        ('user-service', 'user-service'),  # Already kebab-case
+        ('', ''),  # Empty string
+    ]
+    
+    for input_val, expected in test_cases:
+        result = camel_to_kebab(input_val)
+        status = "✅" if result == expected else "❌"
+        print(f"  {status} camel_to_kebab('{input_val}') = '{result}' (expected '{expected}')")
+        if result != expected:
+            raise AssertionError(f"Failed: {input_val}")
+    
+    print("✅ camel_to_kebab tests passed\n")
+
+
+def test_infer_type():
+    """Test file type inference"""
+    print("Testing infer_type_from_name...")
+    
+    from naming_convention_helper import infer_type_from_name
+    
+    test_cases = [
+        ('user-service', 'service'),
+        ('sms-provider', 'provider'),
+        ('jwt-util', 'util'),
+        ('auth-middleware', 'middleware'),
+        ('user-model', 'model'),
+        ('api-client', 'client'),
+        ('random-file', None),  # Cannot infer
+    ]
+    
+    for input_val, expected in test_cases:
+        result = infer_type_from_name(input_val)
+        status = "✅" if result == expected else "❌"
+        print(f"  {status} infer_type_from_name('{input_val}') = {result} (expected {expected})")
+        if result != expected:
+            raise AssertionError(f"Failed: {input_val}")
+    
+    print("✅ infer_type_from_name tests passed\n")
+
+
+def test_auto_correct():
+    """Test auto-correction"""
+    print("Testing auto_correct_path...")
+    
+    from naming_convention_helper import auto_correct_path
+    standard = load_naming_standard(Path.cwd())
+    
+    # Test kebab-case correction
+    print("  Testing kebab-case correction...")
+    path1 = "packages/auth-service/src/services/userService.ts"
+    corrected1, changes1 = auto_correct_path(path1, standard)
+    assert corrected1 == "packages/auth-service/src/services/user-service.ts", f"Expected user-service.ts, got {corrected1}"
+    assert len(changes1) > 0, "Expected changes to be recorded"
+    print(f"    ✅ {path1}")
+    print(f"       → {corrected1}")
+    
+    # Test directory correction
+    print("  Testing directory correction...")
+    path2 = "packages/auth-lib/src/integrations/sms-provider.ts"
+    corrected2, changes2 = auto_correct_path(path2, standard)
+    assert corrected2 == "packages/auth-lib/src/providers/sms-provider.ts", f"Expected providers/, got {corrected2}"
+    assert len(changes2) > 0, "Expected changes to be recorded"
+    print(f"    ✅ {path2}")
+    print(f"       → {corrected2}")
+    
+    # Test complex correction
+    print("  Testing complex correction...")
+    path3 = "packages/auth-lib/src/integrations/smsProvider.ts"
+    corrected3, changes3 = auto_correct_path(path3, standard)
+    assert corrected3 == "packages/auth-lib/src/providers/sms-provider.ts", f"Expected providers/sms-provider.ts, got {corrected3}"
+    assert len(changes3) >= 2, f"Expected multiple changes, got {len(changes3)}"
+    print(f"    ✅ {path3}")
+    print(f"       → {corrected3}")
+    
+    # Test already compliant
+    print("  Testing already compliant...")
+    path4 = "packages/auth-service/src/services/user-service.ts"
+    corrected4, changes4 = auto_correct_path(path4, standard)
+    assert corrected4 == path4, f"Expected no change, got {corrected4}"
+    assert len(changes4) == 0, f"Expected no changes, got {changes4}"
+    print(f"    ✅ {path4} (no changes needed)")
+    
+    print("✅ auto_correct_path tests passed\n")
+
+
+def test_batch_correction():
+    """Test batch auto-correction"""
+    print("Testing auto_correct_paths_batch...")
+    
+    from naming_convention_helper import auto_correct_paths_batch
+    standard = load_naming_standard(Path.cwd())
+    
+    paths = [
+        "packages/auth-service/src/services/userService.ts",
+        "packages/auth-service/src/services/user-service.ts",  # Already compliant
+        "packages/auth-lib/src/integrations/sms-provider.ts",
+    ]
+    
+    result = auto_correct_paths_batch(paths, standard)
+    
+    print(f"  Total: {result['statistics']['total']} (expected 3)")
+    print(f"  Corrected: {result['statistics']['corrected']} (expected 2)")
+    print(f"  Unchanged: {result['statistics']['unchanged']} (expected 1)")
+    print(f"  Compliance rate: {result['statistics']['compliance_rate']:.0%} (expected 100%)")
+    
+    assert result['statistics']['total'] == 3, "Expected 3 total paths"
+    assert result['statistics']['corrected'] == 2, "Expected 2 corrections"
+    assert result['statistics']['unchanged'] == 1, "Expected 1 unchanged"
+    assert result['statistics']['compliance_rate'] == 1.0, "Expected 100% compliance"
+    
+    print("✅ auto_correct_paths_batch tests passed\n")
+
+
+def test_correction_report():
+    """Test correction report formatting"""
+    print("Testing format_correction_report...")
+    
+    from naming_convention_helper import format_correction_report
+    
+    corrections = [
+        {
+            'original': 'packages/auth-service/src/services/userService.ts',
+            'corrected': 'packages/auth-service/src/services/user-service.ts',
+            'changes': ['Changed userService to user-service (kebab-case)']
+        }
+    ]
+    
+    report = format_correction_report(corrections)
+    assert '## Auto-Corrections Made' in report, "Expected report header"
+    assert 'userService.ts' in report, "Expected filename in report"
+    print(f"  ✅ Report generated ({len(report)} chars)")
+    
+    # Test empty corrections
+    empty_report = format_correction_report([])
+    assert 'No corrections needed' in empty_report, "Expected no corrections message"
+    print(f"  ✅ Empty report handled")
+    
+    print("✅ format_correction_report tests passed\n")
+
+
 def run_all_tests():
     """Run all tests"""
     print("=" * 60)
@@ -313,6 +464,17 @@ def run_all_tests():
         test_statistics()
         test_similar_files_separation()
         test_format_issues()
+        
+        # Phase 4 tests
+        print("=" * 60)
+        print("Phase 4: Auto-Correction Tests")
+        print("=" * 60)
+        print()
+        test_camel_to_kebab()
+        test_infer_type()
+        test_auto_correct()
+        test_batch_correction()
+        test_correction_report()
         
         print("=" * 60)
         print("✅ ALL TESTS PASSED!")

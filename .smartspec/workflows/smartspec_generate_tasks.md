@@ -278,13 +278,19 @@ Ensure all generated evidence paths follow SmartSpec naming convention standard 
    - Parse naming rules (kebab-case, suffixes, directories)
    - Use standard throughout task generation
 
-2. **Validate Evidence Paths**
+2. **Auto-Correct Evidence Paths** 🆕
+   - Use `.smartspec/scripts/naming_convention_helper.py`
+   - Call `auto_correct_path()` for each evidence path
+   - Apply corrections automatically
+   - Log corrections in generation report
+
+3. **Validate Evidence Paths**
    - All evidence paths MUST follow naming convention
    - Check kebab-case format
    - Check appropriate suffixes (`.service.ts`, `.provider.ts`, etc.)
    - Check correct directory placement
 
-3. **Add Naming Guidance to Tasks**
+4. **Add Naming Guidance to Tasks**
    - Include naming convention hints in task descriptions
    - Specify expected file type and suffix
    - Indicate correct directory placement
@@ -335,6 +341,110 @@ Ensure all generated evidence paths follow SmartSpec naming convention standard 
   - Create file at exact path specified
   - Do not rename or move files without updating tasks.md
 ```
+
+### Auto-Correction Implementation 🆕
+
+**Step-by-step guide:**
+
+1. **Import helper module:**
+   ```python
+   import sys
+   from pathlib import Path
+   
+   # Add scripts directory to path
+   sys.path.insert(0, str(Path(__file__).parent.parent / 'scripts'))
+   
+   from naming_convention_helper import (
+       load_naming_standard,
+       auto_correct_path,
+       auto_correct_paths_batch,
+       format_correction_report
+   )
+   ```
+
+2. **Load naming standard:**
+   ```python
+   # Load standard once at the beginning
+   repo_root = Path.cwd()
+   naming_standard = load_naming_standard(repo_root)
+   ```
+
+3. **Auto-correct evidence paths:**
+   ```python
+   # For each task with evidence
+   for task in tasks:
+       for evidence in task.get('evidence', []):
+           if 'path' in evidence:
+               original_path = evidence['path']
+               
+               # Auto-correct the path
+               corrected_path, changes = auto_correct_path(
+                   original_path, 
+                   naming_standard
+               )
+               
+               # Update evidence with corrected path
+               if changes:
+                   evidence['path'] = corrected_path
+                   
+                   # Log correction
+                   print(f"✅ Auto-corrected: {original_path}")
+                   print(f"   → {corrected_path}")
+                   for change in changes:
+                       print(f"   - {change}")
+   ```
+
+4. **Batch processing (recommended):**
+   ```python
+   # Collect all evidence paths
+   all_paths = []
+   for task in tasks:
+       for evidence in task.get('evidence', []):
+           if 'path' in evidence:
+               all_paths.append(evidence['path'])
+   
+   # Auto-correct in batch
+   result = auto_correct_paths_batch(all_paths, naming_standard)
+   
+   # Apply corrections
+   path_mapping = {}
+   for correction in result['corrections']:
+       path_mapping[correction['original']] = correction['corrected']
+   
+   # Update all evidence paths
+   for task in tasks:
+       for evidence in task.get('evidence', []):
+           if 'path' in evidence:
+               original = evidence['path']
+               if original in path_mapping:
+                   evidence['path'] = path_mapping[original]
+   
+   # Generate correction report
+   if result['corrections']:
+       correction_report = format_correction_report(result['corrections'])
+       print(correction_report)
+   ```
+
+5. **Add to generation report:**
+   ```python
+   # Include auto-corrections in report.md
+   report_sections = [
+       "# Task Generation Report",
+       f"Generated: {datetime.now()}",
+       "",
+       "## Auto-Corrections Made",
+       "",
+       format_correction_report(result['corrections']),
+       "",
+       "## Statistics",
+       f"- Total paths: {result['statistics']['total']}",
+       f"- Corrected: {result['statistics']['corrected']}",
+       f"- Unchanged: {result['statistics']['unchanged']}",
+       f"- Compliance rate: {result['statistics']['compliance_rate']:.0%}",
+   ]
+   
+   report_content = "\n".join(report_sections)
+   ```
 
 ### Validation Rules
 

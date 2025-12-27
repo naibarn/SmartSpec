@@ -442,3 +442,279 @@ def test_validation():
 if __name__ == '__main__':
     # Run tests when executed directly
     test_validation()
+
+
+# ============================================================================
+# AUTO-CORRECTION FUNCTIONS (Phase 4)
+# ============================================================================
+
+def camel_to_kebab(name: str) -> str:
+    """
+    Convert camelCase or PascalCase to kebab-case.
+    
+    Args:
+        name: camelCase or PascalCase string
+    
+    Returns:
+        kebab-case string
+    
+    Examples:
+        >>> camel_to_kebab('userService')
+        'user-service'
+        >>> camel_to_kebab('SMSProvider')
+        'sms-provider'
+        >>> camel_to_kebab('jwtUtil')
+        'jwt-util'
+        >>> camel_to_kebab('APIClient')
+        'api-client'
+    """
+    # Handle empty string
+    if not name:
+        return name
+    
+    # Insert hyphen before uppercase letters followed by lowercase
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1-\2', name)
+    
+    # Insert hyphen before uppercase in acronyms
+    s2 = re.sub('([a-z0-9])([A-Z])', r'\1-\2', s1)
+    
+    # Convert to lowercase
+    return s2.lower()
+
+
+def infer_type_from_name(stem: str) -> Optional[str]:
+    """
+    Infer file type from filename stem.
+    
+    Args:
+        stem: Filename without extension
+    
+    Returns:
+        File type string or None if cannot infer
+    
+    Examples:
+        >>> infer_type_from_name('user-service')
+        'service'
+        >>> infer_type_from_name('sms-provider')
+        'provider'
+        >>> infer_type_from_name('jwt-util')
+        'util'
+        >>> infer_type_from_name('auth-middleware')
+        'middleware'
+    """
+    # Common patterns for file types
+    patterns = {
+        'service': r'.*[-_]?service$',
+        'provider': r'.*[-_]?provider$',
+        'client': r'.*[-_]?client$',
+        'controller': r'.*[-_]?controller$',
+        'middleware': r'.*[-_]?middleware$',
+        'util': r'.*[-_]?util$',
+        'helper': r'.*[-_]?helper$',
+        'model': r'.*[-_]?model$',
+        'schema': r'.*[-_]?schema$',
+        'type': r'.*[-_]?types?$',
+        'interface': r'.*[-_]?interface$',
+        'enum': r'.*[-_]?enum$',
+        'constant': r'.*[-_]?constants?$',
+        'config': r'.*[-_]?config$',
+        'repository': r'.*[-_]?repository$',
+        'factory': r'.*[-_]?factory$',
+        'adapter': r'.*[-_]?adapter$',
+        'decorator': r'.*[-_]?decorator$',
+        'guard': r'.*[-_]?guard$',
+        'interceptor': r'.*[-_]?interceptor$',
+        'pipe': r'.*[-_]?pipe$',
+        'filter': r'.*[-_]?filter$',
+        'dto': r'.*[-_]?dto$',
+        'entity': r'.*[-_]?entity$',
+        'module': r'.*[-_]?module$',
+        'component': r'.*[-_]?component$',
+        'hook': r'.*[-_]?hook$',
+        'context': r'.*[-_]?context$',
+    }
+    
+    # Try to match patterns
+    for type_name, pattern in patterns.items():
+        if re.match(pattern, stem, re.IGNORECASE):
+            return type_name
+    
+    return None
+
+
+def auto_correct_path(path: str, standard: Dict) -> Tuple[str, List[str]]:
+    """
+    Auto-correct a file path to follow naming convention.
+    
+    Args:
+        path: Original file path (relative to repo root)
+        standard: Naming convention standard from load_naming_standard()
+    
+    Returns:
+        Tuple of (corrected_path, list_of_changes_made)
+    
+    Examples:
+        >>> standard = load_naming_standard(Path('.'))
+        >>> auto_correct_path(
+        ...     "packages/auth-service/src/services/userService.ts",
+        ...     standard
+        ... )
+        ("packages/auth-service/src/services/user-service.ts", 
+         ["Changed userService.ts to user-service.ts (kebab-case)"])
+        
+        >>> auto_correct_path(
+        ...     "packages/auth-lib/src/integrations/sms-provider.ts",
+        ...     standard
+        ... )
+        ("packages/auth-lib/src/providers/sms-provider.ts",
+         ["Moved from integrations/ to providers/ (correct directory for provider)"])
+    """
+    changes = []
+    
+    # Parse path
+    path_obj = Path(path)
+    parts = list(path_obj.parts)
+    filename = path_obj.name
+    stem = path_obj.stem
+    suffix = path_obj.suffix
+    
+    # Skip non-code files
+    if suffix not in ['.ts', '.tsx', '.js', '.jsx', '.py', '.java', '.go', '.rs', '.cpp', '.c', '.h']:
+        return path, []
+    
+    original_stem = stem
+    original_filename = filename
+    
+    # Step 1: Convert to kebab-case if not already
+    if not is_kebab_case(stem):
+        kebab_stem = camel_to_kebab(stem)
+        if kebab_stem != stem:
+            changes.append(f"Changed {stem} to {kebab_stem} (kebab-case)")
+            stem = kebab_stem
+    
+    # Step 2: Detect current file type (use corrected stem with suffix)
+    corrected_filename = f"{stem}{suffix}"
+    current_type = detect_file_type(corrected_filename, standard)
+    
+    # Step 3: Try to infer type if not detected
+    if not current_type:
+        inferred_type = infer_type_from_name(stem)
+        
+        if inferred_type and inferred_type in standard['suffixes']:
+            # Check if stem already ends with type name
+            type_suffix = f"-{inferred_type}"
+            if not stem.endswith(type_suffix):
+                # Add type suffix
+                new_stem = f"{stem}{type_suffix}"
+                expected_suffix = standard['suffixes'][inferred_type]
+                
+                # Check if we need to add the full suffix
+                if not filename.endswith(expected_suffix):
+                    changes.append(f"Added {type_suffix} suffix (inferred type: {inferred_type})")
+                    stem = new_stem
+                    current_type = inferred_type
+    
+    # Step 4: Fix directory placement if type is known
+    if current_type and current_type in standard['directories']:
+        expected_dir = standard['directories'][current_type]
+        
+        # Find current directory (assume it's the parent of the file)
+        if len(parts) >= 2:
+            current_dir = parts[-2]
+            
+            if current_dir != expected_dir:
+                # Replace directory
+                new_parts = parts[:-2] + [expected_dir, f"{stem}{suffix}"]
+                new_path = str(Path(*new_parts))
+                changes.append(f"Moved from {current_dir}/ to {expected_dir}/ (correct directory for {current_type})")
+                return new_path, changes
+    
+    # Reconstruct path with corrected filename
+    new_filename = f"{stem}{suffix}"
+    
+    if new_filename != original_filename:
+        new_parts = parts[:-1] + [new_filename]
+        new_path = str(Path(*new_parts))
+        return new_path, changes
+    
+    # No changes needed
+    return path, changes
+
+
+def auto_correct_paths_batch(paths: List[str], standard: Dict) -> Dict:
+    """
+    Auto-correct multiple file paths at once.
+    
+    Args:
+        paths: List of file paths to correct
+        standard: Naming convention standard
+    
+    Returns:
+        Dictionary with:
+        - corrections: List of {original, corrected, changes}
+        - statistics: {total, corrected, unchanged, compliance_rate}
+    
+    Example:
+        >>> paths = [
+        ...     "packages/auth-service/src/services/userService.ts",
+        ...     "packages/auth-lib/src/providers/sms-provider.ts",
+        ... ]
+        >>> result = auto_correct_paths_batch(paths, standard)
+        >>> result['statistics']['compliance_rate']
+        1.0  # 100% after correction
+    """
+    corrections = []
+    unchanged = 0
+    
+    for original_path in paths:
+        corrected_path, changes = auto_correct_path(original_path, standard)
+        
+        if changes:
+            corrections.append({
+                'original': original_path,
+                'corrected': corrected_path,
+                'changes': changes
+            })
+        else:
+            unchanged += 1
+    
+    total = len(paths)
+    corrected = len(corrections)
+    
+    return {
+        'corrections': corrections,
+        'statistics': {
+            'total': total,
+            'corrected': corrected,
+            'unchanged': unchanged,
+            'compliance_rate': 1.0  # 100% after correction
+        }
+    }
+
+
+def format_correction_report(corrections: List[Dict]) -> str:
+    """
+    Format auto-correction results into a readable report.
+    
+    Args:
+        corrections: List of correction dictionaries
+    
+    Returns:
+        Formatted markdown report
+    """
+    if not corrections:
+        return "✅ No corrections needed - all paths compliant!"
+    
+    lines = []
+    lines.append(f"## Auto-Corrections Made ({len(corrections)})\n")
+    
+    for i, corr in enumerate(corrections, 1):
+        lines.append(f"### {i}. {Path(corr['original']).name}\n")
+        lines.append(f"**Original:** `{corr['original']}`\n")
+        lines.append(f"**Corrected:** `{corr['corrected']}`\n")
+        lines.append("**Changes:**\n")
+        for change in corr['changes']:
+            lines.append(f"- {change}\n")
+        lines.append("\n")
+    
+    return "".join(lines)

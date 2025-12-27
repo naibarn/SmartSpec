@@ -172,6 +172,24 @@ export class AuthGenerator {
       type: 'types',
     });
 
+    files.push({
+      path: path.join(options.outputDir, 'utils/token-cleanup.ts'),
+      content: this.renderTemplate('token-cleanup', context),
+      type: 'types',
+    });
+
+    files.push({
+      path: path.join(options.outputDir, 'utils/audit-logger.ts'),
+      content: this.renderTemplate('audit-logger', context),
+      type: 'types',
+    });
+
+    files.push({
+      path: path.join(options.outputDir, 'services/session.service.ts'),
+      content: this.renderTemplate('session-service', context),
+      type: 'service',
+    });
+
     // Generate repositories
     files.push({
       path: path.join(options.outputDir, 'repositories/user.repository.interface.ts'),
@@ -222,6 +240,9 @@ export class AuthGenerator {
       'repo-memory': 'repositories/user.repository.memory.ts.hbs',
       'repo-prisma': 'repositories/user.repository.prisma.ts.hbs',
       'auth-errors': 'errors/auth-errors.ts.hbs',
+      'token-cleanup': 'utils/token-cleanup.ts.hbs',
+      'audit-logger': 'utils/audit-logger.ts.hbs',
+      'session-service': 'services/session.service.ts.hbs',
     };
 
     for (const [name, file] of Object.entries(templateFiles)) {

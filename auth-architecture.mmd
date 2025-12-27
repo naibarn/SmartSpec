@@ -1,0 +1,66 @@
+graph TB
+    subgraph "Auth Generator Core"
+        Core[Core Interfaces]
+        Config[Configuration Engine]
+        Parser[Auth Spec Parser]
+        Generator[Code Generator]
+    end
+    
+    subgraph "Modular Components"
+        JWT[JWT Module]
+        Session[Session Module]
+        Password[Password Module]
+        OAuth[OAuth Module]
+        SSO[SSO Module]
+        TwoFA[2FA Module]
+    end
+    
+    subgraph "Authorization"
+        RBAC[RBAC Module]
+        ABAC[ABAC Module]
+        Custom[Custom Policy]
+    end
+    
+    subgraph "Plugins"
+        LDAP[LDAP Plugin]
+        SAML[SAML Plugin]
+        Community[Community Plugins]
+    end
+    
+    subgraph "Output"
+        Controllers[Controllers]
+        Services[Services]
+        Middleware[Middleware]
+        Tests[Tests]
+    end
+    
+    Config --> Parser
+    Parser --> Generator
+    Core --> Generator
+    
+    Generator --> JWT
+    Generator --> Session
+    Generator --> Password
+    Generator --> OAuth
+    Generator --> SSO
+    Generator --> TwoFA
+    
+    Generator --> RBAC
+    Generator --> ABAC
+    Generator --> Custom
+    
+    Generator --> LDAP
+    Generator --> SAML
+    Generator --> Community
+    
+    JWT --> Controllers
+    Session --> Controllers
+    Password --> Services
+    OAuth --> Services
+    RBAC --> Middleware
+    ABAC --> Middleware
+    
+    Controllers --> Output
+    Services --> Output
+    Middleware --> Output
+    Tests --> Output

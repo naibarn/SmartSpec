@@ -1,0 +1,32 @@
+import { Router } from 'express';
+import { {{pascalCase entity.name}}Controller } from '../controllers/{{kebabCase entity.name}}.controller';
+import { {{pascalCase entity.name}}Service } from '../services/{{kebabCase entity.name}}.service';
+import { {{pascalCase entity.name}}Model } from '../models/{{kebabCase entity.name}}.model';
+import { authMiddleware } from '../middleware/auth.middleware';
+
+/**
+ * {{pascalCase entity.name}} Routes
+ */
+
+// Initialize dependencies
+const model = new {{pascalCase entity.name}}Model();
+const service = new {{pascalCase entity.name}}Service(model);
+const controller = new {{pascalCase entity.name}}Controller(service);
+
+// Create router
+const router = Router();
+
+{{#each endpoints}}
+/**
+ * {{this.method}} {{this.path}}
+ * {{this.description}}
+ */
+router.{{httpMethodLower this.method}}(
+  '{{this.path}}',
+  {{#if this.requiresAuth}}authMiddleware,{{/if}}
+  (req, res, next) => controller.{{#ifEquals this.method "GET"}}{{#if (includes this.path ":id")}}getById{{else}}getAll{{/if}}{{/ifEquals}}{{#ifEquals this.method "POST"}}create{{/ifEquals}}{{#ifEquals this.method "PUT"}}update{{/ifEquals}}{{#ifEquals this.method "DELETE"}}delete{{/ifEquals}}(req, res, next)
+);
+
+{{/each}}
+
+export default router;

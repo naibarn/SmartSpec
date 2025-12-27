@@ -1,0 +1,120 @@
+import { {{pascalCase entity.name}} } from '../types/{{kebabCase entity.name}}.types';
+
+/**
+ * {{pascalCase entity.name}} Model
+ * Database operations for {{entity.name}} entity
+ * 
+ * NOTE: This is a simplified model interface.
+ * Implement with your preferred ORM (Prisma, TypeORM, Drizzle, etc.)
+ */
+
+export interface FindManyOptions {
+  where?: Record<string, any>;
+  limit?: number;
+  offset?: number;
+  orderBy?: Record<string, 'asc' | 'desc'>;
+}
+
+export interface FindOneOptions {
+  where: Record<string, any>;
+}
+
+export interface UpdateOptions {
+  where: Record<string, any>;
+  data: Partial<{{pascalCase entity.name}}>;
+}
+
+export interface DeleteOptions {
+  where: Record<string, any>;
+}
+
+export interface CountOptions {
+  where?: Record<string, any>;
+}
+
+/**
+ * {{pascalCase entity.name}} Model Interface
+ */
+export class {{pascalCase entity.name}}Model {
+  /**
+   * Find many {{pluralize entity.name}}
+   */
+  async findMany(options: FindManyOptions): Promise<{{pascalCase entity.name}}[]> {
+    // TODO: Implement with your ORM
+    // Example with Prisma:
+    // return prisma.{{camelCase entity.name}}.findMany({
+    //   where: options.where,
+    //   take: options.limit,
+    //   skip: options.offset,
+    //   orderBy: options.orderBy
+    // });
+    
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Find one {{entity.name}}
+   */
+  async findOne(options: FindOneOptions): Promise<{{pascalCase entity.name}} | null> {
+    // TODO: Implement with your ORM
+    // Example with Prisma:
+    // return prisma.{{camelCase entity.name}}.findFirst({
+    //   where: options.where
+    // });
+    
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Create a {{entity.name}}
+   */
+  async create(data: Partial<{{pascalCase entity.name}}>): Promise<{{pascalCase entity.name}}> {
+    // TODO: Implement with your ORM
+    // Example with Prisma:
+    // return prisma.{{camelCase entity.name}}.create({
+    //   data
+    // });
+    
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Update a {{entity.name}}
+   */
+  async update(options: UpdateOptions): Promise<{{pascalCase entity.name}} | null> {
+    // TODO: Implement with your ORM
+    // Example with Prisma:
+    // return prisma.{{camelCase entity.name}}.update({
+    //   where: options.where,
+    //   data: options.data
+    // });
+    
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Delete a {{entity.name}}
+   */
+  async delete(options: DeleteOptions): Promise<void> {
+    // TODO: Implement with your ORM
+    // Example with Prisma:
+    // await prisma.{{camelCase entity.name}}.delete({
+    //   where: options.where
+    // });
+    
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Count {{pluralize entity.name}}
+   */
+  async count(options: CountOptions): Promise<number> {
+    // TODO: Implement with your ORM
+    // Example with Prisma:
+    // return prisma.{{camelCase entity.name}}.count({
+    //   where: options.where
+    // });
+    
+    throw new Error('Not implemented');
+  }
+}

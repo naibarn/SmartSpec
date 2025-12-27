@@ -90,14 +90,30 @@ class TasksEnricher:
             
             # Extract evidence paths
             evidence_paths = []
-            evidence_pattern = r'evidence:\s+(\w+)\s+path=(.+?)(?:\n|$)'
-            for ev_match in re.finditer(evidence_pattern, task_content):
+            # Pattern 1: inline format (evidence: code path=...)
+            evidence_pattern1 = r'evidence:\s+(\w+)\s+path=(.+?)(?:\n|$)'
+            # Pattern 2: bullet format (- code: path)
+            evidence_pattern2 = r'-\s+(\w+):\s+(.+?)(?:\n|$)'
+            
+            for ev_match in re.finditer(evidence_pattern1, task_content):
                 ev_type = ev_match.group(1)
                 ev_path = ev_match.group(2).strip()
                 evidence_paths.append({
                     'type': ev_type,
                     'path': ev_path
                 })
+            
+            # If no inline format found, try bullet format
+            if not evidence_paths:
+                # Look for evidence section first
+                if '**Evidence:**' in task_content or '**evidence:**' in task_content:
+                    for ev_match in re.finditer(evidence_pattern2, task_content):
+                        ev_type = ev_match.group(1)
+                        ev_path = ev_match.group(2).strip()
+                        evidence_paths.append({
+                            'type': ev_type,
+                            'path': ev_path
+                        })
             
             # Check if already enriched
             has_naming_convention = '**Naming Convention:**' in task_content
@@ -137,10 +153,14 @@ class TasksEnricher:
         
         # Determine file type from filename
         file_type = None
-        for type_name, type_suffix in self.naming_standard.get('suffixes', {}).items():
-            if filename.endswith(type_suffix):
-                file_type = type_name
-                break
+        if suffix in ['.ts', '.js', '.tsx', '.jsx']:
+            for type_name, type_suffix in self.naming_standard.get('suffixes', {}).items():
+                # Extract type part from suffix (e.g., '.service.ts' -> 'service')
+                type_part = type_suffix.replace('.ts', '').replace('.js', '').replace('.tsx', '').replace('.jsx', '').lstrip('.')
+                # Check if stem ends with '-{type_part}' (e.g., 'user-service')
+                if stem.endswith(f'-{type_part}'):
+                    file_type = type_name
+                    break
         
         # Check naming convention compliance
         is_kebab_case = re.match(r'^[a-z0-9]+(-[a-z0-9]+)*\.[a-z]+(\.[a-z]+)?$', filename) is not None

@@ -488,7 +488,8 @@ class GeneratePlanValidator:
         
         if apply_fixes:
             self.auto_fix()
-            self.save_plan()
+            if self.fixes_applied:
+                self.save_plan()
         
         report = self.generate_report()
         errors = [i for i in self.issues if i['type'] == 'error']

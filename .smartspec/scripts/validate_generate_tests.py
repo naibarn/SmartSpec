@@ -500,7 +500,8 @@ class GenerateTestsValidator:
         
         if apply_fixes:
             self.auto_fix()
-            self.save_tests()
+            if self.fixes_applied:
+                self.save_tests()
         
         report = self.generate_report()
         errors = [i for i in self.issues if i['type'] == 'error']

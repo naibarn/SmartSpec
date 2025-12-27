@@ -381,7 +381,8 @@ class GenerateSpecValidator:
         
         if apply_fixes:
             self.auto_fix()
-            self.save_spec()
+            if self.fixes_applied:
+                self.save_spec()
         
         report = self.generate_report()
         errors = [i for i in self.issues if i['type'] == 'error']

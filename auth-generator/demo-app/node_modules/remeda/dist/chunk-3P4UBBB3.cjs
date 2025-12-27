@@ -1,0 +1,1 @@
+"use strict";Object.defineProperty(exports, "__esModule", {value: true});var _chunkYC27MA32cjs = require('./chunk-YC27MA32.cjs');function d(...e){return _chunkYC27MA32cjs.a.call(void 0, i,e,o)}var i=(e,n)=>e.length<n.length?e.map((t,r)=>[t,n[r]]):n.map((t,r)=>[e[r],t]),o=e=>(n,t)=>({hasNext:!0,next:[n,e[t]],done:t>=e.length-1});exports.a = d;

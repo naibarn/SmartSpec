@@ -198,8 +198,14 @@ export class AuthGenerator {
       fields: ast.userModel.fields || [],
     };
 
-    // Fields to exclude from user model (handled separately)
-    const excludedFields = ['email', 'password', 'role', 'emailVerified', 'failedLoginAttempts', 'lockedUntil'];
+    // Fields to exclude from user model (handled separately or auto-generated)
+    const excludedFields = [
+      'id', 'email', 'password', 'role', 
+      'emailVerified', 'emailVerificationToken', 'emailVerificationExpires',
+      'failedLoginAttempts', 'lockedUntil',
+      'resetPasswordToken', 'resetPasswordExpires',
+      'createdAt', 'updatedAt'
+    ];
 
     return {
       features,

@@ -1,0 +1,1 @@
+"use strict";Object.defineProperty(exports, "__esModule", {value: true});var _chunkYU24FKMCcjs = require('./chunk-YU24FKMC.cjs');require('./chunk-YC27MA32.cjs');require('./chunk-BZO7MYMJ.cjs');exports.endsWith = _chunkYU24FKMCcjs.a;

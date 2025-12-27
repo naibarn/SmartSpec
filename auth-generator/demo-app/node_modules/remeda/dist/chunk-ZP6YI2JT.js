@@ -1,0 +1,1 @@
+import{a as n,c as a}from"./chunk-ANXBDSUI.js";import{a as t}from"./chunk-WIMGWYZL.js";function T(...e){return t(p,e,u)}var p=(e,r)=>r<0?[...e]:e.slice(r);function u(e){if(e<=0)return a;let r=e;return o=>r>0?(r-=1,n):{done:!1,hasNext:!0,next:o}}export{T as a};

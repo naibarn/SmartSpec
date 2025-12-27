@@ -1,0 +1,1 @@
+import{a as o}from"./chunk-3GOCSNFN.js";function y(t,i){let a=i.length-t.length;if(a===1){let[n,...r]=i;return o(n,{lazy:t,lazyArgs:r})}if(a===0){let n={lazy:t,lazyArgs:i};return Object.assign(e=>o(e,n),n)}throw new Error("Wrong number of arguments")}export{y as a};

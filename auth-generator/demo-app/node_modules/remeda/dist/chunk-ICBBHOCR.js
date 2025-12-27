@@ -1,0 +1,1 @@
+import{a as y}from"./chunk-LFJW7BOT.js";import{a as o,b as a}from"./chunk-ANXBDSUI.js";function s(...t){return y(i,t)}function i(t){if(t.length===0)return a;let n=new Map;for(let r of t)n.set(r,(n.get(r)??0)+1);return r=>{let e=n.get(r);return e===void 0||e===0?o:(e===1?n.delete(r):n.set(r,e-1),{hasNext:!0,next:r,done:n.size===0})}}export{s as a};

@@ -79,7 +79,7 @@ export class AuthSpecParser {
   private parseField(text: string): UserField | null {
     // Format: "name: type (constraints)"
     // Example: "email: string (required, unique, max 255)"
-    const match = text.match(/^(\w+):\s*(\w+(?:\s*\([^)]+\))?)\s*(?:\(([^)]+)\))?/);
+    const match = text.match(/^(\w+):\s*(\w+)(?:\s*\([^)]+\))?\s*(?:\(([^)]+)\))?/);
     if (!match) return null;
     
     const name = match[1];

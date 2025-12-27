@@ -1,0 +1,1 @@
+import{b as t}from"./chunk-ANXBDSUI.js";import{a as n}from"./chunk-WIMGWYZL.js";function l(...r){return n(o,r,u)}var o=(r,e)=>e<0?[]:r.slice(0,e);function u(r){if(r<=0)return t;let e=r;return a=>(e-=1,{done:e<=0,hasNext:!0,next:a})}export{l as a};

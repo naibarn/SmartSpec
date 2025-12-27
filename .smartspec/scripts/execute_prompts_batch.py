@@ -29,6 +29,15 @@ from pathlib import Path
 from typing import List, Dict, Optional, Set
 from enum import Enum
 
+# Import naming convention helper
+sys.path.insert(0, str(Path(__file__).parent))
+from naming_convention_helper import (
+    load_naming_standard,
+    validate_file_path,
+    is_compliant,
+    get_naming_statistics
+)
+
 
 class ProblemCategory(Enum):
     """Problem categories matching verify_evidence_enhanced.py"""
@@ -86,6 +95,7 @@ class BatchExecutionSummary:
     results: List[ExecutionResult]
     verification_before: Optional[Dict] = None
     verification_after: Optional[Dict] = None
+    naming_statistics: Optional[Dict] = None
 
 
 class PromptsParser:
@@ -200,6 +210,8 @@ class BatchExecutor:
         self.checkpoint_enabled = checkpoint_enabled
         self.results: List[ExecutionResult] = []
         self.failures = 0
+        self.naming_standard = load_naming_standard(repo_root)
+        self.naming_violations: List[Dict] = []
         
     def execute(self) -> List[ExecutionResult]:
         """Execute all tasks"""
@@ -247,6 +259,9 @@ class BatchExecutor:
         try:
             # Create code file
             if task.code_file and task.code_content:
+                # Validate naming convention
+                self._validate_naming_convention(task.code_file)
+                
                 code_path = self.repo_root / task.code_file
                 
                 if code_path.exists():
@@ -259,6 +274,9 @@ class BatchExecutor:
             
             # Create test file
             if task.test_file and task.test_content:
+                # Validate naming convention
+                self._validate_naming_convention(task.test_file)
+                
                 test_path = self.repo_root / task.test_file
                 
                 if test_path.exists():
@@ -282,6 +300,22 @@ class BatchExecutor:
                 success=False,
                 error=str(e)
             )
+    
+    def _validate_naming_convention(self, file_path: str):
+        """Validate file path against naming convention"""
+        result = validate_file_path(file_path, self.naming_standard)
+        
+        if not result.compliant:
+            # Log violation but don't fail (warning only)
+            self.naming_violations.append({
+                'file': file_path,
+                'issues': result.issues
+            })
+            print(f"   ⚠️  Naming convention warning: {file_path}")
+            for issue in result.issues:
+                print(f"       - {issue}")
+        else:
+            print(f"   ✅ Naming convention OK: {file_path}")
     
     def _save_checkpoint(self, current_idx: int):
         """Save checkpoint"""
@@ -373,6 +407,29 @@ class ReportGenerator:
                 if not result.success:
                     md += f"- **{result.task_id}:** {result.error}\n"
             md += "\n"
+        
+        # Add naming convention section
+        if self.summary.naming_statistics:
+            stats = self.summary.naming_statistics
+            md += "## Naming Convention Compliance\n\n"
+            md += f"**Compliance Rate:** {stats['compliance_rate']:.1%}\n"
+            md += f"**Compliant Files:** {stats['compliant_files']}/{stats['total_files']}\n\n"
+            
+            if stats['non_compliant_files'] > 0:
+                md += "### Violations\n\n"
+                for violation in stats['violations']:
+                    md += f"**{violation['file']}**\n"
+                    for issue in violation['issues']:
+                        md += f"- {issue}\n"
+                    md += "\n"
+                
+                md += "### Recommendations\n\n"
+                md += "1. Run naming convention validator:\n"
+                md += "   ```bash\n"
+                md += "   python3 .smartspec/scripts/validate_naming_convention.py --fix\n"
+                md += "   ```\n\n"
+                md += "2. Update tasks.md with corrected paths\n\n"
+                md += "3. Re-run verification\n\n"
         
         md += "## Next Steps\n\n"
         if self.summary.failed > 0:
@@ -537,6 +594,15 @@ def main():
     successful = sum(1 for r in results if r.success)
     failed = sum(1 for r in results if not r.success)
     
+    # Collect all created/modified files
+    all_files = []
+    for result in results:
+        all_files.extend(result.files_created)
+        all_files.extend(result.files_modified)
+    
+    # Get naming statistics
+    naming_stats = get_naming_statistics(all_files, executor.naming_standard) if all_files else None
+    
     summary = BatchExecutionSummary(
         started=start_time.isoformat(),
         completed=end_time.isoformat(),
@@ -544,7 +610,8 @@ def main():
         total_tasks=len(tasks),
         successful=successful,
         failed=failed,
-        results=results
+        results=results,
+        naming_statistics=naming_stats
     )
     
     # Generate report

@@ -19,11 +19,20 @@ import argparse
 import json
 import re
 import hashlib
+import sys
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+# Import naming convention helper
+sys.path.insert(0, str(Path(__file__).parent))
+from naming_convention_helper import (
+    load_naming_standard,
+    validate_file_path,
+    find_similar_files_with_naming
+)
 
 
 class TaskStatus(Enum):
@@ -33,6 +42,8 @@ class TaskStatus(Enum):
     INVALID_EVIDENCE = "invalid_evidence"
     INVALID_SCOPE = "invalid_scope"
     NEEDS_MANUAL = "needs_manual"
+    NAMING_ISSUE = "naming_issue"  # Expected path violates naming convention
+    NAMING_VIOLATION = "naming_violation"  # Found file violates naming convention
 
 
 class EvidenceType(Enum):
@@ -103,6 +114,8 @@ class TasksVerifier:
         self.max_excerpt_chars = 500
 
         self.spec_id = self._extract_spec_id()
+        self.naming_standard = load_naming_standard(self.workspace_root)
+        self.naming_issues: List[Dict] = []
 
     def _extract_spec_id(self) -> str:
         # Try header first
@@ -239,6 +252,16 @@ class TasksVerifier:
         ok, reason = self._validate_path_scope(path)
         if not ok:
             return False, [reason or "Invalid path"]
+        
+        # Check naming convention for expected path
+        naming_result = validate_file_path(path, self.naming_standard)
+        if not naming_result.compliant:
+            # Log naming issue but continue verification
+            self.naming_issues.append({
+                'path': path,
+                'issues': naming_result.issues,
+                'type': 'expected_path'
+            })
 
         if hook.type == EvidenceType.UI:
             # UI is not statically verifiable in this strict script
@@ -363,8 +386,11 @@ class TasksVerifier:
                 "invalid_evidence": counts["invalid_evidence"],
                 "invalid_scope": counts["invalid_scope"],
                 "needs_manual": counts["needs_manual"],
+                "naming_issue": counts.get("naming_issue", 0),
+                "naming_violation": counts.get("naming_violation", 0),
                 "verified_percentage": verified_pct,
             },
+            "naming_issues": self.naming_issues,
             "tasks": [
                 {
                     "task_id": r.task_id,
@@ -397,8 +423,29 @@ def _md_report(full: Dict[str, Any]) -> str:
     lines.append(f"| ⚠️ Missing Evidence | {s['missing_evidence']} |\n")
     lines.append(f"| 🚫 Invalid Evidence | {s['invalid_evidence']} |\n")
     lines.append(f"| 👤 Needs Manual | {s['needs_manual']} |\n")
+    lines.append(f"| 📝 Naming Issue | {s.get('naming_issue', 0)} |\n")
+    lines.append(f"| 🔤 Naming Violation | {s.get('naming_violation', 0)} |\n")
     lines.append(f"| **Verified %** | **{s['verified_percentage']}%** |\n")
     lines.append("\n")
+    
+    # Add naming issues section if any
+    naming_issues = full.get("naming_issues", [])
+    if naming_issues:
+        lines.append("## Naming Convention Issues\n\n")
+        for issue in naming_issues:
+            lines.append(f"**{issue['path']}** ({issue['type']})\n")
+            for problem in issue['issues']:
+                lines.append(f"- {problem}\n")
+            lines.append("\n")
+        
+        lines.append("### Recommendations\n\n")
+        lines.append("1. Run naming convention validator:\n")
+        lines.append("   ```bash\n")
+        lines.append("   python3 .smartspec/scripts/validate_naming_convention.py --fix\n")
+        lines.append("   ```\n\n")
+        lines.append("2. Update tasks.md with corrected paths\n\n")
+        lines.append("3. Re-run verification\n\n")
+    
     return "".join(lines)
 
 

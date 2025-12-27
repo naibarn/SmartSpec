@@ -9,21 +9,25 @@ Usage:
 """
 
 import argparse
+from datetime import datetime
 import glob
 import json
 import os
 import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 
 class NamingIssuesFixer:
-    def __init__(self, tasks_path: Path, report_path: Path, apply: bool = False):
+    def __init__(self, tasks_path: Path, report_path: Path, apply: bool = False, repo_root: Optional[Path] = None):
         self.tasks_path = tasks_path
         self.report_path = report_path
         self.apply = apply
+        self.repo_root = repo_root or Path.cwd()
         self.changes: List[Dict] = []
+        self.naming_issues: List[Dict] = []
+        self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
     def read_report(self) -> Dict:
         """Read verification report (JSON or Markdown)"""
@@ -119,6 +123,20 @@ class NamingIssuesFixer:
         elif 'naming_issues' in report:
             naming_issues = report['naming_issues']
         
+        # Check if report has 'not_verified' field (simple JSON format)
+        elif 'not_verified' in report:
+            for item in report['not_verified']:
+                if item.get('reason') == 'naming_issue':
+                    expected = item.get('expected_path')
+                    found = item.get('found_path')
+                    if expected and found:
+                        naming_issues.append({
+                            'task_id': item.get('task'),
+                            'title': item.get('task'),
+                            'expected_path': expected,
+                            'found_path': found
+                        })
+        
         return naming_issues
     
     def read_tasks_md(self) -> str:
@@ -212,6 +230,90 @@ class NamingIssuesFixer:
         print()
         print("="*80 + "\n")
     
+    def generate_report(self) -> str:
+        """Generate markdown report of changes"""
+        md = "# Fix Naming Issues Report\n\n"
+        md += f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        md += f"**Tasks File:** `{self.tasks_path}`\n"
+        md += f"**Source Report:** `{self.report_path}`\n"
+        md += f"**Status:** {'✅ Applied' if self.apply else '👁️ Preview Only'}\n\n"
+        
+        md += "---\n\n"
+        
+        # Summary
+        md += "## Summary\n\n"
+        md += f"- **Total naming issues found:** {len(self.naming_issues)}\n"
+        md += f"- **Evidence paths updated:** {len(self.changes)}\n"
+        md += f"- **Changes applied:** {'Yes' if self.apply else 'No (preview mode)'}\n\n"
+        
+        # Changes Made
+        md += "## Changes Made\n\n"
+        if self.changes:
+            md += "Updated evidence paths to match actual file names:\n\n"
+            
+            # Group by type
+            test_changes = [c for c in self.changes if 'test' in c['expected_path'].lower()]
+            code_changes = [c for c in self.changes if 'test' not in c['expected_path'].lower() and not c['expected_path'].endswith('.md')]
+            doc_changes = [c for c in self.changes if c['expected_path'].endswith('.md')]
+            
+            if test_changes:
+                md += f"### Test Files ({len(test_changes)} changes)\n\n"
+                for change in test_changes[:10]:  # Show first 10
+                    md += f"- `{change['expected_path']}` → `{change['found_path']}`\n"
+                if len(test_changes) > 10:
+                    md += f"- ... and {len(test_changes) - 10} more\n"
+                md += "\n"
+            
+            if code_changes:
+                md += f"### Code Files ({len(code_changes)} changes)\n\n"
+                for change in code_changes[:10]:
+                    md += f"- `{change['expected_path']}` → `{change['found_path']}`\n"
+                if len(code_changes) > 10:
+                    md += f"- ... and {len(code_changes) - 10} more\n"
+                md += "\n"
+            
+            if doc_changes:
+                md += f"### Documentation ({len(doc_changes)} changes)\n\n"
+                for change in doc_changes:
+                    md += f"- `{change['expected_path']}` → `{change['found_path']}`\n"
+                md += "\n"
+        else:
+            md += "No changes made.\n\n"
+        
+        # Next Steps
+        md += "## Next Steps\n\n"
+        if self.apply:
+            md += "1. **Verify changes:**\n"
+            md += f"   ```bash\n   /smartspec_verify_tasks_progress_strict {self.tasks_path} --json\n   ```\n\n"
+            md += "2. **Review diff:**\n"
+            md += f"   ```bash\n   git diff {self.tasks_path}\n   ```\n\n"
+            md += "3. **Commit changes:**\n"
+            md += "   ```bash\n"
+            md += "   git add tasks.md\n"
+            md += '   git commit -m "fix: Update evidence paths to match actual files"\n'
+            md += "   ```\n\n"
+        else:
+            md += "This was a preview. To apply changes, run with `--apply` flag.\n\n"
+        
+        return md
+    
+    def save_report(self):
+        """Save report to file"""
+        # Determine report directory
+        spec_name = self.tasks_path.parent.name
+        report_dir = self.repo_root / ".spec" / "reports" / "fix-naming-issues" / spec_name
+        report_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate report filename
+        report_file = report_dir / f"fix_naming_{self.timestamp}.md"
+        
+        # Generate and save report
+        report_content = self.generate_report()
+        report_file.write_text(report_content, encoding='utf-8')
+        
+        print(f"\n📄 Report saved: {report_file}")
+        return report_file
+    
     def run(self):
         """Main execution flow"""
         try:
@@ -222,6 +324,7 @@ class NamingIssuesFixer:
             # Extract naming issues
             print("🔍 Extracting naming issues...")
             naming_issues = self.extract_naming_issues(report)
+            self.naming_issues = naming_issues  # Save for report generation
             
             if not naming_issues:
                 print("❌ No naming issues found in report.")
@@ -254,6 +357,9 @@ class NamingIssuesFixer:
                 self.print_summary()
             else:
                 self.print_preview()
+            
+            # Generate report
+            self.save_report()
             
             return 0
             
@@ -355,8 +461,18 @@ Examples:
         print(f"❌ Error: report not found: {report_path}", file=sys.stderr)
         return 1
     
+    # Detect repo root
+    repo_root = Path.cwd()
+    if (repo_root / ".spec").exists():
+        # Already at repo root
+        pass
+    elif (repo_root.parent / ".spec").exists():
+        repo_root = repo_root.parent
+    elif (repo_root.parent.parent / ".spec").exists():
+        repo_root = repo_root.parent.parent
+    
     # Run fixer
-    fixer = NamingIssuesFixer(args.tasks, report_path, args.apply)
+    fixer = NamingIssuesFixer(args.tasks, report_path, args.apply, repo_root)
     return fixer.run()
 
 

@@ -127,6 +127,84 @@ Next steps:
 ================================================================================
 ```
 
+## Report Generation
+
+Every execution (preview or apply) automatically generates a detailed report:
+
+**Location:**
+```
+.spec/reports/fix-naming-issues/{spec_name}/fix_naming_{timestamp}.md
+```
+
+**Report Contents:**
+- Execution metadata (timestamp, files, status)
+- Summary statistics (issues found, changes made)
+- Detailed changes grouped by type (test/code/docs)
+- Next steps with executable commands
+
+**Example Report:**
+
+```markdown
+# Fix Naming Issues Report
+
+**Generated:** 2025-12-27 08:30:00
+**Tasks File:** `specs/core/spec-core-001-authentication/tasks.md`
+**Source Report:** `.spec/reports/batch-execution/batch_execution_20251226_174500.md`
+**Status:** ✅ Applied
+
+---
+
+## Summary
+
+- **Total naming issues found:** 52
+- **Evidence paths updated:** 53
+- **Changes applied:** Yes
+
+## Changes Made
+
+Updated evidence paths to match actual file names:
+
+### Test Files (35 changes)
+
+- `packages/auth-lib/tests/unit/jwt.util.test.ts` → `packages/auth-lib/tests/unit/edge-cases/jwt.util.edge-cases.test.ts`
+- `packages/auth-lib/tests/unit/password.util.test.ts` → `packages/auth-lib/tests/unit/password.test.ts`
+- ... and 33 more
+
+### Code Files (15 changes)
+
+- `packages/auth-lib/src/crypto/password.util.ts` → `packages/auth-lib/src/crypto/password.ts`
+- ... and 14 more
+
+### Documentation (3 changes)
+
+- `docs/api/README.util.md` → `docs/api/README.md`
+- ... and 2 more
+
+## Next Steps
+
+1. **Verify changes:**
+   ```bash
+   /smartspec_verify_tasks_progress_strict tasks.md --json
+   ```
+
+2. **Review diff:**
+   ```bash
+   git diff tasks.md
+   ```
+
+3. **Commit changes:**
+   ```bash
+   git add tasks.md
+   git commit -m "fix: Update evidence paths to match actual files"
+   ```
+```
+
+**Benefits:**
+- Audit trail for all changes
+- Easy review and verification
+- Reproducible documentation
+- Integration with other workflows
+
 ## When to Use
 
 Use this workflow when:

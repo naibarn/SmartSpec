@@ -619,6 +619,32 @@ Next steps:
 ================================================================================
 ```
 
+### Report Generation
+
+**Every execution automatically generates a detailed report:**
+
+**Location:**
+```
+.spec/reports/fix-naming-issues/{spec_name}/fix_naming_{timestamp}.md
+```
+
+**Report includes:**
+- Execution metadata (timestamp, files, status)
+- Summary statistics (issues found, changes made)
+- Detailed changes grouped by type
+- Next steps with commands
+
+**Example:**
+```bash
+📄 Report saved: .spec/reports/fix-naming-issues/spec-core-001-authentication/fix_naming_20251227_083000.md
+```
+
+**Benefits:**
+- ✅ Audit trail for all changes
+- ✅ Easy review and verification
+- ✅ Reproducible documentation
+- ✅ Integration with other workflows
+
 ### Integration with Other Workflows
 
 **Typical flow:**

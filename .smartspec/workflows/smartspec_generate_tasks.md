@@ -160,6 +160,12 @@ If you need `heading=...` and the file is docs/spec-like (`.md/.yaml/.yml/.json/
 ### Step 3 — Normalize evidence (in-memory) (MUST)
 Before writing preview, normalize any evidence into canonical form:
 
+**IMPORTANT:** All file paths in evidence MUST follow naming convention standard:
+- Load naming convention from `.smartspec/standards/naming-convention.md`
+- Validate that evidence paths follow kebab-case convention
+- Add naming convention guidance to task descriptions
+- See "Naming Convention Integration" section below for details
+
 1) Quote values with spaces:
 - `command=npx prisma validate` → `command="npx prisma validate"`
 
@@ -256,3 +262,222 @@ If any validator fails:
 ## Related workflows
 - `/smartspec_migrate_evidence_hooks` (normalize legacy evidence)
 - `/smartspec_verify_tasks_progress_strict` (strict verific
+
+---
+
+## Naming Convention Integration
+
+### Purpose
+
+Ensure all generated evidence paths follow SmartSpec naming convention standard to prevent naming issues during implementation and verification.
+
+### Requirements (MUST)
+
+1. **Load Naming Convention Standard**
+   - Read `.smartspec/standards/naming-convention.md`
+   - Parse naming rules (kebab-case, suffixes, directories)
+   - Use standard throughout task generation
+
+2. **Validate Evidence Paths**
+   - All evidence paths MUST follow naming convention
+   - Check kebab-case format
+   - Check appropriate suffixes (`.service.ts`, `.provider.ts`, etc.)
+   - Check correct directory placement
+
+3. **Add Naming Guidance to Tasks**
+   - Include naming convention hints in task descriptions
+   - Specify expected file type and suffix
+   - Indicate correct directory placement
+
+### Task Format with Naming Convention
+
+**Standard format:**
+```markdown
+### Phase 1: Foundations
+
+- [ ] TSK-AUTH-001 Initialize auth service skeleton
+  
+  **Naming Convention:**
+  - Use kebab-case: `auth-service.ts`
+  - Use service suffix: `.service.ts` for business logic
+  - Place in services/: Business logic and core functionality
+  
+  **Evidence:**
+  - code: path=packages/auth-service/src/services/auth-service.ts
+  - test: path=packages/auth-service/tests/unit/services/auth-service.test.ts
+```
+
+**Enhanced format (with architecture):**
+```markdown
+### Phase 1: Foundations
+
+- [ ] TSK-AUTH-057 Integrate SMS provider
+  
+  Implement SMS provider integration for sending verification codes.
+  
+  **Architecture:**
+  - **Package:** `auth-lib` (Shared code, utilities, models)
+  - **Directory:** `providers/` (External integrations)
+  - **File Type:** Provider (External service integration)
+  
+  **Naming Convention:**
+  - Use kebab-case: `sms-provider.ts`
+  - Use provider suffix: `.provider.ts` for external integrations
+  - Place in providers/: External service integrations
+  - Follow pattern: `{service-name}-provider.ts`
+  
+  **Evidence:**
+  - code: path=packages/auth-lib/src/providers/sms-provider.ts
+  - test: path=packages/auth-lib/tests/unit/providers/sms-provider.test.ts
+  
+  **Implementation Notes:**
+  - Follow naming convention strictly
+  - Create file at exact path specified
+  - Do not rename or move files without updating tasks.md
+```
+
+### Validation Rules
+
+**Evidence path validation:**
+
+1. **Kebab-case check:**
+   ```python
+   # Filename must be kebab-case
+   filename = Path(evidence_path).name
+   if not re.match(r'^[a-z0-9]+(-[a-z0-9]+)*\.[a-z]+(\.[a-z]+)?$', filename):
+       raise NamingConventionError(f"Not kebab-case: {filename}")
+   ```
+
+2. **Suffix check:**
+   ```python
+   # File must have appropriate suffix
+   suffixes = {
+       'service': '.service.ts',
+       'provider': '.provider.ts',
+       'client': '.client.ts',
+       'controller': '.controller.ts',
+       'middleware': '.middleware.ts',
+       'util': '.util.ts',
+       'model': '.model.ts',
+       # ... more suffixes
+   }
+   
+   file_type = detect_file_type(filename, suffixes)
+   if not file_type:
+       warnings.append(f"Missing or invalid suffix: {filename}")
+   ```
+
+3. **Directory check:**
+   ```python
+   # File should be in correct directory
+   expected_dir = get_expected_directory(file_type)
+   actual_dir = Path(evidence_path).parent.name
+   if actual_dir != expected_dir:
+       warnings.append(f"Wrong directory: expected {expected_dir}, got {actual_dir}")
+   ```
+
+### Integration with Other Workflows
+
+**Downstream workflows that depend on naming convention:**
+
+1. **`/smartspec_execute_prompts_batch`**
+   - Reads naming convention from tasks
+   - Validates file paths during implementation
+   - Enforces naming convention strictly
+
+2. **`/smartspec_verify_tasks_progress_strict`**
+   - Checks naming convention compliance
+   - Reports violations separately
+   - Suggests fixes for non-compliant files
+
+3. **`/smartspec_fix_naming_issues`**
+   - Uses naming convention for matching
+   - Suggests compliant alternatives
+   - Auto-fixes violations when possible
+
+### Example Implementation
+
+**Python helper function:**
+
+```python
+def add_naming_convention_guidance(task: Dict, evidence_path: str) -> str:
+    """Add naming convention guidance to task description"""
+    
+    # Parse evidence path
+    path = Path(evidence_path)
+    filename = path.name
+    directory = path.parent.name
+    package = extract_package_name(path)
+    
+    # Detect file type
+    file_type = detect_file_type(filename)
+    
+    # Get naming rules
+    case_rule = "Use kebab-case"
+    suffix_rule = f"Use {file_type} suffix: .{file_type}.ts"
+    directory_rule = f"Place in {directory}/: {get_directory_purpose(directory)}"
+    
+    # Generate guidance
+    guidance = f"""
+**Naming Convention:**
+- {case_rule}: `{filename}`
+- {suffix_rule}
+- {directory_rule}
+"""
+    
+    return guidance
+```
+
+### Benefits
+
+1. **Prevention**
+   - Catch naming issues at task generation time
+   - Prevent implementation mistakes
+   - Reduce verification failures
+
+2. **Clarity**
+   - Clear naming expectations
+   - Explicit file type and location
+   - Consistent across all tasks
+
+3. **Automation**
+   - Automated validation
+   - Automated guidance generation
+   - Seamless integration with other workflows
+
+### Validation Command
+
+**Validate generated tasks:**
+```bash
+# After generating tasks, validate naming convention
+python3 .smartspec/scripts/validate_naming_convention.py \
+  --check-tasks .spec/reports/generate-tasks/<run-id>/preview/<spec-folder>/tasks.md
+```
+
+**Expected output:**
+```
+✅ All evidence paths follow naming convention
+✅ All tasks include naming guidance
+✅ Tasks ready for implementation
+```
+
+### Related Tools
+
+- `/smartspec_validate_naming_convention` - Validate naming convention compliance
+- `/smartspec_enrich_tasks` - Add naming convention to existing tasks
+- `/smartspec_fix_naming_issues` - Fix naming issues in evidence paths
+
+---
+
+## Version History
+
+### v7.2.2 (2025-12-27)
+- Added naming convention integration
+- Added naming guidance to task format
+- Added validation rules for evidence paths
+- Enhanced task template with architecture and naming sections
+
+### v7.2.1 (Previous)
+- Evidence hooks validation
+- Preview-first governance
+- Strict evidence format

@@ -1,0 +1,52 @@
+#!/bin/bash
+#
+# Pre-commit hook to validate naming convention
+#
+# This hook validates that all staged TypeScript/JavaScript files
+# follow the SmartSpec naming convention standard.
+#
+# Installation:
+#   ln -sf ../../.smartspec/hooks/pre-commit-naming-convention .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# To bypass (not recommended):
+#   git commit --no-verify
+#
+
+echo "🔍 Validating naming convention for staged files..."
+
+# Find repo root
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
+# Check if validation script exists
+VALIDATOR="$REPO_ROOT/.smartspec/scripts/validate_naming_convention.py"
+if [ ! -f "$VALIDATOR" ]; then
+    echo "❌ Error: Naming convention validator not found"
+    echo "   Expected: $VALIDATOR"
+    exit 1
+fi
+
+# Run validation on staged files only
+python3 "$VALIDATOR" --staged-only
+
+# Check exit code
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Naming convention violations found in staged files!"
+    echo ""
+    echo "To fix:"
+    echo "  1. Run: python3 .smartspec/scripts/validate_naming_convention.py --staged-only --fix"
+    echo "  2. Or rename files manually to follow naming convention"
+    echo "  3. Then stage and commit again"
+    echo ""
+    echo "To bypass this check (not recommended):"
+    echo "  git commit --no-verify"
+    echo ""
+    echo "Naming convention standard:"
+    echo "  .smartspec/standards/naming-convention.md"
+    echo ""
+    exit 1
+fi
+
+echo ""
+exit 0

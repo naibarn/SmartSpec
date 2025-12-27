@@ -376,6 +376,11 @@ python3 .smartspec/scripts/validate_spec_from_prompt.py spec.md --apply
 python3 .smartspec/scripts/validate_spec_from_prompt.py spec.md --output report.md
 ```
 
+**📦 Sample Files & Exercises:**
+- **[Examples Directory →](examples/validators/)** - Ready-to-use sample files (good/bad/empty)
+- **[Interactive Tutorial →](.smartspec/INTERACTIVE_TUTORIAL_EXAMPLE.md)** - Hands-on learning with exercises
+- **[Verification Scripts →](examples/validators/scripts/)** - Automated exercise verification
+
 📚 **[Complete Validators Guide →](.smartspec/scripts/VALIDATORS_README.md)**
 
 ### Security (2 Workflows)

@@ -44,14 +44,18 @@ validate_generate_tests.py (538 lines) - Auto-fix fixed ✅
 
 **New to validators?** Start here!
 
-### Step 1: Download Sample File
+### Step 1: Get Sample Files
 
 ```bash
-# Create practice directory
-mkdir -p ~/smartspec-tutorial && cd ~/smartspec-tutorial
+# Option 1: Use included examples
+cd /path/to/SmartSpec/examples/validators
 
-# Download sample spec
-curl -O https://raw.githubusercontent.com/naibarn/SmartSpec/main/examples/sample-spec.md
+# Option 2: Download from GitHub
+mkdir -p ~/smartspec-tutorial && cd ~/smartspec-tutorial
+curl -O https://raw.githubusercontent.com/naibarn/SmartSpec/main/examples/validators/good/sample-spec-from-prompt.md
+
+# Option 3: Copy from repository
+cp /path/to/SmartSpec/examples/validators/good/sample-spec-from-prompt.md .
 ```
 
 ### Step 2: Run Your First Validation

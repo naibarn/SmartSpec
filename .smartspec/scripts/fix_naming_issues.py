@@ -9,7 +9,9 @@ Usage:
 """
 
 import argparse
+import glob
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -262,6 +264,47 @@ class NamingIssuesFixer:
             return 1
 
 
+def resolve_latest_report(report_path: Path) -> Path:
+    """
+    Resolve wildcard pattern to latest file.
+    If path contains wildcard (*), expand and return newest file.
+    Otherwise, return path as-is.
+    """
+    path_str = str(report_path)
+    
+    # Check if path contains wildcard
+    if '*' not in path_str:
+        return report_path
+    
+    # Expand wildcard
+    matches = glob.glob(path_str)
+    
+    if not matches:
+        print(f"⚠️  Warning: No files match pattern: {path_str}")
+        print(f"   Using original path: {report_path}")
+        return report_path
+    
+    if len(matches) == 1:
+        resolved = Path(matches[0])
+        print(f"ℹ️  Resolved: {report_path} → {resolved.name}")
+        return resolved
+    
+    # Multiple matches - sort by modification time (newest first)
+    matches.sort(key=lambda f: os.path.getmtime(f), reverse=True)
+    latest = Path(matches[0])
+    
+    print(f"ℹ️  Found {len(matches)} files matching pattern: {path_str}")
+    print(f"   Using latest: {latest.name} (modified: {os.path.getmtime(str(latest))})")
+    print(f"   Other files:")
+    for f in matches[1:4]:  # Show up to 3 older files
+        print(f"     - {Path(f).name} (modified: {os.path.getmtime(f)})")
+    if len(matches) > 4:
+        print(f"     ... and {len(matches) - 4} more")
+    print()
+    
+    return latest
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Fix naming issues by updating evidence paths in tasks.md',
@@ -300,17 +343,20 @@ Examples:
     
     args = parser.parse_args()
     
+    # Resolve wildcard in report path
+    report_path = resolve_latest_report(args.from_report)
+    
     # Validate inputs
     if not args.tasks.exists():
         print(f"❌ Error: tasks.md not found: {args.tasks}", file=sys.stderr)
         return 1
     
-    if not args.from_report.exists():
-        print(f"❌ Error: report not found: {args.from_report}", file=sys.stderr)
+    if not report_path.exists():
+        print(f"❌ Error: report not found: {report_path}", file=sys.stderr)
         return 1
     
     # Run fixer
-    fixer = NamingIssuesFixer(args.tasks, args.from_report, args.apply)
+    fixer = NamingIssuesFixer(args.tasks, report_path, args.apply)
     return fixer.run()
 
 

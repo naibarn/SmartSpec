@@ -45,6 +45,28 @@ Fix naming issues by automatically updating evidence paths in tasks.md based on 
   --apply
 ```
 
+### Using Wildcard (Automatic Latest File)
+
+```bash
+# Wildcard - automatically uses latest file
+/smartspec_fix_naming_issues \
+  specs/core/spec-core-001-authentication/tasks.md \
+  --from-report .spec/reports/batch-execution/batch_execution_*.md \
+  --apply
+
+# Output:
+ℹ️  Found 3 files matching pattern
+   Using latest: batch_execution_20251227_090000.md
+   Other files:
+     - batch_execution_20251227_080000.md
+     - batch_execution_20251226_174500.md
+```
+
+**Benefits:**
+- No need to type full filename
+- Always uses latest report
+- Shows which file was selected
+
 ## What It Does
 
 1. **Reads verification report** (JSON or Markdown format)

@@ -532,6 +532,43 @@ Found:    packages/auth-lib/src/crypto/password.ts
   --apply
 ```
 
+### Wildcard Support
+
+**Automatic latest file selection:**
+
+When using wildcard (`*`), the script automatically selects the **newest file** based on modification time.
+
+```bash
+# Wildcard - automatically uses latest file
+/smartspec_fix_naming_issues \
+  tasks.md \
+  --from-report .spec/reports/batch-execution/batch_execution_*.md \
+  --apply
+
+# Output:
+ℹ️  Found 3 files matching pattern
+   Using latest: batch_execution_20251227_090000.md
+   Other files:
+     - batch_execution_20251227_080000.md
+     - batch_execution_20251226_174500.md
+```
+
+**Benefits:**
+- ✅ No need to type full filename
+- ✅ Always uses latest report
+- ✅ Shows which file was selected
+- ✅ Lists other matching files for reference
+
+**When to use:**
+- ✅ After batch execution (latest report)
+- ✅ Multiple report files exist
+- ✅ Want convenience
+
+**When NOT to use:**
+- ❌ Need specific older report
+- ❌ Want explicit control
+- ❌ Scripting (use full path for reliability)
+
 ### Output
 
 **Preview mode (default):**

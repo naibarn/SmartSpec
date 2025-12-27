@@ -7,8 +7,8 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { JWTService } from '../services/jwt.service';
-import { JWTPayload{{#if rbac.enabled}}, UserRole{{/if}} } from '../types/auth.types';
-import { isJWTPayload{{#if rbac.enabled}}, assertUserRoles{{/if}} } from '../utils/type-guards';
+import { JWTPayload, UserRole } from '../types/auth.types';
+import { isJWTPayload, assertUserRoles } from '../utils/type-guards';
 
 // Use Express.Request with extended type from express.d.ts
 // req.user will be JWTPayload, not full User object
@@ -70,7 +70,6 @@ export class AuthMiddleware {
     }
   };
 
-  {{#if rbac.enabled}}
   /**
    * Check if user has required role
    */
@@ -105,14 +104,6 @@ export class AuthMiddleware {
     };
   };
 
-  {{#each rbac.roles}}
-  /**
-   * Require {{this.name}} role
-   */
-  require{{capitalize this.name}} = this.requireRole([UserRole.{{uppercase this.name}}]);
-
-  {{/each}}
-  {{/if}}
 
   /**
    * Optional authentication - attach user if token is valid, but don't fail if not
@@ -135,9 +126,7 @@ export class AuthMiddleware {
       req.user = {
         id: payload.userId,
         email: payload.email,
-        {{#if rbac.enabled}}
         role: payload.role as UserRole,
-        {{/if}}
       } as User;
 
       next();
@@ -147,7 +136,6 @@ export class AuthMiddleware {
     }
   };
 
-  {{#if features.accountLockout}}
   /**
    * Check if account is locked
    */
@@ -180,9 +168,7 @@ export class AuthMiddleware {
       next(error);
     }
   };
-  {{/if}}
 
-  {{#if features.emailVerification}}
   /**
    * Require email verification
    */
@@ -214,7 +200,6 @@ export class AuthMiddleware {
       next(error);
     }
   };
-  {{/if}}
 }
 
 /**

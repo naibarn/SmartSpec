@@ -102,10 +102,61 @@ export class AuthGenerator {
       type: 'routes',
     });
 
-    // Generate service (template reference only)
+    // Generate services
     files.push({
       path: path.join(options.outputDir, 'services/auth.service.ts'),
       content: this.renderTemplate('service', context),
+      type: 'service',
+    });
+
+    files.push({
+      path: path.join(options.outputDir, 'services/jwt.service.ts'),
+      content: this.renderTemplate('jwt-service', context),
+      type: 'service',
+    });
+
+    files.push({
+      path: path.join(options.outputDir, 'services/password.service.ts'),
+      content: this.renderTemplate('password-service', context),
+      type: 'service',
+    });
+
+    files.push({
+      path: path.join(options.outputDir, 'services/email.service.ts'),
+      content: this.renderTemplate('email-service', context),
+      type: 'service',
+    });
+
+    // Generate type definitions
+    files.push({
+      path: path.join(options.outputDir, 'types/express.d.ts'),
+      content: this.renderTemplate('express-types', context),
+      type: 'types',
+    });
+
+    // Generate utilities
+    files.push({
+      path: path.join(options.outputDir, 'utils/type-guards.ts'),
+      content: this.renderTemplate('type-guards', context),
+      type: 'types',
+    });
+
+    // Generate repositories
+    files.push({
+      path: path.join(options.outputDir, 'repositories/user.repository.interface.ts'),
+      content: this.renderTemplate('repo-interface', context),
+      type: 'types',
+    });
+
+    files.push({
+      path: path.join(options.outputDir, 'repositories/user.repository.memory.ts'),
+      content: this.renderTemplate('repo-memory', context),
+      type: 'service',
+    });
+
+    files.push({
+      path: path.join(options.outputDir, 'repositories/user.repository.prisma.ts'),
+      content: this.renderTemplate('repo-prisma', context),
       type: 'service',
     });
 
@@ -125,8 +176,16 @@ export class AuthGenerator {
       controller: 'controllers/auth.controller.ts.hbs',
       middleware: 'middleware/auth.middleware.ts.hbs',
       types: 'types/auth.types.ts.hbs',
+      'express-types': 'types/express.d.ts.hbs',
+      'type-guards': 'utils/type-guards.ts.hbs',
       routes: 'routes/auth.routes.ts.hbs',
       service: 'services/auth.service.ts.hbs',
+      'jwt-service': 'services/jwt.service.ts.hbs',
+      'password-service': 'services/password.service.ts.hbs',
+      'email-service': 'services/email.service.ts.hbs',
+      'repo-interface': 'repositories/user.repository.interface.ts.hbs',
+      'repo-memory': 'repositories/user.repository.memory.ts.hbs',
+      'repo-prisma': 'repositories/user.repository.prisma.ts.hbs',
     };
 
     for (const [name, file] of Object.entries(templateFiles)) {

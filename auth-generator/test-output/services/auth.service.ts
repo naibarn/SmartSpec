@@ -8,27 +8,21 @@
 import { randomBytes } from 'crypto';
 import { JWTService } from './jwt.service';
 import { PasswordService } from './password.service';
-{{#if features.emailVerification}}
 import { EmailService } from './email.service';
-{{/if}}
 import { UserRepository } from '../repositories/user.repository.interface';
-import { User, PublicUser, RegisterInput, LoginInput, TokenPair{{#if rbac.enabled}}, UserRole{{/if}} } from '../types/auth.types';
+import { User, PublicUser, RegisterInput, LoginInput, TokenPair, UserRole } from '../types/auth.types';
 
 export class AuthService {
   private jwtService: JWTService;
   private passwordService: PasswordService;
-  {{#if features.emailVerification}}
   private emailService: EmailService;
-  {{/if}}
   private userRepository: UserRepository;
 
   constructor(userRepository: UserRepository) {
     this.userRepository = userRepository;
     this.jwtService = new JWTService();
     this.passwordService = new PasswordService();
-    {{#if features.emailVerification}}
     this.emailService = new EmailService();
-    {{/if}}
   }
 
   /**
@@ -54,19 +48,10 @@ export class AuthService {
     const user = await this.userRepository.create({
       email: input.email,
       password: hashedPassword,
-      {{#if rbac.enabled}}
-      role: '{{rbac.defaultRole}}',
-      {{/if}}
-      {{#if userModel.fields}}
-      {{#each userModel.fields}}
-      {{#unless (includes ../excludedFields this.name)}}
-      {{this.name}}: input.{{this.name}},
-      {{/unless}}
-      {{/each}}
-      {{/if}}
+      role: 'user',
+      name: input.name,
     });
 
-    {{#if features.emailVerification}}
     // 5. Generate email verification token
     const verificationToken = this.generateSecureToken();
     const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -78,12 +63,11 @@ export class AuthService {
 
     // 6. Send verification email
     await this.emailService.sendVerificationEmail(user.email, verificationToken);
-    {{/if}}
 
-    // {{#if features.emailVerification}}7{{else}}5{{/if}}. Generate tokens
+    // 7. Generate tokens
     const tokens = this.jwtService.generateTokenPair(user.id, user.email, user.role);
 
-    // {{#if features.emailVerification}}8{{else}}6{{/if}}. Remove password from response
+    // 8. Remove password from response
     const { password, ...publicUser } = user;
 
     return {
@@ -102,35 +86,30 @@ export class AuthService {
       throw new Error('Invalid credentials');
     }
 
-    {{#if features.accountLockout}}
     // 2. Check if account is locked
     if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
       const remainingTime = Math.ceil((new Date(user.lockedUntil).getTime() - Date.now()) / 60000);
       throw new Error(`Account is locked. Try again in ${remainingTime} minutes`);
     }
-    {{/if}}
 
-    // {{#if features.accountLockout}}3{{else}}2{{/if}}. Verify password
+    // 3. Verify password
     const isValid = await this.passwordService.compare(input.password, user.password);
     
     if (!isValid) {
-      {{#if features.accountLockout}}
       // Increment failed attempts
       const failedAttempts = (user.failedLoginAttempts || 0) + 1;
       const updates: any = { failedLoginAttempts: failedAttempts };
       
       // Lock account if max attempts reached
-      if (failedAttempts >= {{securitySettings.accountLockout.maxAttempts}}) {
-        updates.lockedUntil = new Date(Date.now() + {{securitySettings.accountLockout.lockoutDuration}} * 60 * 1000);
+      if (failedAttempts >= 5) {
+        updates.lockedUntil = new Date(Date.now() + 30 * 60 * 1000);
       }
       
       await this.userRepository.update(user.id, updates);
-      {{/if}}
       
       throw new Error('Invalid credentials');
     }
 
-    {{#if features.accountLockout}}
     // 4. Reset failed attempts on successful login
     if (user.failedLoginAttempts && user.failedLoginAttempts > 0) {
       await this.userRepository.update(user.id, {
@@ -138,12 +117,11 @@ export class AuthService {
         lockedUntil: undefined,
       });
     }
-    {{/if}}
 
-    // {{#if features.accountLockout}}5{{else}}3{{/if}}. Generate tokens
+    // 5. Generate tokens
     const tokens = this.jwtService.generateTokenPair(user.id, user.email, user.role);
 
-    // {{#if features.accountLockout}}6{{else}}4{{/if}}. Remove password from response
+    // 6. Remove password from response
     const { password, ...publicUser } = user;
 
     return {
@@ -169,7 +147,6 @@ export class AuthService {
     return this.jwtService.generateTokenPair(user.id, user.email, user.role);
   }
 
-  {{#if features.emailVerification}}
   /**
    * Verify email
    */
@@ -220,9 +197,7 @@ export class AuthService {
     // 4. Send email
     await this.emailService.sendVerificationEmail(user.email, verificationToken);
   }
-  {{/if}}
 
-  {{#if features.passwordReset}}
   /**
    * Request password reset
    */
@@ -279,7 +254,6 @@ export class AuthService {
       resetPasswordExpires: undefined,
     });
   }
-  {{/if}}
 
   /**
    * Change password (authenticated user)

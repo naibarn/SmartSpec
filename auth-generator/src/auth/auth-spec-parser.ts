@@ -5,6 +5,8 @@
  */
 
 import { marked } from 'marked';
+import { FieldParser } from './field-parser';
+import { SpecParseError, createParseError, ParseError } from './parser-errors';
 import {
   AuthSpec,
   UserModel,
@@ -22,6 +24,11 @@ import {
 } from '../types/auth-ast.types';
 
 export class AuthSpecParser {
+  private fieldParser: FieldParser;
+
+  constructor() {
+    this.fieldParser = new FieldParser();
+  }
   parse(markdown: string): AuthSpec {
     const tokens = marked.lexer(markdown);
     
@@ -59,8 +66,10 @@ export class AuthSpecParser {
       }
       
       if (inFields && token.type === 'list') {
+        let lineNumber = 0;
         for (const item of token.items) {
-          const field = this.parseField(item.text);
+          lineNumber++;
+          const field = this.parseField(item.text, lineNumber);
           if (field) fields.push(field);
         }
       }
@@ -76,29 +85,22 @@ export class AuthSpecParser {
     return { fields, indexes };
   }
 
-  private parseField(text: string): UserField | null {
-    // Format: "name: type (constraints)"
-    // Example: "email: string (required, unique, max 255)"
-    const match = text.match(/^(\w+):\s*(\w+)(?:\s*\([^)]+\))?\s*(?:\(([^)]+)\))?/);
-    if (!match) return null;
+  private parseField(text: string, lineNumber: number = 0): UserField | null {
+    const result = this.fieldParser.parse(text, lineNumber);
     
-    const name = match[1];
-    let type = match[2];
-    const constraintsStr = match[3] || '';
-    
-    // Handle enum type
-    let enumValues: string[] | undefined;
-    if (type.includes('enum')) {
-      const enumMatch = type.match(/enum\s*\(([^)]+)\)/);
-      if (enumMatch) {
-        enumValues = enumMatch[1].split(',').map(v => v.trim());
-        type = 'enum';
+    if (!result.success) {
+      // Log errors but don't throw - allow parser to continue
+      console.warn(`Field parse error at line ${lineNumber}:`);
+      for (const error of result.errors) {
+        console.warn(`  ${error.message}`);
+        if (error.suggestion) {
+          console.warn(`  Suggestion: ${error.suggestion}`);
+        }
       }
+      return null;
     }
     
-    const constraints = this.parseConstraints(constraintsStr);
-    
-    return { name, type, constraints, enumValues };
+    return result.field || null;
   }
 
   private parseConstraints(constraintsStr: string): FieldConstraint[] {

@@ -7,24 +7,27 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { JWTService } from '../services/jwt.service';
-import { User, UserRole } from '../types/auth.types';
+import { UserRepository } from '../repositories/user.repository.interface';
+import { JWTPayload, UserRole } from '../types/auth.types';
+import { isJWTPayload, assertUserRoles } from '../utils/type-guards';
 
-export interface AuthRequest extends Request {
-  user?: User;
-}
+// Use Express.Request with extended type from express.d.ts
+// req.user will be JWTPayload, not full User object
 
 export class AuthMiddleware {
   private jwtService: JWTService;
+  private userRepository?: UserRepository;
 
-  constructor(jwtService: JWTService) {
+  constructor(jwtService: JWTService, userRepository?: UserRepository) {
     this.jwtService = jwtService;
+    this.userRepository = userRepository;
   }
 
   /**
    * Verify JWT token and attach user to request
    */
   authenticate = async (
-    req: AuthRequest,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
@@ -42,20 +45,24 @@ export class AuthMiddleware {
       const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
       // Verify token
-      const payload = await this.jwtService.verifyAccessToken(token);
+      const payload = this.jwtService.verifyAccessToken(token);
+      
+      // Type guard to ensure payload is valid
+      if (!isJWTPayload(payload)) {
+        res.status(401).json({
+          success: false,
+          error: 'Invalid token payload',
+        });
+        return;
+      }
 
       // Get user from database (this would be done by the database layer)
       // For now, we'll assume the user is retrieved and attached
       // In production, you would query the database here:
       // const user = await userRepository.findById(payload.userId);
       
-      // Attach user to request
-      req.user = {
-        id: payload.userId,
-        email: payload.email,
-        role: payload.role as UserRole,
-        // Other user fields would be populated from database
-      } as User;
+      // Attach JWT payload to request
+      req.user = payload;
 
       next();
     } catch (error) {
@@ -71,7 +78,7 @@ export class AuthMiddleware {
    */
   requireRole = (allowedRoles: UserRole[]) => {
     return async (
-      req: AuthRequest,
+      req: Request,
       res: Response,
       next: NextFunction
     ): Promise<void> => {
@@ -115,7 +122,7 @@ export class AuthMiddleware {
    * Optional authentication - attach user if token is valid, but don't fail if not
    */
   optionalAuth = async (
-    req: AuthRequest,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
@@ -127,13 +134,12 @@ export class AuthMiddleware {
       }
 
       const token = authHeader.substring(7);
-      const payload = await this.jwtService.verifyAccessToken(token);
-
-      req.user = {
-        id: payload.userId,
-        email: payload.email,
-        role: payload.role as UserRole,
-      } as User;
+      const payload = this.jwtService.verifyAccessToken(token);
+      
+      // Type guard to ensure payload is valid
+      if (isJWTPayload(payload)) {
+        req.user = payload;
+      }
 
       next();
     } catch (error) {
@@ -146,14 +152,24 @@ export class AuthMiddleware {
    * Check if account is locked
    */
   checkAccountLockout = async (
-    req: AuthRequest,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
     try {
-      const user = req.user;
-      if (!user) {
+      const jwtPayload = req.user;
+      if (!jwtPayload || !this.userRepository) {
         next();
+        return;
+      }
+
+      // Fetch full user from database
+      const user = await this.userRepository.findById(jwtPayload.userId);
+      if (!user) {
+        res.status(401).json({
+          success: false,
+          error: 'User not found',
+        });
         return;
       }
 
@@ -179,16 +195,26 @@ export class AuthMiddleware {
    * Require email verification
    */
   requireEmailVerified = async (
-    req: AuthRequest,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
     try {
-      const user = req.user;
-      if (!user) {
+      const jwtPayload = req.user;
+      if (!jwtPayload || !this.userRepository) {
         res.status(401).json({
           success: false,
           error: 'Unauthorized',
+        });
+        return;
+      }
+
+      // Fetch full user from database
+      const user = await this.userRepository.findById(jwtPayload.userId);
+      if (!user) {
+        res.status(401).json({
+          success: false,
+          error: 'User not found',
         });
         return;
       }
@@ -211,6 +237,6 @@ export class AuthMiddleware {
 /**
  * Helper to create middleware instance
  */
-export function createAuthMiddleware(jwtService: JWTService): AuthMiddleware {
-  return new AuthMiddleware(jwtService);
+export function createAuthMiddleware(jwtService: JWTService, userRepository?: UserRepository): AuthMiddleware {
+  return new AuthMiddleware(jwtService, userRepository);
 }

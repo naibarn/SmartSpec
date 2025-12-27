@@ -94,6 +94,19 @@ export class AuthGenerator {
       type: 'middleware',
     });
 
+    files.push({
+      path: path.join(options.outputDir, 'middleware/error-handler.middleware.ts'),
+      content: this.renderTemplate('error-handler-middleware', context),
+      type: 'middleware',
+    });
+
+    // Generate errors
+    files.push({
+      path: path.join(options.outputDir, 'errors/auth-errors.ts'),
+      content: this.renderTemplate('auth-errors', context),
+      type: 'types',
+    });
+
     // Generate types
     files.push({
       path: path.join(options.outputDir, 'types/auth.types.ts'),
@@ -182,6 +195,7 @@ export class AuthGenerator {
       controller: 'controllers/auth.controller.ts.hbs',
       middleware: 'middleware/auth.middleware.ts.hbs',
       'validation-middleware': 'middleware/validation.middleware.ts.hbs',
+      'error-handler-middleware': 'middleware/error-handler.middleware.ts.hbs',
       types: 'types/auth.types.ts.hbs',
       'express-types': 'types/express.d.ts.hbs',
       'type-guards': 'utils/type-guards.ts.hbs',
@@ -193,6 +207,7 @@ export class AuthGenerator {
       'repo-interface': 'repositories/user.repository.interface.ts.hbs',
       'repo-memory': 'repositories/user.repository.memory.ts.hbs',
       'repo-prisma': 'repositories/user.repository.prisma.ts.hbs',
+      'auth-errors': 'errors/auth-errors.ts.hbs',
     };
 
     for (const [name, file] of Object.entries(templateFiles)) {

@@ -366,7 +366,8 @@ export class AuthSpecParser {
     };
   }
 
-  private parseSecuritySettings(_tokens: any[]): SecuritySettings {
+  private parseSecuritySettings(tokens: any[]): SecuritySettings {
+    // Default values
     const passwordRequirements = {
       minLength: 8,
       requireUppercase: false,
@@ -385,8 +386,144 @@ export class AuthSpecParser {
       emailVerificationTokenExpiry: '24h',
     };
     
-    // Parse from spec...
-    // (Implementation similar to above)
+    let inSecuritySettings = false;
+    let inPasswordRequirements = false;
+    let inAccountSecurity = false;
+    let inRateLimits = false;
+    
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      
+      // Check for Security Settings section
+      if (token.type === 'heading' && token.depth === 2) {
+        inSecuritySettings = token.text === 'Security Settings';
+        inPasswordRequirements = false;
+        inAccountSecurity = false;
+        inRateLimits = false;
+      }
+      
+      // Check for subsections
+      if (inSecuritySettings && token.type === 'heading' && token.depth === 3) {
+        inPasswordRequirements = token.text === 'Password Requirements';
+        inAccountSecurity = token.text === 'Account Security';
+        inRateLimits = token.text === 'Rate Limits';
+      }
+      
+      // Parse Password Requirements
+      if (inPasswordRequirements && token.type === 'list') {
+        for (const item of token.items) {
+          const text = item.text;
+          
+          // Minimum length: 12
+          if (text.match(/minimum length/i)) {
+            const match = text.match(/(\d+)/);
+            if (match) {
+              passwordRequirements.minLength = parseInt(match[1], 10);
+            }
+          }
+          
+          // Require uppercase: yes/no
+          if (text.match(/require uppercase/i)) {
+            passwordRequirements.requireUppercase = text.match(/yes|true/i) !== null;
+          }
+          
+          // Require lowercase: yes/no
+          if (text.match(/require lowercase/i)) {
+            passwordRequirements.requireLowercase = text.match(/yes|true/i) !== null;
+          }
+          
+          // Require numbers: yes/no
+          if (text.match(/require numbers?/i)) {
+            passwordRequirements.requireNumber = text.match(/yes|true/i) !== null;
+          }
+          
+          // Require special characters: yes/no
+          if (text.match(/require special/i)) {
+            passwordRequirements.requireSpecial = text.match(/yes|true/i) !== null;
+          }
+        }
+      }
+      
+      // Parse Account Security
+      if (inAccountSecurity && token.type === 'list') {
+        for (const item of token.items) {
+          const text = item.text;
+          
+          // Max login attempts: 3
+          if (text.match(/max login attempts/i)) {
+            const match = text.match(/(\d+)/);
+            if (match) {
+              accountSecurity.maxLoginAttempts = parseInt(match[1], 10);
+            }
+          }
+          
+          // Lockout duration: 60m
+          if (text.match(/lockout duration/i)) {
+            const match = text.match(/(\d+)\s*(m|h|d|minutes?|hours?|days?)/i);
+            if (match) {
+              const value = match[1];
+              const unit = match[2].toLowerCase().charAt(0);
+              accountSecurity.lockoutDuration = `${value}${unit}`;
+            }
+          }
+          
+          // Lockout window: 15m
+          if (text.match(/lockout window/i)) {
+            const match = text.match(/(\d+)\s*(m|h|d|minutes?|hours?|days?)/i);
+            if (match) {
+              const value = match[1];
+              const unit = match[2].toLowerCase().charAt(0);
+              accountSecurity.lockoutWindow = `${value}${unit}`;
+            }
+          }
+          
+          // Password reset token expiry: 2h
+          if (text.match(/password reset token expiry/i)) {
+            const match = text.match(/(\d+)\s*(m|h|d|minutes?|hours?|days?)/i);
+            if (match) {
+              const value = match[1];
+              const unit = match[2].toLowerCase().charAt(0);
+              accountSecurity.passwordResetTokenExpiry = `${value}${unit}`;
+            }
+          }
+          
+          // Email verification token expiry: 48h
+          if (text.match(/email verification token expiry/i)) {
+            const match = text.match(/(\d+)\s*(m|h|d|minutes?|hours?|days?)/i);
+            if (match) {
+              const value = match[1];
+              const unit = match[2].toLowerCase().charAt(0);
+              accountSecurity.emailVerificationTokenExpiry = `${value}${unit}`;
+            }
+          }
+        }
+      }
+      
+      // Parse Rate Limits
+      if (inRateLimits && token.type === 'list') {
+        for (const item of token.items) {
+          const text = item.text;
+          // Format: "Login: 5 requests per 15 minutes"
+          const match = text.match(/^([^:]+):\s*(\d+)\s*requests?\s*per\s*(\d+)\s*(minutes?|hours?|seconds?)/i);
+          if (match) {
+            const category = match[1].toLowerCase().trim();
+            const requests = parseInt(match[2], 10);
+            const window = parseInt(match[3], 10);
+            const unit = match[4].toLowerCase();
+            
+            let windowMs = window;
+            if (unit.startsWith('second')) windowMs *= 1000;
+            else if (unit.startsWith('minute')) windowMs *= 60 * 1000;
+            else if (unit.startsWith('hour')) windowMs *= 60 * 60 * 1000;
+            
+            rateLimits[category] = {
+              maxRequests: requests,
+              windowMs,
+            };
+          }
+        }
+      }
+    }
     
     return {
       passwordRequirements,

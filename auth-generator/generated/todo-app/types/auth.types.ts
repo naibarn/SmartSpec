@@ -43,10 +43,7 @@ export interface User {
   lockedUntil?: Date;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
-  id: string (UUID, primary key);
-  name: string (required, max 200);
-  createdAt: datetime (auto);
-  updatedAt: datetime (auto);
+  name: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -83,10 +80,7 @@ export interface TokenPair {
 export interface RegisterInput {
   email: string;
   password: string;
-  id: string (UUID, primary key);
-  name: string (required, max 200);
-  createdAt: datetime (auto);
-  updatedAt: datetime (auto);
+  name: string;
 }
 
 /**

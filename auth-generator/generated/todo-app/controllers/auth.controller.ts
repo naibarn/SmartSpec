@@ -81,19 +81,8 @@ export class AuthController {
       // Validate input
       const input = loginSchema.parse(req.body);
 
-      // Find user by email (this would be done by the database layer)
-      // For now, we'll assume the user is passed from middleware
-      const user = req.user;
-      if (!user) {
-        res.status(401).json({
-          success: false,
-          error: 'Invalid credentials',
-        });
-        return;
-      }
-
-      // Login
-      const result = await this.authService.login(input as LoginInput, user);
+      // Login (service will find user by email)
+      const result = await this.authService.login(input as LoginInput);
 
       res.status(200).json({
         success: true,
@@ -117,18 +106,8 @@ export class AuthController {
       // Validate input
       const { refreshToken } = refreshTokenSchema.parse(req.body);
 
-      // Get user from token (this would be done by middleware)
-      const user = req.user;
-      if (!user) {
-        res.status(401).json({
-          success: false,
-          error: 'Invalid refresh token',
-        });
-        return;
-      }
-
-      // Refresh tokens
-      const tokens = await this.authService.refreshTokens(refreshToken, user);
+      // Refresh tokens (service will verify and find user)
+      const tokens = await this.authService.refreshTokens(refreshToken);
 
       res.status(200).json({
         success: true,
@@ -148,18 +127,8 @@ export class AuthController {
     try {
       const { token } = req.params;
 
-      // Get user from database
-      const user = req.user;
-      if (!user) {
-        res.status(404).json({
-          success: false,
-          error: 'User not found',
-        });
-        return;
-      }
-
-      // Verify email
-      await this.authService.verifyEmail(token, user);
+      // Verify email (service will find user by token)
+      await this.authService.verifyEmail(token);
 
       res.status(200).json({
         success: true,
@@ -204,18 +173,8 @@ export class AuthController {
       // Validate input
       const { token, newPassword } = resetPasswordSchema.parse(req.body);
 
-      // Get user from database
-      const user = req.user;
-      if (!user) {
-        res.status(404).json({
-          success: false,
-          error: 'Invalid or expired reset token',
-        });
-        return;
-      }
-
-      // Reset password
-      await this.authService.resetPassword(token, newPassword, user);
+      // Reset password (service will find user by token)
+      await this.authService.resetPassword(token, newPassword);
 
       res.status(200).json({
         success: true,
@@ -235,9 +194,9 @@ export class AuthController {
       // Validate input
       const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
 
-      // Get authenticated user
-      const user = req.user;
-      if (!user) {
+      // Get authenticated user from JWT
+      const jwtPayload = req.user;
+      if (!jwtPayload) {
         res.status(401).json({
           success: false,
           error: 'Unauthorized',
@@ -246,7 +205,7 @@ export class AuthController {
       }
 
       // Change password
-      await this.authService.changePassword(user, currentPassword, newPassword);
+      await this.authService.changePassword(jwtPayload.userId, currentPassword, newPassword);
 
       res.status(200).json({
         success: true,
@@ -263,8 +222,8 @@ export class AuthController {
    */
   async getCurrentUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const user = req.user;
-      if (!user) {
+      const jwtPayload = req.user;
+      if (!jwtPayload) {
         res.status(401).json({
           success: false,
           error: 'Unauthorized',
@@ -272,8 +231,8 @@ export class AuthController {
         return;
       }
 
-      // Remove password from response
-      const { password, ...userWithoutPassword } = user;
+      // Get full user details from database
+      const userWithoutPassword = await this.authService.getUserById(jwtPayload.userId);
 
       res.status(200).json({
         success: true,

@@ -30,6 +30,10 @@ const resetPasswordRequestSchema = z.object({
   email: z.string().email('Invalid email format'),
 });
 
+const resendVerificationSchema = z.object({
+  email: z.string().email('Invalid email format'),
+});
+
 const resetPasswordSchema = z.object({
   token: z.string().min(1, 'Reset token is required'),
   newPassword: z.string().min({{securitySettings.passwordRequirements.minLength}}, 'Password must be at least {{securitySettings.passwordRequirements.minLength}} characters'),
@@ -134,6 +138,25 @@ export class AuthController {
       res.status(200).json({
         success: true,
         message: 'Email verified successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Resend verification email
+   */
+  async resendVerificationEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = resendVerificationSchema.parse(req.body);
+
+      // Resend verification email
+      await this.authService.resendVerificationEmail(email);
+
+      res.status(200).json({
+        success: true,
+        message: 'Verification email sent. Please check your inbox.',
       });
     } catch (error) {
       next(error);

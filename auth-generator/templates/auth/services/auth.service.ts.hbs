@@ -13,6 +13,13 @@ import { EmailService } from './email.service';
 {{/if}}
 import { UserRepository } from '../repositories/user.repository.interface';
 import { User, PublicUser, RegisterInput, LoginInput, TokenPair{{#if rbac.enabled}}, UserRole{{/if}} } from '../types/auth.types';
+import { 
+  InvalidCredentialsError,
+  InvalidTokenError,
+  TokenExpiredError,
+  PasswordValidationError,
+  EmailAlreadyExistsError
+} from '../errors/auth-errors';
 
 export class AuthService {
   private jwtService: JWTService;
@@ -177,12 +184,12 @@ export class AuthService {
     // 1. Find user by token
     const user = await this.userRepository.findByEmailVerificationToken(token);
     if (!user) {
-      throw new Error('Invalid verification token');
+      throw new InvalidTokenError();
     }
 
     // 2. Check token expiry
     if (user.emailVerificationExpires && new Date(user.emailVerificationExpires) < new Date()) {
-      throw new Error('Verification token has expired');
+      throw new TokenExpiredError();
     }
 
     // 3. Update user
@@ -200,12 +207,14 @@ export class AuthService {
     // 1. Find user
     const user = await this.userRepository.findByEmail(email);
     if (!user) {
-      throw new Error('User not found');
+      // Don't reveal if user exists
+      return;
     }
 
     // 2. Check if already verified
     if (user.emailVerified) {
-      throw new Error('Email is already verified');
+      // Don't reveal if already verified
+      return;
     }
 
     // 3. Generate new token
@@ -255,18 +264,18 @@ export class AuthService {
     // 1. Find user by token
     const user = await this.userRepository.findByResetPasswordToken(token);
     if (!user) {
-      throw new Error('Invalid reset token');
+      throw new InvalidTokenError();
     }
 
     // 2. Check token expiry
     if (user.resetPasswordExpires && new Date(user.resetPasswordExpires) < new Date()) {
-      throw new Error('Reset token has expired');
+      throw new TokenExpiredError();
     }
 
     // 3. Validate new password
     const validation = this.passwordService.validate(newPassword);
     if (!validation.valid) {
-      throw new Error(`Password validation failed: ${validation.errors.join(', ')}`);
+      throw new PasswordValidationError();
     }
 
     // 4. Hash new password

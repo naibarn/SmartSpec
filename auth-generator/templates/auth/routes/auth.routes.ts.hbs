@@ -8,6 +8,12 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller';
 import { AuthMiddleware } from '../middleware/auth.middleware';
+import {
+  loginRateLimiter,
+  registrationRateLimiter,
+  passwordResetRateLimiter,
+  emailVerificationRateLimiter,
+} from '../middleware/rate-limit.middleware';
 
 export function createAuthRoutes(
   authController: AuthController,
@@ -16,17 +22,18 @@ export function createAuthRoutes(
   const router = Router();
 
   // Public routes
-  router.post('/register', authController.register.bind(authController));
-  router.post('/login', authController.login.bind(authController));
+  router.post('/register', registrationRateLimiter, authController.register.bind(authController));
+  router.post('/login', loginRateLimiter, authController.login.bind(authController));
   router.post('/refresh', authController.refreshTokens.bind(authController));
 
   {{#if features.emailVerification}}
   router.get('/verify-email/:token', authController.verifyEmail.bind(authController));
+  router.post('/resend-verification', emailVerificationRateLimiter, authController.resendVerificationEmail.bind(authController));
   {{/if}}
 
   {{#if features.passwordReset}}
-  router.post('/forgot-password', authController.requestPasswordReset.bind(authController));
-  router.post('/reset-password', authController.resetPassword.bind(authController));
+  router.post('/forgot-password', passwordResetRateLimiter, authController.requestPasswordReset.bind(authController));
+  router.post('/reset-password', passwordResetRateLimiter, authController.resetPassword.bind(authController));
   {{/if}}
 
   // Protected routes

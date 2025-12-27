@@ -503,18 +503,19 @@ export class AuthSpecParser {
       if (inRateLimits && token.type === 'list') {
         for (const item of token.items) {
           const text = item.text;
-          // Format: "Login: 5 requests per 15 minutes"
-          const match = text.match(/^([^:]+):\s*(\d+)\s*requests?\s*per\s*(\d+)\s*(minutes?|hours?|seconds?)/i);
+          // Format: "Login: 5 requests per 15 minutes" or "Registration: 3 requests per hour"
+          const match = text.match(/^([^:]+):\s*(\d+)\s*requests?\s*per\s*(?:(\d+)\s*)?(minutes?|hours?|seconds?|day)/i);
           if (match) {
             const category = match[1].toLowerCase().trim();
             const requests = parseInt(match[2], 10);
-            const window = parseInt(match[3], 10);
+            const window = match[3] ? parseInt(match[3], 10) : 1;  // Default to 1 if not specified
             const unit = match[4].toLowerCase();
             
             let windowMs = window;
             if (unit.startsWith('second')) windowMs *= 1000;
             else if (unit.startsWith('minute')) windowMs *= 60 * 1000;
             else if (unit.startsWith('hour')) windowMs *= 60 * 60 * 1000;
+            else if (unit.startsWith('day')) windowMs *= 24 * 60 * 60 * 1000;
             
             rateLimits[category] = {
               maxRequests: requests,

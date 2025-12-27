@@ -100,6 +100,12 @@ export class AuthGenerator {
       type: 'middleware',
     });
 
+    files.push({
+      path: path.join(options.outputDir, 'middleware/rate-limit.middleware.ts'),
+      content: this.renderTemplate('rate-limit-middleware', context),
+      type: 'middleware',
+    });
+
     // Generate errors
     files.push({
       path: path.join(options.outputDir, 'errors/auth-errors.ts'),
@@ -160,6 +166,12 @@ export class AuthGenerator {
       type: 'types',
     });
 
+    files.push({
+      path: path.join(options.outputDir, 'utils/sanitization.ts'),
+      content: this.renderTemplate('sanitization', context),
+      type: 'types',
+    });
+
     // Generate repositories
     files.push({
       path: path.join(options.outputDir, 'repositories/user.repository.interface.ts'),
@@ -196,9 +208,11 @@ export class AuthGenerator {
       middleware: 'middleware/auth.middleware.ts.hbs',
       'validation-middleware': 'middleware/validation.middleware.ts.hbs',
       'error-handler-middleware': 'middleware/error-handler.middleware.ts.hbs',
+      'rate-limit-middleware': 'middleware/rate-limit.middleware.ts.hbs',
       types: 'types/auth.types.ts.hbs',
       'express-types': 'types/express.d.ts.hbs',
       'type-guards': 'utils/type-guards.ts.hbs',
+      'sanitization': 'utils/sanitization.ts.hbs',
       routes: 'routes/auth.routes.ts.hbs',
       service: 'services/auth.service.ts.hbs',
       'jwt-service': 'services/jwt.service.ts.hbs',

@@ -49,3 +49,4 @@ htmlcov/
 coverage.xml
 *.cover
 .hypothesis/
+auth-generator/demo-app/node_modules/

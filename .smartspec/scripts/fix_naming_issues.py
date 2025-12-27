@@ -32,6 +32,15 @@ class EnhancedNamingIssuesFixer:
     SIMILARITY_THRESHOLD_MEDIUM = 0.60  # Auto-fix with medium confidence
     SIMILARITY_THRESHOLD_LOW = 0.50  # Show in report for manual review
     
+    # Semantic word groups for better matching
+    SEMANTIC_GROUPS = {
+        'auth': {'api', 'auth', 'authentication', 'authorize', 'oauth', 'jwt'},
+        'middleware': {'handler', 'interceptor', 'guard', 'middleware', 'filter'},
+        'service': {'provider', 'manager', 'controller', 'service', 'handler'},
+        'test': {'spec', 'test', 'e2e', 'integration', 'unit'},
+        'util': {'helper', 'utility', 'utils', 'util', 'tool'},
+    }
+    
     def __init__(self, tasks_path: Path, report_path: Path, apply: bool = False, repo_root: Optional[Path] = None):
         self.tasks_path = tasks_path
         self.report_path = report_path
@@ -43,6 +52,22 @@ class EnhancedNamingIssuesFixer:
         self.manual_review: List[Dict] = []
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
+    def are_semantically_similar(self, word1: str, word2: str) -> bool:
+        """Check if two words are semantically similar"""
+        word1_lower = word1.lower()
+        word2_lower = word2.lower()
+        
+        # Exact match
+        if word1_lower == word2_lower:
+            return True
+        
+        # Check if both words belong to same semantic group
+        for group, words in self.SEMANTIC_GROUPS.items():
+            if word1_lower in words and word2_lower in words:
+                return True
+        
+        return False
+    
     def extract_keywords(self, path: str) -> Set[str]:
         """Extract keywords from path for similarity matching"""
         # Split by / - . _
@@ -53,14 +78,37 @@ class EnhancedNamingIssuesFixer:
         return keywords
     
     def calculate_similarity(self, expected: str, found: str) -> float:
-        """Calculate weighted similarity between two paths"""
+        """Calculate weighted similarity between two paths with semantic understanding"""
         expected_path = Path(expected)
         found_path = Path(found)
         
-        # 1. Filename similarity (40%)
+        # Special Rule 1: Same base name, different suffix
+        # e.g., rate-limit.middleware.ts vs rate-limit.ts
+        expected_base = expected_path.stem.replace('.middleware', '').replace('.service', '').replace('.provider', '')
+        found_base = found_path.stem.replace('.middleware', '').replace('.service', '').replace('.provider', '')
+        
+        if expected_base == found_base and expected_path.suffix == found_path.suffix:
+            # Same base name, only suffix difference
+            return 0.95
+        
+        # Special Rule 2: Semantic word matching in filename
+        expected_words = re.split(r'[-_.]', expected_path.stem.lower())
+        found_words = re.split(r'[-_.]', found_path.stem.lower())
+        
+        semantic_matches = 0
+        total_words = max(len(expected_words), len(found_words))
+        
+        for i in range(min(len(expected_words), len(found_words))):
+            if self.are_semantically_similar(expected_words[i], found_words[i]):
+                semantic_matches += 1
+        
+        semantic_filename_sim = semantic_matches / total_words if total_words > 0 else 0.0
+        
+        # 1. Filename similarity (30% character-based + 20% semantic)
         expected_name = expected_path.stem
         found_name = found_path.stem
-        filename_sim = difflib.SequenceMatcher(None, expected_name, found_name).ratio()
+        char_filename_sim = difflib.SequenceMatcher(None, expected_name, found_name).ratio()
+        filename_sim = char_filename_sim * 0.6 + semantic_filename_sim * 0.4
         
         # 2. Directory similarity (20%)
         expected_dir = str(expected_path.parent)
@@ -70,7 +118,7 @@ class EnhancedNamingIssuesFixer:
         # 3. Extension similarity (10%)
         ext_sim = 1.0 if expected_path.suffix == found_path.suffix else 0.0
         
-        # 4. Keywords similarity (30%)
+        # 4. Keywords similarity (20%)
         expected_keywords = self.extract_keywords(expected)
         found_keywords = self.extract_keywords(found)
         if expected_keywords:
@@ -78,12 +126,12 @@ class EnhancedNamingIssuesFixer:
         else:
             keyword_sim = 0.0
         
-        # Weighted average
+        # Weighted average (total 100%)
         total_sim = (
-            filename_sim * 0.4 +
-            dir_sim * 0.2 +
-            ext_sim * 0.1 +
-            keyword_sim * 0.3
+            filename_sim * 0.5 +  # 50% (30% char + 20% semantic)
+            dir_sim * 0.2 +       # 20%
+            ext_sim * 0.1 +       # 10%
+            keyword_sim * 0.2     # 20%
         )
         
         return total_sim

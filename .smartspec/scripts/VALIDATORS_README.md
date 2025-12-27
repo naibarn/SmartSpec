@@ -40,6 +40,121 @@ validate_generate_tests.py (538 lines) - Auto-fix fixed ✅
 
 ---
 
+## 🚀 Quick Start (5 Minutes)
+
+**New to validators?** Start here!
+
+### Step 1: Download Sample File
+
+```bash
+# Create practice directory
+mkdir -p ~/smartspec-tutorial && cd ~/smartspec-tutorial
+
+# Download sample spec
+curl -O https://raw.githubusercontent.com/naibarn/SmartSpec/main/examples/sample-spec.md
+```
+
+### Step 2: Run Your First Validation
+
+```bash
+python3 ~/.smartspec/.smartspec/scripts/validate_spec_from_prompt.py sample-spec.md
+```
+
+**Expected Output:**
+```
+# Validation Report
+**File:** `sample-spec.md`
+
+## Summary
+- **Errors:** 2
+- **Warnings:** 1
+
+## Errors
+- Missing required section: architecture
+- Missing required section: implementation
+```
+
+### Step 3: Auto-fix Issues
+
+```bash
+python3 ~/.smartspec/.smartspec/scripts/validate_spec_from_prompt.py sample-spec.md --apply
+```
+
+**Expected Output:**
+```
+## Fixes Applied
+- Added section: architecture
+- Added section: implementation
+- Added 8 sections total
+
+✅ File updated successfully!
+```
+
+### Step 4: Verify Fixes
+
+```bash
+python3 ~/.smartspec/.smartspec/scripts/validate_spec_from_prompt.py sample-spec.md
+```
+
+**Expected Output:**
+```
+✅ All required checks passed!
+```
+
+### 🎉 Success!
+
+You've completed your first validation! 
+
+**Next Steps:**
+- 📚 [Learn all validators](#validators)
+- 💪 [Try exercises](#exercises)
+- 🎓 [Follow learning path](#learning-paths)
+
+---
+
+## 🎓 Learning Paths
+
+Choose your path based on experience:
+
+### 🟢 Beginner Path (30 min)
+
+**Best for:** First time using validators
+
+1. ✅ [Quick Start](#quick-start-5-minutes) (5 min)
+2. ⬜ [Common Features](#common-features) (10 min)
+3. ⬜ [Exercise 1: Basic Validation](#exercise-1-basic-validation) (10 min)
+4. ⬜ [Quiz: Test Your Knowledge](#quiz-beginner) (5 min)
+
+**Progress:** ⬛⬜⬜⬜ 1/4 (25%)
+
+### 🟡 Intermediate Path (1 hour)
+
+**Best for:** Want to integrate validators
+
+**Prerequisites:** Complete Beginner Path
+
+1. ⬜ [All Validators](#validators) (20 min)
+2. ⬜ [Best Practices](#best-practices) (15 min)
+3. ⬜ [Exercise 2: Integration](#exercise-2-integration) (20 min)
+4. ⬜ [Quiz: Integration](#quiz-intermediate) (5 min)
+
+**Progress:** ⬜⬜⬜⬜ 0/4 (0%)
+
+### 🔴 Advanced Path (2 hours)
+
+**Best for:** Want to extend validators
+
+**Prerequisites:** Complete Intermediate Path
+
+1. ⬜ [Architecture](#architecture) (30 min)
+2. ⬜ [Base Class Code](#base-class-implementation) (40 min)
+3. ⬜ [Exercise 3: Custom Validator](#exercise-3-custom-validator) (40 min)
+4. ⬜ [Contributing](#contributing) (10 min)
+
+**Progress:** ⬜⬜⬜⬜ 0/4 (0%)
+
+---
+
 ## Overview
 
 SmartSpec provides 5 workflow validators to achieve 100% validation coverage. These validators ensure quality, consistency, and completeness across all SmartSpec workflows.
@@ -522,6 +637,298 @@ OK
 - ✅ Rejects larger files for security
 - ✅ Low memory footprint
 - ✅ Fast validation (< 1s for typical files)
+
+---
+
+## 💪 Exercises
+
+### Exercise 1: Basic Validation
+
+**Objective:** Successfully validate and fix a specification
+
+**Time:** 10 minutes
+
+**Steps:**
+
+1. **Create a new spec file:**
+   ```bash
+   cat > todo-api-spec.md << 'EOF'
+   # Todo List API Specification
+   
+   ## Problem
+   
+   Users need a simple way to manage their daily tasks.
+   
+   ## Solution
+   
+   Build a REST API for creating, reading, updating, and deleting todos.
+   EOF
+   ```
+
+2. **Run validation:**
+   ```bash
+   python3 validate_spec_from_prompt.py todo-api-spec.md
+   ```
+   
+   **Question:** How many errors did you find?
+   <details>
+   <summary>Show Answer</summary>
+   
+   **Answer:** 3 errors (missing architecture, implementation, requirements)
+   </details>
+
+3. **Apply auto-fix:**
+   ```bash
+   python3 validate_spec_from_prompt.py todo-api-spec.md --apply
+   ```
+
+4. **Fill in at least 2 sections** with real content
+
+5. **Verify fixes:**
+   ```bash
+   python3 validate_spec_from_prompt.py todo-api-spec.md
+   ```
+
+**Success Criteria:**
+- [ ] File created
+- [ ] Validation run successfully
+- [ ] Auto-fix applied
+- [ ] At least 2 sections completed
+- [ ] Final validation shows 0 errors
+
+---
+
+### Exercise 2: Integration
+
+**Objective:** Integrate validators into your workflow
+
+**Time:** 20 minutes
+
+**Steps:**
+
+1. **Create validation script:**
+   ```bash
+   cat > validate-all.sh << 'EOF'
+   #!/bin/bash
+   echo "🔍 Validating all specifications..."
+   
+   for file in .spec/**/*.md; do
+       echo "Checking $file..."
+       python3 ~/.smartspec/.smartspec/scripts/validate_spec_from_prompt.py "$file"
+       
+       if [ $? -ne 0 ]; then
+           echo "❌ Validation failed for $file"
+           exit 1
+       fi
+   done
+   
+   echo "✅ All specifications validated successfully!"
+   EOF
+   
+   chmod +x validate-all.sh
+   ```
+
+2. **Create pre-commit hook:**
+   ```bash
+   cat > .git/hooks/pre-commit << 'EOF'
+   #!/bin/bash
+   echo "🔍 Running spec validation..."
+   
+   SPEC_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.spec.*\.md$')
+   
+   if [ -z "$SPEC_FILES" ]; then
+       exit 0
+   fi
+   
+   for file in $SPEC_FILES; do
+       python3 ~/.smartspec/.smartspec/scripts/validate_spec_from_prompt.py "$file"
+       if [ $? -ne 0 ]; then
+           echo "❌ Validation failed for $file"
+           exit 1
+       fi
+   done
+   
+   echo "✅ All spec files validated!"
+   EOF
+   
+   chmod +x .git/hooks/pre-commit
+   ```
+
+3. **Test the pipeline:**
+   ```bash
+   # Create test spec
+   mkdir -p .spec
+   echo "# Test" > .spec/test.md
+   
+   # Try to commit
+   git add .spec/test.md
+   git commit -m "Test validation"
+   ```
+
+**Success Criteria:**
+- [ ] Validation script created
+- [ ] Pre-commit hook installed
+- [ ] Pipeline tested
+- [ ] Validation runs automatically on commit
+
+---
+
+### Exercise 3: Custom Validator
+
+**Objective:** Create a custom validator for API documentation
+
+**Time:** 30 minutes
+
+**Template:**
+
+```python
+#!/usr/bin/env python3
+"""Validator for API documentation files."""
+
+import sys
+from pathlib import Path
+
+# Import base validator
+sys.path.insert(0, str(Path(__file__).parent))
+from base_validator import BaseValidator
+
+class APIDocsValidator(BaseValidator):
+    """Validates API documentation files."""
+    
+    def __init__(self, file_path: str, repo_root: str = None):
+        super().__init__(file_path, repo_root)
+        
+        self.required_sections = [
+            'overview',
+            'endpoints',
+            'authentication',
+            'errors'
+        ]
+        
+        self.recommended_sections = [
+            'rate_limiting',
+            'versioning',
+            'examples'
+        ]
+    
+    def validate_content(self) -> list:
+        """Validate API-specific content."""
+        issues = []
+        
+        # Add your validation logic here
+        content = self.content.lower()
+        
+        if 'endpoints' in content:
+            methods = ['get', 'post', 'put', 'delete']
+            found = [m for m in methods if m in content]
+            
+            if not found:
+                issues.append({
+                    'type': 'warning',
+                    'message': 'No HTTP methods found'
+                })
+        
+        return issues
+
+if __name__ == '__main__':
+    # Add main() function here
+    pass
+```
+
+**Your Task:**
+
+1. Complete the `main()` function
+2. Add command-line argument parsing
+3. Test with sample API docs
+4. Verify auto-fix works
+
+**Success Criteria:**
+- [ ] Custom validator created
+- [ ] Inherits from BaseValidator
+- [ ] Validates required sections
+- [ ] Command-line interface works
+- [ ] Auto-fix functional
+
+---
+
+## 📝 Quizzes
+
+### Quiz: Beginner
+
+**Question 1:** What does the `--apply` flag do?
+
+- [ ] A) Shows a preview
+- [ ] B) Applies fixes automatically ✅
+- [ ] C) Generates a report
+- [ ] D) Runs tests
+
+<details>
+<summary>Show Explanation</summary>
+
+The `--apply` flag tells validators to actually modify the file and apply fixes. Without it, validators run in preview mode only.
+</details>
+
+---
+
+**Question 2:** What's the maximum file size?
+
+- [ ] A) 1 MB
+- [ ] B) 5 MB
+- [ ] C) 10 MB ✅
+- [ ] D) Unlimited
+
+<details>
+<summary>Show Explanation</summary>
+
+Validators limit file size to 10 MB for security (DoS protection).
+</details>
+
+---
+
+**Question 3:** Which file types are supported?
+
+- [ ] A) .txt only
+- [ ] B) .md only
+- [ ] C) .md and .json ✅
+- [ ] D) All types
+
+<details>
+<summary>Show Explanation</summary>
+
+Validators accept `.md` (Markdown) and `.json` files only for security.
+</details>
+
+---
+
+### Quiz: Intermediate
+
+**Question 1:** When do pre-commit hooks run?
+
+- [ ] A) Before pushing
+- [ ] B) Before committing locally ✅
+- [ ] C) After committing
+- [ ] D) Only in CI/CD
+
+<details>
+<summary>Show Explanation</summary>
+
+Pre-commit hooks run before committing locally, allowing you to catch issues before they enter version control.
+</details>
+
+---
+
+**Question 2:** Why validate in CI/CD?
+
+- [ ] A) Required by Git
+- [ ] B) Catches issues before merge ✅
+- [ ] C) Makes commits faster
+- [ ] D) No reason
+
+<details>
+<summary>Show Explanation</summary>
+
+CI/CD validation catches issues before merging to main branch, ensuring quality standards across the team.
+</details>
 
 ---
 

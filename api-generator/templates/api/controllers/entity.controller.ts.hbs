@@ -1,0 +1,140 @@
+import { Request, Response, NextFunction } from 'express';
+import { {{pascalCase entity.name}}Service } from '../services/{{kebabCase entity.name}}.service';
+import { {{pascalCase entity.name}}CreateSchema, {{pascalCase entity.name}}UpdateSchema } from '../validators/{{kebabCase entity.name}}.validator';
+
+/**
+ * {{pascalCase entity.name}} Controller
+ * Handles HTTP requests for {{entity.name}} resources
+ */
+export class {{pascalCase entity.name}}Controller {
+  constructor(private service: {{pascalCase entity.name}}Service) {}
+
+  /**
+   * Get all {{entity.name}}s for the current user
+   * GET /api/{{kebabCase entity.name}}s
+   */
+  async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { limit = 20, offset = 0, {{#each entity.filters}}{{this.name}}, {{/each}} } = req.query;
+      
+      const result = await this.service.findAll({
+        limit: Number(limit),
+        offset: Number(offset),
+        userId: req.user.id,
+        {{#each entity.filters}}
+        {{this.name}}: {{this.name}} !== undefined ? {{this.name}} : undefined,
+        {{/each}}
+      });
+
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get a single {{entity.name}} by ID
+   * GET /api/{{kebabCase entity.name}}s/:id
+   */
+  async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      const {{camelCase entity.name}} = await this.service.findById(id, userId);
+
+      if (!{{camelCase entity.name}}) {
+        res.status(404).json({
+          error: {
+            code: 'NOT_FOUND',
+            message: '{{pascalCase entity.name}} not found'
+          }
+        });
+        return;
+      }
+
+      res.json({ data: {{camelCase entity.name}} });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Create a new {{entity.name}}
+   * POST /api/{{kebabCase entity.name}}s
+   */
+  async create(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      // Validate input
+      const validatedData = {{pascalCase entity.name}}CreateSchema.parse(req.body);
+
+      // Create {{entity.name}}
+      const {{camelCase entity.name}} = await this.service.create({
+        ...validatedData,
+        userId: req.user.id
+      });
+
+      res.status(201).json({ data: {{camelCase entity.name}} });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Update an existing {{entity.name}}
+   * PUT /api/{{kebabCase entity.name}}s/:id
+   */
+  async update(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      // Validate input
+      const validatedData = {{pascalCase entity.name}}UpdateSchema.parse(req.body);
+
+      // Update {{entity.name}}
+      const {{camelCase entity.name}} = await this.service.update(id, userId, validatedData);
+
+      if (!{{camelCase entity.name}}) {
+        res.status(404).json({
+          error: {
+            code: 'NOT_FOUND',
+            message: '{{pascalCase entity.name}} not found'
+          }
+        });
+        return;
+      }
+
+      res.json({ data: {{camelCase entity.name}} });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Delete a {{entity.name}}
+   * DELETE /api/{{kebabCase entity.name}}s/:id
+   */
+  async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+
+      const deleted = await this.service.delete(id, userId);
+
+      if (!deleted) {
+        res.status(404).json({
+          error: {
+            code: 'NOT_FOUND',
+            message: '{{pascalCase entity.name}} not found'
+          }
+        });
+        return;
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+}

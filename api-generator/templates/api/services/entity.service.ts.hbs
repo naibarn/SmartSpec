@@ -1,0 +1,99 @@
+import { {{pascalCase entity.name}}Model } from '../models/{{kebabCase entity.name}}.model';
+import { {{pascalCase entity.name}}CreateInput, {{pascalCase entity.name}}UpdateInput, {{pascalCase entity.name}}FindAllOptions } from '../types/{{kebabCase entity.name}}.types';
+
+/**
+ * {{pascalCase entity.name}} Service
+ * Business logic for {{entity.name}} operations
+ */
+export class {{pascalCase entity.name}}Service {
+  constructor(private model: {{pascalCase entity.name}}Model) {}
+
+  /**
+   * Find all {{entity.name}}s for a user with pagination and filters
+   */
+  async findAll(options: {{pascalCase entity.name}}FindAllOptions) {
+    const { limit, offset, userId, ...filters } = options;
+
+    const [data, total] = await Promise.all([
+      this.model.findMany({
+        where: {
+          userId,
+          ...filters
+        },
+        limit,
+        offset,
+        orderBy: { createdAt: 'desc' }
+      }),
+      this.model.count({
+        where: {
+          userId,
+          ...filters
+        }
+      })
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        limit,
+        offset
+      }
+    };
+  }
+
+  /**
+   * Find a {{entity.name}} by ID
+   * Returns null if not found or user doesn't own it
+   */
+  async findById(id: string, userId: string) {
+    return this.model.findOne({
+      where: {
+        id,
+        userId
+      }
+    });
+  }
+
+  /**
+   * Create a new {{entity.name}}
+   */
+  async create(data: {{pascalCase entity.name}}CreateInput) {
+    return this.model.create(data);
+  }
+
+  /**
+   * Update a {{entity.name}}
+   * Returns null if not found or user doesn't own it
+   */
+  async update(id: string, userId: string, data: {{pascalCase entity.name}}UpdateInput) {
+    // Check if exists and user owns it
+    const existing = await this.findById(id, userId);
+    if (!existing) {
+      return null;
+    }
+
+    return this.model.update({
+      where: { id, userId },
+      data
+    });
+  }
+
+  /**
+   * Delete a {{entity.name}}
+   * Returns true if deleted, false if not found or user doesn't own it
+   */
+  async delete(id: string, userId: string): Promise<boolean> {
+    // Check if exists and user owns it
+    const existing = await this.findById(id, userId);
+    if (!existing) {
+      return false;
+    }
+
+    await this.model.delete({
+      where: { id, userId }
+    });
+
+    return true;
+  }
+}

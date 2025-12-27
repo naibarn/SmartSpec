@@ -9,6 +9,7 @@ import * as path from 'path';
 import Handlebars from 'handlebars';
 import { AuthSpecParser } from '../auth/auth-spec-parser';
 import { AuthSpec } from '../types/auth-ast.types';
+import { registerHandlebarsHelpers } from './handlebars-helpers';
 
 export interface GeneratorOptions {
   outputDir: string;
@@ -140,30 +141,7 @@ export class AuthGenerator {
    * Register Handlebars helpers
    */
   private registerHelpers(): void {
-    // Helper: uppercase
-    Handlebars.registerHelper('uppercase', (str: string) => {
-      return str.toUpperCase();
-    });
-
-    // Helper: capitalize
-    Handlebars.registerHelper('capitalize', (str: string) => {
-      return str.charAt(0).toUpperCase() + str.slice(1);
-    });
-
-    // Helper: includes (check if array includes value)
-    Handlebars.registerHelper('includes', (array: any[], value: any) => {
-      return Array.isArray(array) && array.includes(value);
-    });
-
-    // Helper: ifEquals
-    Handlebars.registerHelper('ifEquals', function(this: any, arg1: any, arg2: any, options: any) {
-      return arg1 === arg2 ? options.fn(this) : (options.inverse ? options.inverse(this) : '');
-    });
-
-    // Helper: json (stringify object)
-    Handlebars.registerHelper('json', (obj: any) => {
-      return JSON.stringify(obj, null, 2);
-    });
+    registerHandlebarsHelpers();
   }
 
   /**

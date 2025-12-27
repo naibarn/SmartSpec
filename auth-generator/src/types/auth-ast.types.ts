@@ -14,6 +14,7 @@ export interface AuthSpec {
   securitySettings: SecuritySettings;
   businessRules: BusinessRules;
   errorResponses: ErrorResponse[];
+  rbac?: RBAC;
 }
 
 export interface UserModel {
@@ -180,4 +181,11 @@ export interface ErrorResponse {
   message: string;
   code: string;
   additionalFields?: { [key: string]: any };
+}
+
+export interface RBAC {
+  enabled: boolean;
+  roles: string[];
+  defaultRole: string;
+  permissions: { [role: string]: string[] };
 }

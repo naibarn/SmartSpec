@@ -22,7 +22,7 @@ export class InMemoryUserRepository implements UserRepository {
       email: input.email,
       password: input.password,
       {{#if rbac.enabled}}
-      role: (input.role || '{{rbac.defaultRole}}') as UserRole,
+      role: (input.role as UserRole) || UserRole.{{uppercase rbac.defaultRole}},
       {{/if}}
       {{#if features.emailVerification}}
       emailVerified: false,

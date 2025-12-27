@@ -7,6 +7,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { JWTService } from '../services/jwt.service';
+import { UserRepository } from '../repositories/user.repository.interface';
 import { JWTPayload{{#if rbac.enabled}}, UserRole{{/if}} } from '../types/auth.types';
 import { isJWTPayload{{#if rbac.enabled}}, assertUserRoles{{/if}} } from '../utils/type-guards';
 
@@ -15,9 +16,11 @@ import { isJWTPayload{{#if rbac.enabled}}, assertUserRoles{{/if}} } from '../uti
 
 export class AuthMiddleware {
   private jwtService: JWTService;
+  private userRepository?: UserRepository;
 
-  constructor(jwtService: JWTService) {
+  constructor(jwtService: JWTService, userRepository?: UserRepository) {
     this.jwtService = jwtService;
+    this.userRepository = userRepository;
   }
 
   /**
@@ -130,15 +133,12 @@ export class AuthMiddleware {
       }
 
       const token = authHeader.substring(7);
-      const payload = await this.jwtService.verifyAccessToken(token);
-
-      req.user = {
-        id: payload.userId,
-        email: payload.email,
-        {{#if rbac.enabled}}
-        role: payload.role as UserRole,
-        {{/if}}
-      } as User;
+      const payload = this.jwtService.verifyAccessToken(token);
+      
+      // Type guard to ensure payload is valid
+      if (isJWTPayload(payload)) {
+        req.user = payload;
+      }
 
       next();
     } catch (error) {
@@ -157,9 +157,19 @@ export class AuthMiddleware {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const user = req.user;
-      if (!user) {
+      const jwtPayload = req.user;
+      if (!jwtPayload || !this.userRepository) {
         next();
+        return;
+      }
+
+      // Fetch full user from database
+      const user = await this.userRepository.findById(jwtPayload.userId);
+      if (!user) {
+        res.status(401).json({
+          success: false,
+          error: 'User not found',
+        });
         return;
       }
 
@@ -192,11 +202,21 @@ export class AuthMiddleware {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const user = req.user;
-      if (!user) {
+      const jwtPayload = req.user;
+      if (!jwtPayload || !this.userRepository) {
         res.status(401).json({
           success: false,
           error: 'Unauthorized',
+        });
+        return;
+      }
+
+      // Fetch full user from database
+      const user = await this.userRepository.findById(jwtPayload.userId);
+      if (!user) {
+        res.status(401).json({
+          success: false,
+          error: 'User not found',
         });
         return;
       }
@@ -220,6 +240,6 @@ export class AuthMiddleware {
 /**
  * Helper to create middleware instance
  */
-export function createAuthMiddleware(jwtService: JWTService): AuthMiddleware {
-  return new AuthMiddleware(jwtService);
+export function createAuthMiddleware(jwtService: JWTService, userRepository?: UserRepository): AuthMiddleware {
+  return new AuthMiddleware(jwtService, userRepository);
 }

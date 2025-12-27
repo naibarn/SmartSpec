@@ -6,7 +6,7 @@
  */
 
 import * as jwt from 'jsonwebtoken';
-import { JWTPayload, TokenPair } from '../types/auth.types';
+import { JWTPayload, TokenPair{{#if rbac.enabled}}, UserRole{{/if}} } from '../types/auth.types';
 
 export class JWTService {
   private accessTokenSecret: string;
@@ -45,7 +45,7 @@ export class JWTService {
     };
 
     const options: jwt.SignOptions = {
-      expiresIn: this.accessTokenExpiry,
+      expiresIn: this.accessTokenExpiry as string | number,
       algorithm: this.algorithm
     };
 
@@ -74,7 +74,7 @@ export class JWTService {
     };
 
     const options: jwt.SignOptions = {
-      expiresIn: this.refreshTokenExpiry,
+      expiresIn: this.refreshTokenExpiry as string | number,
       algorithm: this.algorithm
     };
 
@@ -96,8 +96,14 @@ export class JWTService {
   /**
    * Generate token pair (access + refresh)
    */
-  generateTokenPair(userId: string, email: string, role: string): TokenPair {
-    const payload = { userId, email, role };
+  generateTokenPair(userId: string, email: string{{#if rbac.enabled}}, role: UserRole{{/if}}): TokenPair {
+    const payload{{#if rbac.enabled}}: { userId: string; email: string; role: UserRole }{{/if}} = {
+      userId,
+      email,
+      {{#if rbac.enabled}}
+      role
+      {{/if}}
+    };
     
     const accessToken = this.generateAccessToken(payload);
     const refreshToken = this.generateRefreshToken(payload);

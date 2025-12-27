@@ -120,7 +120,26 @@ export class FieldParser {
 
     // Handle enum type specially
     let enumValues: string[] | undefined;
-    if (type.startsWith('enum')) {
+    if (type === 'enum' && constraintsStr) {
+      // Enum values are in the "constraints" part
+      enumValues = constraintsStr.split(',').map(v => v.trim()).filter(v => v);
+      
+      if (enumValues.length === 0) {
+        errors.push(createParseError(
+          lineNumber,
+          'Enum type requires at least one value',
+          {
+            context: normalized,
+            suggestion: 'Example: role: enum (user, admin)'
+          }
+        ));
+        return { success: false, errors };
+      }
+      
+      // Clear constraints since they're actually enum values
+      constraintsStr = undefined;
+    } else if (type.startsWith('enum')) {
+      // Handle inline enum: enum(user, admin)
       const enumMatch = type.match(/enum\s*\(([^)]+)\)/);
       if (enumMatch) {
         enumValues = enumMatch[1].split(',').map(v => v.trim()).filter(v => v);
@@ -160,7 +179,7 @@ export class FieldParser {
   /**
    * Parse constraints string
    */
-  private parseConstraints(constraintsStr: string, lineNumber: number): FieldConstraint[] {
+  private parseConstraints(constraintsStr: string, _lineNumber: number): FieldConstraint[] {
     const constraints: FieldConstraint[] = [];
     
     if (!constraintsStr) return constraints;

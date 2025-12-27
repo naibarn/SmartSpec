@@ -6,12 +6,12 @@
 
 import { marked } from 'marked';
 import { FieldParser } from './field-parser';
-import { SpecParseError, createParseError, ParseError } from './parser-errors';
+// import { SpecParseError, createParseError, ParseError } from './parser-errors';
 import {
   AuthSpec,
   UserModel,
   UserField,
-  FieldConstraint,
+  // FieldConstraint,
   Index,
   AuthMethods,
   TokenConfig,
@@ -21,6 +21,7 @@ import {
   SecuritySettings,
   BusinessRules,
   ErrorResponse,
+  RBAC,
 } from '../types/auth-ast.types';
 
 export class AuthSpecParser {
@@ -32,8 +33,11 @@ export class AuthSpecParser {
   parse(markdown: string): AuthSpec {
     const tokens = marked.lexer(markdown);
     
+    const userModel = this.parseUserModel(tokens);
+    const rbac = this.extractRBACFromUserModel(userModel);
+    
     return {
-      userModel: this.parseUserModel(tokens),
+      userModel,
       authMethods: this.parseAuthMethods(tokens),
       tokenConfig: this.parseTokenConfig(tokens),
       protectedEndpoints: this.parseProtectedEndpoints(tokens),
@@ -42,6 +46,27 @@ export class AuthSpecParser {
       securitySettings: this.parseSecuritySettings(tokens),
       businessRules: this.parseBusinessRules(tokens),
       errorResponses: this.parseErrorResponses(tokens),
+      rbac,
+    };
+  }
+
+  /**
+   * Extract RBAC configuration from user model role field
+   */
+  private extractRBACFromUserModel(userModel: UserModel): RBAC | undefined {
+    // Find role field
+    const roleField = userModel.fields.find(f => f.name === 'role' && f.type === 'enum');
+    
+    if (!roleField || !roleField.enumValues || roleField.enumValues.length === 0) {
+      return undefined;
+    }
+    
+    // Create RBAC config from enum values
+    return {
+      enabled: true,
+      roles: roleField.enumValues,
+      defaultRole: roleField.enumValues[0], // First role is default
+      permissions: {}, // Empty for now
     };
   }
 
@@ -103,6 +128,8 @@ export class AuthSpecParser {
     return result.field || null;
   }
 
+  /*
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private parseConstraints(constraintsStr: string): FieldConstraint[] {
     const constraints: FieldConstraint[] = [];
     
@@ -135,6 +162,7 @@ export class AuthSpecParser {
     
     return constraints;
   }
+  */
 
   private parseIndex(text: string): Index | null {
     // Format: "field (unique)" or "field"

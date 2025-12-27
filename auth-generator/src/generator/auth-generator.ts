@@ -88,6 +88,12 @@ export class AuthGenerator {
       type: 'middleware',
     });
 
+    files.push({
+      path: path.join(options.outputDir, 'middleware/validation.middleware.ts'),
+      content: this.renderTemplate('validation-middleware', context),
+      type: 'middleware',
+    });
+
     // Generate types
     files.push({
       path: path.join(options.outputDir, 'types/auth.types.ts'),
@@ -175,6 +181,7 @@ export class AuthGenerator {
     const templateFiles = {
       controller: 'controllers/auth.controller.ts.hbs',
       middleware: 'middleware/auth.middleware.ts.hbs',
+      'validation-middleware': 'middleware/validation.middleware.ts.hbs',
       types: 'types/auth.types.ts.hbs',
       'express-types': 'types/express.d.ts.hbs',
       'type-guards': 'utils/type-guards.ts.hbs',

@@ -1,1 +1,0 @@
-import{a as o}from"./chunk-WIMGWYZL.js";function i(...e){return o(u,e)}var u=(e,a)=>{let n=new Map;for(let[d,y]of e.entries()){let r=a(y,d,e);if(r!==void 0){let t=n.get(r);t===void 0?n.set(r,1):n.set(r,t+1)}}return Object.fromEntries(n)};export{i as a};

@@ -1,1 +1,0 @@
-import{a}from"./chunk-WIMGWYZL.js";function d(...e){return a(i,e,o)}var i=(e,n)=>e.length<n.length?e.map((t,r)=>[t,n[r]]):n.map((t,r)=>[e[r],t]),o=e=>(n,t)=>({hasNext:!0,next:[n,e[t]],done:t>=e.length-1});export{d as a};

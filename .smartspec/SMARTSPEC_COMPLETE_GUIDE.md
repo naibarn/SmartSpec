@@ -15,10 +15,11 @@
 5. [Prompt Generation](#prompt-generation)
 6. [After Prompt Generation](#after-prompt-generation)
 7. [Batch Execution](#batch-execution)
-8. [Complete Examples](#complete-examples)
-9. [Best Practices](#best-practices)
-10. [FAQ](#faq)
-11. [Troubleshooting](#troubleshooting)
+8. [Fix Naming Issues](#fix-naming-issues)
+9. [Complete Examples](#complete-examples)
+10. [Best Practices](#best-practices)
+11. [FAQ](#faq)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -312,6 +313,33 @@ cat .spec/prompts/latest/missing_tests.md
 
 **See [Batch Execution](#batch-execution) section for details**
 
+### After Batch Execution
+
+**Check results:**
+```bash
+# Batch execution creates report
+cat .spec/reports/batch-execution/batch_execution_*.md
+```
+
+**If naming issues remain (common):**
+```bash
+# Fix naming issues automatically
+/smartspec_fix_naming_issues \
+  tasks.md \
+  --from-report .spec/reports/batch-execution/batch_execution_*.md \
+  --apply
+
+# Then verify
+/smartspec_verify_tasks_progress_strict tasks.md
+```
+
+**Why naming issues?**
+- Batch execution fixes: missing tests, missing code, implementation issues
+- Batch execution CANNOT fix: evidence path mismatches (naming issues)
+- Naming issues = governance problem, not implementation problem
+
+**See [Fix Naming Issues](#fix-naming-issues) section for details**
+
 ---
 
 ## Batch Execution
@@ -428,6 +456,209 @@ Would execute 8 tasks:
 | **Errors** | 2-3 | 0-1 | -80% |
 | **Consistency** | Variable | High | +90% |
 | **Tracking** | Manual | Automatic | +100% |
+
+---
+
+## Fix Naming Issues
+
+### What Are Naming Issues?
+
+**Definition:** Evidence paths in tasks.md don't match actual file locations
+
+**Example:**
+```
+Expected: packages/auth-lib/src/crypto/password.util.ts
+Found:    packages/auth-lib/src/crypto/password.ts
+```
+
+**Root cause:**
+- Files were renamed during implementation
+- Files moved to different folders
+- Evidence paths not updated in tasks.md
+
+### Why Can't Batch Execution Fix This?
+
+**Batch execution fixes:**
+- ✅ Missing tests → Creates test files
+- ✅ Missing code → Implements features
+- ✅ Symbol issues → Updates symbols
+
+**Batch execution CANNOT fix:**
+- ❌ Naming issues → Evidence governance problem
+- ❌ Requires updating tasks.md (governed artifact)
+- ❌ Needs manual review or dedicated workflow
+
+### When to Use
+
+**Use `/smartspec_fix_naming_issues` when:**
+- ✅ After batch execution with naming issues remaining
+- ✅ After refactoring (files renamed/moved)
+- ✅ 10+ naming issues to fix
+- ✅ Want automated evidence path updates
+
+**Don't use when:**
+- ❌ Only 1-2 naming issues (faster to edit manually)
+- ❌ Missing files (use batch execution instead)
+- ❌ Implementation issues (fix code first)
+
+### Basic Usage
+
+```bash
+# Preview changes (default)
+/smartspec_fix_naming_issues \
+  tasks.md \
+  --from-report .spec/reports/batch-execution/batch_execution_*.md
+
+# Apply changes
+/smartspec_fix_naming_issues \
+  tasks.md \
+  --from-report .spec/reports/batch-execution/batch_execution_*.md \
+  --apply
+```
+
+### From Different Reports
+
+```bash
+# From batch execution report (Markdown)
+/smartspec_fix_naming_issues \
+  tasks.md \
+  --from-report .spec/reports/batch-execution/batch_execution_20251226_174500.md \
+  --apply
+
+# From verification report (JSON)
+/smartspec_fix_naming_issues \
+  tasks.md \
+  --from-report .spec/reports/verify-tasks-progress/spec-001/summary.json \
+  --apply
+```
+
+### Output
+
+**Preview mode (default):**
+```
+================================================================================
+PREVIEW: Evidence Path Updates
+================================================================================
+
+1. Line 123:
+   Expected: packages/auth-lib/src/crypto/password.util.ts
+   Found:    packages/auth-lib/src/crypto/password.ts
+   Old: evidence: code path=packages/auth-lib/src/crypto/password.util.ts
+   New: evidence: code path=packages/auth-lib/src/crypto/password.ts
+
+2. Line 456:
+   Expected: packages/auth-lib/tests/unit/jwt.util.test.ts
+   Found:    packages/auth-lib/tests/unit/edge-cases/jwt.util.edge-cases.test.ts
+   Old: evidence: test path=packages/auth-lib/tests/unit/jwt.util.test.ts
+   New: evidence: test path=packages/auth-lib/tests/unit/edge-cases/jwt.util.edge-cases.test.ts
+
+================================================================================
+Total changes: 52
+================================================================================
+
+ℹ️  This is preview mode. Use --apply to make changes.
+```
+
+**Apply mode (`--apply`):**
+```
+================================================================================
+✅ APPLIED: Evidence Path Updates
+================================================================================
+
+Total changes applied: 52
+File updated: tasks.md
+
+Next steps:
+1. Verify changes:
+   /smartspec_verify_tasks_progress_strict tasks.md --json
+
+2. Review diff:
+   git diff tasks.md
+
+3. Commit changes:
+   git add tasks.md
+   git commit -m "fix: Update evidence paths to match actual files"
+
+================================================================================
+```
+
+### Integration with Other Workflows
+
+**Typical flow:**
+```bash
+# 1. Verify
+/smartspec_verify_tasks_progress_strict tasks.md --json
+
+# 2. Generate prompts
+/smartspec_report_implement_prompter \
+  --verify-report .spec/reports/latest/summary.json \
+  --tasks tasks.md
+
+# 3. Execute batch
+/smartspec_execute_prompts_batch \
+  --prompts-dir .spec/prompts/latest/ \
+  --tasks tasks.md \
+  --checkpoint
+
+# 4. Fix naming issues (if any) ⭐ NEW
+/smartspec_fix_naming_issues \
+  tasks.md \
+  --from-report .spec/reports/batch-execution/batch_execution_*.md \
+  --apply
+
+# 5. Verify again
+/smartspec_verify_tasks_progress_strict tasks.md --json
+```
+
+### Best Practices
+
+**1. Always preview first:**
+```bash
+# Preview
+/smartspec_fix_naming_issues tasks.md --from-report report.md
+
+# Review output carefully
+# Then apply
+/smartspec_fix_naming_issues tasks.md --from-report report.md --apply
+```
+
+**2. Review with git diff:**
+```bash
+# After applying
+git diff tasks.md
+
+# Check:
+# - Correct path updates
+# - No unintended changes
+# - Proper formatting
+```
+
+**3. Verify immediately:**
+```bash
+# Fix naming issues
+/smartspec_fix_naming_issues tasks.md --from-report report.md --apply
+
+# Verify right away
+/smartspec_verify_tasks_progress_strict tasks.md --json
+
+# Expected: naming issues = 0
+```
+
+### Safety Features
+
+- **Preview by default** - Must use `--apply` explicitly
+- **Line-by-line tracking** - Shows exact changes
+- **No data loss** - Only updates paths, doesn't delete
+- **Git-friendly** - Easy to review and rollback
+- **Validation** - Checks file existence first
+
+### Limitations
+
+- Only fixes naming issues (evidence path mismatches)
+- Doesn't create missing files
+- Doesn't fix implementation issues
+- Requires verification report as input
+- Doesn't handle complex path transformations
 
 ---
 

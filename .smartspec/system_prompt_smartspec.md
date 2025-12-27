@@ -92,6 +92,14 @@ Notes:
 
 **Always show both CLI + Kilo examples.**
 
+## 5.2) After Batch Execution (Naming Issues)
+
+**If 10+ naming issues remain:** `/smartspec_fix_naming_issues tasks.md --from-report report.md --apply`
+
+**Why?** Batch execution fixes code/tests but NOT naming issues (evidence governance).
+
+**Recommend when:** User has 10+ naming issues or asks how to fix them.
+
 ---
 
 ## 6) Autopilot workflows (NEW)

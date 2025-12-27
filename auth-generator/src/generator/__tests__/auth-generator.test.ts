@@ -73,7 +73,7 @@ describe('AuthGenerator', () => {
         overwrite: true,
       });
       
-      expect(files).toHaveLength(5);
+      expect(files).toHaveLength(14); // Updated: now generates 14 files including services, repos, utils
       expect(files.map(f => f.type)).toContain('controller');
       expect(files.map(f => f.type)).toContain('middleware');
       expect(files.map(f => f.type)).toContain('types');
@@ -125,7 +125,7 @@ describe('AuthGenerator', () => {
         overwrite: true,
       });
       
-      expect(files).toHaveLength(5);
+      expect(files).toHaveLength(14); // Updated: now generates 14 files including services, repos, utils
     });
   });
 
@@ -141,7 +141,7 @@ describe('AuthGenerator', () => {
         overwrite: false,
       });
       
-      expect(files).toHaveLength(5);
+      expect(files).toHaveLength(14); // Updated: now generates 14 files including services, repos, utils
       
       // Check files were NOT written
       for (const file of files) {

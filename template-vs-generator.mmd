@@ -1,0 +1,31 @@
+graph TB
+    subgraph "❌ Template Approach (Static)"
+        A1[User: Todo App] --> B1[Use Todo Template]
+        A2[User: E-commerce] --> B2[Use E-commerce Template]
+        A3[User: Hospital System] --> B3[❌ No Template!]
+        
+        B1 --> C1[Todo Code]
+        B2 --> C2[E-commerce Code]
+        B3 --> C3[❌ Cannot Generate]
+    end
+    
+    subgraph "✅ Dynamic Generator (Our Approach)"
+        D1[User: Todo App] --> E[Generate Spec]
+        D2[User: E-commerce] --> E
+        D3[User: Hospital System] --> E
+        D4[User: Anything!] --> E
+        
+        E --> F[SpecParser]
+        F --> G[AST]
+        G --> H[TemplateEngine]
+        H --> I1[Todo Code]
+        H --> I2[E-commerce Code]
+        H --> I3[Hospital Code]
+        H --> I4[Any Code!]
+    end
+    
+    style B3 fill:#ffcccc
+    style C3 fill:#ffcccc
+    style E fill:#90EE90
+    style H fill:#90EE90
+    style I4 fill:#FFD700

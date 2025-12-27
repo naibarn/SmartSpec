@@ -38,7 +38,7 @@ export class AuthSpecParser {
     };
   }
 
-  private parseUserModel(tokens: marked.TokensList): UserModel {
+  private parseUserModel(tokens: any[]): UserModel {
     const fields: UserField[] = [];
     const indexes: Index[] = [];
     
@@ -145,7 +145,7 @@ export class AuthSpecParser {
     return { fields, unique };
   }
 
-  private parseAuthMethods(tokens: marked.TokensList): AuthMethods {
+  private parseAuthMethods(tokens: any[]): AuthMethods {
     let password = false;
     
     for (const token of tokens) {
@@ -167,7 +167,7 @@ export class AuthSpecParser {
     return { password };
   }
 
-  private parseTokenConfig(tokens: marked.TokensList): TokenConfig {
+  private parseTokenConfig(tokens: any[]): TokenConfig {
     let accessTokenExpiry = '15m';
     let refreshTokenExpiry = '7d';
     let algorithm = 'RS256';
@@ -213,7 +213,7 @@ export class AuthSpecParser {
     };
   }
 
-  private parseProtectedEndpoints(tokens: marked.TokensList): ProtectedEndpoint[] {
+  private parseProtectedEndpoints(tokens: any[]): ProtectedEndpoint[] {
     const endpoints: ProtectedEndpoint[] = [];
     
     let inProtectedEndpoints = false;
@@ -256,7 +256,7 @@ export class AuthSpecParser {
     return { method, path, authRequired, role, ownerOnly };
   }
 
-  private parsePublicEndpoints(tokens: marked.TokensList): PublicEndpoint[] {
+  private parsePublicEndpoints(tokens: any[]): PublicEndpoint[] {
     const endpoints: PublicEndpoint[] = [];
     
     let inPublicEndpoints = false;
@@ -294,7 +294,7 @@ export class AuthSpecParser {
     return { method, path, description, category };
   }
 
-  private parseFeatures(tokens: marked.TokensList): Features {
+  private parseFeatures(tokens: any[]): Features {
     let emailVerification = false;
     let passwordReset = false;
     let rateLimitEnabled = false;
@@ -336,7 +336,7 @@ export class AuthSpecParser {
     };
   }
 
-  private parseSecuritySettings(tokens: marked.TokensList): SecuritySettings {
+  private parseSecuritySettings(_tokens: any[]): SecuritySettings {
     const passwordRequirements = {
       minLength: 8,
       requireUppercase: false,
@@ -365,7 +365,7 @@ export class AuthSpecParser {
     };
   }
 
-  private parseBusinessRules(tokens: marked.TokensList): BusinessRules {
+  private parseBusinessRules(_tokens: any[]): BusinessRules {
     // Default business rules
     return {
       registration: {
@@ -400,7 +400,7 @@ export class AuthSpecParser {
     };
   }
 
-  private parseErrorResponses(tokens: marked.TokensList): ErrorResponse[] {
+  private parseErrorResponses(_tokens: any[]): ErrorResponse[] {
     const errors: ErrorResponse[] = [];
     
     // Parse error responses from spec...

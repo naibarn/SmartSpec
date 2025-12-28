@@ -1,13 +1,7 @@
 #!/usr/bin/env bash
-# SmartSpec Installer (Project-Local) - FIXED VERSION
+# SmartSpec Installer (Project-Local)
 # Platform: Linux / macOS (bash)
-# Version: 6.1.0
-#
-# FIXES:
-# - Handles externally-managed-environment error (PEP 668)
-# - Uses --break-system-packages flag for system Python
-# - Provides fallback to pipx for user-level installation
-# - Better error handling and user guidance
+# Version: 6.0.1
 #
 # This script:
 #   - Downloads the SmartSpec distribution repo
@@ -98,94 +92,62 @@ copy_dir() {
   cp -R "$src"/. "$dst"/
 }
 
-# NEW: Check if Python environment is externally managed (PEP 668)
-is_externally_managed() {
-  # Check for EXTERNALLY-MANAGED marker file
-  local python_lib=$(python3 -c "import sys; print(sys.prefix)" 2>/dev/null || echo "")
-  if [ -n "$python_lib" ] && [ -f "$python_lib/EXTERNALLY-MANAGED" ]; then
-    return 0  # True - externally managed
-  fi
-  return 1  # False - not externally managed
-}
-
-# NEW: Install Python package with proper error handling
-install_python_package() {
-  local package="$1"
-  local pip_cmd="$2"
-  local package_name="${3:-$package}"  # Display name
-  
-  log "  • Installing $package_name..."
-  
-  # Try normal installation first
-  if $pip_cmd install "$package" --quiet 2>/dev/null; then
-    log "  ✅ $package_name installed successfully"
-    return 0
-  fi
-  
-  # Check if it's externally-managed error
-  if is_externally_managed; then
-    log "  ℹ️  Python environment is externally managed (PEP 668)"
-    log "  ℹ️  Trying with --break-system-packages flag..."
-    
-    # Try with --break-system-packages
-    if $pip_cmd install "$package" --break-system-packages --quiet 2>/dev/null; then
-      log "  ✅ $package_name installed successfully (with --break-system-packages)"
-      return 0
-    fi
-  fi
-  
-  # If still failing, suggest alternatives
-  log "  ⚠️  Failed to install $package_name."
-  log ""
-  log "  📝 You have several options:"
-  log "     1. Use pipx (recommended for user-level installation):"
-  log "        $ sudo apt install pipx  # or: brew install pipx"
-  log "        $ pipx install $package"
-  log ""
-  log "     2. Create a virtual environment (recommended for projects):"
-  log "        $ python3 -m venv path/to/venv"
-  log "        $ source path/to/venv/bin/activate"
-  log "        $ pip install $package"
-  log ""
-  log "     3. Install system-wide (requires sudo):"
-  log "        $ sudo apt install python3-$package_name  # if available"
-  log ""
-  log "     4. Override system protection (not recommended):"
-  log "        $ pip install $package --break-system-packages"
-  log ""
-  
-  return 1
-}
-
 ###############################
 # Banner
 ###############################
 
 log "============================================="
-log "🚀 SmartSpec Installer (Linux/macOS) v6.1.0"
+log "🚀 SmartSpec Installer (Linux/macOS) v6.0.0"
 log "============================================="
-log ""
 log "Project root: $(pwd)"
-log "Repo:         $SMARTSPEC_REPO_URL (branch: $SMARTSPEC_REPO_BRANCH)"
+log "Repo:         ${SMARTSPEC_REPO_URL} (branch: ${SMARTSPEC_REPO_BRANCH})"
 log ""
 
 ###############################
-# Step 1: Download and verify SmartSpec repo
+# Step 1: Download SmartSpec repo
 ###############################
-
-log "📥 Downloading SmartSpec into temp dir: /tmp/tmp.*"
 
 TMP_DIR=$(mktemp_dir)
-log "  • Cloning into '$TMP_DIR'..."
+log "📥 Downloading SmartSpec into temp dir: ${TMP_DIR}"
 
-if ! git clone --depth=1 --branch="$SMARTSPEC_REPO_BRANCH" "$SMARTSPEC_REPO_URL" "$TMP_DIR" >/dev/null 2>&1; then
-  log "❌ Failed to clone repository. Please check your internet connection and try again."
-  exit 1
+if have_cmd git; then
+  git clone --depth 1 --branch "$SMARTSPEC_REPO_BRANCH" "$SMARTSPEC_REPO_URL" "$TMP_DIR"
+else
+  log "⚠️ git not found, trying curl + unzip..."
+  if ! have_cmd curl && ! have_cmd wget; then
+    log "❌ Neither git, curl nor wget is available. Please install git (recommended)."
+    exit 1
+  fi
+  ZIP_URL="${SMARTSPEC_REPO_URL%.git}/archive/refs/heads/${SMARTSPEC_REPO_BRANCH}.zip"
+  ZIP_FILE="${TMP_DIR}/smartspec.zip"
+  if have_cmd curl; then
+    curl -L "$ZIP_URL" -o "$ZIP_FILE"
+  else
+    wget -O "$ZIP_FILE" "$ZIP_URL"
+  fi
+  if have_cmd unzip; then
+    unzip -q "$ZIP_FILE" -d "$TMP_DIR"
+  else
+    log "❌ unzip is required when git is not installed."
+    exit 1
+  fi
+  # assume single top-level folder from zip
+  TMP_DIR=$(find "$TMP_DIR" -maxdepth 1 -type d ! -path "$TMP_DIR" | head -n1)
 fi
+
+###############################
+# Step 1.5: Verify repository integrity (optional but recommended)
+###############################
 
 log "🔒 Verifying repository integrity..."
 
-# Check critical files exist
+# Check if .smartspec directory exists
+if [ ! -d "$TMP_DIR/.smartspec" ]; then
+  log "❌ Downloaded repository does not contain .smartspec directory"
+  exit 1
+fi
+
+# Verify critical files exist
 CRITICAL_FILES=(
   ".smartspec/system_prompt_smartspec.md"
   ".smartspec/workflows/smartspec_generate_spec.md"
@@ -241,6 +203,8 @@ else
   log "ℹ️ No .smartspec/scripts/ directory found in repo; skipping scripts copy."
 fi
 
+
+
 ###############################
 # Step 3: Sanity check core files
 ###############################
@@ -279,7 +243,7 @@ else
 fi
 
 ###############################
-# Step 5: Check and install Python dependencies (FIXED)
+# Step 5: Check and install Python dependencies
 ###############################
 
 log "🐍 Checking Python dependencies..."
@@ -291,12 +255,6 @@ if ! have_cmd python3; then
 else
   PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
   log "  • Python version: $PYTHON_VERSION"
-  
-  # Check if environment is externally managed
-  if is_externally_managed; then
-    log "  ℹ️  Detected externally-managed Python environment (PEP 668)"
-    log "  ℹ️  Will use --break-system-packages flag if needed"
-  fi
   
   # Check if pip is available (try pip3 first, then python3 -m pip)
   PIP_CMD=""
@@ -319,7 +277,12 @@ else
       log "  • LangGraph already installed (version: $LANGGRAPH_VERSION)"
     else
       log "  • LangGraph not found, installing..."
-      install_python_package "langgraph>=0.2.0" "$PIP_CMD" "LangGraph"
+      if $PIP_CMD install langgraph>=0.2.0 --quiet; then
+        log "  ✅ LangGraph installed successfully"
+      else
+        log "  ⚠️  Failed to install LangGraph. Autopilot features may not work."
+        log "     You can install it manually: pip install langgraph>=0.2.0"
+      fi
     fi
     
     # Check if langgraph-checkpoint is installed
@@ -327,7 +290,12 @@ else
       log "  • LangGraph Checkpoint already installed"
     else
       log "  • LangGraph Checkpoint not found, installing..."
-      install_python_package "langgraph-checkpoint>=0.2.0" "$PIP_CMD" "LangGraph Checkpoint"
+      if $PIP_CMD install langgraph-checkpoint>=0.2.0 --quiet; then
+        log "  ✅ LangGraph Checkpoint installed successfully"
+      else
+        log "  ⚠️  Failed to install LangGraph Checkpoint."
+        log "     You can install it manually: pip install langgraph-checkpoint>=0.2.0"
+      fi
     fi
   fi
 fi
@@ -380,33 +348,30 @@ fi
 ###############################
 
 log ""
-log "============================================="
-log "✅ SmartSpec installation complete!"
-log "============================================="
+log "✅ SmartSpec installation/update complete!"
 log ""
-log "📚 Next steps:"
-log "  1. Review .smartspec/system_prompt_smartspec.md"
-log "  2. Check .smartspec/workflows/ for available commands"
-log "  3. Use SmartSpec workflows in your AI coding assistant"
+log "📦 Installed Components:"
+log "   - Core:      $SMARTSPEC_DIR"
+log "   - Docs:      $SMARTSPEC_DOCS_DIR (if present in repo)"
+log "   - Autopilot: $AUTOPILOT_DIR ($AGENT_COUNT agents)"
+log "   - Workflows: $WORKFLOWS_DIR (59+ workflows)"
+log "   - Tools:     $KILOCODE_DIR, $ROO_DIR, $CLAUDE_DIR, $ANTIGRAVITY_DIR, $GEMINI_DIR"
 log ""
-log "🤖 Autopilot:"
-if python3 -c "import langgraph" 2>/dev/null && python3 -c "import langgraph.checkpoint" 2>/dev/null; then
-  log "  ✅ Autopilot ready! Use workflows:"
-  log "     • autopilot_status.md - Check agent status"
-  log "     • autopilot_run.md - Run autonomous agents"
-  log "     • autopilot_ask.md - Ask agents questions"
-else
-  log "  ⚠️  Autopilot dependencies not fully installed"
-  log "     Please install manually:"
-  log "     $ pip install langgraph>=0.2.0 langgraph-checkpoint>=0.2.0"
-  log "     Or use pipx for user-level installation"
-fi
+log "🚀 Quick Start:"
 log ""
-log "📖 Documentation: .smartspec-docs/"
-log "🔧 Scripts: .smartspec/scripts/"
+log "   SmartSpec Workflows (59 workflows):"
+log "     /smartspec_project_copilot.md --platform kilo"
+log "     /smartspec_generate_spec.md <spec-path> --platform kilo"
+log "     /smartspec_implement_tasks.md <tasks-path> --apply --platform kilo"
 log ""
-log "Happy coding! 🚀"
+log "   Autopilot Workflows (3 workflows - NEW!):"
+log "     /autopilot_status.md <spec-id> --platform kilo"
+log "     /autopilot_run.md <spec-id> --platform kilo"
+log "     /autopilot_ask.md \"<your question>\" --platform kilo"
 log ""
-
-# Cleanup
-rm -rf "$TMP_DIR"
+log "📚 Documentation:"
+log "   - README:     https://github.com/naibarn/SmartSpec/blob/main/README.md"
+log "   - Workflows:  https://github.com/naibarn/SmartSpec/tree/main/.smartspec/workflows"
+log "   - Copilot:    https://chatgpt.com/g/g-6936ffad015c81918e006a9ee2077074-smartspec-copilot"
+log ""
+log "💡 Tip: Run /autopilot_ask.md \"help\" --platform kilo to learn more about Autopilot!"

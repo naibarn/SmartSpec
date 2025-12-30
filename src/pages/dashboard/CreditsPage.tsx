@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Wallet,
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/select';
 
 export default function CreditsPage() {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
 
   // Mock data - จะเชื่อมกับ API ในภายหลัง
@@ -147,7 +149,11 @@ export default function CreditsPage() {
             Manage your credits and view transaction history
           </p>
         </div>
-        <Button size="lg" className="rounded-full shadow-lg shadow-primary/25">
+        <Button 
+          size="lg" 
+          className="rounded-full shadow-lg shadow-primary/25"
+          onClick={() => navigate('/dashboard/credits/buy')}
+        >
           <Plus className="mr-2 h-5 w-5" />
           Buy Credits
         </Button>

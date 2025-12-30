@@ -22,6 +22,7 @@ import OAuthCallbackPage from '@/pages/auth/OAuthCallbackPage';
 // Dashboard Pages
 import DashboardPage from '@/pages/dashboard/DashboardPage';
 import CreditsPage from '@/pages/dashboard/CreditsPage';
+import LLMGatewayPage from '@/pages/dashboard/LLMGatewayPage';
 import { PlaceholderPage } from '@/pages/dashboard/PlaceholderPage';
 
 const queryClient = new QueryClient({
@@ -62,7 +63,7 @@ function App() {
                 }
               >
                 <Route index element={<DashboardPage />} />
-                <Route path="llm-gateway" element={<PlaceholderPage title="LLM Gateway" phase="Phase 6" />} />
+                <Route path="llm-gateway" element={<LLMGatewayPage />} />
                 <Route path="analytics" element={<PlaceholderPage title="Analytics" phase="Phase 8" />} />
                 <Route path="credits" element={<CreditsPage />} />
                 <Route path="payments" element={<PlaceholderPage title="Payments" phase="Phase 7" />} />

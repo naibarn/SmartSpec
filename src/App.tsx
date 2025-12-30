@@ -26,6 +26,7 @@ import BuyCreditsPage from '@/pages/dashboard/BuyCreditsPage';
 import LLMGatewayPage from '@/pages/dashboard/LLMGatewayPage';
 import PaymentsPage from '@/pages/dashboard/PaymentsPage';
 import AnalyticsPage from '@/pages/dashboard/AnalyticsPage';
+import AdminPage from '@/pages/dashboard/AdminPage';
 import { PlaceholderPage } from '@/pages/dashboard/PlaceholderPage';
 
 const queryClient = new QueryClient({
@@ -75,8 +76,8 @@ function App() {
                 <Route path="monitoring" element={<PlaceholderPage title="Monitoring" phase="Future" />} />
                 <Route path="logs" element={<PlaceholderPage title="Logs" phase="Future" />} />
                 <Route path="settings" element={<PlaceholderPage title="Settings" phase="Future" />} />
-                <Route path="admin" element={<PlaceholderPage title="Admin Panel" phase="Phase 9" />} />
               </Route>
+              <Route path="admin" element={<AdminPage />} />
 
               {/* Catch all */}
               <Route path="*" element={<Navigate to="/" replace />} />

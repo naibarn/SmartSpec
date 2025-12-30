@@ -25,6 +25,7 @@ import CreditsPage from '@/pages/dashboard/CreditsPage';
 import BuyCreditsPage from '@/pages/dashboard/BuyCreditsPage';
 import LLMGatewayPage from '@/pages/dashboard/LLMGatewayPage';
 import PaymentsPage from '@/pages/dashboard/PaymentsPage';
+import AnalyticsPage from '@/pages/dashboard/AnalyticsPage';
 import { PlaceholderPage } from '@/pages/dashboard/PlaceholderPage';
 
 const queryClient = new QueryClient({
@@ -66,7 +67,7 @@ function App() {
               >
                 <Route index element={<DashboardPage />} />
                 <Route path="llm-gateway" element={<LLMGatewayPage />} />
-                <Route path="analytics" element={<PlaceholderPage title="Analytics" phase="Phase 8" />} />
+                <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="credits" element={<CreditsPage />} />
                 <Route path="credits/buy" element={<BuyCreditsPage />} />
                 <Route path="payments" element={<PaymentsPage />} />

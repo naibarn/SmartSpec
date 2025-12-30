@@ -129,6 +129,56 @@ class APIService {
     const response = await this.client.get('/api/dashboard');
     return response.data;
   }
+
+  // OAuth endpoints
+  async getGoogleAuthUrl(): Promise<{ authorization_url: string }> {
+    const response = await this.client.get('/api/oauth/google/authorize');
+    return response.data;
+  }
+
+  async getGithubAuthUrl(): Promise<{ authorization_url: string }> {
+    const response = await this.client.get('/api/oauth/github/authorize');
+    return response.data;
+  }
+
+  async handleGoogleCallback(code: string): Promise<AuthResponse> {
+    const response = await this.client.post('/api/oauth/google/callback', { code });
+    return response.data;
+  }
+
+  async handleGithubCallback(code: string): Promise<AuthResponse> {
+    const response = await this.client.post('/api/oauth/github/callback', { code });
+    return response.data;
+  }
+
+  async getOAuthConnections(): Promise<{ connections: Array<{ provider: string; connected_at: string; email_verified: boolean }> }> {
+    const response = await this.client.get('/api/oauth/connections');
+    return response.data;
+  }
+
+  async linkOAuthAccount(provider: string, code: string): Promise<{ message: string }> {
+    const response = await this.client.post('/api/oauth/link', { provider, code });
+    return response.data;
+  }
+
+  async unlinkOAuthAccount(provider: string): Promise<{ message: string }> {
+    const response = await this.client.delete(`/api/oauth/unlink/${provider}`);
+    return response.data;
+  }
+
+  // Password reset endpoints
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const response = await this.client.post('/api/auth/forgot-password', { email });
+    return response.data;
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    const response = await this.client.post('/api/auth/reset-password', { 
+      token, 
+      new_password: newPassword 
+    });
+    return response.data;
+  }
 }
 
 export const apiService = new APIService();

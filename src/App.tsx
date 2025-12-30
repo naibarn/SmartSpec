@@ -14,6 +14,7 @@ import PricingPage from '@/pages/public/PricingPage';
 import LoginPage from '@/pages/auth/LoginPage';
 import RegisterPage from '@/pages/auth/RegisterPage';
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage';
+import OAuthCallbackPage from '@/pages/auth/OAuthCallbackPage';
 
 // Dashboard Pages
 import DashboardLayout from '@/pages/dashboard/DashboardLayout';
@@ -49,6 +50,7 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/auth/callback/:provider" element={<OAuthCallbackPage />} />
 
               {/* Dashboard Routes (Protected) */}
               <Route

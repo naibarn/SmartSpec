@@ -5,6 +5,9 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
+// Layouts
+import { DashboardLayout } from '@/layouts/DashboardLayout';
+
 // Public Pages
 import LandingPage from '@/pages/public/LandingPage';
 import FeaturesPage from '@/pages/public/FeaturesPage';
@@ -17,12 +20,8 @@ import ResetPasswordPage from '@/pages/auth/ResetPasswordPage';
 import OAuthCallbackPage from '@/pages/auth/OAuthCallbackPage';
 
 // Dashboard Pages
-import DashboardLayout from '@/pages/dashboard/DashboardLayout';
-import DashboardHome from '@/pages/dashboard/DashboardHome';
-import CreditsPage from '@/pages/dashboard/CreditsPage';
-import AnalyticsPage from '@/pages/dashboard/AnalyticsPage';
-import PaymentPage from '@/pages/dashboard/PaymentPage';
-import SettingsPage from '@/pages/dashboard/SettingsPage';
+import DashboardPage from '@/pages/dashboard/DashboardPage';
+import { PlaceholderPage } from '@/pages/dashboard/PlaceholderPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,11 +60,16 @@ function App() {
                   </ProtectedRoute>
                 }
               >
-                <Route index element={<DashboardHome />} />
-                <Route path="credits" element={<CreditsPage />} />
-                <Route path="analytics" element={<AnalyticsPage />} />
-                <Route path="payment" element={<PaymentPage />} />
-                <Route path="settings" element={<SettingsPage />} />
+                <Route index element={<DashboardPage />} />
+                <Route path="llm-gateway" element={<PlaceholderPage title="LLM Gateway" phase="Phase 6" />} />
+                <Route path="analytics" element={<PlaceholderPage title="Analytics" phase="Phase 8" />} />
+                <Route path="credits" element={<PlaceholderPage title="Credits" phase="Phase 5" />} />
+                <Route path="payments" element={<PlaceholderPage title="Payments" phase="Phase 7" />} />
+                <Route path="api-keys" element={<PlaceholderPage title="API Keys" phase="Future" />} />
+                <Route path="monitoring" element={<PlaceholderPage title="Monitoring" phase="Future" />} />
+                <Route path="logs" element={<PlaceholderPage title="Logs" phase="Future" />} />
+                <Route path="settings" element={<PlaceholderPage title="Settings" phase="Future" />} />
+                <Route path="admin" element={<PlaceholderPage title="Admin Panel" phase="Phase 9" />} />
               </Route>
 
               {/* Catch all */}

@@ -46,7 +46,7 @@ export default function Dashboard() {
   }
 
   const stats = [
-    { label: 'Credits Available', value: user.credits.toString(), icon: Zap, color: 'text-yellow-500' },
+    { label: 'Credits Available', value: (user.credits ?? 0).toString(), icon: Zap, color: 'text-yellow-500' },
     { label: 'Generations Today', value: '12', icon: TrendingUp, color: 'text-green-500' },
     { label: 'Total Projects', value: '24', icon: Image, color: 'text-purple-500' },
     { label: 'Time Saved', value: '48h', icon: Clock, color: 'text-blue-500' },

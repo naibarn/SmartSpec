@@ -17,6 +17,9 @@ import Dashboard from "./pages/Dashboard";
 import AuthCallback from "./pages/AuthCallback";
 import ForgotPassword from "./pages/ForgotPassword";
 import Profile from "./pages/Profile";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+import VerifyEmail from "./pages/VerifyEmail";
 
 function Router() {
   return (
@@ -32,6 +35,9 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/profile" component={Profile} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/auth/callback/:provider" component={AuthCallback} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

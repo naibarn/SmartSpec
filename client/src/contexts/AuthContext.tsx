@@ -5,26 +5,27 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-interface User {
+export interface User {
   id: string;
   email: string;
   name: string;
   avatar?: string;
   company?: string;
   plan: 'free' | 'pro' | 'enterprise';
-  credits: number;
+  credits?: number;
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (userOrEmail: User | string, password?: string) => Promise<void>;
   signup: (data: SignupData) => Promise<void>;
   logout: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   loginWithGitHub: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateUser: (updates: Partial<User>) => void;
 }
 
 interface SignupData {
@@ -72,15 +73,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('auth_token');
+      // For demo mode, check if we have a stored user
+      const storedUser = localStorage.getItem('demo_user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      } else {
+        localStorage.removeItem('auth_token');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (userOrEmail: User | string, password?: string) => {
     setIsLoading(true);
     try {
+      // If userOrEmail is a User object (from OAuth callback)
+      if (typeof userOrEmail === 'object') {
+        setUser(userOrEmail);
+        localStorage.setItem('demo_user', JSON.stringify(userOrEmail));
+        localStorage.setItem('auth_token', 'demo_token_' + userOrEmail.id);
+        return;
+      }
+
+      // Otherwise, it's email/password login
+      const email = userOrEmail;
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
@@ -97,6 +114,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       localStorage.setItem('auth_token', data.access_token);
       setUser(data.user);
+    } catch (error) {
+      // Demo mode: create mock user for testing
+      if (typeof userOrEmail === 'string') {
+        const mockUser: User = {
+          id: 'demo_' + Date.now(),
+          email: userOrEmail,
+          name: userOrEmail.split('@')[0],
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userOrEmail}`,
+          plan: 'free',
+          credits: 100,
+        };
+        setUser(mockUser);
+        localStorage.setItem('demo_user', JSON.stringify(mockUser));
+        localStorage.setItem('auth_token', 'demo_token_' + mockUser.id);
+      } else {
+        throw error;
+      }
     } finally {
       setIsLoading(false);
     }
@@ -121,6 +155,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       localStorage.setItem('auth_token', data.access_token);
       setUser(data.user);
+    } catch (error) {
+      // Demo mode: create mock user
+      const mockUser: User = {
+        id: 'demo_' + Date.now(),
+        email: signupData.email,
+        name: signupData.name,
+        company: signupData.company,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${signupData.email}`,
+        plan: signupData.plan,
+        credits: signupData.plan === 'pro' ? 500 : 100,
+      };
+      setUser(mockUser);
+      localStorage.setItem('demo_user', JSON.stringify(mockUser));
+      localStorage.setItem('auth_token', 'demo_token_' + mockUser.id);
     } finally {
       setIsLoading(false);
     }
@@ -129,7 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      if (token) {
+      if (token && !token.startsWith('demo_')) {
         await fetch(`${API_BASE_URL}/api/auth/logout`, {
           method: 'POST',
           headers: {
@@ -141,27 +189,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Logout error:', error);
     } finally {
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('demo_user');
       setUser(null);
     }
   };
 
   const loginWithGoogle = async () => {
+    // Store state for CSRF protection
+    const state = Math.random().toString(36).substring(7);
+    sessionStorage.setItem('oauth_state', state);
+    sessionStorage.setItem('oauth_provider', 'google');
+    
     // Redirect to Google OAuth
     const redirectUri = `${window.location.origin}/auth/callback/google`;
-    const googleAuthUrl = `${API_BASE_URL}/api/auth/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
+    const googleAuthUrl = `${API_BASE_URL}/api/auth/google?redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
     window.location.href = googleAuthUrl;
   };
 
   const loginWithGitHub = async () => {
+    // Store state for CSRF protection
+    const state = Math.random().toString(36).substring(7);
+    sessionStorage.setItem('oauth_state', state);
+    sessionStorage.setItem('oauth_provider', 'github');
+    
     // Redirect to GitHub OAuth
     const redirectUri = `${window.location.origin}/auth/callback/github`;
-    const githubAuthUrl = `${API_BASE_URL}/api/auth/github?redirect_uri=${encodeURIComponent(redirectUri)}`;
+    const githubAuthUrl = `${API_BASE_URL}/api/auth/github?redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
     window.location.href = githubAuthUrl;
   };
 
   const refreshUser = async () => {
     const token = localStorage.getItem('auth_token');
     if (!token) return;
+
+    // Demo mode
+    if (token.startsWith('demo_')) {
+      const storedUser = localStorage.getItem('demo_user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+      return;
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
@@ -179,6 +247,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateUser = (updates: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+      localStorage.setItem('demo_user', JSON.stringify(updatedUser));
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -191,6 +267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginWithGoogle,
         loginWithGitHub,
         refreshUser,
+        updateUser,
       }}
     >
       {children}

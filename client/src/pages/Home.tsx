@@ -4,6 +4,7 @@
  * Sections: Hero, Features, How It Works, Testimonials, CTA
  */
 
+import { useAuth } from '@/_core/hooks/useAuth';
 import { motion } from 'framer-motion';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -86,6 +87,7 @@ const howItWorks = [
 ];
 
 export default function Home() {
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />

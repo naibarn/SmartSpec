@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1767452664221,
+      "tag": "0000_greedy_otto_octavius",
+      "breakpoints": true
+    }
+  ]
+}

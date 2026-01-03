@@ -10,6 +10,7 @@ interface User {
   email: string;
   name: string;
   avatar?: string;
+  company?: string;
   plan: 'free' | 'pro' | 'enterprise';
   credits: number;
 }

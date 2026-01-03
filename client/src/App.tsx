@@ -15,6 +15,8 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import AuthCallback from "./pages/AuthCallback";
+import ForgotPassword from "./pages/ForgotPassword";
+import Profile from "./pages/Profile";
 
 function Router() {
   return (
@@ -27,7 +29,9 @@ function Router() {
       <Route path="/blog" component={Blog} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
+      <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/profile" component={Profile} />
       <Route path="/auth/callback/:provider" component={AuthCallback} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

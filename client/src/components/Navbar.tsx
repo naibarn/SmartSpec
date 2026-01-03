@@ -15,6 +15,8 @@ const navLinks = [
   { href: '/features', label: 'Features' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/docs', label: 'Docs' },
+  { href: '/blog', label: 'Blog' },
+  { href: '/contact', label: 'Contact' },
 ];
 
 export function Navbar() {
@@ -29,6 +31,10 @@ export function Navbar() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Hide navbar on auth pages
+  const isAuthPage = location === '/login' || location === '/signup';
+  if (isAuthPage) return null;
 
   return (
     <motion.header
@@ -81,15 +87,19 @@ export function Navbar() {
 
           {/* CTA Buttons */}
           <div className="hidden lg:flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
-              Sign In
-            </Button>
-            <Button 
-              size="sm" 
-              className="bg-gradient-to-r from-violet-500 to-teal-400 hover:from-violet-600 hover:to-teal-500 text-white shadow-lg shadow-violet-500/25"
-            >
-              Get Started Free
-            </Button>
+            <Link href="/login">
+              <Button variant="ghost" size="sm" className="text-muted-foreground">
+                Sign In
+              </Button>
+            </Link>
+            <Link href="/signup">
+              <Button 
+                size="sm" 
+                className="bg-gradient-to-r from-violet-500 to-teal-400 hover:from-violet-600 hover:to-teal-500 text-white shadow-lg shadow-violet-500/25"
+              >
+                Get Started Free
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -133,12 +143,19 @@ export function Navbar() {
                 </Link>
               ))}
               <div className="pt-4 space-y-2">
-                <Button variant="outline" className="w-full">
-                  Sign In
-                </Button>
-                <Button className="w-full bg-gradient-to-r from-violet-500 to-teal-400 text-white">
-                  Get Started Free
-                </Button>
+                <Link href="/login">
+                  <Button variant="outline" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/signup">
+                  <Button 
+                    className="w-full bg-gradient-to-r from-violet-500 to-teal-400 text-white"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Get Started Free
+                  </Button>
+                </Link>
               </div>
             </div>
           </motion.div>

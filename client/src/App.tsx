@@ -23,6 +23,7 @@ import Privacy from "./pages/Privacy";
 import VerifyEmail from "./pages/VerifyEmail";
 import Gallery from "./pages/Gallery";
 import AdminGallery from "./pages/AdminGallery";
+import Chat from "./pages/Chat";
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
       <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/chat" component={Chat} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/profile" component={Profile} />
       <Route path="/terms" component={Terms} />

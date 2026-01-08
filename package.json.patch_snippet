@@ -1,0 +1,6 @@
+Add dependency:
+  "redis": "^4.6.13"
+
+And set env:
+  REDIS_URL=redis://localhost:6379/0
+  TOKEN_REVOKE_PREFIX=revoked:

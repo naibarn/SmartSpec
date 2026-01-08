@@ -21,6 +21,7 @@ import {
   Zap,
   ChevronRight,
   Plus,
+  MessageSquare,
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -54,6 +55,7 @@ export default function Dashboard() {
 
   const quickActions = [
     { label: 'Generate Image', icon: Image, href: '/generate/image', color: 'from-purple-500 to-pink-500' },
+    { label: 'Chat (LLM)', icon: MessageSquare, href: '/chat', color: 'from-teal-500 to-violet-500' },
     { label: 'Generate Video', icon: Video, href: '/generate/video', color: 'from-blue-500 to-cyan-500' },
     { label: 'Generate Audio', icon: Music, href: '/generate/audio', color: 'from-orange-500 to-red-500' },
     { label: 'Buy Credits', icon: CreditCard, href: '/credits', color: 'from-green-500 to-emerald-500' },

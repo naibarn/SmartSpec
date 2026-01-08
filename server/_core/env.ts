@@ -7,4 +7,17 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+
+  // Optional bearer tokens for non-browser callers (e.g. LLM proxy -> website gateway / MCP).
+  // If unset, only session-cookie auth is accepted.
+  webGatewayToken:
+    process.env.SMARTSPEC_WEB_GATEWAY_TOKEN ??
+    process.env.WEB_GATEWAY_TOKEN ??
+    "",
+  mcpServerToken:
+    process.env.SMARTSPEC_MCP_TOKEN ??
+    process.env.MCP_SERVER_TOKEN ??
+    process.env.SMARTSPEC_WEB_GATEWAY_TOKEN ??
+    process.env.WEB_GATEWAY_TOKEN ??
+    "",
 };
